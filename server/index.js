@@ -55,6 +55,8 @@ let zohoSession = {
   connected: initialCreds.connected,
   orgId: initialCreds.orgId,
   apiToken: initialCreds.apiToken,
+  accessToken: '',
+  tokenExpiresAt: 0,
   organizationName: 'VRM Structures India Pvt Ltd'
 };
 
@@ -147,6 +149,12 @@ app.post('/api/zoho/sync', async (req, res) => {
 });
 
 const getZohoAccessToken = () => {
+  const now = Date.now();
+  // If we already have a valid access token (with a 5-minute buffer), resolve immediately
+  if (zohoSession.accessToken && zohoSession.tokenExpiresAt > now + 300000) {
+    return Promise.resolve(zohoSession.accessToken);
+  }
+
   return new Promise((resolve, reject) => {
     const postData = new URLSearchParams({
       refresh_token: zohoSession.apiToken,
@@ -173,6 +181,9 @@ const getZohoAccessToken = () => {
         try {
           const parsed = JSON.parse(data);
           if (parsed.access_token) {
+            zohoSession.accessToken = parsed.access_token;
+            // Cache token and set expiration timestamp
+            zohoSession.tokenExpiresAt = Date.now() + (parsed.expires_in || 3600) * 1000;
             resolve(parsed.access_token);
           } else {
             reject(new Error(parsed.error || 'No access token returned.'));
