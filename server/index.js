@@ -606,6 +606,10 @@ app.get('/api/zoho/items/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
+  });
+}
+
+export default app;
