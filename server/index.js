@@ -35,6 +35,13 @@ const loadCredentialsFromEnv = () => {
       }
     }
     credentials.connected = !!(credentials.orgId && credentials.apiToken);
+    
+    // Fallback to process.env if the file is missing or empty (essential for Vercel environment variables)
+    if (!credentials.connected) {
+      credentials.orgId = process.env.ZOHO_ORG_ID || '';
+      credentials.apiToken = process.env.ZOHO_REFRESH_TOKEN || '';
+      credentials.connected = !!(credentials.orgId && credentials.apiToken);
+    }
   } catch (err) {
     console.error("Failed to load credentials from .env:", err);
   }
