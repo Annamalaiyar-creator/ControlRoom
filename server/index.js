@@ -88,12 +88,16 @@ const saveCredentialsToEnv = (orgId, apiToken) => {
 
 // 1. Check Connection Status and Credentials
 app.get('/api/zoho/status', (req, res) => {
+  const mask = (str) => {
+    if (!str) return 'empty';
+    return `${str.substring(0, 5)}...${str.substring(str.length - 5)}`;
+  };
   res.json({
     connected: zohoSession.connected,
     orgId: zohoSession.orgId,
-    apiToken: zohoSession.apiToken,
-    clientIdLength: (process.env.ZOHO_CLIENT_ID || '').length,
-    clientSecretLength: (process.env.ZOHO_CLIENT_SECRET || '').length,
+    apiToken: mask(zohoSession.apiToken),
+    clientId: mask(process.env.ZOHO_CLIENT_ID),
+    clientSecret: mask(process.env.ZOHO_CLIENT_SECRET),
     organizationName: zohoSession.connected ? zohoSession.organizationName : null
   });
 });
