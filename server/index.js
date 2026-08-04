@@ -92,6 +92,8 @@ app.get('/api/zoho/status', (req, res) => {
     connected: zohoSession.connected,
     orgId: zohoSession.orgId,
     apiToken: zohoSession.apiToken,
+    clientIdLength: (process.env.ZOHO_CLIENT_ID || '').length,
+    clientSecretLength: (process.env.ZOHO_CLIENT_SECRET || '').length,
     organizationName: zohoSession.connected ? zohoSession.organizationName : null
   });
 });
