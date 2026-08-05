@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
-export default function MaterialReorderAlerts({ items = [] }) {
+export default function MaterialReorderAlerts({ items = [], isLoading = false }) {
   const lowStockItems = items.filter(item => {
     const stock = Number(item.stockOnHand || 0);
     const reorder = Number(item.reorderLevel || 0);
@@ -11,44 +11,72 @@ export default function MaterialReorderAlerts({ items = [] }) {
   const defaultAlerts = [
     {
       id: 1,
-      item: 'Solar Module 550Wp',
-      code: 'Alert: #SM-550WP',
-      currentStock: '120 nos',
-      reorderLevel: '200 nos',
-      eta: '1 Day (Urgent)',
-      supplier: 'Sun Source Energy',
-      etaColor: '#ef4444', // red
+      item: 'Alu. Rail 100 mm',
+      code: 'Req: 12,500 Nos | Avail: 8,200 Nos',
+      currentStock: '8,200 Nos',
+      reorderLevel: '12,500 Nos',
+      eta: 'Shortage: 4,300 Nos (High)',
+      supplier: 'AKEYEM SONS',
+      etaColor: '#ef4444',
       tags: [
-        { label: 'CRITICAL STOCK', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
-        { label: 'ENERGY EQUIP', color: '#0d9488', bg: '#f0fdfa', border: '#ccfbf1' }
+        { label: 'SHORTAGE: 4,300 NOS', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
+        { label: 'HIGH PRIORITY', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' }
       ]
     },
     {
       id: 2,
-      item: 'Aluminium Rail 40mm',
-      code: 'Alert: #AR-40MM',
-      currentStock: '1,250 Mtr',
-      reorderLevel: '2,000 Mtr',
-      eta: '2 Days (High)',
-      supplier: 'Jindal Aluminium',
-      etaColor: '#eab308', // orange
+      item: 'Alu. Rail 60 mm',
+      code: 'Req: 7,800 Nos | Avail: 5,100 Nos',
+      currentStock: '5,100 Nos',
+      reorderLevel: '7,800 Nos',
+      eta: 'Shortage: 2,700 Nos (High)',
+      supplier: 'ARUMUGA STEEL',
+      etaColor: '#ef4444',
       tags: [
-        { label: 'HIGH RISK', color: '#d97706', bg: '#fffbeb', border: '#fef3c7' },
-        { label: 'RAW MATERIALS', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe' }
+        { label: 'SHORTAGE: 2,700 NOS', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
+        { label: 'HIGH PRIORITY', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' }
       ]
     },
     {
       id: 3,
-      item: 'Hex Bolt M10',
-      code: 'Alert: #HB-M10',
-      currentStock: '8,500 nos',
-      reorderLevel: '10,000 nos',
-      eta: '5 Days (Normal)',
-      supplier: 'Tata Steel Ltd.',
-      etaColor: '#3b82f6', // blue
+      item: 'Mid Clamp 35 mm',
+      code: 'Req: 18,000 Nos | Avail: 14,800 Nos',
+      currentStock: '14,800 Nos',
+      reorderLevel: '18,000 Nos',
+      eta: 'Shortage: 3,200 Nos (Medium)',
+      supplier: 'VAIBOV POLES',
+      etaColor: '#eab308',
       tags: [
-        { label: 'MEDIUM RISK', color: '#4f46e5', bg: '#f5f3ff', border: '#e0e7ff' },
-        { label: 'FASTENERS', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' }
+        { label: 'SHORTAGE: 3,200 NOS', color: '#d97706', bg: '#fffbeb', border: '#fef3c7' },
+        { label: 'MEDIUM PRIORITY', color: '#ca8a04', bg: '#fef9c3', border: '#fef08a' }
+      ]
+    },
+    {
+      id: 4,
+      item: 'T Nut M10',
+      code: 'Req: 25,000 Nos | Avail: 21,600 Nos',
+      currentStock: '21,600 Nos',
+      reorderLevel: '25,000 Nos',
+      eta: 'Shortage: 3,400 Nos (Medium)',
+      supplier: 'KPR Mill',
+      etaColor: '#eab308',
+      tags: [
+        { label: 'SHORTAGE: 3,400 NOS', color: '#d97706', bg: '#fffbeb', border: '#fef3c7' },
+        { label: 'MEDIUM PRIORITY', color: '#ca8a04', bg: '#fef9c3', border: '#fef08a' }
+      ]
+    },
+    {
+      id: 5,
+      item: 'HDG Pipe 50 NB',
+      code: 'Req: 15,000 Kg | Avail: 10,900 Kg',
+      currentStock: '10,900 Kg',
+      reorderLevel: '15,000 Kg',
+      eta: 'Shortage: 4,100 Kg (High)',
+      supplier: 'SHREE GANESH TRADERS',
+      etaColor: '#ef4444',
+      tags: [
+        { label: 'SHORTAGE: 4,100 KG', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
+        { label: 'HIGH PRIORITY', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' }
       ]
     }
   ];
@@ -96,19 +124,69 @@ export default function MaterialReorderAlerts({ items = [] }) {
           gap: '20px' 
         }}
       >
-        {alerts.map((alert) => (
-          <div 
-            key={alert.id}
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              padding: '20px', 
-              backgroundColor: '#f8fafc', // soft off-white child card bg
-              border: '1px solid var(--color-border)',
-              borderRadius: '12px',
-              margin: 0
-            }}
-          >
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, idx) => (
+            <div 
+              key={idx}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                padding: '20px', 
+                backgroundColor: '#f8fafc',
+                border: '1px solid var(--color-border)',
+                borderRadius: '12px',
+                margin: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                <div className="skeleton-shimmer" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '12px' }} />
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '40%', height: '10px' }} />
+                </div>
+              </div>
+
+              <div 
+                style={{ 
+                  backgroundColor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '10px 12px',
+                  marginBottom: '14px',
+                  flex: 1
+                }}
+              >
+                {Array.from({ length: 4 }).map((_, sIdx) => (
+                  <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '50%', height: '8px' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '12px' }} />
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', display: 'flex', gap: '6px' }}>
+                <div className="skeleton-shimmer" style={{ width: '60px', height: '16px', borderRadius: '4px' }} />
+                <div className="skeleton-shimmer" style={{ width: '80px', height: '16px', borderRadius: '4px' }} />
+              </div>
+            </div>
+          ))
+        ) : (
+          alerts.map((alert) => (
+            <div 
+              key={alert.id}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                padding: '20px', 
+                backgroundColor: '#f8fafc', // soft off-white child card bg
+                border: '1px solid var(--color-border)',
+                borderRadius: '12px',
+                margin: 0
+              }}
+            >
             {/* 1. Child Card Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
               
@@ -200,8 +278,10 @@ export default function MaterialReorderAlerts({ items = [] }) {
             </div>
 
           </div>
-        ))}
+        ))
+      )}
       </div>
     </div>
   );
 }
+

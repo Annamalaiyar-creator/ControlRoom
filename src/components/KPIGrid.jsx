@@ -1,7 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function KPIGrid({ purchaseOrders = [], items = [] }) {
+export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = false }) {
   const cleanAmount = (amountStr) => {
     if (!amountStr) return 0;
     const cleaned = amountStr.replace(/[^0-9.]/g, '');
@@ -30,50 +30,88 @@ export default function KPIGrid({ purchaseOrders = [], items = [] }) {
 
   const kpis = [
     {
-      title: 'TOTAL PO VALUE',
-      value: hasRealData ? `₹${realTotalValue.toLocaleString('en-IN')}` : '₹2,48,75,000',
-      trend: '15.6%',
+      title: 'TOTAL PO VALUE (THIS MONTH)',
+      value: hasRealData ? `₹${realTotalValue.toLocaleString('en-IN')}` : '₹ 4.28 Cr',
+      trend: '16.2%',
       trendUp: true,
-      bottomText: hasRealData ? 'Total value of all synced Zoho POs' : 'This month you spent extra ',
-      bottomHighlight: hasRealData ? '' : '₹33,75,000'
+      bottomText: hasRealData ? 'Total value of all synced Zoho POs' : 'vs Last Month',
+      bottomHighlight: ''
     },
     {
-      title: 'POS ISSUED',
+      title: 'TOTAL PO QTY (MT/NOS)',
+      value: '1,256',
+      trend: '12.8%',
+      trendUp: true,
+      bottomText: 'vs Last Month',
+      bottomHighlight: ''
+    },
+    {
+      title: 'POS RAISED (THIS MONTH)',
       value: hasRealData ? `${realIssued}` : '86',
-      trend: '12.4%',
+      trend: '10.3%',
       trendUp: true,
-      bottomText: hasRealData ? 'Total number of POs created' : 'This month you created extra ',
-      bottomHighlight: hasRealData ? '' : '12 POs'
+      bottomText: 'vs Last Month',
+      bottomHighlight: ''
     },
     {
-      title: 'PENDING APPROVALS',
+      title: 'POS RECEIVED (THIS MONTH)',
+      value: hasRealData ? `${realCompleted}` : '72',
+      trend: '14.1%',
+      trendUp: true,
+      bottomText: 'vs Last Month',
+      bottomHighlight: ''
+    },
+    {
+      title: 'OVERDUE POS',
       value: hasRealData ? `${realPending}` : '14',
-      trend: '7%',
+      trend: '3',
       trendUp: false,
-      bottomText: hasRealData ? 'Draft or pending approval POs' : 'Pending queue decreased by ',
-      bottomHighlight: hasRealData ? '' : '7 items'
-    },
-    {
-      title: 'GRN COMPLETED',
-      value: hasRealData ? `${realCompleted}` : '64',
-      trend: '18.2%',
-      trendUp: true,
-      bottomText: hasRealData ? 'Approved/Open/Billed purchase orders' : 'Received extra ',
-      bottomHighlight: hasRealData ? '' : '10 packages'
-    },
-    {
-      title: 'PAYMENTS THIS MONTH',
-      value: hasRealData ? `₹${realPayments.toLocaleString('en-IN')}` : '₹1,85,40,000',
-      trend: '9.7%',
-      trendUp: true,
-      bottomText: hasRealData ? 'Value of billed or received POs' : 'This month you paid extra ',
-      bottomHighlight: hasRealData ? '' : '₹16,40,000'
+      bottomText: 'vs Last Month',
+      bottomHighlight: ''
     }
   ];
 
   return (
     <div className="kpi-grid-5">
       {kpis.map((kpi, idx) => {
+        if (isLoading) {
+          return (
+            <div 
+              key={idx} 
+              className="kpi-card" 
+              style={{ 
+                boxShadow: 'var(--shadow-sm)',
+                padding: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+                backgroundColor: 'white',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-card)',
+                height: '115px'
+              }}
+            >
+              <div style={{ padding: 'var(--spacing-16) var(--spacing-16) var(--spacing-12) var(--spacing-16)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-12)' }}>
+                <div className="skeleton-shimmer skeleton-text" style={{ width: '50%', height: '10px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)' }}>
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '22px' }} />
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '25%', height: '16px', borderRadius: '12px' }} />
+                </div>
+              </div>
+              <div 
+                style={{ 
+                  padding: '10px var(--spacing-16)', 
+                  borderTop: '1px solid var(--color-border)',
+                  backgroundColor: '#fafbfc'
+                }}
+              >
+                <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '8px' }} />
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div 
             key={idx} 

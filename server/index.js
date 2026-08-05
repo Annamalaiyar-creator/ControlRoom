@@ -148,6 +148,8 @@ app.post('/api/zoho/sync', async (req, res) => {
   }
 });
 
+let pendingTokenPromise = null;
+
 const getZohoAccessToken = () => {
   const now = Date.now();
   // If we already have a valid access token (with a 5-minute buffer), resolve immediately
@@ -155,7 +157,11 @@ const getZohoAccessToken = () => {
     return Promise.resolve(zohoSession.accessToken);
   }
 
-  return new Promise((resolve, reject) => {
+  if (pendingTokenPromise) {
+    return pendingTokenPromise;
+  }
+
+  pendingTokenPromise = new Promise((resolve, reject) => {
     const postData = new URLSearchParams({
       refresh_token: zohoSession.apiToken,
       client_id: process.env.ZOHO_CLIENT_ID,
@@ -197,8 +203,13 @@ const getZohoAccessToken = () => {
     req.on('error', (e) => reject(e));
     req.write(postData);
     req.end();
+  }).finally(() => {
+    pendingTokenPromise = null;
   });
+
+  return pendingTokenPromise;
 };
+
 
 const fetchZohoVendors = (accessToken) => {
   return new Promise((resolve, reject) => {
@@ -242,15 +253,26 @@ app.get('/api/zoho/vendors', async (req, res) => {
     
     if (data.contacts) {
       const translated = data.contacts.map(c => ({
+        id: c.contact_id,
         code: c.contact_id,
         name: c.contact_name,
+        companyName: c.company_name || c.contact_name,
         type: c.contact_type === 'customer_vendor' ? 'Manufacturer' : 'Supplier',
         contact: c.primary_contact_name || '—',
-        phone: c.phone || '—',
+        phone: c.phone || c.mobile || '—',
+        mobile: c.mobile || '—',
+        email: c.email || '—',
         cat: 'General Vendor',
         status: c.status === 'active' ? 'Active' : 'Inactive',
-        spend: '—',
-        terms: c.payment_terms_label || 'Net 30 Days'
+        spend: c.outstanding_payable_amount ? `₹${Number(c.outstanding_payable_amount).toLocaleString('en-IN')}` : '—',
+        payable: c.outstanding_payable_amount ? `₹${Number(c.outstanding_payable_amount).toLocaleString('en-IN')}` : '₹0.00',
+        terms: c.payment_terms_label || (c.payment_terms ? `Net ${c.payment_terms} Days` : 'Net 30 Days'),
+        gstin: c.gst_no || c.gstin || '—',
+        gstTreatment: c.gst_treatment_formatted || c.gst_treatment || '—',
+        sourceOfSupply: c.place_of_contact_formatted || c.place_of_contact || c.source_of_supply || '—',
+        pan: c.pan_no || c.pan || '—',
+        currency: c.currency_code || 'INR',
+        website: c.website || '—'
       }));
       res.json(translated);
     } else {
@@ -261,34 +283,162 @@ app.get('/api/zoho/vendors', async (req, res) => {
     res.status(500).json({ error: 'Connection to Zoho Books failed.' });
   }
 });
-const fetchZohoPurchaseOrders = (accessToken) => {
-  return new Promise((resolve, reject) => {
+
+// Single vendor details endpoint from Zoho Books
+app.get('/api/zoho/vendors/:id', async (req, res) => {
+  if (!zohoSession.connected) {
+    return res.status(400).json({ error: 'Zoho session not connected.' });
+  }
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const { id } = req.params;
+    
     const options = {
       hostname: 'www.zohoapis.in',
       port: 443,
-      path: `/books/v3/purchaseorders?organization_id=${zohoSession.orgId}`,
+      path: `/books/v3/contacts/${id}?organization_id=${zohoSession.orgId}`,
       method: 'GET',
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`
       }
     };
 
-    const req = https.request(options, (res) => {
+    const request = https.request(options, (response) => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
+      response.on('data', (chunk) => { data += chunk; });
+      response.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          resolve(parsed);
+          if (parsed.contact) {
+            const c = parsed.contact;
+            let billingObj = c.billing_address || {};
+            let shippingObj = c.shipping_address || {};
+
+            if (Array.isArray(c.addresses)) {
+              const bFound = c.addresses.find(a => a.address_type === 'billing');
+              if (bFound) billingObj = bFound;
+              const sFound = c.addresses.find(a => a.address_type === 'shipping');
+              if (sFound) shippingObj = sFound;
+            }
+
+            const formatAddr = (a) => {
+              if (!a || typeof a !== 'object') return '—';
+              const parts = [
+                a.attention ? `Attn: ${a.attention}` : '',
+                a.address || a.street || a.address_1 || '',
+                a.street2 || a.address_2 || '',
+                a.city || '',
+                a.state || a.province || '',
+                a.zip || a.zipcode || a.postal_code || a.pincode || '',
+                a.country || a.country_name || ''
+              ].filter(p => p && String(p).trim().length > 0);
+              return parts.length > 0 ? parts.join(', ') : '—';
+            };
+
+            const billingAddressStr = formatAddr(billingObj);
+            const shippingAddressStr = formatAddr(shippingObj);
+
+            const detailedVendor = {
+              id: c.contact_id,
+              code: c.contact_id,
+              name: c.contact_name,
+              companyName: c.company_name || c.contact_name,
+              type: c.contact_type === 'customer_vendor' ? 'Manufacturer' : 'Supplier',
+              contact: c.primary_contact_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : '—'),
+              firstName: c.first_name || '—',
+              lastName: c.last_name || '—',
+              email: c.email || '—',
+              phone: c.phone || '—',
+              mobile: c.mobile || '—',
+              cat: 'General Vendor',
+              status: c.status === 'active' ? 'Active' : 'Inactive',
+              spend: c.outstanding_payable_amount ? `₹${Number(c.outstanding_payable_amount).toLocaleString('en-IN')}` : '—',
+              payable: c.outstanding_payable_amount ? `₹${Number(c.outstanding_payable_amount).toLocaleString('en-IN')}` : '₹0.00',
+              unusedCredits: c.unused_credits_receivable_amount ? `₹${Number(c.unused_credits_receivable_amount).toLocaleString('en-IN')}` : '₹0.00',
+              terms: c.payment_terms_label || (c.payment_terms ? `Net ${c.payment_terms} Days` : 'Net 30 Days'),
+              gstin: c.gst_no || c.gstin || '—',
+              gstTreatment: c.gst_treatment_formatted || c.gst_treatment || '—',
+              sourceOfSupply: c.place_of_contact_formatted || c.place_of_contact || c.source_of_supply || (billingObj.state || '—'),
+              pan: c.pan_no || c.pan || '—',
+              currency: c.currency_code || 'INR',
+              website: c.website || '—',
+              billingAddressObj: billingObj,
+              shippingAddressObj: shippingObj,
+              billingAddress: billingAddressStr,
+              shippingAddress: shippingAddressStr,
+              notes: c.notes || '—',
+              contactPersons: Array.isArray(c.contact_persons) ? c.contact_persons.map(cp => ({
+                name: `${cp.first_name || ''} ${cp.last_name || ''}`.trim(),
+                email: cp.email || '—',
+                phone: cp.phone || cp.mobile || '—',
+                designation: cp.designation || '—'
+              })) : [],
+              rawZohoContact: c
+            };
+            res.json(detailedVendor);
+          } else {
+            res.status(500).json({ error: parsed.message || 'Failed to fetch vendor detail from Zoho.' });
+          }
         } catch (e) {
-          reject(e);
+          res.status(500).json({ error: e.message });
         }
       });
     });
 
-    req.on('error', (e) => reject(e));
-    req.end();
-  });
+    request.on('error', (e) => res.status(500).json({ error: e.message }));
+    request.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to connect to Zoho Books API.' });
+  }
+});
+const fetchZohoPurchaseOrders = async (accessToken) => {
+  let allOrders = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageData = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'www.zohoapis.in',
+        port: 443,
+        path: `/books/v3/purchaseorders?organization_id=${zohoSession.orgId}&page=${page}&per_page=200`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+
+      req.on('error', (e) => reject(e));
+      req.end();
+    });
+
+    if (pageData && Array.isArray(pageData.purchaseorders)) {
+      allOrders = allOrders.concat(pageData.purchaseorders);
+      if (pageData.page_context && pageData.page_context.has_more_page) {
+        page++;
+      } else {
+        hasMore = false;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return { purchaseorders: allOrders };
 };
 
 const fetchZohoInvoices = (accessToken) => {
@@ -412,6 +562,7 @@ app.get('/api/zoho/purchaseorders/:id', async (req, res) => {
       const po = data.purchaseorder;
       const items = (po.line_items || []).map(item => ({
         name: item.name,
+        description: item.description || '',
         account: item.account_name || 'Raw Material',
         qty: item.quantity,
         unit: item.unit || 'NOS',

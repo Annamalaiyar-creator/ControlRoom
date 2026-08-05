@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, 
   TrendingUp, Users, CheckCircle, Clock, ShieldAlert, Award, 
-  MapPin, Phone, Mail, FileCheck, CheckSquare, XCircle, ArrowRight,
+  MapPin, Phone, Mail, FileCheck, CheckSquare, XCircle, ArrowRight, ArrowLeft,
   TrendingDown, DollarSign, Calendar, Edit3, SlidersHorizontal, Filter,
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2
@@ -13,12 +13,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showCreateGRN, setShowCreateGRN] = useState(false);
-  const [grnItems, setGrnItems] = useState([
-    { id: 1, name: 'Solar Rail 4.2m', desc: 'Aluminium 6063T6', sku: 'SR-4.2', uom: 'Nos', ordered: 100, prev: 60, now: '', accepted: '', rejected: '', reason: '—', batch: '' },
-    { id: 2, name: 'Mid Clamp', desc: 'Aluminium', sku: 'MC-01', uom: 'Nos', ordered: 500, prev: 300, now: '', accepted: '', rejected: '', reason: '—', batch: '' },
-    { id: 3, name: 'End Clamp', desc: 'Aluminium', sku: 'EC-01', uom: 'Nos', ordered: 300, prev: 150, now: '', accepted: '', rejected: '', reason: '—', batch: '' },
-    { id: 4, name: 'GI Nut Bolt M8 x 25', desc: 'SS 304', sku: 'NB-M8-25', uom: 'Nos', ordered: 1000, prev: 600, now: '', accepted: '', rejected: '', reason: '—', batch: '' }
-  ]);
+  const [grnItems, setGrnItems] = useState([]);
+  const [selectedGRNPo, setSelectedGRNPo] = useState('');
+  const [selectedGRNVendor, setSelectedGRNVendor] = useState('');
+  const [grnChallanNo, setGrnChallanNo] = useState('');
   const [selectedRows, setSelectedRows] = useState([]);
   const [grnDocs, setGrnDocs] = useState([]);
 
@@ -322,17 +320,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [selectedPRs, setSelectedPRs] = useState([]);
 
   // Vendor Data State
-  const [vendorList, setVendorList] = useState([
-    { code: 'VEND-001', name: 'Tata Steel Ltd', type: 'Manufacturer', contact: 'Suresh Raina', phone: '9876543210', cat: 'Raw Material', status: 'Preferred', spend: '₹24,50,000', terms: 'Net 30 Days' },
-    { code: 'VEND-002', name: 'Jindal Steel & Power', type: 'Manufacturer', contact: 'Amit Shah', phone: '9123456789', cat: 'Raw Material', status: 'Active', spend: '₹18,20,000', terms: 'Net 30 Days' },
-    { code: 'VEND-003', name: 'Supreme Industries', type: 'Supplier', contact: 'Ramesh Kumar', phone: '9988776655', cat: 'Consumables', status: 'Active', spend: '₹4,50,000', terms: 'Net 15 Days' },
-    { code: 'VEND-004', name: 'Everest Industries', type: 'Supplier', contact: 'Vijay Mallya', phone: '9000000001', cat: 'Accessories', status: 'Inactive', spend: '₹12,0,000', terms: 'Immediate' },
-    { code: 'VEND-005', name: 'AP Fasteners', type: 'Supplier', contact: 'Karthik Raja', phone: '9444012345', cat: 'Fasteners', status: 'Blacklisted', spend: '₹1,20,000', terms: 'COD' }
-  ]);
+  const [vendorList, setVendorList] = useState([]);
+  const [vendorLoading, setVendorLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'Vendor Management') {
       const fetchZohoVendors = async () => {
+        setVendorLoading(true);
         try {
           const statusRes = await fetch('/api/zoho/status');
           const statusData = await statusRes.json();
@@ -340,15 +334,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             const res = await fetch('/api/zoho/vendors');
             const zohoVendors = await res.json();
             if (Array.isArray(zohoVendors) && zohoVendors.length > 0) {
-              setVendorList(prev => {
-                // Avoid duplicates by filtering out any mock vendors that have the same code or name
-                const filteredPrev = prev.filter(v => !zohoVendors.some(zv => zv.name === v.name || zv.code === v.code));
-                return [...zohoVendors, ...filteredPrev];
-              });
+              setVendorList(zohoVendors);
+            } else {
+              // Zoho connected but returned no vendors - show empty
+              setVendorList([]);
             }
+          } else {
+            // Not connected to Zoho - show empty
+            setVendorList([]);
           }
         } catch (e) {
           console.error("Failed to load Zoho vendors", e);
+          setVendorList([]);
+        } finally {
+          setVendorLoading(false);
         }
       };
 
@@ -380,7 +379,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [activeVendorActionMenu, setActiveVendorActionMenu] = useState(null);
   const [deleteConfirmVendor, setDeleteConfirmVendor] = useState(null);
   const [viewingVendor, setViewingVendor] = useState(null);
+  const [vendorModalLoading, setVendorModalLoading] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+
+  const handleOpenVendorDetails = async (vendor) => {
+    setViewingVendor(vendor);
+    setActiveVendorActionMenu(null);
+    if (vendor.id || vendor.code) {
+      setVendorModalLoading(true);
+      try {
+        const vendorId = vendor.id || vendor.code;
+        const res = await fetch(`/api/zoho/vendors/${vendorId}`);
+        if (res.ok) {
+          const detail = await res.json();
+          setViewingVendor(detail);
+        }
+      } catch (e) {
+        console.error("Failed to load detailed vendor info from Zoho", e);
+      } finally {
+        setVendorModalLoading(false);
+      }
+    }
+  };
 
   // Quotations Action States
   const [activeQuotationActionMenu, setActiveQuotationActionMenu] = useState(null);
@@ -1297,23 +1317,31 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <ChevronLeft style={{ width: '14px', height: '14px' }} />
                         </button>
                         
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            style={{
-                              border: page === currentPage ? 'none' : '1px solid #cbd5e1',
-                              background: page === currentPage ? '#2563eb' : 'white',
-                              color: page === currentPage ? 'white' : '#475569',
-                              cursor: 'pointer',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontWeight: page === currentPage ? 'bold' : 'normal'
-                            }}
-                          >
-                            {page}
-                          </button>
-                        ))}
+                        {(() => {
+                          let start = Math.max(1, currentPage - 1);
+                          let end = start + 3;
+                          if (end > totalPages) {
+                            end = totalPages;
+                            start = Math.max(1, end - 3);
+                          }
+                          return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              style={{
+                                border: page === currentPage ? 'none' : '1px solid #cbd5e1',
+                                background: page === currentPage ? '#2563eb' : 'white',
+                                color: page === currentPage ? 'white' : '#475569',
+                                cursor: 'pointer',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                fontWeight: page === currentPage ? 'bold' : 'normal'
+                              }}
+                            >
+                              {page}
+                            </button>
+                          ));
+                        })()}
 
                         <button 
                           disabled={currentPage === totalPages}
@@ -1566,38 +1594,40 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Vendor Directory</h2>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>Manage procurement suppliers and contact ledgers</span>
-              </div>
-              {showForm ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <button type="button" onClick={handleCreateVendor} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
-                    Save as Draft
-                  </button>
-                  <button type="button" onClick={() => setShowForm(false)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
-                    Cancel
-                  </button>
-                  <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
-                    <button type="button" onClick={handleCreateVendor} style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>
-                      Submit for Review
-                    </button>
-                    <button type="button" style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
-                      ▼
-                    </button>
-                  </div>
+            {!viewingVendor && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Vendor Directory</h2>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Manage procurement suppliers and contact ledgers</span>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => setShowForm(true)} 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: 'bold', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
-                >
-                  <PlusCircle style={{ width: '16px', height: '16px' }} />
-                  Onboard Vendor
-                </button>
-              )}
-            </div>
+                {showForm ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button type="button" onClick={handleCreateVendor} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                      Save as Draft
+                    </button>
+                    <button type="button" onClick={() => setShowForm(false)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                      Cancel
+                    </button>
+                    <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
+                      <button type="button" onClick={handleCreateVendor} style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+                        Submit for Review
+                      </button>
+                      <button type="button" style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowForm(true)} 
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: 'bold', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    <PlusCircle style={{ width: '16px', height: '16px' }} />
+                    Onboard Vendor
+                  </button>
+                )}
+              </div>
+            )}
 
             {showForm ? (
               <form onSubmit={handleCreateVendor} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
@@ -1862,9 +1892,209 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
                 </div>
-
-
               </form>
+            ) : viewingVendor ? (
+              /* Vendor Management View Mode: Full-Page Detail */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                {/* Header Action Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '16px 24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>{viewingVendor.companyName || viewingVendor.name}</h2>
+                        {renderStatusBadge(viewingVendor.status)}
+                      </div>
+                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                        Zoho Contact ID: <strong style={{ color: '#2563EB' }}>{viewingVendor.code || viewingVendor.id}</strong> | Currency: <strong>{viewingVendor.currency || 'INR'}</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      onClick={() => setViewingVendor(null)}
+                      style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', fontWeight: 'bold', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                      Close View
+                    </button>
+                  </div>
+                </div>
+
+                {vendorModalLoading ? (
+                  <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '60px 0', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    <span style={{ fontSize: '14px', color: '#2563EB', fontWeight: '600' }}>Fetching live contact details & addresses from Zoho Books…</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Top Key Metrics Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                      <div className="section-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #DC2626' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Outstanding Payable</span>
+                        <strong style={{ fontSize: '20px', color: '#DC2626', fontWeight: '800' }}>{viewingVendor.payable || viewingVendor.spend || '₹0.00'}</strong>
+                      </div>
+                      <div className="section-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #16A34A' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Unused Credits</span>
+                        <strong style={{ fontSize: '20px', color: '#16A34A', fontWeight: '800' }}>{viewingVendor.unusedCredits || '₹0.00'}</strong>
+                      </div>
+                      <div className="section-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #2563EB' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Payment Terms</span>
+                        <strong style={{ fontSize: '18px', color: '#1E293B', fontWeight: '700' }}>{viewingVendor.terms || 'Net 30 Days'}</strong>
+                      </div>
+                      <div className="section-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #9333EA' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>GSTIN / Tax ID</span>
+                        <strong style={{ fontSize: '16px', color: '#1E293B', fontWeight: '700' }}>{viewingVendor.gstin || viewingVendor.gstTreatment || '—'}</strong>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Overview & Primary Contact Info */}
+                    <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>1. General & Contact Profile</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 20px' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Vendor Legal Name</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.companyName || viewingVendor.name}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Primary Contact Person</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.contact || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Vendor Type</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.type || 'Supplier'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Email Address</span>
+                          <strong style={{ fontSize: '14px', color: '#2563EB' }}>{viewingVendor.email || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Phone Number</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.phone || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Mobile Phone</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.mobile || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Website</span>
+                          <strong style={{ fontSize: '14px', color: '#2563EB' }}>{viewingVendor.website || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>PAN Number</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.pan || '—'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Addresses (Billing & Shipping) */}
+                    <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>Address</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <strong style={{ fontSize: '12px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Billing Address</strong>
+                          {(() => {
+                            const b = viewingVendor.billingAddressObj || {};
+                            const street = b.address || b.street || b.address_1;
+                            const street2 = b.street2 || b.address_2;
+                            const cityStatePin = [b.city, b.state || b.province, b.zip || b.zipcode || b.postal_code || b.pincode].filter(Boolean).join(', ');
+                            const hasStructured = street || street2 || cityStatePin || b.country;
+
+                            if (hasStructured) {
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
+                                  {b.attention && <div><strong>Attention:</strong> {b.attention}</div>}
+                                  {street && <div>{street}</div>}
+                                  {street2 && <div>{street2}</div>}
+                                  {cityStatePin && <div>{cityStatePin}</div>}
+                                  {b.country && <div>{b.country || b.country_name}</div>}
+                                  {b.phone && <div style={{ marginTop: '4px', color: '#64748B', fontSize: '12px' }}>Phone: {b.phone}</div>}
+                                </div>
+                              );
+                            }
+                            return <span style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.6' }}>{viewingVendor.billingAddress && viewingVendor.billingAddress !== '—' ? viewingVendor.billingAddress : '—'}</span>;
+                          })()}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <strong style={{ fontSize: '12px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Shipping Address</strong>
+                          {(() => {
+                            const s = viewingVendor.shippingAddressObj || {};
+                            const street = s.address || s.street || s.address_1;
+                            const street2 = s.street2 || s.address_2;
+                            const cityStatePin = [s.city, s.state || s.province, s.zip || s.zipcode || s.postal_code || s.pincode].filter(Boolean).join(', ');
+                            const hasStructured = street || street2 || cityStatePin || s.country;
+
+                            if (hasStructured) {
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
+                                  {s.attention && <div><strong>Attention:</strong> {s.attention}</div>}
+                                  {street && <div>{street}</div>}
+                                  {street2 && <div>{street2}</div>}
+                                  {cityStatePin && <div>{cityStatePin}</div>}
+                                  {s.country && <div>{s.country || s.country_name}</div>}
+                                  {s.phone && <div style={{ marginTop: '4px', color: '#64748B', fontSize: '12px' }}>Phone: {s.phone}</div>}
+                                </div>
+                              );
+                            }
+                            return <span style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.6' }}>{viewingVendor.shippingAddress && viewingVendor.shippingAddress !== '—' ? viewingVendor.shippingAddress : '—'}</span>;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Other Details (Tax & GST Information from Zoho) */}
+                    <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>Other Details</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px 20px' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Default Currency</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.currency || 'INR'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>GST Treatment</span>
+                          <strong style={{ fontSize: '13px', color: '#1E293B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', display: 'inline-block' }}>
+                            {viewingVendor.gstTreatment && viewingVendor.gstTreatment !== '—' ? viewingVendor.gstTreatment : 'Registered Business - Regular'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>GSTIN</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B', letterSpacing: '0.5px' }}>{viewingVendor.gstin || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Source of Supply</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.sourceOfSupply || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>PAN</span>
+                          <strong style={{ fontSize: '14px', color: '#1E293B', letterSpacing: '0.5px' }}>{viewingVendor.pan || '—'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Associated Contact Persons */}
+                    {Array.isArray(viewingVendor.contactPersons) && viewingVendor.contactPersons.length > 0 && (
+                      <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+                          Associated Contact Persons ({viewingVendor.contactPersons.length})
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                          {viewingVendor.contactPersons.map((cp, cIdx) => (
+                            <div key={cIdx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <strong style={{ fontSize: '13px', color: '#0F172A' }}>{cp.name || 'Contact Person'}</strong>
+                              {cp.designation && cp.designation !== '—' && <span style={{ fontSize: '11px', color: '#64748B' }}>{cp.designation}</span>}
+                              <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                <span>📧 {cp.email || '—'}</span>
+                                <span>📞 {cp.phone || '—'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             ) : (
               <>
                 {/* 1. FILTERS & SEARCH ROW CARD */}
@@ -1960,7 +2190,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {currentVendorRows.length > 0 ? (
+                      {vendorLoading ? (
+                        Array.from({ length: 6 }).map((_, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <input type="checkbox" defaultChecked={false} disabled />
+                            </td>
+                            {Array.from({ length: 9 }).map((_, cIdx) => (
+                              <td key={cIdx} style={{ padding: '12px 16px' }}>
+                                <div className="skeleton-shimmer skeleton-text" style={{ width: `${60 + (cIdx * 7) % 30}%`, height: '13px' }} />
+                              </td>
+                            ))}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
+                            </td>
+                          </tr>
+                        ))
+                      ) : currentVendorRows.length > 0 ? (
                         currentVendorRows.map((vendor, idx) => {
                           const isChecked = selectedVendors.includes(vendor.code);
                           let statusBg = '#f1f5f9';
@@ -2010,9 +2256,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     e.stopPropagation();
                                     setActiveVendorActionMenu(activeVendorActionMenu === vendor.code ? null : vendor.code);
                                   }}
-                                  style={{ display: 'inline-flex', padding: '6px', borderRadius: '4px' }}
+                                  style={{ display: 'inline-flex', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
                                 >
-                                  <MoreVertical style={{ width: '16px', height: '16px', margin: '0 auto' }} />
+                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
                                 </div>
                                 {activeVendorActionMenu === vendor.code && (
                                   <>
@@ -2037,7 +2283,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       <button 
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setViewingVendor(vendor);
+                                          handleOpenVendorDetails(vendor);
                                           setActiveVendorActionMenu(null);
                                         }}
                                         style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', textAlign: 'left', fontWeight: '500' }}
@@ -2103,24 +2349,31 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <ChevronLeft style={{ width: '14px', height: '14px' }} />
                         </button>
                         
-                        {Array.from({ length: totalVendorPages }, (_, i) => i + 1).map(page => (
-                          <button
-                            key={page}
-                            onClick={() => setVCurrentPage(page)}
-                            style={{
-                              border: '1px solid #cbd5e1',
-                              background: page === vCurrentPage ? '#2563eb' : 'white',
-                              color: page === vCurrentPage ? 'white' : '#475569',
-                              cursor: 'pointer',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontWeight: page === vCurrentPage ? 'bold' : 'normal'
-                            }}
-                          >
-                            {page}
-                          </button>
-                        ))}
-
+                        {(() => {
+                          let start = Math.max(1, vCurrentPage - 1);
+                          let end = start + 3;
+                          if (end > totalVendorPages) {
+                            end = totalVendorPages;
+                            start = Math.max(1, end - 3);
+                          }
+                          return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => setVCurrentPage(page)}
+                              style={{
+                                border: '1px solid #cbd5e1',
+                                background: page === vCurrentPage ? '#2563eb' : 'white',
+                                color: page === vCurrentPage ? 'white' : '#475569',
+                                cursor: 'pointer',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                fontWeight: page === vCurrentPage ? 'bold' : 'normal'
+                              }}
+                            >
+                              {page}
+                            </button>
+                          ));
+                        })()}
                         <button 
                           disabled={vCurrentPage === totalVendorPages}
                           onClick={() => setVCurrentPage(prev => Math.min(prev + 1, totalVendorPages))}
@@ -2133,60 +2386,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
                 )}
               </>
-            )}
-
-            {/* View Vendor Modal */}
-            {viewingVendor && (
-              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '90%', maxWidth: '500px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Vendor Profile — {viewingVendor.code}</h3>
-                    <button onClick={() => setViewingVendor(null)} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: '24px' }}>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Vendor Name</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.name}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Vendor Type</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.type}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Primary Contact</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.contact}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Phone Number</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.phone}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Category</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.cat}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Payment Terms</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.terms}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Total Spend</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingVendor.spend}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Status</span>
-                      <span style={{ display: 'inline-block', marginTop: '2px' }}>{renderStatusBadge(viewingVendor.status)}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button 
-                      onClick={() => setViewingVendor(null)}
-                      style={{ border: 'none', background: '#2563eb', color: 'white', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
             )}
 
             {/* Edit Vendor Modal */}
@@ -2381,96 +2580,100 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'end', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', visibility: 'hidden' }}>Search</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '320px' }}>
-                  <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
-                  <input
-                    type="text"
-                    placeholder="Search by Quotation No, Customer, Project..."
-                    value={quotationSearchQuery}
-                    onChange={(e) => { setQuotationSearchQuery(e.target.value); setQuotationCurrentPage(1); }}
-                    style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
-                  />
-                </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '380px' }}>
+                <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
+                <input
+                  type="text"
+                  placeholder="Search by Quotation No, Customer, Project..."
+                  value={quotationSearchQuery}
+                  onChange={(e) => { setQuotationSearchQuery(e.target.value); setQuotationCurrentPage(1); }}
+                  style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
+                />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', flexShrink: 0, alignItems: 'end' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Status</label>
-                  {renderSelect(quotationStatusFilter, (e) => { setQuotationStatusFilter(e.target.value); setQuotationActiveTab(e.target.value); setQuotationCurrentPage(1); }, ['All', 'Sent', 'Viewed', 'Accepted', 'Draft', 'Expired', 'Rejected'], { height: '38px', width: '100px' })}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', cursor: 'pointer', backgroundColor: 'white', fontSize: '13px', color: '#475569' }}>
+                  <span>Date Range</span>
+                  <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Date Range</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white', fontSize: '13px', color: '#334155', cursor: 'pointer' }}>
-                    <span style={{ fontWeight: '500' }}>Date Range</span>
-                    <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                  </div>
-                </div>
+                <select value={quotationStatusFilter} onChange={(e) => { setQuotationStatusFilter(e.target.value); setQuotationActiveTab(e.target.value); setQuotationCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 24px 0 10px', fontSize: '13px', backgroundColor: 'white', color: '#334155', minWidth: '130px', outline: 'none' }}>
+                  {['All', 'Draft', 'Sent', 'Viewed', 'Accepted', 'Expired', 'Rejected'].map(s => (
+                    <option key={s} value={s}>
+                      {s === 'All' ? 'Status: All' : s}
+                    </option>
+                  ))}
+                </select>
 
+                {renderSelect(quotationSalesPersonFilter, (e) => { setQuotationSalesPersonFilter(e.target.value); setQuotationCurrentPage(1); }, uniqueSalesPersons, { height: '38px', width: '140px' })}
 
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Sales Person</label>
-                  {renderSelect(quotationSalesPersonFilter, (e) => { setQuotationSalesPersonFilter(e.target.value); setQuotationCurrentPage(1); }, uniqueSalesPersons, { height: '38px', width: '140px' })}
-                </div>
-
-                <button 
-                  onClick={() => {}} 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#334155', fontWeight: 'bold', padding: '0 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', height: '38px', boxSizing: 'border-box' }}
-                >
-                  <Filter style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                  Filters
+                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 16px', height: '38px', cursor: 'pointer', backgroundColor: 'white', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                  <Filter style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+                  <span>Filters</span>
                 </button>
 
                 <button 
                   onClick={clearQuotationFilters} 
-                  style={{ border: 'none', backgroundColor: 'transparent', color: '#2563eb', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', padding: '0 8px', height: '38px' }}
+                  title="Clear Filters"
+                  style={{ 
+                    background: '#f1f5f9', 
+                    border: '1px solid #cbd5e1', 
+                    color: '#475569', 
+                    cursor: 'pointer', 
+                    padding: '0', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    borderRadius: '8px', 
+                    height: '38px',
+                    width: '38px',
+                    transition: 'all 0.15s ease'
+                  }}
                 >
-                  Clear
+                  <RotateCcw style={{ width: '15px', height: '15px' }} />
                 </button>
               </div>
             </div>
 
-            {/* 2. TABS & TABLE CARD */}
+            {/* 2. STATUS TABS ROW (RFP Style) */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {[
+                { label: 'All Quotations', status: 'All', color: '#3b82f6', bg: '#eff6ff' },
+                { label: 'Draft', status: 'Draft', color: '#c2410c', bg: '#fff7ed' },
+                { label: 'Sent', status: 'Sent', color: '#1d4ed8', bg: '#eff6ff' },
+                { label: 'Viewed', status: 'Viewed', color: '#7e22ce', bg: '#faf5ff' },
+                { label: 'Accepted', status: 'Accepted', color: '#15803d', bg: '#f0fdf4' },
+                { label: 'Expired', status: 'Expired', color: '#b91c1c', bg: '#fef2f2' },
+                { label: 'Rejected', status: 'Rejected', color: '#e53e3e', bg: '#fff5f5' }
+              ].map(tab => (
+                <button
+                  key={tab.status}
+                  onClick={() => { setQuotationActiveTab(tab.status); setQuotationStatusFilter(tab.status); setQuotationCurrentPage(1); }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    padding: '10px 4px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    color: quotationActiveTab === tab.status ? '#2563eb' : '#64748b',
+                    borderBottom: quotationActiveTab === tab.status ? '2px solid #2563eb' : '2px solid transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', backgroundColor: tab.bg || '#f1f5f9', color: tab.color || '#475569', padding: '1px 6px', borderRadius: '10px' }}>
+                    {getCount(tab.status)}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* 3. TABLE CARD */}
             <div className="section-card" style={{ padding: 0, overflow: 'hidden' }}>
-              {/* Tab headers */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', backgroundColor: '#fafbfc', padding: '0 16px' }}>
-                {[
-                  { label: 'All Quotations', status: 'All' },
-                  { label: 'Draft', status: 'Draft' },
-                  { label: 'Sent', status: 'Sent' },
-                  { label: 'Viewed', status: 'Viewed' },
-                  { label: 'Accepted', status: 'Accepted' },
-                  { label: 'Expired', status: 'Expired' },
-                  { label: 'Rejected', status: 'Rejected' }
-                ].map(t => {
-                  const isActive = quotationActiveTab === t.status;
-                  return (
-                    <button
-                      key={t.status}
-                      onClick={() => { setQuotationActiveTab(t.status); setQuotationStatusFilter(t.status); setQuotationCurrentPage(1); }}
-                      style={{
-                        padding: '14px 16px',
-                        border: 'none',
-                        background: 'transparent',
-                        fontSize: '13px',
-                        fontWeight: isActive ? 'bold' : '500',
-                        color: isActive ? '#2563eb' : '#64748b',
-                        borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      {t.label} <span style={{ fontSize: '11px', color: isActive ? '#2563eb' : '#94a3b8' }}>({getCount(t.status)})</span>
-                    </button>
-                  );
-                })}
-              </div>
 
               {/* Table */}
               <div style={{ overflowX: 'auto', width: '100%' }}>
@@ -2848,7 +3051,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     Import GRN
                   </button>
                   <button 
-                    onClick={() => setShowCreateGRN(true)}
+                    onClick={() => {
+                      setSelectedGRNPo('');
+                      setSelectedGRNVendor('');
+                      setGrnChallanNo('');
+                      setGrnItems([]);
+                      setShowCreateGRN(true);
+                    }}
                     style={{
                       height: '38px',
                       padding: '0 16px',
@@ -3166,7 +3375,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Vendor *</label>
                         <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
@@ -3175,17 +3384,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Branch *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                          <option value="">Select Branch</option>
-                          <option value="VRM">VRM Head Office</option>
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Warehouse / Location *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                          <option value="">Select Warehouse</option>
-                          <option value="Main">Main Warehouse, Nellore</option>
+                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#1E293B' }}>
+                          <option value="">Select Warehouse / Location</option>
+                          <option value="VRM Structures">VRM Structures</option>
+                          <option value="Stock Area">Stock Area</option>
                         </select>
                       </div>
                     </div>
@@ -3204,10 +3407,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Received By *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                          <option value="">Select Received By</option>
-                          <option value="Ramesh">Ramesh Kumar</option>
-                        </select>
+                        <input type="text" placeholder="Enter receiver name" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }} />
                       </div>
                     </div>
                   </div>
@@ -3216,63 +3416,58 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div className="section-card" style={{ gridColumn: 'span 4', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ fontSize: '14px', color: '#2563EB' }}>2. Purchase Order Summary</strong>
-                      <button style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        color: '#2563EB',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        cursor: 'pointer'
-                      }}>
-                        View PO
-                        <ExternalLink style={{ width: '10px', height: '10px' }} />
-                      </button>
+                      {selectedGRNPo && (
+                        <button style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #E2E8F0',
+                          backgroundColor: '#FFFFFF',
+                          color: '#2563EB',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer'
+                        }}>
+                          View PO
+                          <ExternalLink style={{ width: '10px', height: '10px' }} />
+                        </button>
+                      )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <strong style={{ fontSize: '16px', color: '#0F172A' }}>PO-2026-00142</strong>
-                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>ABC Electricals Pvt Ltd</div>
+                    {!selectedGRNPo ? (
+                      <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                        Select a Purchase Order to load order details and line items.
                       </div>
-                      <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E6F7ED', color: '#137333', fontSize: '11px', fontWeight: 'bold' }}>
-                        Partially Received
-                      </span>
-                    </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <strong style={{ fontSize: '16px', color: '#0F172A' }}>{selectedGRNPo}</strong>
+                            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{selectedGRNVendor || 'Vendor'}</div>
+                          </div>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E6F7ED', color: '#137333', fontSize: '11px', fontWeight: 'bold' }}>
+                            Approved
+                          </span>
+                        </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>PO Date</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>03 Aug 2026</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Expected Delivery</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>05 Aug 2026</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Total PO Value</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>₹ 2,48,500</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '6px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Total Items</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>8</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Previously Received</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>5</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Pending Items</span>
-                        <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>3</span>
-                      </div>
-                    </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>PO Date</span>
+                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>05 Aug 2026</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Expected Delivery</span>
+                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>12 Aug 2026</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Total PO Value</span>
+                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>₹ 1,50,000</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Card 3: 3. Received Items (Span 8) */}
@@ -3301,7 +3496,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {grnItems.map((item, idx) => (
+                          {grnItems.length === 0 ? (
+                            <tr>
+                              <td colSpan="12" style={{ padding: '24px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                                No items loaded. Select a Purchase Order to display its line items for receipt entry.
+                              </td>
+                            </tr>
+                          ) : (
+                            grnItems.map((item, idx) => (
                             <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
                               <td style={{ padding: '8px 2px', color: '#94A3B8' }}>{idx + 1}</td>
                               <td style={{ padding: '8px 4px', fontWeight: '600', color: '#0F172A' }}>
@@ -3378,7 +3580,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 <FileText style={{ width: '12px', height: '12px' }} />
                               </td>
                             </tr>
-                          ))}
+                          )))}
                           
                           {/* Totals Summary Row */}
                           <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
@@ -3531,7 +3733,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                           <span style={{ color: '#64748B' }}>Total Items</span>
-                          <strong style={{ color: '#334155' }}>8</strong>
+                          <strong style={{ color: '#334155' }}>{grnItems.length}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                           <span style={{ color: '#64748B' }}>Total Ordered Qty</span>
@@ -3947,7 +4149,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               <button style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
                                 <ChevronLeft style={{ width: '12px', height: '12px' }} />
                               </button>
-                              {[1, 2, 3, 4, 5, '...', 25].map((page, pIdx) => (
+                              {[1, 2, 3, 4].map((page, pIdx) => (
                                 <button key={pIdx} style={{ 
                                   width: '28px', 
                                   height: '28px', 
@@ -5277,7 +5479,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <button style={{ width: '28px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ChevronLeft style={{ width: '12px', height: '12px' }} />
                           </button>
-                          {[1, 2, 3, 4, 5, 6].map(page => (
+                          {[1, 2, 3, 4].map(page => (
                             <button key={page} style={{
                               width: '28px',
                               height: '28px',
@@ -6211,7 +6413,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
-                  {[1, 2, 3, 4, 5].map((page) => (
+                  {[1, 2, 3, 4].map((page) => (
                     <button key={page} style={{ 
                       width: '32px', 
                       height: '32px', 
@@ -6593,7 +6795,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
-                  {[1, 2, 3, 4, 5].map((page) => (
+                  {[1, 2, 3, 4].map((page) => (
                     <button key={page} style={{ 
                       width: '32px', 
                       height: '32px', 
@@ -6608,20 +6810,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       {page}
                     </button>
                   ))}
-                  <span style={{ fontSize: '12px', color: '#64748B', padding: '0 4px' }}>...</span>
-                  <button style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    border: '1px solid #E2E8F0', 
-                    borderRadius: '6px', 
-                    backgroundColor: '#FFFFFF', 
-                    color: '#475569', 
-                    fontSize: '12px', 
-                    fontWeight: 'bold', 
-                    cursor: 'pointer' 
-                  }}>
-                    161
-                  </button>
                   <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
                     <ChevronRight style={{ width: '14px', height: '14px' }} />
                   </button>
@@ -7467,7 +7655,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
-                  {[1, 2, 3, 4, 5, 6].map((page) => (
+                  {[1, 2, 3, 4].map((page) => (
                     <button key={page} style={{ 
                       width: '32px', 
                       height: '32px', 

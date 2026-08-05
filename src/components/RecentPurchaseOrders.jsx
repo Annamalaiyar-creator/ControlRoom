@@ -1,54 +1,54 @@
 import React, { useState } from 'react';
 import { Check, Hourglass, Loader2 } from 'lucide-react';
 
-export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrders = [] }) {
+export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrders = [], isLoading = false }) {
   const [selectedPOs, setSelectedPOs] = useState([]);
 
   const defaultPurchaseOrders = [
     {
-      poNo: 'PO-250520-086',
-      vendor: 'Tata Steel Ltd.',
-      poDate: '20 May 2025',
-      deliveryDate: '28 May 2025',
-      amount: '₹18,75,000',
-      status: 'In Progress',
-      statusType: 'in-progress'
-    },
-    {
-      poNo: 'PO-250520-085',
-      vendor: 'Jindal Aluminium',
-      poDate: '19 May 2025',
-      deliveryDate: '26 May 2025',
-      amount: '₹12,40,000',
+      poNo: 'VRM/PO/26-07-086',
+      vendor: 'AKEYEM SONS',
+      poDate: '23-Jul-26',
+      deliveryDate: '28-Jul-26',
+      amount: '₹52,48,000',
       status: 'Approved',
       statusType: 'approved'
     },
     {
-      poNo: 'PO-250520-084',
-      vendor: 'Polycab India Ltd.',
-      poDate: '18 May 2025',
-      deliveryDate: '25 May 2025',
-      amount: '₹8,90,000',
-      status: 'In Progress',
-      statusType: 'in-progress'
-    },
-    {
-      poNo: 'PO-250520-083',
-      vendor: 'Havells India Ltd.',
-      poDate: '17 May 2025',
-      deliveryDate: '24 May 2025',
-      amount: '₹6,35,000',
+      poNo: 'VRM/PO/26-07-085',
+      vendor: 'ARUMUGA STEEL',
+      poDate: '22-Jul-26',
+      deliveryDate: '27-Jul-26',
+      amount: '₹28,75,600',
       status: 'Approved',
       statusType: 'approved'
     },
     {
-      poNo: 'PO-250520-082',
-      vendor: 'Ultratech Cement',
-      poDate: '16 May 2025',
-      deliveryDate: '23 May 2025',
-      amount: '₹5,80,000',
-      status: 'In Progress',
+      poNo: 'VRM/PO/26-07-084',
+      vendor: 'VAIBOV POLES',
+      poDate: '21-Jul-26',
+      deliveryDate: '30-Jul-26',
+      amount: '₹21,64,400',
+      status: 'Approved',
+      statusType: 'approved'
+    },
+    {
+      poNo: 'VRM/PO/26-07-083',
+      vendor: 'KPR Mill',
+      poDate: '20-Jul-26',
+      deliveryDate: '26-Jul-26',
+      amount: '₹17,88,000',
+      status: 'Part. Received',
       statusType: 'in-progress'
+    },
+    {
+      poNo: 'VRM/PO/26-07-082',
+      vendor: 'SHREE GANESH TRADERS',
+      poDate: '19-Jul-26',
+      deliveryDate: '25-Jul-26',
+      amount: '₹14,36,000',
+      status: 'Approved',
+      statusType: 'approved'
     }
   ];
 
@@ -161,7 +161,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
                 <input 
                   type="checkbox" 
                   onChange={handleSelectAll}
-                  checked={purchaseOrders.length > 0 && purchaseOrders.every(po => selectedPOs.includes(po.poNo))}
+                  checked={!isLoading && purchaseOrders.length > 0 && purchaseOrders.every(po => selectedPOs.includes(po.poNo))}
+                  disabled={isLoading}
                 />
               </th>
               <th>PO No.</th>
@@ -173,43 +174,72 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
             </tr>
           </thead>
           <tbody>
-            {purchaseOrders.map((po, idx) => {
-              const isChecked = selectedPOs.includes(po.poNo);
-              return (
-                <tr 
-                  key={idx} 
-                  style={{ 
-                    borderBottom: idx === purchaseOrders.length - 1 ? 'none' : '1px solid #f1f5f9',
-                    transition: 'background-color 0.2s',
-                    backgroundColor: isChecked ? '#f8fafc' : 'transparent'
-                  }}
-                  className="table-row-hover"
-                >
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, idx) => (
+                <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #f1f5f9' }}>
                   <td style={{ textAlign: 'center' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isChecked}
-                      onChange={() => handleSelectRow(po.poNo)}
-                    />
+                    <input type="checkbox" defaultChecked={false} disabled />
                   </td>
                   <td>
-                    <a href="#" style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}>
-                      {po.poNo}
-                    </a>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '14px' }} />
                   </td>
-                  <td style={{ fontWeight: '500', color: '#1e293b' }}>{po.vendor}</td>
-                  <td style={{ color: '#64748b' }}>{po.poDate}</td>
-                  <td style={{ color: '#64748b' }}>{po.deliveryDate}</td>
-                  <td style={{ fontWeight: '600', color: '#1e293b' }}>{po.amount}</td>
                   <td>
-                    {renderStatusBadge(po.statusType, po.status)}
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '14px' }} />
+                  </td>
+                  <td>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '14px' }} />
+                  </td>
+                  <td>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '14px' }} />
+                  </td>
+                  <td>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '50%', height: '14px' }} />
+                  </td>
+                  <td>
+                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60px', height: '20px', borderRadius: '12px' }} />
                   </td>
                 </tr>
-              );
-            })}
+              ))
+            ) : (
+              purchaseOrders.map((po, idx) => {
+                const isChecked = selectedPOs.includes(po.poNo);
+                return (
+                  <tr 
+                    key={idx} 
+                    style={{ 
+                      borderBottom: idx === purchaseOrders.length - 1 ? 'none' : '1px solid #f1f5f9',
+                      transition: 'background-color 0.2s',
+                      backgroundColor: isChecked ? '#f8fafc' : 'transparent'
+                    }}
+                    className="table-row-hover"
+                  >
+                    <td style={{ textAlign: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isChecked}
+                        onChange={() => handleSelectRow(po.poNo)}
+                      />
+                    </td>
+                    <td>
+                      <a href="#" style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}>
+                        {po.poNo}
+                      </a>
+                    </td>
+                    <td style={{ fontWeight: '500', color: '#1e293b' }}>{po.vendor}</td>
+                    <td style={{ color: '#64748b' }}>{po.poDate}</td>
+                    <td style={{ color: '#64748b' }}>{po.deliveryDate}</td>
+                    <td style={{ fontWeight: '600', color: '#1e293b' }}>{po.amount}</td>
+                    <td>
+                      {renderStatusBadge(po.statusType, po.status)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+

@@ -15,6 +15,7 @@ const PRESET_MATERIALS = [
 
 export default function PurchaseOrdersView() {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
+  const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Confirmation and edit states
@@ -56,11 +57,13 @@ export default function PurchaseOrdersView() {
   };
 
   const [poList, setPoList] = useState([]);
+  const [tableLoading, setTableLoading] = useState(true);
   const [zohoVendors, setZohoVendors] = useState([]);
   const [zohoItems, setZohoItems] = useState([]);
 
   useEffect(() => {
     const fetchZohoPOs = async () => {
+      setTableLoading(true);
       try {
         const response = await fetch('/api/zoho/purchaseorders');
         if (response.ok) {
@@ -71,6 +74,8 @@ export default function PurchaseOrdersView() {
         }
       } catch (err) {
         console.error("Error fetching Zoho POs:", err);
+      } finally {
+        setTableLoading(false);
       }
     };
     const fetchZohoDropdowns = async () => {
@@ -329,43 +334,43 @@ export default function PurchaseOrdersView() {
 
   const handleStartEdit = async (po, idx) => {
     setEditIdx(idx);
-    if (po.id) {
-      try {
-        const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
-        if (res.ok) {
-          const detail = await res.json();
-          populateFormStates(detail);
-          setViewMode('edit');
-          setActiveDropdownIdx(null);
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to load PO details from Zoho", err);
-      }
-    }
     populateFormStates(po);
     setViewMode('edit');
     setActiveDropdownIdx(null);
-  };
-
-  const handleStartView = async (po) => {
     if (po.id) {
+      setPoDetailLoading(true);
       try {
         const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
         if (res.ok) {
           const detail = await res.json();
           populateFormStates(detail);
-          setViewMode('view');
-          setActiveDropdownIdx(null);
-          return;
         }
       } catch (err) {
         console.error("Failed to load PO details from Zoho", err);
+      } finally {
+        setPoDetailLoading(false);
       }
     }
+  };
+
+  const handleStartView = async (po) => {
     populateFormStates(po);
     setViewMode('view');
     setActiveDropdownIdx(null);
+    if (po.id) {
+      setPoDetailLoading(true);
+      try {
+        const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
+        if (res.ok) {
+          const detail = await res.json();
+          populateFormStates(detail);
+        }
+      } catch (err) {
+        console.error("Failed to load PO details from Zoho", err);
+      } finally {
+        setPoDetailLoading(false);
+      }
+    }
   };
 
   // Triggers fresh form initialization
@@ -641,7 +646,23 @@ export default function PurchaseOrdersView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(() => {
+                  {tableLoading ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" defaultChecked={false} disabled />
+                        </td>
+                        {Array.from({ length: 6 }).map((_, cIdx) => (
+                          <td key={cIdx}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: `${50 + (cIdx * 9) % 40}%`, height: '14px' }} />
+                          </td>
+                        ))}
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
+                        </td>
+                      </tr>
+                    ))
+                  ) : (() => {
                     return currentRows.map((po, idx) => {
                       const isChecked = selectedPOs.includes(po.poNo);
                       return (
@@ -894,7 +915,54 @@ export default function PurchaseOrdersView() {
           </div>
 
           {/* Form Content Cards */}
-          {viewMode === 'view' ? (
+
+          {/* Skeleton loader — shown while Zoho PO detail is fetching */}
+          {poDetailLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="section-card" style={{ padding: '30px', borderRadius: '16px', borderTop: '4px solid #2563EB', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '40%' }}>
+                    <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '90%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '75%' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', width: '30%' }}>
+                    <div className="skeleton-shimmer" style={{ height: '20px', width: '80%', borderRadius: '6px' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '14px', width: '60%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '14px', width: '50%' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div className="skeleton-shimmer skeleton-text" style={{ height: '11px', width: '40%' }} />
+                      <div className="skeleton-shimmer skeleton-text" style={{ height: '14px', width: '70%' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="section-card" style={{ padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="skeleton-shimmer" style={{ height: '18px', width: '180px', borderRadius: '6px' }} />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '80%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '60%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '50%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '60%' }} />
+                    <div className="skeleton-shimmer skeleton-text" style={{ height: '13px', width: '70%' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '10px', border: '1px solid #BFDBFE' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <span style={{ fontSize: '13px', color: '#1D4ED8', fontWeight: '600' }}>Loading PO details from Zoho Books…</span>
+              </div>
+            </div>
+          )}
+
+          {viewMode === 'view' && !poDetailLoading ? (
             /* ==================== PREMIUM READ-ONLY PO DOCUMENT LAYOUT ==================== */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               
@@ -998,7 +1066,14 @@ export default function PurchaseOrdersView() {
                         return (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                             <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{idx + 1}</td>
-                            <td style={{ padding: '10px 8px', fontWeight: '600', color: '#1E293B' }}>{item.name}</td>
+                            <td style={{ padding: '10px 8px', color: '#1E293B' }}>
+                              <div style={{ fontWeight: '600' }}>{item.name}</div>
+                              {item.description && (
+                                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px', fontWeight: '400', lineHeight: '1.3' }}>
+                                  {item.description}
+                                </div>
+                              )}
+                            </td>
                             <td style={{ padding: '10px 8px', color: '#475569' }}>{item.account}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>{item.qty}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{item.unit}</td>

@@ -749,23 +749,31 @@ export default function PerformaInvoiceView() {
                         <ChevronLeft style={{ width: '14px', height: '14px' }} />
                       </button>
                       
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          style={{
-                            border: page === currentPage ? 'none' : '1px solid #cbd5e1',
-                            background: page === currentPage ? '#2563eb' : 'white',
-                            color: page === currentPage ? 'white' : '#475569',
-                            cursor: 'pointer',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            fontWeight: page === currentPage ? 'bold' : 'normal'
-                          }}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      {(() => {
+                        let start = Math.max(1, currentPage - 1);
+                        let end = start + 3;
+                        if (end > totalPages) {
+                          end = totalPages;
+                          start = Math.max(1, end - 3);
+                        }
+                        return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            style={{
+                              border: page === currentPage ? 'none' : '1px solid #cbd5e1',
+                              background: page === currentPage ? '#2563eb' : 'white',
+                              color: page === currentPage ? 'white' : '#475569',
+                              cursor: 'pointer',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontWeight: page === currentPage ? 'bold' : 'normal'
+                            }}
+                          >
+                            {page}
+                          </button>
+                        ));
+                      })()}
 
                       <button 
                         disabled={currentPage === totalPages || totalPages === 0}

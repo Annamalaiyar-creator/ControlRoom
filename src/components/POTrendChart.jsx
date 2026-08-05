@@ -7,14 +7,13 @@ export default function POTrendChart({ sidebarCollapsed }) {
   const [activeIndex, setActiveIndex] = useState(5);
 
   const tooltipData = [
-    { date: 'Jan 15, 2025', val: '₹10,00,000' },
-    { date: 'Feb 15, 2025', val: '₹14,00,000' },
-    { date: 'Mar 15, 2025', val: '₹8,00,000' },
-    { date: 'Apr 15, 2025', val: '₹12,00,000' },
-    { date: 'May 15, 2025', val: '₹15,00,000' },
-    { date: 'Jun 18, 2025', val: '₹19,58,000' },
-    { date: 'Jul 15, 2025', val: '₹15,00,000' },
-    { date: 'Aug 15, 2025', val: '₹8,00,000' }
+    { date: 'Jan 2026', val: '₹2.81 Cr (62 POs)' },
+    { date: 'Feb 2026', val: '₹3.12 Cr (64 POs)' },
+    { date: 'Mar 2026', val: '₹3.45 Cr (68 POs)' },
+    { date: 'Apr 2026', val: '₹4.02 Cr (75 POs)' },
+    { date: 'May 2026', val: '₹3.76 Cr (70 POs)' },
+    { date: 'Jun 2026', val: '₹3.68 Cr (71 POs)' },
+    { date: 'Jul 2026', val: '₹4.28 Cr (86 POs)' }
   ];
 
   const handleMouseMove = (e) => {
@@ -26,7 +25,7 @@ export default function POTrendChart({ sidebarCollapsed }) {
     const paddingLeft = 36;
     const paddingRight = 20;
     const graphWidth = rect.width - paddingLeft - paddingRight;
-    const count = 8;
+    const count = 7;
     
     let idx = Math.round(((x - paddingLeft) / graphWidth) * (count - 1));
     if (idx < 0) idx = 0;
@@ -38,7 +37,7 @@ export default function POTrendChart({ sidebarCollapsed }) {
   };
 
   const handleMouseLeave = () => {
-    setActiveIndex(5);
+    setActiveIndex(6);
   };
 
   const drawChart = () => {
@@ -66,7 +65,7 @@ export default function POTrendChart({ sidebarCollapsed }) {
     const graphWidth = width - paddingLeft - paddingRight;
     const graphHeight = height - paddingTop - paddingBottom;
 
-    const yLabels = ['25K', '20K', '15K', '10K', '5K', '0'];
+    const yLabels = ['5 Cr', '4 Cr', '3 Cr', '2 Cr', '1 Cr', '0'];
     const gridRows = 5;
 
     ctx.strokeStyle = '#f1f5f9';
@@ -88,15 +87,15 @@ export default function POTrendChart({ sidebarCollapsed }) {
     }
     ctx.setLineDash([]);
 
-    const months = ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025', 'Jul 2025', 'Aug 2025'];
+    const months = ['Jan-26', 'Feb-26', 'Mar-26', 'Apr-26', 'May-26', 'Jun-26', 'Jul-26'];
     ctx.textAlign = 'center';
     months.forEach((m, i) => {
       const x = paddingLeft + (graphWidth / (months.length - 1)) * i;
       ctx.fillText(m, x, height - 10);
     });
 
-    const dataValues = [10, 14, 8, 12, 15, 19.5, 15, 8];
-    const maxVal = 25;
+    const dataValues = [2.81, 3.12, 3.45, 4.02, 3.76, 3.68, 4.28];
+    const maxVal = 5;
 
     const points = dataValues.map((val, i) => {
       return {

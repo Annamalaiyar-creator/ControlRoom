@@ -27,18 +27,19 @@ export default function POStatusOverview() {
     const thickness = 16;
     const innerRadius = radius - thickness;
 
-    // Percentages matching the blue monochromatic palette of the reference
+    // Segments matching reference chart values: Draft (4), Approved (24), Partially Received (22), Fully Received (36), Cancelled (0) -> Total 86
     const segments = [
-      { color: '#2563eb', value: 0.395 }, // Completed (Deep Blue)
-      { color: '#3b82f6', value: 0.256 }, // In Progress (Blue)
-      { color: '#60a5fa', value: 0.163 }, // Approved (Light Blue)
-      { color: '#93c5fd', value: 0.116 }, // Pending (Soft Blue)
-      { color: '#dbeafe', value: 0.070 }  // Cancelled (Very Light Blue)
+      { color: '#2563eb', value: 36 / 86 }, // Fully Received (41.9%)
+      { color: '#16a34a', value: 24 / 86 }, // Approved (27.9%)
+      { color: '#ea580c', value: 22 / 86 }, // Partially Received (25.6%)
+      { color: '#0284c7', value: 4 / 86 },  // Draft (4.7%)
+      { color: '#dc2626', value: 0 }        // Cancelled (0.0%)
     ];
 
     let startAngle = -Math.PI / 2;
 
     segments.forEach(seg => {
+      if (seg.value <= 0) return;
       const angle = seg.value * 2 * Math.PI;
       ctx.beginPath();
       ctx.arc(x, y, radius - (thickness / 2), startAngle, startAngle + angle, false);
@@ -55,11 +56,11 @@ export default function POStatusOverview() {
   }, []);
 
   const statusItems = [
-    { name: 'Completed', percentage: '39.5%', count: '34 POs', color: '#2563eb' },
-    { name: 'In Progress', percentage: '25.6%', count: '22 POs', color: '#3b82f6' },
-    { name: 'Approved', percentage: '16.3%', count: '14 POs', color: '#60a5fa' },
-    { name: 'Pending Approval', percentage: '11.6%', count: '10 POs', color: '#93c5fd' },
-    { name: 'Cancelled', percentage: '7.0%', count: '6 POs', color: '#dbeafe' }
+    { name: 'Draft', percentage: '4.7%', count: '4 POs', color: '#0284c7' },
+    { name: 'Approved', percentage: '27.9%', count: '24 POs', color: '#16a34a' },
+    { name: 'Partially Received', percentage: '25.6%', count: '22 POs', color: '#ea580c' },
+    { name: 'Fully Received', percentage: '41.9%', count: '36 POs', color: '#2563eb' },
+    { name: 'Cancelled', percentage: '0.0%', count: '0 POs', color: '#dc2626' }
   ];
 
   return (
@@ -107,11 +108,11 @@ export default function POStatusOverview() {
               pointerEvents: 'none'
             }}
           >
-            <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#1e293b', fontFamily: 'Inter, system-ui' }}>
-              39.5%
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b', fontFamily: 'Inter, system-ui' }}>
+              86
             </span>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', marginTop: '2px' }}>
-              Completed
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>
+              Total POs
             </span>
           </div>
         </div>

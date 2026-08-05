@@ -11,6 +11,7 @@ import PerformaInvoiceView from './components/PerformaInvoiceView';
 import PurchaseOrdersView from './components/PurchaseOrdersView';
 import OtherViews from './components/OtherViews';
 import ZohoIntegrationView from './components/ZohoIntegrationView';
+import DashboardFullReference from './components/DashboardFullReference';
 
 import { useEffect } from 'react';
 
@@ -19,32 +20,35 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [itemsList, setItemsList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
       try {
-        const poRes = await fetch('/api/zoho/purchaseorders');
+        const [poRes, itemsRes] = await Promise.all([
+          fetch('/api/zoho/purchaseorders'),
+          fetch('/api/zoho/items')
+        ]);
+        
         if (poRes.ok) {
           const poData = await poRes.json();
           setPurchaseOrders(poData || []);
         }
-      } catch (err) {
-        console.error("Failed to fetch POs for dashboard:", err);
-      }
-
-      try {
-        const itemsRes = await fetch('/api/zoho/items');
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
           setItemsList(itemsData || []);
         }
       } catch (err) {
-        console.error("Failed to fetch items for dashboard:", err);
+        console.error("Failed to fetch dashboard data:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchDashboardData();
   }, []);
+
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -68,25 +72,7 @@ function App() {
         {/* Scrollable Center Content Pane */}
         <div className="content-pane procurement-layout">
           {activeTab === 'Dashboard' ? (
-            <>
-              {/* Row 1: KPI Cards */}
-              <KPIGrid purchaseOrders={purchaseOrders} items={itemsList} />
-
-              {/* Row 2: Charts and Spend Categories */}
-              <div className="dashboard-grid-3">
-                <POTrendChart sidebarCollapsed={sidebarCollapsed} />
-                <POStatusOverview />
-              </div>
-
-              {/* Row 3: PO Table and Side Stacks */}
-              <div className="dashboard-grid-3">
-                <RecentPurchaseOrders purchaseOrders={purchaseOrders} />
-                <SidebarRightColumn />
-              </div>
-
-              {/* Row 4: Stock Alerts */}
-              <MaterialReorderAlerts items={itemsList} />
-            </>
+            <DashboardFullReference />
           ) : (
             <div style={{ minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
               {(activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (

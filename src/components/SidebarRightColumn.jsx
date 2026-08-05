@@ -6,56 +6,69 @@ export default function SidebarRightColumn() {
 
   const approvals = [
     {
-      vendor: 'Tata Steel Ltd.',
-      initials: 'TS',
-      avatarBg: '#FF4A5A', // red circle
-      poNo: 'PO-250520-087',
-      amount: '₹22,60,000',
-      date: '20 May 25',
-      requestor: 'Karthik R • 1h ago',
+      vendor: 'AKEYEM SONS',
+      initials: 'AS',
+      avatarBg: '#2563EB',
+      poNo: 'PO Value: ₹1.28 Cr (29.9%)',
+      amount: '92.3% On-Time',
+      date: 'Rating: ★★★★★',
+      requestor: 'Top Vendor • 29.9% of Total PO Value',
       tags: [
-        { label: 'Raw Materials', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
-        { label: 'Capital Spend', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-        { label: 'Urgent', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' }
+        { label: 'PO Value: ₹1.28 Cr', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe' },
+        { label: '29.9% Share', color: '#16a34a', bg: '#f0fdf4', border: '#dcfce7' },
+        { label: '92.3% On-Time', color: '#0284c7', bg: '#e0f2fe', border: '#bae6fd' }
       ]
     },
     {
-      vendor: 'Jindal Aluminium',
-      initials: 'JA',
-      avatarBg: '#3B82F6', // blue circle
-      poNo: 'PO-250520-088',
-      amount: '₹15,75,000',
-      date: '19 May 25',
-      requestor: 'Meena S • 3h ago',
+      vendor: 'ARUMUGA STEEL',
+      initials: 'ST',
+      avatarBg: '#DC2626',
+      poNo: 'PO Value: ₹0.86 Cr (20.1%)',
+      amount: '89.6% On-Time',
+      date: 'Rating: ★★★★★',
+      requestor: 'Key Supplier • 20.1% of Total PO Value',
       tags: [
-        { label: 'Aluminium Rails', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe' },
-        { label: 'Inventory Stock', color: '#0891b2', bg: '#ecfeff', border: '#cffafe' }
+        { label: 'PO Value: ₹0.86 Cr', color: '#dc2626', bg: '#fef2f2', border: '#fee2e2' },
+        { label: '20.1% Share', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' }
       ]
     },
     {
-      vendor: 'Sun Source Energy',
-      initials: 'SS',
-      avatarBg: '#10B981', // green circle
-      poNo: 'PO-250520-089',
-      amount: '₹9,40,000',
-      date: '18 May 25',
-      requestor: 'Aravind K • 5h ago',
+      vendor: 'VAIBOV POLES',
+      initials: 'VP',
+      avatarBg: '#16A34A',
+      poNo: 'PO Value: ₹0.64 Cr (15.0%)',
+      amount: '95.4% On-Time',
+      date: 'Rating: ★★★★★',
+      requestor: 'Preferred Vendor • 15.0% of Total PO Value',
       tags: [
-        { label: 'Solar Modules', color: '#16a34a', bg: '#f0fdf4', border: '#dcfce7' },
-        { label: 'Green Energy', color: '#0d9488', bg: '#f0fdfa', border: '#ccfbf1' }
+        { label: 'PO Value: ₹0.64 Cr', color: '#16a34a', bg: '#f0fdf4', border: '#dcfce7' },
+        { label: '95.4% On-Time', color: '#2563eb', bg: '#eff6ff', border: '#dbeafe' }
       ]
     },
     {
-      vendor: 'ABB India Ltd.',
-      initials: 'AB',
-      avatarBg: '#8B5CF6', // purple circle
-      poNo: 'PO-250520-090',
-      amount: '₹8,25,000',
-      date: '17 May 25',
-      requestor: 'Priya M • 1d ago',
+      vendor: 'KPR Mill',
+      initials: 'KM',
+      avatarBg: '#9333EA',
+      poNo: 'PO Value: ₹0.42 Cr (9.8%)',
+      amount: '88.0% On-Time',
+      date: 'Rating: ★★★★☆',
+      requestor: 'Supplier • 9.8% of Total PO Value',
       tags: [
-        { label: 'Electrical items', color: '#ea580c', bg: '#fff7ed', border: '#ffedd5' },
-        { label: 'Machinery', color: '#4f46e5', bg: '#e0e7ff', border: '#c7d2fe' }
+        { label: 'PO Value: ₹0.42 Cr', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+        { label: '88.0% On-Time', color: '#d97706', bg: '#fffbeb', border: '#fef3c7' }
+      ]
+    },
+    {
+      vendor: 'SHREE GANESH TRADERS',
+      initials: 'SG',
+      avatarBg: '#0284C7',
+      poNo: 'PO Value: ₹0.38 Cr (8.9%)',
+      amount: '90.1% On-Time',
+      date: 'Rating: ★★★★★',
+      requestor: 'Supplier • 8.9% of Total PO Value',
+      tags: [
+        { label: 'PO Value: ₹0.38 Cr', color: '#0284c7', bg: '#e0f2fe', border: '#bae6fd' },
+        { label: '90.1% On-Time', color: '#16a34a', bg: '#f0fdf4', border: '#dcfce7' }
       ]
     }
   ];
