@@ -19,6 +19,144 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [grnChallanNo, setGrnChallanNo] = useState('');
   const [selectedRows, setSelectedRows] = useState([]);
   const [grnDocs, setGrnDocs] = useState([]);
+  const [livePOs, setLivePOs] = useState([]);
+  const [poReceivingHistory, setPoReceivingHistory] = useState([]);
+  const [selectedPOForDetail, setSelectedPOForDetail] = useState(null);
+  const [poDetailData, setPoDetailData] = useState(null);
+
+  const [grnToDelete, setGrnToDelete] = useState(null);
+  const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
+  const [editingGrnId, setEditingGrnId] = useState(null);
+
+  // Reset GRN modal state to clean initial state
+  const resetCreateGRNForm = () => {
+    setSelectedGRNPo('');
+    setSelectedGRNVendor('');
+    setGrnChallanNo('');
+    setGrnItems([]);
+    setPoReceivingHistory([]);
+    setIsViewOnlyMode(false);
+    setEditingGrnId(null);
+  };
+
+  // Fetch live Zoho Purchase Orders & stored GRNs for GRN selection and list display
+  useEffect(() => {
+    fetch('/api/zoho/purchaseorders')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setLivePOs(data);
+        }
+      })
+      .catch(err => console.error('Error fetching live POs:', err));
+
+    fetch('/api/grns')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const formattedList = data.map(g => ({
+            id: g.grnNo || g.id,
+            poRef: g.poRef || g.poNo || '—',
+            vendor: g.vendor || '—',
+            date: g.date || '—',
+            received: `${g.receivedQty || 0} Units`,
+            status: g.status || 'Approved',
+            val: `₹ ${(g.receivedQty || 0) * 1250}`
+          }));
+          setGrnList(formattedList);
+        }
+      })
+      .catch(err => console.error('Error fetching stored GRNs:', err));
+  }, []);
+
+  // Function to load PO details and line items when a PO is selected
+  const loadPOItems = (selectedId, currentLivePOs = livePOs) => {
+    if (!selectedId) {
+      setSelectedGRNPo('');
+      setGrnItems([]);
+      setSelectedGRNVendor('');
+      setPoReceivingHistory([]);
+      return;
+    }
+
+    const found = currentLivePOs.find(p => p.poNo === selectedId || p.id === selectedId);
+    const vendorName = found ? found.vendor : 'Vendor';
+    const targetId = found ? (found.id || selectedId) : selectedId;
+    const poRef = found ? (found.poNo || selectedId) : selectedId;
+    
+    setSelectedGRNPo(poRef);
+    setSelectedGRNVendor(vendorName);
+    
+    Promise.all([
+      fetch(`/api/zoho/purchaseorders/${encodeURIComponent(targetId)}`).then(res => res.json()),
+      fetch(`/api/po-receiving-history/${encodeURIComponent(poRef)}`).then(res => res.json())
+    ])
+      .then(([detail, historyData]) => {
+        let rawItems = (detail && Array.isArray(detail.items) && detail.items.length > 0) 
+          ? detail.items 
+          : [
+              { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', qty: 3000, unit: 'NOS' },
+              { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', qty: 1000, unit: 'Set' }
+            ];
+
+        const historyTotals = (historyData && historyData.itemReceivedTotals) ? historyData.itemReceivedTotals : {};
+        const historyList = (historyData && historyData.grnHistory) ? historyData.grnHistory : [];
+
+        const items = rawItems.map((it, idx) => {
+          const itemId = it.id || it.itemId || it.lineItemId || `PO-ITEM-${idx}`;
+          const itemName = (it.name || '').trim().toLowerCase();
+          
+          let prev = 0;
+          if (historyTotals[itemId] !== undefined) {
+            prev = Number(historyTotals[itemId]);
+          } else if (historyTotals[itemName] !== undefined) {
+            prev = Number(historyTotals[itemName]);
+          } else if (historyTotals[idx] !== undefined) {
+            prev = Number(historyTotals[idx]);
+          } else if (it.previouslyReceived !== undefined) {
+            prev = Number(it.previouslyReceived);
+          }
+
+          const ordered = it.qty || 0;
+          const remaining = (it.remainingQty !== undefined) ? Number(it.remainingQty) : Math.max(0, ordered - prev);
+
+          return {
+            id: itemId,
+            name: it.name,
+            sku: it.sku || `SKU-${101 + idx}`,
+            desc: it.description || '',
+            uom: it.unit || 'NOS',
+            ordered: ordered,
+            prev: prev,
+            remaining: remaining,
+            now: '',
+            accepted: '',
+            rejected: 0,
+            reason: '—',
+            batch: `LOT-2026-${idx + 1}`
+          };
+        });
+
+        setGrnItems(items);
+        setPoReceivingHistory(historyList);
+      })
+      .catch(err => console.error('Error fetching PO receiving history:', err));
+  };
+
+  // Fetch detailed PO summary and GRN receiving history when viewing PO detail
+  useEffect(() => {
+    if (selectedPOForDetail) {
+      const found = livePOs.find(p => p.poNo === selectedPOForDetail || p.id === selectedPOForDetail);
+      const targetId = found ? found.id : selectedPOForDetail;
+      
+      fetch(`/api/zoho/purchaseorders/${targetId}`)
+        .then(res => res.json())
+        .then(data => setPoDetailData(data))
+        .catch(err => console.error('Error fetching PO detail:', err));
+    } else {
+      setPoDetailData(null);
+    }
+  }, [selectedPOForDetail, livePOs]);
 
   // Add Stock Form States
   const [showAddStockForm, setShowAddStockForm] = useState(false);
@@ -51,18 +189,105 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   }, [activeTab]);
 
   const handleSaveAndReceive = () => {
+    // Validate if any line item exceeds remaining PO quantity
+    const invalidItem = grnItems.find(it => {
+      const remaining = Math.max(0, (it.ordered || 0) - (it.prev || 0));
+      return (it.now || 0) > remaining;
+    });
+
+    if (invalidItem) {
+      const remaining = Math.max(0, (invalidItem.ordered || 0) - (invalidItem.prev || 0));
+      alert(`Validation Error: Received quantity (${invalidItem.now}) for "${invalidItem.name}" cannot exceed the remaining PO quantity of ${remaining}.`);
+      return;
+    }
+
     const totalNow = grnItems.reduce((acc, it) => acc + Number(it.now || 0), 0);
-    const newGRN = {
-      id: `GRN-2026-${String(grnList.length + 125).padStart(6, '0')}`,
-      poRef: 'PO-2026-00142',
-      vendor: 'ABC Electricals Pvt Ltd',
+    const totalAccepted = grnItems.reduce((acc, it) => acc + Number(it.accepted || 0), 0);
+    const totalRejected = grnItems.reduce((acc, it) => acc + Number(it.rejected || 0), 0);
+
+    const payload = {
+      poRef: selectedGRNPo,
+      poNo: selectedGRNPo,
+      vendor: selectedGRNVendor || 'Vendor',
+      challanNo: grnChallanNo || 'DC-NEW',
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      received: `${totalNow} Units`,
-      status: 'Approved',
-      val: '₹ 2,48,500'
+      receivedQty: totalNow,
+      acceptedQty: totalAccepted,
+      rejectedQty: totalRejected,
+      items: grnItems
     };
-    setGrnList([newGRN, ...grnList]);
-    setShowCreateGRN(false);
+
+    fetch('/api/grns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.grn) {
+          const formattedGRN = {
+            id: data.grn.grnNo,
+            poRef: data.grn.poRef,
+            vendor: data.grn.vendor,
+            date: data.grn.date,
+            received: `${totalNow} Units`,
+            status: data.grn.status,
+            val: `₹ ${totalNow * 1250}`
+          };
+          // Refresh GRN list from server
+          fetch('/api/grns')
+            .then(res => res.json())
+            .then(grns => {
+              if (Array.isArray(grns)) {
+                setGrnList(grns.map(g => ({
+                  id: g.grnNo || g.id,
+                  poRef: g.poRef || g.poNo || '—',
+                  vendor: g.vendor || '—',
+                  date: g.date || '—',
+                  received: `${g.receivedQty || 0} Units`,
+                  status: g.status || 'Approved',
+                  val: `₹ ${(g.receivedQty || 0) * 1250}`
+                })));
+              }
+            });
+
+          // Refresh live POs list to trigger status update across UI
+          fetch('/api/zoho/purchaseorders')
+            .then(res => res.json())
+            .then(d => { if (Array.isArray(d)) setLivePOs(d); });
+        }
+        setShowCreateGRN(false);
+        resetCreateGRNForm();
+      })
+      .catch(err => {
+        console.error('Failed to post GRN:', err);
+        setShowCreateGRN(false);
+        resetCreateGRNForm();
+      });
+  };
+
+  const handleDeleteGRN = (targetId) => {
+    setGrnToDelete(targetId);
+  };
+
+  const confirmDeleteGRN = () => {
+    if (!grnToDelete) return;
+    const targetId = grnToDelete;
+
+    fetch(`/api/grns/${encodeURIComponent(targetId)}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(() => {
+        setGrnList(prev => prev.filter(g => g.id !== targetId && g.grnNo !== targetId));
+        setGrnToDelete(null);
+        // Refresh live POs list
+        fetch('/api/zoho/purchaseorders')
+          .then(res => res.json())
+          .then(d => { if (Array.isArray(d)) setLivePOs(d); });
+      })
+      .catch(err => {
+        console.error('Error deleting GRN:', err);
+        setGrnToDelete(null);
+      });
   };
 
   const handleAddStockSubmit = () => {
@@ -3213,14 +3438,54 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 borderRadius: '4px', 
                                 fontSize: '11px', 
                                 fontWeight: 'bold', 
-                                backgroundColor: row.status === 'Approved' || row.status === 'Fully Accepted' ? '#E6F7ED' : '#FEF3D6', 
-                                color: row.status === 'Approved' || row.status === 'Fully Accepted' ? '#137333' : '#B06000' 
+                                backgroundColor: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#E6F7ED' : '#FEF3D6', 
+                                color: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#137333' : '#B06000' 
                               }}>
                                 {row.status}
                               </span>
                             </td>
-                            <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                              <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
+                            <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  title="View GRN Full Details"
+                                  onClick={() => {
+                                    resetCreateGRNForm();
+                                    loadPOItems(row.poRef);
+                                    if (row.challanNo) setGrnChallanNo(row.challanNo);
+                                    setIsViewOnlyMode(true);
+                                    setShowCreateGRN(true);
+                                  }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#2563EB' }}
+                                >
+                                  <Eye style={{ width: '15px', height: '15px' }} />
+                                </button>
+                                {row.status !== 'CLOSED / FULLY RECEIVED' && row.status !== 'Approved' && row.status !== 'Fully Accepted' && (
+                                  <button
+                                    type="button"
+                                    title="Edit Draft GRN"
+                                    onClick={() => {
+                                      resetCreateGRNForm();
+                                      loadPOItems(row.poRef);
+                                      if (row.challanNo) setGrnChallanNo(row.challanNo);
+                                      setEditingGrnId(row.id);
+                                      setIsViewOnlyMode(false);
+                                      setShowCreateGRN(true);
+                                    }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#D97706' }}
+                                  >
+                                    <Edit3 style={{ width: '15px', height: '15px' }} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  title="Delete GRN"
+                                  onClick={() => handleDeleteGRN(row.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#EF4444' }}
+                                >
+                                  <Trash2 style={{ width: '15px', height: '15px' }} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -3235,12 +3500,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', height: '100%' }}>
                     {[
-                      { label: 'Create New GRN', icon: PlusCircle, action: () => setShowCreateGRN(true) },
-                      { label: 'Import GRN (Excel)', icon: UploadCloud },
-                      { label: 'GRN from PO', icon: Package },
-                      { label: 'Draft GRNs', icon: FileText },
-                      { label: 'Return Note', icon: Truck },
-                      { label: 'GRN Report', icon: FileCheck }
+                      { label: 'Create New GRN', icon: PlusCircle, action: () => { resetCreateGRNForm(); setShowCreateGRN(true); } },
+                      { label: 'Import GRN (Excel)', icon: UploadCloud, action: () => alert('Import GRN Excel: Select a file to upload batch receipt notes.') },
+                      { label: 'GRN from PO', icon: Package, action: () => { resetCreateGRNForm(); setShowCreateGRN(true); } },
+                      { label: 'Draft GRNs', icon: FileText, action: () => setSelectedRows(['GRN-2026-000124']) },
+                      { label: 'Return Note', icon: Truck, action: () => alert('Return Note module: Initiate vendor return for rejected materials.') },
+                      { label: 'GRN Report', icon: FileCheck, action: () => window.print() }
                     ].map((act, idx) => {
                       const ActIcon = act.icon || FileText;
                       return (
@@ -3291,12 +3556,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 {/* Form Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>New Goods Receipt Note (GRN)</h2>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>Record goods received against a Purchase Order</span>
+                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>
+                      {isViewOnlyMode ? 'View Goods Receipt Note (GRN)' : (editingGrnId ? `Edit Draft (${editingGrnId})` : 'New Goods Receipt Note (GRN)')}
+                    </h2>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      {isViewOnlyMode ? 'Viewing recorded goods receipt details (Read Only)' : 'Record goods received against a Purchase Order'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button 
-                      onClick={() => setShowCreateGRN(false)}
+                      onClick={() => {
+                        setShowCreateGRN(false);
+                        resetCreateGRNForm();
+                      }}
                       style={{
                         height: '38px',
                         padding: '0 20px',
@@ -3309,40 +3581,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         cursor: 'pointer'
                       }}
                     >
-                      Cancel
+                      {isViewOnlyMode ? 'Back to List' : 'Cancel'}
                     </button>
-                    <button 
-                      onClick={() => setShowCreateGRN(false)}
-                      style={{
-                        height: '38px',
-                        padding: '0 20px',
-                        borderRadius: '8px',
-                        border: '1px solid #2563EB',
-                        backgroundColor: '#FFFFFF',
-                        color: '#2563EB',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save Draft
-                    </button>
-                    <button 
-                      onClick={handleSaveAndReceive}
-                      style={{
-                        height: '38px',
-                        padding: '0 20px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        backgroundColor: '#2563EB',
-                        color: '#FFFFFF',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save & Receive
-                    </button>
+                    {!isViewOnlyMode && (
+                      <>
+                        <button 
+                          onClick={() => {
+                            setShowCreateGRN(false);
+                            resetCreateGRNForm();
+                          }}
+                          style={{
+                            height: '38px',
+                            padding: '0 20px',
+                            borderRadius: '8px',
+                            border: '1px solid #2563EB',
+                            backgroundColor: '#FFFFFF',
+                            color: '#2563EB',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Save Draft
+                        </button>
+                        <button 
+                          onClick={handleSaveAndReceive}
+                          style={{
+                            height: '38px',
+                            padding: '0 20px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: '#2563EB',
+                            color: '#FFFFFF',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Save & Receive
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -3350,10 +3629,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '20px' }}>
                   
                   {/* Card 1: 1. GRN Information (Span 8) */}
-                  <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <strong style={{ fontSize: '14px', color: '#2563EB' }}>1. GRN Information</strong>
+                  <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong style={{ fontSize: '14px', color: '#2563EB' }}>1. GRN Information</strong>
+                      <HelpCircle style={{ width: '14px', height: '14px', color: '#94A3B8' }} />
+                    </div>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    {/* Row 1: GRN No, Receipt Date, Purchase Order */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>GRN No.</label>
                         <input type="text" value="GRN-2026-000124" disabled style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#64748B' }} />
@@ -3361,31 +3644,45 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Receipt Date *</label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <input type="text" placeholder="Select Date" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 36px 0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} />
-                          <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
-                        </div>
+                        <input type="date" defaultValue={new Date().toISOString().split('T')[0]} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Purchase Order *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                          <option value="">Select PO No.</option>
-                          <option value="PO-2026-00142">PO-2026-00142</option>
+                        <select 
+                          value={selectedGRNPo} 
+                          disabled={isViewOnlyMode}
+                          onChange={(e) => {
+                            const poNo = e.target.value;
+                            loadPOItems(poNo);
+                          }}
+                          style={{ height: '38px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                        >
+                          <option value="">Select PO No. ({livePOs.length} Live POs)</option>
+                          {livePOs.map((po) => (
+                            <option key={po.id || po.poNo} value={po.poNo || po.id}>
+                              {po.poNo} — {po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : po.vendor} ({po.amount})
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    {/* Row 2: Vendor, Warehouse / Location */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Vendor *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                          <option value="">Select Vendor</option>
-                          <option value="ABC">ABC Electricals Pvt Ltd</option>
-                        </select>
+                        <input 
+                          type="text" 
+                          value={selectedGRNVendor || ''} 
+                          disabled={isViewOnlyMode}
+                          placeholder="Select Vendor"
+                          onChange={(e) => setSelectedGRNVendor(e.target.value)}
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                        />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Warehouse / Location *</label>
-                        <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#1E293B' }}>
+                        <select defaultValue="VRM Structures" disabled={isViewOnlyMode} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
                           <option value="">Select Warehouse / Location</option>
                           <option value="VRM Structures">VRM Structures</option>
                           <option value="Stock Area">Stock Area</option>
@@ -3393,43 +3690,52 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    {/* Row 3: Delivery Challan No, Challan Date, Received By */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Delivery Challan No.</label>
-                        <input type="text" placeholder="Enter Challan No." style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px' }} />
+                        <input 
+                          type="text" 
+                          placeholder="Enter Challan No." 
+                          value={grnChallanNo}
+                          disabled={isViewOnlyMode}
+                          onChange={(e) => setGrnChallanNo(e.target.value)}
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                        />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Challan Date</label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <input type="text" placeholder="Select Date" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 36px 0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} />
-                          <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
-                        </div>
+                        <input type="date" disabled={isViewOnlyMode} defaultValue={new Date().toISOString().split('T')[0]} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Received By *</label>
-                        <input type="text" placeholder="Enter receiver name" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }} />
+                        <input type="text" disabled={isViewOnlyMode} placeholder="Enter receiver name" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Card 2: 2. Purchase Order Summary (Span 4) */}
+                  {/* Card 2: 2. Purchase Order Summary & Receiving History (Span 4) */}
                   <div className="section-card" style={{ gridColumn: 'span 4', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ fontSize: '14px', color: '#2563EB' }}>2. Purchase Order Summary</strong>
                       {selectedGRNPo && (
-                        <button style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #E2E8F0',
-                          backgroundColor: '#FFFFFF',
-                          color: '#2563EB',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          cursor: 'pointer'
-                        }}>
+                        <button 
+                          type="button"
+                          onClick={() => setSelectedPOForDetail(selectedGRNPo)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #E2E8F0',
+                            backgroundColor: '#FFFFFF',
+                            color: '#2563EB',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
                           View PO
                           <ExternalLink style={{ width: '10px', height: '10px' }} />
                         </button>
@@ -3442,48 +3748,100 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
                     ) : (
                       <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <strong style={{ fontSize: '16px', color: '#0F172A' }}>{selectedGRNPo}</strong>
-                            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{selectedGRNVendor || 'Vendor'}</div>
-                          </div>
-                          <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E6F7ED', color: '#137333', fontSize: '11px', fontWeight: 'bold' }}>
-                            Approved
-                          </span>
-                        </div>
+                        {(() => {
+                          const totOrd = grnItems.reduce((acc, curr) => acc + (curr.ordered || 0), 0);
+                          const totPrev = grnItems.reduce((acc, curr) => acc + (curr.prev || 0), 0);
+                          const totNow = grnItems.reduce((acc, curr) => acc + (curr.now || 0), 0);
+                          const totRemaining = Math.max(0, totOrd - totPrev - totNow);
+                          const pct = totOrd > 0 ? (((totPrev + totNow) / totOrd) * 100).toFixed(1) : 0;
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>PO Date</span>
-                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>05 Aug 2026</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Expected Delivery</span>
-                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>12 Aug 2026</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>Total PO Value</span>
-                            <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>₹ 1,50,000</span>
-                          </div>
-                        </div>
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>{selectedGRNPo}</strong>
+                                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{selectedGRNVendor || 'Vendor'}</div>
+                                </div>
+                                <span style={{ 
+                                  padding: '4px 10px', 
+                                  borderRadius: '20px', 
+                                  fontSize: '10px', 
+                                  fontWeight: '800',
+                                  backgroundColor: totPrev + totNow >= totOrd && totOrd > 0 ? '#E6F7ED' : '#FEF3C7',
+                                  color: totPrev + totNow >= totOrd && totOrd > 0 ? '#137333' : '#D97706'
+                                }}>
+                                  {totPrev + totNow >= totOrd && totOrd > 0 ? 'CLOSED / FULLY RECEIVED' : (totPrev > 0 ? 'OPEN / PARTIALLY RECEIVED' : 'OPEN')}
+                                </span>
+                              </div>
+
+                              {/* Receiving Progress Bar */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700' }}>
+                                  <span style={{ color: '#475569' }}>Receiving Progress</span>
+                                  <span style={{ color: '#2563EB' }}>{totPrev + totNow} / {totOrd} Received ({pct}%)</span>
+                                </div>
+                                <div style={{ height: '6px', width: '100%', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, backgroundColor: '#2563EB', transition: 'width 0.3s' }}></div>
+                                </div>
+                              </div>
+
+                              {/* Quantitative Summary */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', textAlign: 'center' }}>
+                                <div style={{ backgroundColor: '#F1F5F9', padding: '6px 4px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '9px', color: '#64748B', display: 'block', fontWeight: 'bold' }}>Ordered</span>
+                                  <strong style={{ fontSize: '12px', color: '#0F172A' }}>{totOrd}</strong>
+                                </div>
+                                <div style={{ backgroundColor: '#F1F5F9', padding: '6px 4px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '9px', color: '#64748B', display: 'block', fontWeight: 'bold' }}>Previous</span>
+                                  <strong style={{ fontSize: '12px', color: '#64748B' }}>{totPrev}</strong>
+                                </div>
+                                <div style={{ backgroundColor: '#EFF6FF', padding: '6px 4px', borderRadius: '6px', border: '1px solid #DBEAFE' }}>
+                                  <span style={{ fontSize: '9px', color: '#2563EB', display: 'block', fontWeight: 'bold' }}>This GRN</span>
+                                  <strong style={{ fontSize: '12px', color: '#2563EB' }}>+{totNow}</strong>
+                                </div>
+                                <div style={{ backgroundColor: totRemaining === 0 ? '#E6F7ED' : '#FEF2F2', padding: '6px 4px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '9px', color: totRemaining === 0 ? '#137333' : '#DC2626', display: 'block', fontWeight: 'bold' }}>Remaining</span>
+                                  <strong style={{ fontSize: '12px', color: totRemaining === 0 ? '#137333' : '#DC2626' }}>{totRemaining}</strong>
+                                </div>
+                              </div>
+
+                              {/* Previous GRN History List */}
+                              {poReceivingHistory.length > 0 && (
+                                <div style={{ marginTop: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                    Previous GRN History ({poReceivingHistory.length})
+                                  </span>
+                                  <div style={{ maxHeight: '100px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {poReceivingHistory.map((g, idx) => (
+                                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', padding: '4px 8px', backgroundColor: '#F8FAFC', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
+                                        <span style={{ fontWeight: 'bold', color: '#2563EB' }}>{g.grnNo}</span>
+                                        <span style={{ color: '#64748B' }}>{g.date}</span>
+                                        <span style={{ fontWeight: 'bold', color: '#137333' }}>+{g.receivedQty || 0} Qty</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </>
                     )}
                   </div>
 
                   {/* Card 3: 3. Received Items (Span 8) */}
-                  <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', height: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <strong style={{ fontSize: '14px', color: '#2563EB' }}>3. Received Items</strong>
                       <HelpCircle style={{ width: '14px', height: '14px', color: '#94A3B8' }} />
                     </div>
 
-                    <div style={{ overflowX: 'auto' }}>
+                    <div style={{ overflowX: 'auto', flex: 1 }}>
                       <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                         <thead>
                           <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
                             <th style={{ padding: '8px 2px', color: '#64748B' }}>#</th>
-                            <th style={{ padding: '8px 4px', color: '#64748B' }}>Item / Material</th>
-                            <th style={{ padding: '8px 4px', color: '#64748B' }}>SKU / Code</th>
+                            <th style={{ padding: '8px 4px', color: '#64748B', width: '320px' }}>Item / Material & Description</th>
                             <th style={{ padding: '8px 4px', color: '#64748B', textAlign: 'center' }}>UOM</th>
                             <th style={{ padding: '8px 4px', color: '#64748B', textAlign: 'center' }}>Ordered Qty</th>
                             <th style={{ padding: '8px 4px', color: '#64748B', textAlign: 'center' }}>Previously Received</th>
@@ -3491,73 +3849,170 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <th style={{ padding: '8px 4px', color: '#64748B', textAlign: 'center' }}>Accepted Qty</th>
                             <th style={{ padding: '8px 4px', color: '#64748B', textAlign: 'center' }}>Rejected Qty</th>
                             <th style={{ padding: '8px 4px', color: '#64748B' }}>Reason for Rejection</th>
-                            <th style={{ padding: '8px 4px', color: '#64748B' }}>Batch / Lot No.</th>
                             <th style={{ padding: '8px 2px' }}></th>
                           </tr>
                         </thead>
                         <tbody>
                           {grnItems.length === 0 ? (
                             <tr>
-                              <td colSpan="12" style={{ padding: '24px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                              <td colSpan="11" style={{ padding: '24px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
                                 No items loaded. Select a Purchase Order to display its line items for receipt entry.
                               </td>
                             </tr>
                           ) : (
                             grnItems.map((item, idx) => (
                             <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                              <td style={{ padding: '8px 2px', color: '#94A3B8' }}>{idx + 1}</td>
-                              <td style={{ padding: '8px 4px', fontWeight: '600', color: '#0F172A' }}>
-                                <div>{item.name}</div>
-                                <div style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 'normal' }}>{item.desc}</div>
-                              </td>
-                              <td style={{ padding: '8px 4px', color: '#64748B' }}>{item.sku}</td>
-                              <td style={{ padding: '8px 4px', textAlign: 'center', color: '#64748B' }}>{item.uom}</td>
-                              <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600' }}>{item.ordered}</td>
-                              <td style={{ padding: '8px 4px', textAlign: 'center', color: '#64748B' }}>{item.prev}</td>
-                              <td style={{ padding: '4px', textAlign: 'center' }}>
+                              <td style={{ padding: '10px 4px', color: '#94A3B8', verticalAlign: 'top', paddingTop: '16px' }}>{idx + 1}</td>
+                              <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A', minWidth: '280px', verticalAlign: 'top' }}>
                                 <input 
-                                  type="number" 
-                                  value={item.now} 
+                                  type="text" 
+                                  value={item.name} 
+                                  disabled={isViewOnlyMode}
+                                  placeholder="Enter Material / Item Name..."
                                   onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, now: val, accepted: val - it.rejected } : it);
+                                    const val = e.target.value;
+                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, name: val } : it);
                                     setGrnItems(updated);
                                   }}
-                                  style={{ width: '50px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '4px', textAlign: 'center', fontSize: '11px' }} 
+                                  style={{ width: '100%', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 10px', fontSize: '12px', fontWeight: '700', color: '#0F172A', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
                                 />
+                                <div style={{ marginTop: '6px' }}>
+                                  <textarea 
+                                    value={item.desc || ''} 
+                                    disabled={isViewOnlyMode}
+                                    placeholder="Enter Item / Material Description..."
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, desc: val } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ 
+                                      width: '100%', 
+                                      minHeight: '54px', 
+                                      border: '1px solid #CBD5E1', 
+                                      borderRadius: '6px', 
+                                      padding: '6px 10px', 
+                                      fontSize: '11px', 
+                                      color: '#334155', 
+                                      resize: 'vertical',
+                                      boxSizing: 'border-box',
+                                      backgroundColor: '#F8FAFC',
+                                      lineHeight: '1.4'
+                                    }} 
+                                  />
+                                </div>
                               </td>
-                              <td style={{ padding: '4px', textAlign: 'center' }}>
+                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                 <input 
+                                   type="text" 
+                                   value={item.uom} 
+                                   disabled={isViewOnlyMode}
+                                   onChange={(e) => {
+                                     const val = e.target.value;
+                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, uom: val } : it);
+                                     setGrnItems(updated);
+                                   }}
+                                   style={{ width: '50px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
+                                 />
+                               </td>
+                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                 <input 
+                                   type="number" 
+                                   value={item.ordered} 
+                                   disabled={isViewOnlyMode}
+                                   onChange={(e) => {
+                                     const val = Number(e.target.value);
+                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, ordered: val } : it);
+                                     setGrnItems(updated);
+                                   }}
+                                   style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', fontWeight: '600', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
+                                 />
+                               </td>
+                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                 <input 
+                                   type="number" 
+                                   value={item.prev} 
+                                   disabled={isViewOnlyMode}
+                                   onChange={(e) => {
+                                     const val = Number(e.target.value);
+                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, prev: val } : it);
+                                     setGrnItems(updated);
+                                   }}
+                                   style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
+                                 />
+                               </td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  <input 
+                                    type="number" 
+                                    value={item.now} 
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      const maxAllowed = Math.max(0, item.ordered - item.prev);
+                                      const hasErr = val > maxAllowed;
+                                      const updated = grnItems.map(it => it.id === item.id ? { 
+                                        ...it, 
+                                        now: val, 
+                                        accepted: val - (it.rejected || 0),
+                                        error: hasErr ? `Exceeds remaining PO quantity of ${maxAllowed}` : null
+                                      } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ 
+                                      width: '65px', 
+                                      height: '34px', 
+                                      border: item.error ? '1.5px solid #DC2626' : '1px solid #CBD5E1', 
+                                      borderRadius: '6px', 
+                                      textAlign: 'center', 
+                                      fontSize: '11px',
+                                      fontWeight: 'bold',
+                                      backgroundColor: item.error ? '#FEF2F2' : (isViewOnlyMode ? '#F8FAFC' : '#FFFFFF'),
+                                      color: item.error ? '#DC2626' : '#0F172A'
+                                    }} 
+                                  />
+                                  {item.error && (
+                                    <span style={{ fontSize: '8px', color: '#DC2626', fontWeight: 'bold', marginTop: '2px', lineHeight: '1' }}>
+                                      Max {item.ordered - item.prev}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
                                 <input 
                                   type="number" 
                                   value={item.accepted} 
+                                  disabled={isViewOnlyMode}
                                   onChange={(e) => {
                                     const val = Number(e.target.value);
                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, accepted: val, rejected: it.now - val } : it);
                                     setGrnItems(updated);
                                   }}
-                                  style={{ width: '50px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '4px', textAlign: 'center', fontSize: '11px' }} 
+                                  style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
                                 />
                               </td>
-                              <td style={{ padding: '4px', textAlign: 'center' }}>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
                                 <input 
                                   type="number" 
                                   value={item.rejected} 
+                                  disabled={isViewOnlyMode}
                                   onChange={(e) => {
                                     const val = Number(e.target.value);
                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, rejected: val, accepted: it.now - val } : it);
                                     setGrnItems(updated);
                                   }}
-                                  style={{ width: '50px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '4px', textAlign: 'center', fontSize: '11px', color: item.rejected > 0 ? '#C5221F' : '#334155', fontWeight: item.rejected > 0 ? 'bold' : 'normal' }} 
+                                  style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', color: item.rejected > 0 ? '#C5221F' : '#334155', fontWeight: item.rejected > 0 ? 'bold' : 'normal', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
                                 />
                               </td>
-                              <td style={{ padding: '4px' }}>
+                              <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
                                 <select 
                                   value={item.reason} 
+                                  disabled={isViewOnlyMode}
                                   onChange={(e) => {
                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, reason: e.target.value } : it);
                                     setGrnItems(updated);
                                   }}
-                                  style={{ height: '28px', border: '1px solid #E2E8F0', borderRadius: '4px', fontSize: '11px', backgroundColor: '#FFFFFF' }}
+                                  style={{ height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', padding: '0 6px' }}
                                 >
                                   <option>—</option>
                                   <option>Damaged</option>
@@ -3565,50 +4020,103 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   <option>Wrong Specs</option>
                                 </select>
                               </td>
-                              <td style={{ padding: '4px' }}>
+                              <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
                                 <input 
                                   type="text" 
                                   value={item.batch} 
+                                  disabled={isViewOnlyMode}
                                   onChange={(e) => {
                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, batch: e.target.value } : it);
                                     setGrnItems(updated);
                                   }}
-                                  style={{ width: '80px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '4px', padding: '0 6px', fontSize: '11px' }} 
+                                  style={{ width: '90px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 8px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
                                 />
                               </td>
-                              <td style={{ padding: '8px 2px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                                <FileText style={{ width: '12px', height: '12px' }} />
+                              <td style={{ padding: '10px 2px', textAlign: 'center', verticalAlign: 'top', paddingTop: '14px' }}>
+                                {!isViewOnlyMode && (
+                                  <button
+                                    type="button"
+                                    title="Delete Item"
+                                    onClick={() => {
+                                      setGrnItems(grnItems.filter(it => it.id !== item.id));
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#EF4444',
+                                      cursor: 'pointer',
+                                      padding: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      borderRadius: '4px'
+                                    }}
+                                  >
+                                    <Trash2 style={{ width: '15px', height: '15px' }} />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           )))}
                           
-                          {/* Totals Summary Row */}
-                          <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
-                            <td colSpan="4" style={{ padding: '10px 4px', fontSize: '12px' }}>Total</td>
-                            <td style={{ padding: '10px 4px', textAlign: 'center' }}>{totalOrdered}</td>
-                            <td style={{ padding: '10px 4px', textAlign: 'center', color: '#64748B' }}>{totalPrev}</td>
-                            <td style={{ padding: '10px 4px', textAlign: 'center' }}>{totalNow}</td>
-                            <td style={{ padding: '10px 4px', textAlign: 'center', color: '#137333' }}>{totalAccepted}</td>
-                            <td style={{ padding: '10px 4px', textAlign: 'center', color: '#C5221F' }}>{totalRejected}</td>
-                            <td colSpan="3"></td>
-                          </tr>
                         </tbody>
                       </table>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                      <button style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        color: '#334155',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}>
-                        + Add Additional Item
-                      </button>
+                    {/* Anchored Footer Section with Total Row & Add Button */}
+                    <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <tbody>
+                            <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
+                              <td colSpan="3" style={{ padding: '10px 4px', fontSize: '12px' }}>Total</td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center' }}>{totalOrdered}</td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', color: '#64748B' }}>{totalPrev}</td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center' }}>{totalNow}</td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', color: '#137333' }}>{totalAccepted}</td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center', color: '#C5221F' }}>{totalRejected}</td>
+                              <td colSpan="3"></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {!isViewOnlyMode && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              const newItem = {
+                                id: `NEW-ITEM-${Date.now()}`,
+                                name: 'Additional Material / Item',
+                                desc: 'Custom ad-hoc line item',
+                                sku: 'SKU-NEW',
+                                uom: 'NOS',
+                                ordered: 0,
+                                prev: 0,
+                                now: 1,
+                                accepted: 1,
+                                rejected: 0,
+                                reason: '—',
+                                batch: 'LOT-NEW'
+                              };
+                              setGrnItems([...grnItems, newItem]);
+                            }}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '6px',
+                              border: '1px solid #CBD5E1',
+                              backgroundColor: '#FFFFFF',
+                              color: '#2563EB',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            + Add Additional Item
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3644,10 +4152,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspector Name</label>
-                      <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                        <option value="">Select Inspector</option>
-                        <option value="Prakash">S. Prakash</option>
-                      </select>
+                      <input 
+                        type="text" 
+                        placeholder="Enter Inspector Name..." 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#0F172A', fontWeight: '600' }} 
+                      />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -3685,41 +4194,37 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       ))}
 
                       {/* Upload Box */}
-                      <div 
-                        onClick={() => {
-                          const nextId = grnDocs.length + 1;
-                          const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
-                          const title = names[nextId - 1] || `Attachment ${nextId}`;
-                          setGrnDocs([...grnDocs, { title, filename: `${title.replace(/[^a-zA-Z0-9]/g, '_')}_001.pdf`, size: '1.4 MB' }]);
-                        }}
-                        style={{ border: '2px dashed #E2E8F0', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#F8FAFC', cursor: 'pointer' }}
+                      <label 
+                        style={{ border: '2px dashed #CBD5E1', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#F8FAFC', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2563EB'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
                       >
+                        <input 
+                          type="file" 
+                          multiple 
+                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                          style={{ display: 'none' }} 
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (files.length > 0) {
+                              const newDocs = files.map((file, i) => {
+                                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                                const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
+                                const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
+                                return {
+                                  title,
+                                  filename: file.name,
+                                  size: `${sizeMB} MB`
+                                };
+                              });
+                              setGrnDocs(prev => [...prev, ...newDocs]);
+                            }
+                          }}
+                        />
+                        <UploadCloud style={{ width: '20px', height: '20px', color: '#2563EB' }} />
                         <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold' }}>+ Upload File</span>
                         <span style={{ fontSize: '8px', color: '#94A3B8', textAlign: 'center' }}>PDF, JPG, PNG (Max 10MB)</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                      <button 
-                        onClick={() => {
-                          const nextId = grnDocs.length + 1;
-                          const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
-                          const title = names[nextId - 1] || `Attachment ${nextId}`;
-                          setGrnDocs([...grnDocs, { title, filename: `${title.replace(/[^a-zA-Z0-9]/g, '_')}_001.pdf`, size: '1.4 MB' }]);
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #E2E8F0',
-                          backgroundColor: '#FFFFFF',
-                          color: '#2563EB',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        + Add More Documents
-                      </button>
+                      </label>
                     </div>
                   </div>
 
@@ -3781,65 +4286,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
 
-                </div>
-
-                {/* Footer Info bar & buttons */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: '12px', padding: '14px 20px', border: '1px solid #DBEAFE', marginTop: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#1E40AF', fontWeight: '600' }}>
-                    <Info style={{ width: '16px', height: '16px', color: '#2563EB', flexShrink: 0 }} />
-                    <span>After clicking Save & Receive, the system will: GRN Created → Inventory Updated → PO Updated → Rejected Qty Recorded → Accounts Notified → Vendor History Updated</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                    <button 
-                      onClick={() => setShowCreateGRN(false)}
-                      style={{
-                        height: '38px',
-                        padding: '0 20px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        backgroundColor: '#FFFFFF',
-                        color: '#334155',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={() => setShowCreateGRN(false)}
-                      style={{
-                        height: '38px',
-                        padding: '0 20px',
-                        borderRadius: '8px',
-                        border: '1px solid #2563EB',
-                        backgroundColor: '#FFFFFF',
-                        color: '#2563EB',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save Draft
-                    </button>
-                    <button 
-                      onClick={handleSaveAndReceive}
-                      style={{
-                        height: '38px',
-                        padding: '0 20px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        backgroundColor: '#2563EB',
-                        color: '#FFFFFF',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save & Receive
-                    </button>
-                  </div>
                 </div>
 
               </div>
@@ -6445,13 +6891,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {[
-                { label: 'Create Purchase Request', icon: ShoppingCart },
-                { label: 'Create Indent', icon: FileText },
-                { label: 'Stock Report', icon: TrendingUp }
+                { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
+                { label: 'Create Indent', icon: FileText, action: () => onChangeTab('purchase-orders') },
+                { label: 'Stock Report', icon: TrendingUp, action: () => window.print() }
               ].map((act, idx) => {
                 const ActIcon = act.icon || FileText;
                 return (
-                  <button key={idx} style={{
+                  <button key={idx} 
+                  onClick={act.action || null}
+                  style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -6830,7 +7278,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 { 
                   label: 'Stock Adjustment', 
                   icon: Edit3, 
-                  color: '#8B5CF6' 
+                  color: '#8B5CF6',
+                  action: () => setShowAddStockForm(true)
                 },
                 { 
                   label: 'Stock Transfer', 
@@ -6841,16 +7290,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <polyline points="7 23 3 19 7 15"></polyline>
                       <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                     </svg>
-                  )
+                  ),
+                  action: () => setShowAddStockForm(true)
                 },
-                { label: 'Create Purchase Request', icon: ShoppingCart },
-                { label: 'Reorder Report', icon: FileCheck },
-                { label: 'Stock Movement', icon: TrendingUp },
-                { label: 'Stock Valuation', icon: DollarSign }
+                { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
+                { label: 'Reorder Report', icon: FileCheck, action: () => window.print() },
+                { label: 'Stock Movement', icon: TrendingUp, action: () => alert('Stock Movement Report generated for current warehouse.') },
+                { label: 'Stock Valuation', icon: DollarSign, action: () => alert('Total Stock Valuation: ₹42,85,000 across all warehouses.') }
               ].map((act, idx) => {
                 const ActIcon = act.icon || null;
                 return (
-                  <button key={idx} style={{
+                  <button key={idx} 
+                  onClick={act.action || null}
+                  style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -8430,6 +8882,338 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ==================== PO RECEIVING HISTORY & GRN HISTORY MODAL ==================== */}
+      {selectedPOForDetail && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '850px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                    PO Receiving Details — {selectedPOForDetail}
+                  </h3>
+                  {poDetailData && (
+                    <span style={{ 
+                      padding: '4px 10px', 
+                      borderRadius: '20px', 
+                      fontSize: '11px', 
+                      fontWeight: '800',
+                      backgroundColor: poDetailData.statusType === 'closed' ? '#E6F7ED' : (poDetailData.statusType === 'partially_received' ? '#FEF3C7' : '#EFF6FF'),
+                      color: poDetailData.statusType === 'closed' ? '#137333' : (poDetailData.statusType === 'partially_received' ? '#D97706' : '#2563EB')
+                    }}>
+                      {poDetailData.status}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                  Complete multi-delivery audit ledger and item receiving progress
+                </span>
+              </div>
+              <button 
+                onClick={() => setSelectedPOForDetail(null)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', color: '#64748B', cursor: 'pointer', padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content Body */}
+            {!poDetailData ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+                Loading Purchase Order receiving history...
+              </div>
+            ) : (
+              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* PO Header KPI Bar */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B', display: 'block' }}>VENDOR</span>
+                    <strong style={{ fontSize: '13px', color: '#0F172A' }}>{poDetailData.vendor}</strong>
+                  </div>
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B', display: 'block' }}>TOTAL ORDERED QTY</span>
+                    <strong style={{ fontSize: '15px', color: '#0F172A' }}>{poDetailData.totalOrderedQty}</strong>
+                  </div>
+                  <div style={{ backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '10px', border: '1px solid #DBEAFE' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', display: 'block' }}>TOTAL RECEIVED QTY</span>
+                    <strong style={{ fontSize: '15px', color: '#2563EB' }}>{poDetailData.totalReceivedQty}</strong>
+                  </div>
+                  <div style={{ backgroundColor: poDetailData.totalRemainingQty === 0 ? '#E6F7ED' : '#FEF2F2', padding: '12px', borderRadius: '10px', border: poDetailData.totalRemainingQty === 0 ? '1px solid #A7F3D0' : '1px solid #FECACA' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: poDetailData.totalRemainingQty === 0 ? '#137333' : '#DC2626', display: 'block' }}>REMAINING QTY</span>
+                    <strong style={{ fontSize: '15px', color: poDetailData.totalRemainingQty === 0 ? '#137333' : '#DC2626' }}>{poDetailData.totalRemainingQty}</strong>
+                  </div>
+                </div>
+
+                {/* Overall Receiving Progress Bar */}
+                <div style={{ backgroundColor: '#F1F5F9', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>Receiving Completion Progress</span>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB' }}>
+                      {poDetailData.totalReceivedQty} / {poDetailData.totalOrderedQty} Received — {poDetailData.receivingProgressPct}%
+                    </span>
+                  </div>
+                  <div style={{ height: '10px', width: '100%', backgroundColor: '#CBD5E1', borderRadius: '5px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, poDetailData.receivingProgressPct)}%`, backgroundColor: '#2563EB', transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+
+                {/* Multi-Product Line Items Breakdown */}
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A', marginBottom: '10px' }}>
+                    Line Items Receiving Summary
+                  </h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left' }}>
+                        <th style={{ padding: '10px', color: '#475569' }}>Product / Material</th>
+                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Ordered Qty</th>
+                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Total Received</th>
+                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Remaining Qty</th>
+                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(poDetailData.items || []).map((it, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '10px', fontWeight: 'bold', color: '#0F172A' }}>
+                            {it.name}
+                            <span style={{ display: 'block', fontSize: '10px', color: '#64748B', fontWeight: 'normal' }}>{it.description}</span>
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{it.qty}</td>
+                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#2563EB' }}>{it.previouslyReceived}</td>
+                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: it.remainingQty === 0 ? '#137333' : '#DC2626' }}>{it.remainingQty}</td>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              backgroundColor: it.remainingQty === 0 ? '#E6F7ED' : '#FEF3C7',
+                              color: it.remainingQty === 0 ? '#137333' : '#D97706'
+                            }}>
+                              {it.remainingQty === 0 ? 'COMPLETED' : 'PENDING'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* GRN History Table */}
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A', marginBottom: '10px' }}>
+                    GRN Deliveries Audit History ({poDetailData.grnHistory ? poDetailData.grnHistory.length : 0})
+                  </h4>
+                  {(!poDetailData.grnHistory || poDetailData.grnHistory.length === 0) ? (
+                    <div style={{ padding: '16px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '8px', color: '#94A3B8', fontSize: '12px' }}>
+                      No GRNs recorded for this Purchase Order yet.
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left' }}>
+                          <th style={{ padding: '10px', color: '#475569' }}>GRN Number</th>
+                          <th style={{ padding: '10px', color: '#475569' }}>GRN Date</th>
+                          <th style={{ padding: '10px', color: '#475569' }}>Challan No.</th>
+                          <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Received Qty</th>
+                          <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {poDetailData.grnHistory.map((grn, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '10px', fontWeight: 'bold', color: '#2563EB' }}>{grn.grnNo}</td>
+                            <td style={{ padding: '10px', color: '#475569' }}>{grn.date}</td>
+                            <td style={{ padding: '10px', color: '#475569' }}>{grn.challanNo || '—'}</td>
+                            <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#137333' }}>+{grn.receivedQty || 0}</td>
+                            <td style={{ padding: '10px', textAlign: 'center' }}>
+                              <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#E6F7ED', color: '#137333' }}>
+                                {grn.status || 'Received'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button 
+                onClick={() => {
+                  const poNo = selectedPOForDetail;
+                  setSelectedPOForDetail(null);
+                  setShowCreateGRN(true);
+                  setSelectedGRNPo(poNo);
+                }}
+                style={{
+                  height: '38px',
+                  padding: '0 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #2563EB',
+                  backgroundColor: '#FFFFFF',
+                  color: '#2563EB',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                + Create New GRN for this PO
+              </button>
+
+              <button 
+                onClick={() => setSelectedPOForDetail(null)}
+                style={{
+                  height: '38px',
+                  padding: '0 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete GRN Confirmation Modal Popup */}
+      {grnToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.55)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            width: '90%',
+            maxWidth: '440px',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                backgroundColor: '#FEE2E2',
+                color: '#DC2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <AlertCircle style={{ width: '24px', height: '24px' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Delete Goods Receipt Note</h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                  Are you sure you want to permanently delete <strong style={{ color: '#0F172A' }}>{grnToDelete}</strong>?
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              padding: '12px',
+              borderRadius: '8px',
+              backgroundColor: '#FFFBEB',
+              border: '1px solid #FDE68A',
+              fontSize: '11px',
+              color: '#B45309',
+              lineHeight: '1.4'
+            }}>
+              ⚠️ This action cannot be undone. Cumulative received quantities on the associated Purchase Order will be restored.
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setGrnToDelete(null)}
+                style={{
+                  height: '38px',
+                  padding: '0 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteGRN}
+                style={{
+                  height: '38px',
+                  padding: '0 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(220, 38, 38, 0.2)'
+                }}
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -9,22 +9,26 @@ export default function DashboardFullReference() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthCode);
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
   const [poData, setPoData] = useState([]);
+  const [approvalCounts, setApprovalCounts] = useState({ posPending: 0, grnsPending: 0, invoicesPending: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Fetch live Zoho Purchase Orders
+  // Fetch live Zoho Purchase Orders & Approval Pending Counts
   useEffect(() => {
-    fetch('/api/zoho/purchaseorders')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPoData(data);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Error fetching Zoho POs:', err);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch('/api/zoho/purchaseorders').then((res) => res.json()).catch(() => []),
+      fetch('/api/zoho/approvals-pending').then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 }))
+    ]).then(([poResults, approvals]) => {
+      if (Array.isArray(poResults)) {
+        setPoData(poResults);
+      }
+      if (approvals) {
+        setApprovalCounts(approvals);
+      }
+      setLoading(false);
+    }).catch((err) => {
+      console.error('Error fetching Zoho data:', err);
+      setLoading(false);
+    });
   }, []);
 
   // Filter POs by selected Month and Year
@@ -132,19 +136,19 @@ export default function DashboardFullReference() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
       
       {/* GLOBAL MONTH & YEAR FILTER HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '12px 20px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Calendar style={{ width: '18px', height: '18px', color: '#2563EB' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '12px 20px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <Calendar style={{ width: '18px', height: '18px', color: '#2563EB', flexShrink: 0 }} />
           <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>Procurement Overview Dashboard</span>
           <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
             Live Zoho Books Data ({poData.length} POs Synced)
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#475569', fontWeight: '600' }}>
             <Filter style={{ width: '14px', height: '14px', color: '#64748B' }} />
-            Filter Period:
+            Filter:
           </div>
 
           <select
@@ -171,120 +175,106 @@ export default function DashboardFullReference() {
         </div>
       </div>
 
-      {/* ROW 1: 7 KPI CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', width: '100%' }}>
+      {/* ROW 1: 6 KPI CARDS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
         {/* KPI 1 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              <ShoppingCart style={{ width: '15px', height: '15px' }} />
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+              <ShoppingCart style={{ width: '13px', height: '13px' }} />
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>TOTAL PO VALUE</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>TOTAL PO VALUE</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>₹ {totalValueCr} Cr</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <TrendingUp style={{ width: '12px', height: '12px' }} /> ▲ Live Sync
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>₹ {totalValueCr} Cr</strong>
+          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+            <TrendingUp style={{ width: '11px', height: '11px' }} /> ▲ Live Sync
           </span>
         </div>
 
         {/* KPI 2 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              <Truck style={{ width: '15px', height: '15px' }} />
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+              <Truck style={{ width: '13px', height: '13px' }} />
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>TOTAL PO QTY</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>TOTAL PO QTY</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{posRaisedCount * 18}</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <TrendingUp style={{ width: '12px', height: '12px' }} /> ▲ Live Sync
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>{posRaisedCount * 18}</strong>
+          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+            <TrendingUp style={{ width: '11px', height: '11px' }} /> ▲ Live Sync
           </span>
         </div>
 
         {/* KPI 3 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              <FileText style={{ width: '15px', height: '15px' }} />
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+              <FileText style={{ width: '13px', height: '13px' }} />
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>POs RAISED</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>POs RAISED</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{posRaisedCount}</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <TrendingUp style={{ width: '12px', height: '12px' }} /> ▲ Live Sync
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>{posRaisedCount}</strong>
+          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+            <TrendingUp style={{ width: '11px', height: '11px' }} /> ▲ Live Sync
           </span>
         </div>
 
         {/* KPI 4 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              <Package style={{ width: '15px', height: '15px' }} />
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+              <Package style={{ width: '13px', height: '13px' }} />
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>POs APPROVED</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>POs APPROVED</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{approvedCount}</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <TrendingUp style={{ width: '12px', height: '12px' }} /> ▲ Live Sync
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>{approvedCount}</strong>
+          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+            <TrendingUp style={{ width: '11px', height: '11px' }} /> ▲ Live Sync
           </span>
         </div>
 
         {/* KPI 5 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-              <Clock style={{ width: '15px', height: '15px' }} />
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+              <Clock style={{ width: '13px', height: '13px' }} />
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>DRAFT POs</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>DRAFT POs</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{draftCount}</strong>
-          <span style={{ fontSize: '11px', color: '#DC2626', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>{draftCount}</strong>
+          <span style={{ fontSize: '10px', color: '#DC2626', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
             ▲ Live Sync
           </span>
         </div>
 
         {/* KPI 6 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0, fontWeight: 'bold' }}>
+        <div className="section-card" style={{ padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: '3px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0, fontWeight: 'bold', fontSize: '12px' }}>
               ₹
             </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>AVG LEAD TIME</span>
+            <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>AVG LEAD TIME</span>
           </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>3.2 Days</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            ▼ 0.6 Days vs Prev
-          </span>
-        </div>
-
-        {/* KPI 7 */}
-        <div className="section-card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#BE185D', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0, fontWeight: 'bold' }}>
-              %
-            </div>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>COST SAVINGS</span>
-          </div>
-          <strong style={{ fontSize: '18px', color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>₹ 18.46 L</strong>
-          <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-            ▲ 9.6% vs Prev
+          <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', marginTop: '2px', whiteSpace: 'nowrap' }}>3.2 Days</strong>
+          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+            ▼ 0.6 Days
           </span>
         </div>
       </div>
 
       {/* ROW 2: THREE COLUMNS IN FIRST LINE (PURCHASE STATUS, MATERIAL CATEGORY WISE PURCHASE, APPROVAL PENDING) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 0.8fr', gap: '16px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
         
         {/* CARD 1: PURCHASE STATUS */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>PURCHASE STATUS BREAKDOWN</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>PURCHASE STATUS BREAKDOWN</span>
           </div>
           
           {/* Top: Donut Chart */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4px 0' }}>
-            <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="110" height="110" viewBox="0 0 36 36">
+            <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="100" height="100" viewBox="0 0 36 36">
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" strokeWidth="4.5" />
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 15.9155 15.9155" fill="none" stroke="#2563EB" strokeWidth="4.5" strokeDasharray="41.9, 100" />
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 11.25 4.6" fill="none" stroke="#16A34A" strokeWidth="4.5" strokeDasharray="27.9, 100" strokeDashoffset="-41.9" />
@@ -292,66 +282,66 @@ export default function DashboardFullReference() {
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 3.0 0.4" fill="none" stroke="#0284C7" strokeWidth="4.5" strokeDasharray="4.7, 100" strokeDashoffset="-95.4" />
               </svg>
               <div style={{ position: 'absolute', textAlign: 'center' }}>
-                <strong style={{ fontSize: '16px', color: '#0F172A', display: 'block' }}>{posRaisedCount}</strong>
-                <span style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Total POs</span>
+                <strong style={{ fontSize: '15px', color: '#0F172A', display: 'block' }}>{posRaisedCount}</strong>
+                <span style={{ fontSize: '8.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Total POs</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom: Items strictly 3 per line */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284C7', flexShrink: 0 }}></span>
+          {/* Bottom: Items auto-fitting */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(75px, 1fr))', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#0284C7', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px', fontWeight: '600' }}>Draft</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>{draftCount} POs</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px', fontWeight: '600' }}>Draft</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>{draftCount} POs</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16A34A', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px', fontWeight: '600' }}>Approved</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>{approvedCount} POs</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px', fontWeight: '600' }}>Approved</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>{approvedCount} POs</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EA580C', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px', fontWeight: '600' }}>Part. Rec.</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>0 POs</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px', fontWeight: '600' }}>Part. Rec.</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>0 POs</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563EB', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2563EB', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px', fontWeight: '600' }}>Fully Rec.</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>0 POs</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px', fontWeight: '600' }}>Fully Rec.</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>0 POs</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px', fontWeight: '600' }}>Cancelled</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>0 POs</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px', fontWeight: '600' }}>Cancelled</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>0 POs</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* CARD 2: MATERIAL CATEGORY WISE PURCHASE */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>MATERIAL CATEGORY SPEND</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>MATERIAL CATEGORY SPEND</span>
           </div>
 
           {/* Top: Donut Chart */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4px 0' }}>
-            <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="110" height="110" viewBox="0 0 36 36">
+            <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="100" height="100" viewBox="0 0 36 36">
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" strokeWidth="4.5" />
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 15.9155 15.9155" fill="none" stroke="#2563EB" strokeWidth="4.5" strokeDasharray="43.5, 100" />
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 11.25 4.6" fill="none" stroke="#16A34A" strokeWidth="4.5" strokeDasharray="29.0, 100" strokeDashoffset="-43.5" />
@@ -360,73 +350,74 @@ export default function DashboardFullReference() {
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 1.0 0.2" fill="none" stroke="#DC2626" strokeWidth="4.5" strokeDasharray="5.0, 100" strokeDashoffset="-95.0" />
               </svg>
               <div style={{ position: 'absolute', textAlign: 'center' }}>
-                <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block' }}>₹ {totalValueCr} Cr</strong>
-                <span style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Total Spend</span>
+                <strong style={{ fontSize: '12px', color: '#0F172A', display: 'block' }}>₹ {totalValueCr} Cr</strong>
+                <span style={{ fontSize: '8.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Total Spend</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom: Items strictly 3 per row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563EB', flexShrink: 0 }}></span>
+          {/* Bottom: Items auto-fitting */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2563EB', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px' }}>Alu Profiles</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>₹1.86 Cr (43.5%)</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px' }}>Alu Profiles</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>₹1.86 Cr</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16A34A', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px' }}>HDG Steel</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>₹1.24 Cr (29.0%)</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px' }}>HDG Steel</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>₹1.24 Cr</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#CA8A04', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#CA8A04', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px' }}>Raw Material</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>₹0.64 Cr (15.0%)</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px' }}>Raw Mat.</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>₹0.64 Cr</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9333EA', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#9333EA', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px' }}>Fasteners</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>₹0.32 Cr (7.5%)</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px' }}>Fasteners</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>₹0.32 Cr</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }}></span>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#64748B', fontSize: '9px' }}>Others</span>
-                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '10px' }}>₹0.22 Cr (5.0%)</span>
+                <span style={{ color: '#64748B', fontSize: '8.5px' }}>Others</span>
+                <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>₹0.22 Cr</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* CARD 3: APPROVAL PENDING */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>APPROVAL PENDING</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>APPROVAL PENDING</span>
+            <span style={{ fontSize: '9px', color: '#16A34A', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '1px 6px', borderRadius: '8px' }}>LIVE</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px', color: '#334155' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontWeight: '500' }}>POs Pending for Approval</span>
-              <strong style={{ color: '#2563EB', fontSize: '16px' }}>8</strong>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#334155' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+              <span style={{ fontWeight: '500', fontSize: '10.5px' }}>POs Pending</span>
+              <strong style={{ color: '#2563EB', fontSize: '14px' }}>{approvalCounts.posPending}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontWeight: '500' }}>GRNs Pending for Approval</span>
-              <strong style={{ color: '#2563EB', fontSize: '16px' }}>6</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+              <span style={{ fontWeight: '500', fontSize: '10.5px' }}>GRNs Pending</span>
+              <strong style={{ color: '#2563EB', fontSize: '14px' }}>{approvalCounts.grnsPending}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontWeight: '500' }}>Invoices Pending for Approval</span>
-              <strong style={{ color: '#2563EB', fontSize: '16px' }}>9</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+              <span style={{ fontWeight: '500', fontSize: '10.5px' }}>Invoices Pending</span>
+              <strong style={{ color: '#2563EB', fontSize: '14px' }}>{approvalCounts.invoicesPending}</strong>
             </div>
           </div>
         </div>
@@ -434,10 +425,10 @@ export default function DashboardFullReference() {
       </div>
 
       {/* ROW 3: ELEGANT DUAL-LINE PO VALUE TREND (₹ Cr) & AGEING SUMMARY */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '16px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '12px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
         
         {/* RE-DESIGNED PO VALUE TREND (AREA + ACCENT BARS + METRIC HEADERS) */}
-        <div className="section-card" style={{ padding: '18px 22px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '16px 18px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -515,17 +506,17 @@ export default function DashboardFullReference() {
         </div>
 
         {/* PO AGEING SUMMARY (By Value) */}
-        <div className="section-card" style={{ padding: '18px 22px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>PO AGEING SUMMARY</span>
+        <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>PO AGEING SUMMARY</span>
           </div>
-          <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+          <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'separate', borderSpacing: '0 3px' }}>
             <thead>
               <tr style={{ color: '#475569', textAlign: 'left' }}>
-                <th style={{ padding: '6px 8px 6px 0', borderBottom: '1px solid #E2E8F0' }}>Ageing</th>
-                <th style={{ padding: '6px 8px', borderBottom: '1px solid #E2E8F0' }}>PO Value (₹ Cr)</th>
-                <th style={{ padding: '6px 8px', borderBottom: '1px solid #E2E8F0' }}>% Share</th>
-                <th style={{ padding: '6px 0 6px 8px', borderBottom: '1px solid #E2E8F0' }}>No. of POs</th>
+                <th style={{ padding: '4px 4px 4px 0', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>Ageing</th>
+                <th style={{ padding: '4px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>PO Value</th>
+                <th style={{ padding: '4px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>% Share</th>
+                <th style={{ padding: '4px 0 4px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>POs</th>
               </tr>
             </thead>
             <tbody>
@@ -550,31 +541,31 @@ export default function DashboardFullReference() {
 
                 const totalValSum = totalValueNum || 1;
                 const ageingRows = [
-                  { range: '0 - 7 Days', val: (val0_7 / 10000000).toFixed(2), share: `${((val0_7 / totalValSum) * 100).toFixed(1)}%`, count: d0_7, color: '#16A34A' },
-                  { range: '8 - 15 Days', val: (val8_15 / 10000000).toFixed(2), share: `${((val8_15 / totalValSum) * 100).toFixed(1)}%`, count: d8_15, color: '#65A30D' },
-                  { range: '16 - 30 Days', val: (val16_30 / 10000000).toFixed(2), share: `${((val16_30 / totalValSum) * 100).toFixed(1)}%`, count: d16_30, color: '#CA8A04' },
-                  { range: '31 - 60 Days', val: (val31_60 / 10000000).toFixed(2), share: `${((val31_60 / totalValSum) * 100).toFixed(1)}%`, count: d31_60, color: '#EA580C' },
-                  { range: 'Above 60 Days', val: (valAbove60 / 10000000).toFixed(2), share: `${((valAbove60 / totalValSum) * 100).toFixed(1)}%`, count: dAbove60, color: '#DC2626' }
+                  { range: '0-7 Days', val: (val0_7 / 10000000).toFixed(2), share: `${((val0_7 / totalValSum) * 100).toFixed(1)}%`, count: d0_7, color: '#16A34A' },
+                  { range: '8-15 Days', val: (val8_15 / 10000000).toFixed(2), share: `${((val8_15 / totalValSum) * 100).toFixed(1)}%`, count: d8_15, color: '#65A30D' },
+                  { range: '16-30 Days', val: (val16_30 / 10000000).toFixed(2), share: `${((val16_30 / totalValSum) * 100).toFixed(1)}%`, count: d16_30, color: '#CA8A04' },
+                  { range: '31-60 Days', val: (val31_60 / 10000000).toFixed(2), share: `${((val31_60 / totalValSum) * 100).toFixed(1)}%`, count: d31_60, color: '#EA580C' },
+                  { range: '>60 Days', val: (valAbove60 / 10000000).toFixed(2), share: `${((valAbove60 / totalValSum) * 100).toFixed(1)}%`, count: dAbove60, color: '#DC2626' }
                 ];
 
                 return (
                   <>
                     {ageingRows.map((a, idx) => (
                       <tr key={idx} style={{ color: '#1E293B' }}>
-                        <td style={{ padding: '6px 8px 6px 0', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                          <span style={{ width: '8px', height: '8px', backgroundColor: a.color, borderRadius: '2px', flexShrink: 0 }}></span>
+                        <td style={{ padding: '4px 4px 4px 0', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                          <span style={{ width: '6px', height: '6px', backgroundColor: a.color, borderRadius: '2px', flexShrink: 0 }}></span>
                           {a.range}
                         </td>
-                        <td style={{ padding: '6px 8px' }}>{a.val}</td>
-                        <td style={{ padding: '6px 8px' }}>{a.share}</td>
-                        <td style={{ padding: '6px 0 6px 8px' }}>{a.count}</td>
+                        <td style={{ padding: '4px 4px' }}>₹{a.val}Cr</td>
+                        <td style={{ padding: '4px 4px' }}>{a.share}</td>
+                        <td style={{ padding: '4px 0 4px 4px' }}>{a.count}</td>
                       </tr>
                     ))}
                     <tr style={{ fontWeight: 'bold', color: '#1E3A8A' }}>
-                      <td style={{ padding: '8px 8px 4px 0', borderTop: '2px solid #E2E8F0' }}>Total</td>
-                      <td style={{ padding: '8px 8px 4px 8px', borderTop: '2px solid #E2E8F0' }}>{totalValueCr}</td>
-                      <td style={{ padding: '8px 8px 4px 8px', borderTop: '2px solid #E2E8F0' }}>100%</td>
-                      <td style={{ padding: '8px 0 4px 8px', borderTop: '2px solid #E2E8F0' }}>{posRaisedCount}</td>
+                      <td style={{ padding: '6px 4px 2px 0', borderTop: '2px solid #E2E8F0' }}>Total</td>
+                      <td style={{ padding: '6px 4px 2px 4px', borderTop: '2px solid #E2E8F0' }}>₹{totalValueCr}Cr</td>
+                      <td style={{ padding: '6px 4px 2px 4px', borderTop: '2px solid #E2E8F0' }}>100%</td>
+                      <td style={{ padding: '6px 0 2px 4px', borderTop: '2px solid #E2E8F0' }}>{posRaisedCount}</td>
                     </tr>
                   </>
                 );
@@ -674,19 +665,19 @@ export default function DashboardFullReference() {
         </div>
 
         {/* OVERDUE POs */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '16px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
             <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>OVERDUE POs</span>
           </div>
-          <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+          <table style={{ width: '100%', fontSize: '10.5px', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
             <thead>
               <tr style={{ color: '#475569', textAlign: 'left' }}>
-                <th style={{ padding: '6px 12px 6px 0', borderBottom: '1px solid #E2E8F0' }}>PO No.</th>
-                <th style={{ padding: '6px 12px', borderBottom: '1px solid #E2E8F0' }}>Vendor Name</th>
-                <th style={{ padding: '6px 12px', borderBottom: '1px solid #E2E8F0' }}>PO Date</th>
-                <th style={{ padding: '6px 12px', borderBottom: '1px solid #E2E8F0' }}>Value (₹)</th>
-                <th style={{ padding: '6px 12px', borderBottom: '1px solid #E2E8F0' }}>Delay</th>
-                <th style={{ padding: '6px 0 6px 12px', borderBottom: '1px solid #E2E8F0' }}>Status</th>
+                <th style={{ padding: '4px 6px 4px 0', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>PO No.</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>Vendor Name</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>PO Date</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>Value</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>Delay</th>
+                <th style={{ padding: '4px 0 4px 6px', borderBottom: '1px solid #E2E8F0', fontSize: '9.5px' }}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -709,13 +700,13 @@ export default function DashboardFullReference() {
 
                 return displayOverdue.map((o, idx) => (
                   <tr key={idx} style={{ color: '#1E293B' }}>
-                    <td style={{ padding: '6px 12px 6px 0', fontWeight: 'bold', color: '#2563EB', whiteSpace: 'nowrap' }}>{o.poNo || o.po}</td>
-                    <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>{o.vendor}</td>
-                    <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>{o.poDate || o.date}</td>
-                    <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>{o.amount || `₹${o.val}`}</td>
-                    <td style={{ padding: '6px 12px', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#DC2626' }}>{o.delay || `${(idx + 3)} Days`}</td>
-                    <td style={{ padding: '6px 0 6px 12px', whiteSpace: 'nowrap' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                    <td style={{ padding: '4px 6px 4px 0', fontWeight: 'bold', color: '#2563EB', whiteSpace: 'nowrap' }}>{o.poNo || o.po}</td>
+                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>{o.vendor}</td>
+                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>{o.poDate || o.date}</td>
+                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>{o.amount || `₹${o.val}`}</td>
+                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap', fontWeight: 'bold', color: '#DC2626' }}>{o.delay || `${(idx + 3)} Days`}</td>
+                    <td style={{ padding: '4px 0 4px 6px', whiteSpace: 'nowrap' }}>
+                      <span style={{ padding: '2px 6px', borderRadius: '12px', fontSize: '9.5px', fontWeight: 'bold', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
                         Overdue
                       </span>
                     </td>
@@ -736,30 +727,30 @@ export default function DashboardFullReference() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
             <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase' }}>TODAY'S SNAPSHOT</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', textAlign: 'center' }}>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>POs Raised Today</span>
-              <strong style={{ fontSize: '18px', color: '#2563EB', marginTop: '4px', display: 'block' }}>6</strong>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Raised Today</span>
+              <strong style={{ fontSize: '16px', color: '#2563EB', fontWeight: '800', lineHeight: '1' }}>6</strong>
             </div>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>PO Value Today</span>
-              <strong style={{ fontSize: '15px', color: '#0F172A', marginTop: '4px', display: 'block' }}>₹ 32.48 L</strong>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>PO Value Today</span>
+              <strong style={{ fontSize: '14px', color: '#0F172A', fontWeight: '800', lineHeight: '1', whiteSpace: 'nowrap' }}>₹ 32.48 L</strong>
             </div>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>POs Approved Today</span>
-              <strong style={{ fontSize: '18px', color: '#16A34A', marginTop: '4px', display: 'block' }}>5</strong>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Approved Today</span>
+              <strong style={{ fontSize: '16px', color: '#16A34A', fontWeight: '800', lineHeight: '1' }}>5</strong>
             </div>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>POs Received Today</span>
-              <strong style={{ fontSize: '18px', color: '#EA580C', marginTop: '4px', display: 'block' }}>3</strong>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Received Today</span>
+              <strong style={{ fontSize: '16px', color: '#EA580C', fontWeight: '800', lineHeight: '1' }}>3</strong>
             </div>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>GRNs Posted Today</span>
-              <strong style={{ fontSize: '18px', color: '#9333EA', marginTop: '4px', display: 'block' }}>5</strong>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>GRNs Posted Today</span>
+              <strong style={{ fontSize: '16px', color: '#9333EA', fontWeight: '800', lineHeight: '1' }}>5</strong>
             </div>
-            <div style={{ padding: '10px 4px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Pending GRNs</span>
-              <strong style={{ fontSize: '18px', color: '#DC2626', marginTop: '4px', display: 'block' }}>7</strong>
+            <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>Pending GRNs</span>
+              <strong style={{ fontSize: '16px', color: '#DC2626', fontWeight: '800', lineHeight: '1' }}>7</strong>
             </div>
           </div>
         </div>
