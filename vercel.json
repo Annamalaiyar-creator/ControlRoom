@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index.js"
+      "destination": "https://controlroom-8lsp.onrender.com/api/:path*"
     }
   ]
 }
