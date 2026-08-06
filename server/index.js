@@ -17,37 +17,38 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Parse credentials directly from the .env file to bypass environment caching
 const loadCredentialsFromEnv = () => {
   const credentials = { orgId: '', apiToken: '', connected: false };
-  try {
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8');
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const parts = line.split('=');
-        if (parts.length >= 2) {
-          const key = parts[0].trim();
-          const value = parts.slice(1).join('=').trim();
-          if (key === 'ZOHO_ORG_ID') {
-            credentials.orgId = value;
-          } else if (key === 'ZOHO_REFRESH_TOKEN') {
-            credentials.apiToken = value;
+  
+  // First check system process.env (essential for Render / Cloud deployments)
+  credentials.orgId = process.env.ZOHO_ORG_ID || '';
+  credentials.apiToken = process.env.ZOHO_REFRESH_TOKEN || '';
+  credentials.connected = !!(credentials.orgId && credentials.apiToken);
+
+  // Fallback to local .env file if process.env is empty
+  if (!credentials.connected) {
+    try {
+      const envPath = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8');
+        const lines = content.split('\n');
+        for (const line of lines) {
+          const parts = line.split('=');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join('=').trim();
+            if (key === 'ZOHO_ORG_ID') {
+              credentials.orgId = value;
+            } else if (key === 'ZOHO_REFRESH_TOKEN') {
+              credentials.apiToken = value;
+            }
           }
         }
       }
-    }
-    credentials.connected = !!(credentials.orgId && credentials.apiToken);
-    
-    // Fallback to process.env if the file is missing or empty (essential for Vercel environment variables)
-    if (!credentials.connected) {
-      credentials.orgId = process.env.ZOHO_ORG_ID || '';
-      credentials.apiToken = process.env.ZOHO_REFRESH_TOKEN || '';
       credentials.connected = !!(credentials.orgId && credentials.apiToken);
+    } catch (err) {
+      console.error("Failed to load credentials from .env file:", err);
     }
-  } catch (err) {
-    console.error("Failed to load credentials from .env:", err);
   }
   return credentials;
 };
