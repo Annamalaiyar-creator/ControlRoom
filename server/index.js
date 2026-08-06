@@ -896,13 +896,20 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
   }
 });
 
-// Local GRN Store file path
-const GRN_STORE_PATH = path.resolve(process.cwd(), 'server', 'grn_store.json');
+// Local GRN Store file path with fallback for cloud read-only environments
+const getGRNStorePath = () => {
+  const localPath = path.resolve(process.cwd(), 'server', 'grn_store.json');
+  try {
+    if (fs.existsSync(localPath)) return localPath;
+  } catch (e) {}
+  return '/tmp/grn_store.json';
+};
 
 const loadLocalGRNs = () => {
   try {
-    if (fs.existsSync(GRN_STORE_PATH)) {
-      return JSON.parse(fs.readFileSync(GRN_STORE_PATH, 'utf8'));
+    const storePath = getGRNStorePath();
+    if (fs.existsSync(storePath)) {
+      return JSON.parse(fs.readFileSync(storePath, 'utf8'));
     }
   } catch (err) {
     console.error('Error loading local GRNs:', err);
@@ -912,7 +919,13 @@ const loadLocalGRNs = () => {
 
 const saveLocalGRNs = (grns) => {
   try {
-    fs.writeFileSync(GRN_STORE_PATH, JSON.stringify(grns, null, 2), 'utf8');
+    let storePath = path.resolve(process.cwd(), 'server', 'grn_store.json');
+    try {
+      fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
+    } catch (e) {
+      storePath = '/tmp/grn_store.json';
+      fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
+    }
   } catch (err) {
     console.error('Error saving local GRNs:', err);
   }
