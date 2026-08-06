@@ -10,7 +10,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Parse credentials directly from the .env file to bypass environment caching
@@ -1285,7 +1289,7 @@ app.get('/api/zoho/items/:id', async (req, res) => {
   }
 });
 
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {
     console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
   });
