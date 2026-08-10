@@ -1,0 +1,29 @@
+[
+  {
+    "itemId": "4080449000000033187",
+    "name": "Mini Rail",
+    "rate": 1000,
+    "sku": "MR-001",
+    "status": "Active",
+    "description": "Aluminum Mini Rail for Solar Mount",
+    "unit": "NOS"
+  },
+  {
+    "itemId": "4080449000000033188",
+    "name": "Raw Steel",
+    "rate": 45000,
+    "sku": "RS-100",
+    "status": "Active",
+    "description": "Structural Raw Steel Sections",
+    "unit": "MT"
+  },
+  {
+    "itemId": "4080449000000033189",
+    "name": "HDG Steel Structure",
+    "rate": 65000,
+    "sku": "HDG-200",
+    "status": "Active",
+    "description": "Hot Dip Galvanized Steel Structure",
+    "unit": "MT"
+  }
+]

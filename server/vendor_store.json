@@ -1,0 +1,38 @@
+[
+  {
+    "id": "4080449000000039008",
+    "name": "Annamalaiyar",
+    "contact": "Mr. Karthik",
+    "phone": "9884012345",
+    "email": "karthik@annamalaiyar.com",
+    "city": "Chennai",
+    "status": "Active"
+  },
+  {
+    "id": "4080449000000033001",
+    "name": "RK ENTERPRISES",
+    "contact": "Mr. Rajesh",
+    "phone": "9876543210",
+    "email": "sales@rkenterprises.com",
+    "city": "Chennai",
+    "status": "Active"
+  },
+  {
+    "id": "4080449000000033002",
+    "name": "Misar Trading Co",
+    "contact": "Mr. Ahmed",
+    "phone": "9840011223",
+    "email": "info@misar.com",
+    "city": "Chennai",
+    "status": "Active"
+  },
+  {
+    "id": "4080449000000033003",
+    "name": "Tata Power Solar Systems",
+    "contact": "Ms. Priya",
+    "phone": "9811223344",
+    "email": "contact@tatapowersolar.com",
+    "city": "Mumbai",
+    "status": "Active"
+  }
+]

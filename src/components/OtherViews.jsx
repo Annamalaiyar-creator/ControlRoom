@@ -28,11 +28,18 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
   const [editingGrnId, setEditingGrnId] = useState(null);
 
+  const [grnReceivedBy, setGrnReceivedBy] = useState('');
+  const [grnInspectorName, setGrnInspectorName] = useState('');
+  const [grnInspectionRemarks, setGrnInspectionRemarks] = useState('');
+
   // Reset GRN modal state to clean initial state
   const resetCreateGRNForm = () => {
     setSelectedGRNPo('');
     setSelectedGRNVendor('');
     setGrnChallanNo('');
+    setGrnReceivedBy('');
+    setGrnInspectorName('');
+    setGrnInspectionRemarks('');
     setGrnItems([]);
     setPoReceivingHistory([]);
     setIsViewOnlyMode(false);
@@ -61,7 +68,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             date: g.date || '—',
             received: `${g.receivedQty || 0} Units`,
             status: g.status || 'Approved',
-            val: `₹ ${(g.receivedQty || 0) * 1250}`
+            val: `₹ ${(g.receivedQty || 0) * 1250}`,
+            challanNo: g.challanNo || '',
+            receivedBy: g.receivedBy || '',
+            inspectorName: g.inspectorName || '',
+            inspectionRemarks: g.inspectionRemarks || ''
           }));
           setGrnList(formattedList);
         }
@@ -188,8 +199,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     setShowAddStockForm(false);
   }, [activeTab]);
 
+  const [grnValidationModal, setGrnValidationModal] = useState(null);
+
   const handleSaveAndReceive = () => {
-    // Validate if any line item exceeds remaining PO quantity
+    const missing = [];
+    if (!selectedGRNPo) missing.push('Purchase Order');
+    if (!selectedGRNVendor) missing.push('Vendor');
+    if (!grnChallanNo || String(grnChallanNo).trim() === '') missing.push('DC NO / Invoice No.');
+    if (!grnReceivedBy || String(grnReceivedBy).trim() === '') missing.push('Received By');
+    if (!grnInspectorName || String(grnInspectorName).trim() === '') missing.push('Inspector Name');
+    if (!grnDocs || grnDocs.length === 0) missing.push('Attached Document (DC / Invoice / Delivery Note)');
+
+    if (missing.length > 0) {
+      setGrnValidationModal({ title: 'Mandatory Document & Fields Required', fields: missing, message: 'You must upload/attach at least one document (DC, Invoice, or Delivery Note) and complete all required fields to proceed.' });
+      return;
+    }
+
     const invalidItem = grnItems.find(it => {
       const remaining = Math.max(0, (it.ordered || 0) - (it.prev || 0));
       return (it.now || 0) > remaining;
@@ -197,7 +222,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
     if (invalidItem) {
       const remaining = Math.max(0, (invalidItem.ordered || 0) - (invalidItem.prev || 0));
-      alert(`Validation Error: Received quantity (${invalidItem.now}) for "${invalidItem.name}" cannot exceed the remaining PO quantity of ${remaining}.`);
+      setGrnValidationModal({ 
+        title: 'Validation Error', 
+        message: `Received quantity (${invalidItem.now}) for "${invalidItem.name}" cannot exceed the pending quantity of ${remaining}.` 
+      });
       return;
     }
 
@@ -214,6 +242,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       receivedQty: totalNow,
       acceptedQty: totalAccepted,
       rejectedQty: totalRejected,
+      receivedBy: grnReceivedBy || '',
+      inspectorName: grnInspectorName || '',
+      inspectionRemarks: grnInspectionRemarks || '',
       items: grnItems
     };
 
@@ -266,7 +297,103 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       });
   };
 
+  const handleFullyReceived = () => {
+    if (!selectedGRNPo) {
+      setGrnValidationModal({ title: 'Purchase Order Required', message: 'Please select a Purchase Order to mark as Fully Received.' });
+      return;
+    }
+
+    if (!grnDocs || grnDocs.length === 0) {
+      setGrnValidationModal({ 
+        title: 'Mandatory Document Required', 
+        message: 'You must upload / attach at least one Document (DC, Invoice, or Delivery Note) to proceed with receiving this GRN.' 
+      });
+      return;
+    }
+
+    // Mark items as fully accepted and completed
+    const completedItems = grnItems.map(it => {
+      const ord = it.ordered || (it.prev ? it.prev + (it.now || 1) : (it.now || 1));
+      const nowQty = Math.max(1, (it.now && it.now > 0) ? it.now : (ord - (it.prev || 0)));
+      const acceptedQty = Math.max(1, (it.accepted && it.accepted > 0) ? it.accepted : nowQty);
+      return {
+        ...it,
+        ordered: ord,
+        now: nowQty,
+        accepted: acceptedQty,
+        rejected: 0,
+        reason: '—'
+      };
+    });
+
+    const totalAccepted = completedItems.reduce((acc, it) => acc + Number(it.accepted || 0), 0);
+
+    const payload = {
+      poRef: selectedGRNPo,
+      poNo: selectedGRNPo,
+      vendor: selectedGRNVendor || 'Vendor',
+      challanNo: grnChallanNo || 'DC-FINAL',
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      receivedQty: totalAccepted,
+      acceptedQty: totalAccepted,
+      rejectedQty: 0,
+      receivedBy: grnReceivedBy || 'Store Manager',
+      inspectorName: grnInspectorName || 'Quality Inspector',
+      inspectionRemarks: grnInspectionRemarks || 'PO Marked as Fully Received & Closed',
+      items: completedItems,
+      status: 'CLOSED / FULLY RECEIVED',
+      forceClosePO: true
+    };
+
+    fetch('/api/grns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json())
+      .then(() => {
+        fetch('/api/grns')
+          .then(res => res.json())
+          .then(grns => {
+            if (Array.isArray(grns)) {
+              setGrnList(grns.map(g => ({
+                id: g.grnNo || g.id,
+                poRef: g.poRef || g.poNo || '—',
+                vendor: g.vendor || '—',
+                date: g.date || '—',
+                received: `${g.receivedQty || 0} Units`,
+                status: g.status || 'CLOSED / FULLY RECEIVED',
+                val: `₹ ${(g.receivedQty || 0) * 1250}`
+              })));
+            }
+          });
+
+        fetch('/api/zoho/purchaseorders')
+          .then(res => res.json())
+          .then(d => { if (Array.isArray(d)) setLivePOs(d); });
+
+        setShowCreateGRN(false);
+        resetCreateGRNForm();
+      })
+      .catch(err => {
+        console.error('Failed to mark as Fully Received:', err);
+        setShowCreateGRN(false);
+        resetCreateGRNForm();
+      });
+  };
+
   const handleDeleteGRN = (targetId) => {
+    const targetItem = grnList.find(g => g.id === targetId || g.grnNo === targetId);
+    if (targetItem && (
+      targetItem.status === 'CLOSED / FULLY RECEIVED' || 
+      targetItem.status === 'Approved' || 
+      targetItem.status === 'Fully Accepted' || 
+      targetItem.status === 'Closed' || 
+      targetItem.status === 'CLOSED'
+    )) {
+      alert('Fully received or approved GRNs cannot be deleted.');
+      return;
+    }
     setGrnToDelete(targetId);
   };
 
@@ -508,13 +635,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             height: '38px',
             borderRadius: '8px',
             border: '1px solid #cbd5e1',
-            padding: '0 32px 0 12px',
+            padding: '0 12px',
             fontSize: '13px',
             backgroundColor: 'white',
             color: '#334155',
             outline: 'none',
-            appearance: 'none',
-            WebkitAppearance: 'none',
             cursor: 'pointer',
             ...style
           }}
@@ -525,7 +650,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               : <option key={i} value={opt}>{opt}</option>
           ))}
         </select>
-        <ChevronDown style={{ position: 'absolute', right: '12px', width: '14px', height: '14px', color: '#64748b', pointerEvents: 'none' }} />
       </div>
     );
   };
@@ -548,35 +672,33 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [vendorList, setVendorList] = useState([]);
   const [vendorLoading, setVendorLoading] = useState(false);
 
+  const loadVendorsFromZoho = async () => {
+    setVendorLoading(true);
+    try {
+      const statusRes = await fetch('/api/zoho/status');
+      const statusData = await statusRes.json();
+      if (statusData.connected) {
+        const res = await fetch('/api/zoho/vendors');
+        const zohoVendors = await res.json();
+        if (Array.isArray(zohoVendors) && zohoVendors.length > 0) {
+          setVendorList(zohoVendors);
+        } else {
+          setVendorList([]);
+        }
+      } else {
+        setVendorList([]);
+      }
+    } catch (e) {
+      console.error("Failed to load Zoho vendors", e);
+      setVendorList([]);
+    } finally {
+      setVendorLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'Vendor Management') {
-      const fetchZohoVendors = async () => {
-        setVendorLoading(true);
-        try {
-          const statusRes = await fetch('/api/zoho/status');
-          const statusData = await statusRes.json();
-          if (statusData.connected) {
-            const res = await fetch('/api/zoho/vendors');
-            const zohoVendors = await res.json();
-            if (Array.isArray(zohoVendors) && zohoVendors.length > 0) {
-              setVendorList(zohoVendors);
-            } else {
-              // Zoho connected but returned no vendors - show empty
-              setVendorList([]);
-            }
-          } else {
-            // Not connected to Zoho - show empty
-            setVendorList([]);
-          }
-        } catch (e) {
-          console.error("Failed to load Zoho vendors", e);
-          setVendorList([]);
-        } finally {
-          setVendorLoading(false);
-        }
-      };
-
-      fetchZohoVendors();
+      loadVendorsFromZoho();
     }
   }, [activeTab]);
 
@@ -669,6 +791,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [isSavingItem, setIsSavingItem] = useState(false);
+  const [isSyncingZohoItems, setIsSyncingZohoItems] = useState(false);
+  const [itemSaveStatus, setItemSaveStatus] = useState(null);
+  const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [createStatus, setCreateStatus] = useState(null);
+  const [newItemData, setNewItemData] = useState({
+    name: '',
+    sku: '',
+    rate: '',
+    purchaseRate: '',
+    unit: 'NOS',
+    status: 'Active',
+    description: '',
+    purchaseDescription: '',
+    productType: 'goods'
+  });
   const [itemsCurrentPage, setItemsCurrentPage] = useState(1);
   const [itemsRowsPerPage, setItemsRowsPerPage] = useState(10);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -678,23 +817,142 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [selectedItemStatus, setSelectedItemStatus] = useState('All Status');
 
   useEffect(() => {
-    if (activeTab === 'Items Directory') {
-      const fetchZohoItems = async () => {
-        try {
-          const response = await fetch('/api/zoho/items');
-          if (response.ok) {
-            const zohoItems = await response.json();
-            if (Array.isArray(zohoItems)) {
-              setItemsList(zohoItems);
-            }
+    const fetchZohoItems = async () => {
+      try {
+        const response = await fetch('/api/zoho/items');
+        if (response.ok) {
+          const zohoItems = await response.json();
+          if (Array.isArray(zohoItems) && zohoItems.length > 0) {
+            setItemsList(zohoItems);
           }
-        } catch (err) {
-          console.error("Error fetching Zoho Items:", err);
         }
-      };
-      fetchZohoItems();
-    }
+      } catch (err) {
+        console.error("Error fetching Zoho Items:", err);
+      }
+    };
+    fetchZohoItems();
   }, [activeTab]);
+
+  const handleCreateProductInZoho = async () => {
+    if (!newItemData.name || !newItemData.name.trim()) {
+      setCreateStatus({ type: 'warning', text: 'Item Name is required.' });
+      return;
+    }
+    try {
+      setIsCreatingProduct(true);
+      setCreateStatus(null);
+      
+      const payload = {
+        name: newItemData.name.trim(),
+        rate: Number(newItemData.rate) || 0,
+        sku: newItemData.sku ? newItemData.sku.trim() : '',
+        description: newItemData.description ? newItemData.description.trim() : '',
+        unit: newItemData.unit || 'NOS',
+        purchaseRate: Number(newItemData.purchaseRate) || 0,
+        purchaseDescription: newItemData.purchaseDescription ? newItemData.purchaseDescription.trim() : '',
+        productType: newItemData.productType || 'goods',
+        status: newItemData.status || 'Active'
+      };
+
+      const res = await fetch('/api/zoho/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      const createdItem = result.item || {
+        itemId: 'ITEM-' + Date.now(),
+        ...payload
+      };
+
+      setItemsList(prev => [createdItem, ...prev]);
+      setCreateStatus({ type: 'success', text: result.message || 'Product created successfully and added to Zoho Books!' });
+      
+      setTimeout(() => {
+        setIsCreatingItem(false);
+        setCreateStatus(null);
+        setNewItemData({
+          name: '',
+          sku: '',
+          rate: '',
+          purchaseRate: '',
+          unit: 'NOS',
+          status: 'Active',
+          description: '',
+          purchaseDescription: '',
+          productType: 'goods'
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("Error creating product:", err);
+      const fallback = {
+        itemId: 'ITEM-' + Date.now(),
+        name: newItemData.name,
+        rate: Number(newItemData.rate) || 0,
+        sku: newItemData.sku || '—',
+        unit: newItemData.unit || 'NOS',
+        description: newItemData.description || '—',
+        status: 'Active'
+      };
+      setItemsList(prev => [fallback, ...prev]);
+      setCreateStatus({ type: 'success', text: 'Product created locally in Control Room.' });
+      setTimeout(() => {
+        setIsCreatingItem(false);
+        setCreateStatus(null);
+      }, 1000);
+    } finally {
+      setIsCreatingProduct(false);
+    }
+  };
+
+  const handleSaveItemToZoho = async () => {
+    if (!editingItem) return;
+    try {
+      setIsSavingItem(true);
+      setItemSaveStatus(null);
+      
+      const payload = {
+        name: editingItem.name,
+        rate: Number(editingItem.rate) || 0,
+        sku: editingItem.sku || '',
+        description: editingItem.description || '',
+        unit: editingItem.unit || 'NOS',
+        purchaseRate: Number(editingItem.purchaseRate) || 0,
+        purchaseDescription: editingItem.purchaseDescription || '',
+        status: editingItem.status || 'Active'
+      };
+
+      const res = await fetch(`/api/zoho/items/${editingItem.itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setItemSaveStatus({ type: 'success', text: 'Item updated successfully and synced with Zoho Books!' });
+      } else {
+        setItemSaveStatus({ type: 'warning', text: 'Saved locally in Control Room.' });
+      }
+
+      setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? { ...it, ...editingItem, ...payload } : it));
+      
+      setTimeout(() => {
+        setEditingItem(null);
+        setItemSaveStatus(null);
+      }, 900);
+    } catch (err) {
+      console.error("Error updating item:", err);
+      setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? editingItem : it));
+      setItemSaveStatus({ type: 'success', text: 'Item saved locally.' });
+      setTimeout(() => {
+        setEditingItem(null);
+        setItemSaveStatus(null);
+      }, 900);
+    } finally {
+      setIsSavingItem(false);
+    }
+  };
 
   const [vName, setVName] = useState('');
   const [vCat, setVCat] = useState('Select category');
@@ -727,6 +985,81 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [vBlacklistedVendor, setVBlacklistedVendor] = useState(false);
   const [vTags, setVTags] = useState('');
   const [vInternalNotes, setVInternalNotes] = useState('');
+  const [vendorConfirmModal, setVendorConfirmModal] = useState({
+    show: false,
+    action: null,
+    title: '',
+    message: '',
+    confirmLabel: '',
+    confirmBtnColor: '#2563eb'
+  });
+
+  const [isGstFetching, setIsGstFetching] = useState(false);
+  const [gstLookupStatus, setGstLookupStatus] = useState(null);
+
+  const handleGstFetch = async (valToFetch) => {
+    const g = (valToFetch || vGST || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    if (g.length < 2) return;
+
+    setIsGstFetching(true);
+    setGstLookupStatus(null);
+
+    const stateMap = {
+      '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+      '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+      '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+      '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+      '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh',
+      '24': 'Gujarat', '27': 'Maharashtra', '29': 'Karnataka', '30': 'Goa',
+      '32': 'Kerala', '33': 'Tamil Nadu', '36': 'Telangana', '37': 'Andhra Pradesh'
+    };
+
+    const stateCode = g.substring(0, 2);
+    const resolvedState = stateMap[stateCode] || 'Andhra Pradesh';
+    setVState(resolvedState);
+    setVBillingState(resolvedState);
+
+    if (g.length >= 12) {
+      const extractedPan = g.substring(2, 12);
+      setVPAN(extractedPan);
+    }
+
+    try {
+      const res = await fetch(`/api/zoho/gst-lookup?gstin=${g}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (data.legalName && data.legalName !== '—') setVName(data.legalName);
+          if (data.pan) setVPAN(data.pan);
+          if (data.state) {
+            setVState(data.state);
+            setVBillingState(data.state);
+          }
+          if (data.address) {
+            setVRegAddress(data.address);
+            setVBillingAddress(data.address);
+          }
+          if (data.city) {
+            setVCity(data.city);
+            setVBillingCity(data.city);
+          }
+          if (data.pincode) {
+            setVPinCode(data.pincode);
+            setVBillingPinCode(data.pincode);
+          }
+          if (data.companyReg) setVCompanyReg(data.companyReg);
+          if (data.email) setVEmail(data.email);
+          if (data.phone) setVPhone(data.phone);
+
+          setGstLookupStatus({ type: 'success', msg: `✓ Verified: Official Details Loaded for ${data.legalName}` });
+        }
+      }
+    } catch (err) {
+      console.error('GST Lookup failed', err);
+    } finally {
+      setIsGstFetching(false);
+    }
+  };
 
   // Vendor Filter State
   const [vSearchQuery, setVSearchQuery] = useState('');
@@ -911,19 +1244,38 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     else if (!vActiveVendor) vStatus = 'Inactive';
     else if (vPreferredVendor) vStatus = 'Preferred';
 
-    const newVendor = {
-      code: `VEN-${1023 + vendorList.length}`,
+    const newVendorPayload = {
       name: vName,
+      companyName: vName,
       type: vType === 'Select vendor type' ? 'Supplier' : vType,
-      contact: vContact || 'Mr. Contact Person',
-      phone: vPhone || '+91 99999 88888',
+      contact: vContact || '',
+      phone: vPhone || '',
+      email: vEmail || '',
       cat: vCat === 'Select category' ? 'Steel & Metals' : vCat,
       status: vStatus,
       rating: 5.0,
       spend: '₹ 0.00',
-      terms: vPaymentTerms === 'Select payment terms' ? 'Net 30 Days' : vPaymentTerms
+      terms: vPaymentTerms === 'Select payment terms' ? 'Net 30 Days' : vPaymentTerms,
+      gstin: vGST || '',
+      pan: vPAN || ''
     };
-    setVendorList([newVendor, ...vendorList]);
+
+    // Push new vendor to Zoho Books API & refresh live list so official Zoho Contact ID is assigned as Vendor Code
+    fetch('/api/zoho/vendors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVendorPayload)
+    }).then(res => res.json()).then(data => {
+      if (data.success) {
+        console.log('Vendor created in Zoho Books successfully!', data);
+      } else {
+        console.warn('Zoho Vendor creation notice:', data);
+      }
+      loadVendorsFromZoho();
+    }).catch(err => {
+      console.error('Failed to sync vendor to Zoho:', err);
+      loadVendorsFromZoho();
+    });
 
     // Reset states
     setVName('');
@@ -1745,7 +2097,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
           const matchesType = vTypeFilter === 'All' || vendor.type === vTypeFilter;
           const matchesStatus = vStatusFilter === 'All' || vendor.status === vStatusFilter;
-          const matchesCat = vCatFilter === 'All' || vendor.cat === vCatFilter;
+          const matchesCat = vCatFilter === 'All' || vendor.cat === vCatFilter || vendor.cat === 'General Vendor' || !vendor.cat;
 
           let matchesRating = true;
           if (vRatingFilter !== 'All') {
@@ -1827,14 +2179,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 </div>
                 {showForm ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button type="button" onClick={handleCreateVendor} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setVendorConfirmModal({
+                        show: true,
+                        action: 'draft',
+                        title: 'Save Vendor as Draft?',
+                        message: 'Are you sure you want to save this vendor information as a Draft?',
+                        confirmLabel: 'Save Draft',
+                        confirmBtnColor: '#475569'
+                      })} 
+                      style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
+                    >
                       Save as Draft
                     </button>
-                    <button type="button" onClick={() => setShowForm(false)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setVendorConfirmModal({
+                        show: true,
+                        action: 'cancel',
+                        title: 'Cancel Vendor Onboarding?',
+                        message: 'Are you sure you want to cancel? Any entered vendor information will be cleared.',
+                        confirmLabel: 'Discard Changes',
+                        confirmBtnColor: '#EF4444'
+                      })} 
+                      style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
+                    >
                       Cancel
                     </button>
                     <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
-                      <button type="button" onClick={handleCreateVendor} style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => setVendorConfirmModal({
+                          show: true,
+                          action: 'submit',
+                          title: 'Submit Vendor for Review?',
+                          message: 'Are you sure you want to submit this vendor for onboarding approval & review?',
+                          confirmLabel: 'Submit Vendor',
+                          confirmBtnColor: '#2563eb'
+                        })} 
+                        style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', borderRight: '1px solid rgba(255,255,255,0.2)' }}
+                      >
                         Submit for Review
                       </button>
                       <button type="button" style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
@@ -1864,11 +2249,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>1. Basic Information</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Name *</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Vendor Name <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="text" value={vName} onChange={(e) => setVName(e.target.value)} required placeholder="Enter vendor name" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Type *</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Vendor Type <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         {renderSelect(vType, (e) => setVType(e.target.value), ['Manufacturer', 'Supplier', 'Trader'], { height: '38px' })}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1877,15 +2266,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Company Registration Number</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Company Registration Number <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="text" value={vCompanyReg} onChange={(e) => setVCompanyReg(e.target.value)} placeholder="Enter registration number" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>GST Number</label>
-                        <input type="text" value={vGST} onChange={(e) => setVGST(e.target.value)} placeholder="Enter GST number" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                            GST Number <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                          </label>
+                          <button 
+                            type="button" 
+                            onClick={() => handleGstFetch(vGST)}
+                            disabled={isGstFetching || !vGST || vGST.trim().length < 2}
+                            style={{ border: 'none', background: 'none', color: (isGstFetching || !vGST || vGST.trim().length < 2) ? '#94a3b8' : '#2563eb', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                          >
+                            {isGstFetching ? '⏳ Fetching GST...' : '🔍 Auto-Fetch Details'}
+                          </button>
+                        </div>
+                        <input 
+                          type="text" 
+                          value={vGST} 
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase();
+                            setVGST(val);
+                            if (val.replace(/[^A-Z0-9]/gi, '').length >= 10) {
+                              handleGstFetch(val);
+                            }
+                          }} 
+                          maxLength={15}
+                          placeholder="Enter 15-digit GSTIN (e.g. 37AAACT2727Q1ZS)" 
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }} 
+                        />
+                        {gstLookupStatus && (
+                          <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 'bold' }}>{gstLookupStatus.msg}</span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>PAN Number</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          PAN Number <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="text" value={vPAN} onChange={(e) => setVPAN(e.target.value)} placeholder="Enter PAN number" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
 
@@ -1894,11 +2315,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <input type="text" value={vWebsite} onChange={(e) => setVWebsite(e.target.value)} placeholder="Enter website" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Email</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Email <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="email" value={vEmail} onChange={(e) => setVEmail(e.target.value)} placeholder="Enter email address" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Mobile Number</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Mobile Number <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <select style={{ width: '80px', height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
                             <option>+91</option>
@@ -1917,25 +2342,35 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                       {/* Registered Address */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <strong style={{ fontSize: '12px', color: '#334155' }}>Registered Address</strong>
+                        <strong style={{ fontSize: '12px', color: '#334155' }}>
+                          Registered Address <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </strong>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           <textarea value={vRegAddress} onChange={(e) => setVRegAddress(e.target.value)} placeholder="Enter registered address" style={{ height: '70px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '8px 12px', fontSize: '13px', outline: 'none', resize: 'none' }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>City</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              City <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             <input type="text" value={vCity} onChange={(e) => setVCity(e.target.value)} placeholder="Enter city" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>State</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              State <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             {renderSelect(vState, (e) => setVState(e.target.value), ['Andhra Pradesh', 'Telangana', 'Tamil Nadu', 'Karnataka', 'Maharashtra'], { height: '38px' })}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Country</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              Country <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             {renderSelect(vCountry, (e) => setVCountry(e.target.value), ['India', 'United States', 'Singapore'], { height: '38px' })}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>PIN Code</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              PIN Code <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             <input type="text" value={vPinCode} onChange={(e) => setVPinCode(e.target.value)} placeholder="Enter PIN code" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                           </div>
                         </div>
@@ -1944,7 +2379,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       {/* Billing Address */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '12px', color: '#334155' }}>Billing Address (If Different)</strong>
+                          <strong style={{ fontSize: '12px', color: '#334155' }}>
+                            Billing Address (If Different) <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                          </strong>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#475569', cursor: 'pointer' }}>
                             <input type="checkbox" checked={vSameAsRegistered} onChange={(e) => {
                               setVSameAsRegistered(e.target.checked);
@@ -1964,19 +2401,27 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>City</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              City <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             <input disabled={vSameAsRegistered} type="text" value={vSameAsRegistered ? vCity : vBillingCity} onChange={(e) => setVBillingCity(e.target.value)} placeholder="Enter city" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none', backgroundColor: vSameAsRegistered ? '#f8fafc' : 'white' }} />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>State</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              State <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             {renderSelect(vSameAsRegistered ? vState : vBillingState, (e) => setVBillingState(e.target.value), ['Andhra Pradesh', 'Telangana', 'Tamil Nadu', 'Karnataka', 'Maharashtra'], { height: '38px', backgroundColor: vSameAsRegistered ? '#f8fafc' : 'white', disabled: vSameAsRegistered })}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Country</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              Country <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             {renderSelect(vSameAsRegistered ? vCountry : vBillingCountry, (e) => setVBillingCountry(e.target.value), ['India', 'United States', 'Singapore'], { height: '38px', backgroundColor: vSameAsRegistered ? '#f8fafc' : 'white', disabled: vSameAsRegistered })}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>PIN Code</label>
+                            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                              PIN Code <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                            </label>
                             <input disabled={vSameAsRegistered} type="text" value={vSameAsRegistered ? vPinCode : vBillingPinCode} onChange={(e) => setVBillingPinCode(e.target.value)} placeholder="Enter PIN code" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none', backgroundColor: vSameAsRegistered ? '#f8fafc' : 'white' }} />
                           </div>
                         </div>
@@ -1989,7 +2434,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>3. Contact Details</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Primary Contact Person</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Primary Contact Person <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="text" value={vContact} onChange={(e) => setVContact(e.target.value)} placeholder="Enter contact person" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1997,12 +2444,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <input type="text" value={vDesignation} onChange={(e) => setVDesignation(e.target.value)} placeholder="Enter designation" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Phone</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Phone <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="text" value={vPhone} onChange={(e) => setVPhone(e.target.value)} placeholder="Enter phone number" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Email</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Email <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="email" value={vEmail} onChange={(e) => setVEmail(e.target.value)} placeholder="Enter email address" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2021,15 +2472,21 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>4. Other Details</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Payment Terms</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Payment Terms <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         {renderSelect(vPaymentTerms, (e) => setVPaymentTerms(e.target.value), ['Net 15 Days', 'Net 30 Days', 'Net 45 Days', 'Net 60 Days'], { height: '38px' })}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Currency</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Currency <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         {renderSelect(vCurrency, (e) => setVCurrency(e.target.value), ['INR - Indian Rupee', 'USD - US Dollar', 'EUR - Euro'], { height: '38px' })}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Category</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                          Vendor Category <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         {renderSelect(vCat, (e) => setVCat(e.target.value), ['Steel & Metals', 'Aluminium', 'Electrical', 'Fasteners', 'Packaging', 'Raw Materials', 'Components'], { height: '38px' })}
                       </div>
 
@@ -2328,7 +2785,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
                     <input
                       type="text"
-                      placeholder="Search vendor name, code, GST, contact person..."
+                      placeholder="Search vendors (Vendor Name, Contact Person, Mobile, Email)..."
                       value={vSearchQuery}
                       onChange={(e) => { setVSearchQuery(e.target.value); setVCurrentPage(1); }}
                       style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
@@ -2336,21 +2793,37 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: '110px' }}>
-                      {renderSelect(vTypeFilter, (e) => { setVTypeFilter(e.target.value); setVCurrentPage(1); }, ['All', 'Manufacturer', 'Supplier', 'Trader'], { height: '38px' })}
-                    </div>
+                    <select 
+                      value={vStatusFilter} 
+                      onChange={(e) => { setVStatusFilter(e.target.value); setVCurrentPage(1); }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}
+                    >
+                      <option value="All">Status: All</option>
+                      <option value="Active">Active</option>
+                      <option value="Preferred">Preferred</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Blacklisted">Blacklisted</option>
+                    </select>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: '130px' }}>
-                      {renderSelect(vCatFilter, (e) => { setVCatFilter(e.target.value); setVCurrentPage(1); }, ['All', 'Steel & Metals', 'Aluminium', 'Electrical', 'Fasteners', 'Packaging', 'Raw Materials', 'Components'], { height: '38px' })}
-                    </div>
-
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 16px', height: '38px', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      <Filter style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                      <span>Filters</span>
-                    </button>
-
-                    <button onClick={clearVendorFilters} style={{ display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 16px', height: '38px', backgroundColor: '#f1f5f9', color: '#2563eb', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      <span>Clear</span>
+                    <button 
+                      onClick={clearVendorFilters} 
+                      title="Clear Filters"
+                      style={{ 
+                        background: '#f1f5f9', 
+                        border: '1px solid #cbd5e1', 
+                        color: '#475569', 
+                        cursor: 'pointer', 
+                        padding: '0', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        borderRadius: '8px', 
+                        height: '38px',
+                        width: '38px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <RotateCcw style={{ width: '15px', height: '15px' }} />
                     </button>
                   </div>
                 </div>
@@ -2402,14 +2875,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             style={{ cursor: 'pointer' }}
                           />
                         </th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Vendor Code</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Vendor Name</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Vendor Type</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Contact Person</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Mobile / Email</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Vendor Category</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Status</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Total Spend (YTD)</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Payment Terms</th>
                         <th style={{ width: '60px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 'bold' }}>Action</th>
                       </tr>
@@ -2421,7 +2890,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                               <input type="checkbox" defaultChecked={false} disabled />
                             </td>
-                            {Array.from({ length: 9 }).map((_, cIdx) => (
+                            {Array.from({ length: 5 }).map((_, cIdx) => (
                               <td key={cIdx} style={{ padding: '12px 16px' }}>
                                 <div className="skeleton-shimmer skeleton-text" style={{ width: `${60 + (cIdx * 7) % 30}%`, height: '13px' }} />
                               </td>
@@ -2464,16 +2933,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   style={{ cursor: 'pointer' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 16px', fontWeight: 'bold', color: '#2563eb' }}>{vendor.code}</td>
                               <td style={{ padding: '12px 16px', fontWeight: '600', color: '#1e293b' }}>{vendor.name}</td>
-                              <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.type}</td>
                               <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.contact}</td>
                               <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.phone}</td>
-                              <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.cat}</td>
-                               <td style={{ padding: '12px 16px' }}>
-                                 {renderStatusBadge(vendor.status)}
-                               </td>
-                              <td style={{ padding: '12px 16px', fontWeight: '600', color: '#1e293b' }}>{vendor.spend}</td>
+                              <td style={{ padding: '12px 16px' }}>
+                                {renderStatusBadge(vendor.status)}
+                              </td>
                               <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.terms}</td>
                               <td style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', cursor: 'pointer', position: 'relative' }}>
                                 <div 
@@ -2544,72 +3009,73 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         })
                       ) : (
                         <tr>
-                          <td colSpan="11" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
                             No vendors match the active filter criteria.
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
-                </div>
 
-                {/* 4. PAGINATION FOOTER */}
-                {totalVendorPages > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                    <span style={{ fontSize: '13px', color: '#64748b' }}>
-                      Showing {(vCurrentPage - 1) * vRowsPerPage + 1} to {Math.min(vCurrentPage * vRowsPerPage, filteredVendors.length)} of {filteredVendors.length} entries
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', color: '#64748b' }}>Rows per page:</span>
-                        {renderSelect(vRowsPerPage, (e) => { setVRowsPerPage(parseInt(e.target.value)); setVCurrentPage(1); }, [5, 10, 20, 50], { height: '32px', width: '70px' })}
-                      </div>
+                  {/* 4. PAGINATION FOOTER */}
+                  {totalVendorPages > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', fontSize: '13px', color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
+                      <span>
+                        Showing {(vCurrentPage - 1) * vRowsPerPage + 1} to {Math.min(vCurrentPage * vRowsPerPage, filteredVendors.length)} of {filteredVendors.length} entries
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', color: '#64748b' }}>Rows per page:</span>
+                          {renderSelect(vRowsPerPage, (e) => { setVRowsPerPage(parseInt(e.target.value)); setVCurrentPage(1); }, [5, 10, 20, 50], { height: '32px', width: '70px' })}
+                        </div>
 
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button 
-                          disabled={vCurrentPage === 1}
-                          onClick={() => setVCurrentPage(prev => Math.max(prev - 1, 1))}
-                          style={{ border: '1px solid #cbd5e1', background: vCurrentPage === 1 ? '#f1f5f9' : 'white', cursor: vCurrentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                        >
-                          <ChevronLeft style={{ width: '14px', height: '14px' }} />
-                        </button>
-                        
-                        {(() => {
-                          let start = Math.max(1, vCurrentPage - 1);
-                          let end = start + 3;
-                          if (end > totalVendorPages) {
-                            end = totalVendorPages;
-                            start = Math.max(1, end - 3);
-                          }
-                          return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
-                            <button
-                              key={page}
-                              onClick={() => setVCurrentPage(page)}
-                              style={{
-                                border: '1px solid #cbd5e1',
-                                background: page === vCurrentPage ? '#2563eb' : 'white',
-                                color: page === vCurrentPage ? 'white' : '#475569',
-                                cursor: 'pointer',
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                fontWeight: page === vCurrentPage ? 'bold' : 'normal'
-                              }}
-                            >
-                              {page}
-                            </button>
-                          ));
-                        })()}
-                        <button 
-                          disabled={vCurrentPage === totalVendorPages}
-                          onClick={() => setVCurrentPage(prev => Math.min(prev + 1, totalVendorPages))}
-                          style={{ border: '1px solid #cbd5e1', background: vCurrentPage === totalVendorPages ? '#f1f5f9' : 'white', cursor: vCurrentPage === totalVendorPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                        >
-                          <ChevronRight style={{ width: '14px', height: '14px' }} />
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button 
+                            disabled={vCurrentPage === 1}
+                            onClick={() => setVCurrentPage(prev => Math.max(prev - 1, 1))}
+                            style={{ border: '1px solid #cbd5e1', background: vCurrentPage === 1 ? '#f1f5f9' : 'white', cursor: vCurrentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                          >
+                            <ChevronLeft style={{ width: '14px', height: '14px' }} />
+                          </button>
+                          
+                          {(() => {
+                            let start = Math.max(1, vCurrentPage - 1);
+                            let end = start + 3;
+                            if (end > totalVendorPages) {
+                              end = totalVendorPages;
+                              start = Math.max(1, end - 3);
+                            }
+                            return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
+                              <button
+                                key={page}
+                                onClick={() => setVCurrentPage(page)}
+                                style={{
+                                  border: '1px solid #cbd5e1',
+                                  background: page === vCurrentPage ? '#2563eb' : 'white',
+                                  color: page === vCurrentPage ? 'white' : '#475569',
+                                  cursor: 'pointer',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontWeight: page === vCurrentPage ? 'bold' : 'normal'
+                                }}
+                              >
+                                {page}
+                              </button>
+                            ));
+                          })()}
+
+                          <button 
+                            disabled={vCurrentPage === totalVendorPages}
+                            onClick={() => setVCurrentPage(prev => Math.min(prev + 1, totalVendorPages))}
+                            style={{ border: '1px solid #cbd5e1', background: vCurrentPage === totalVendorPages ? '#f1f5f9' : 'white', cursor: vCurrentPage === totalVendorPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                          >
+                            <ChevronRight style={{ width: '14px', height: '14px' }} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </>
             )}
 
@@ -2702,12 +3168,59 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </button>
                     <button 
                       onClick={() => {
-                        setVendorList(prev => prev.filter(v => v.code !== deleteConfirmVendor.code));
+                        const targetId = deleteConfirmVendor.id || deleteConfirmVendor.code || deleteConfirmVendor.name;
+                        setVendorList(prev => prev.filter(v => v.code !== deleteConfirmVendor.code && v.id !== deleteConfirmVendor.id));
                         setDeleteConfirmVendor(null);
+                        
+                        if (targetId) {
+                          fetch(`/api/zoho/vendors/${encodeURIComponent(targetId)}`, { method: 'DELETE' })
+                            .then(res => res.json())
+                            .then(data => {
+                              console.log('Vendor deleted from Zoho & Control Room:', data);
+                              fetchVendors();
+                            })
+                            .catch(err => console.error('Failed to delete vendor in backend:', err));
+                        }
                       }}
                       style={{ border: 'none', background: '#EF4444', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
                       Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation Modal matching standard Control Room popups */}
+            {vendorConfirmModal.show && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '90%', maxWidth: '400px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                  <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>{vendorConfirmModal.title}</h3>
+                  <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#475569', lineHeight: '1.5' }}>
+                    {vendorConfirmModal.message}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <button 
+                      type="button"
+                      onClick={() => setVendorConfirmModal({ ...vendorConfirmModal, show: false })}
+                      style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const act = vendorConfirmModal.action;
+                        setVendorConfirmModal({ ...vendorConfirmModal, show: false });
+                        if (act === 'cancel') {
+                          setShowForm(false);
+                        } else if (act === 'draft' || act === 'submit') {
+                          handleCreateVendor();
+                        }
+                      }}
+                      style={{ border: 'none', background: vendorConfirmModal.confirmBtnColor || '#2563eb', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                    >
+                      {vendorConfirmModal.confirmLabel}
                     </button>
                   </div>
                 </div>
@@ -3258,23 +3771,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <span style={{ fontSize: '12px', color: '#64748b' }}>Record goods received against Purchase Order</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button style={{
-                    height: '38px',
-                    padding: '0 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF',
-                    color: '#1E3A8A',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer'
-                  }}>
-                    <UploadCloud style={{ width: '16px', height: '16px', color: '#2563EB' }} />
-                    Import GRN
-                  </button>
                   <button 
                     onClick={() => {
                       setSelectedGRNPo('');
@@ -3386,97 +3882,108 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 </div>
               </div>
 
-              {/* Bottom Grid (2 Columns) */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '20px' }}>
-                
-                {/* Column 1: Recent GRNs (Grid Span 9) */}
-                <div className="section-card" style={{ gridColumn: 'span 9', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '15px', color: '#0F172A' }}>Recent GRNs</strong>
-                    <button style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      color: '#475569',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}>View All</button>
-                  </div>
+              {/* Recent GRNs Card */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>Recent GRNs</strong>
+                  <button style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}>View All</button>
+                </div>
 
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                      <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN No.</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>PO No.</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN Date</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Total Value</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                          <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN No.</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>PO No.</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN Date</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Total Value</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grnList.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                            No Goods Receipt Notes found. Click "Create New GRN" to log a new receipt.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {grnList.length === 0 ? (
-                          <tr>
-                            <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
-                              No Goods Receipt Notes found. Click "Create New GRN" to log a new receipt.
-                            </td>
-                          </tr>
-                        ) : grnList.map((row, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                            <td style={{ padding: '12px 4px', fontWeight: '700', color: '#0F172A' }}>{row.id}</td>
-                            <td style={{ padding: '12px 4px', color: '#475569' }}>{row.poRef}</td>
-                            <td style={{ padding: '12px 4px', color: '#475569' }}>{row.vendor}</td>
-                            <td style={{ padding: '12px 4px', color: '#64748B' }}>{row.date}</td>
-                            <td style={{ padding: '12px 4px', fontWeight: '600', color: '#0F172A' }}>{row.val || '₹ 2,48,500'}</td>
-                            <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                              <span style={{ 
-                                padding: '2px 8px', 
-                                borderRadius: '4px', 
-                                fontSize: '11px', 
-                                fontWeight: 'bold', 
-                                backgroundColor: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#E6F7ED' : '#FEF3D6', 
-                                color: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#137333' : '#B06000' 
-                              }}>
-                                {row.status}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      ) : [...grnList].sort((a, b) => {
+                        const parseNum = (item) => {
+                          const str = String(item.id || item.grnNo || item.poRef || '');
+                          const match = str.match(/\d+/);
+                          return match ? parseInt(match[0], 10) : 0;
+                        };
+                        return parseNum(b) - parseNum(a);
+                      }).map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                          <td style={{ padding: '12px 4px', fontWeight: '700', color: '#0F172A' }}>{row.id}</td>
+                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.poRef}</td>
+                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.vendor}</td>
+                          <td style={{ padding: '12px 4px', color: '#64748B' }}>{row.date}</td>
+                          <td style={{ padding: '12px 4px', fontWeight: '600', color: '#0F172A' }}>{row.val || '₹ 2,48,500'}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                            <span style={{ 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '11px', 
+                              fontWeight: 'bold', 
+                              backgroundColor: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#E6F7ED' : '#FEF3D6', 
+                              color: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#137333' : '#B06000' 
+                            }}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                              <button
+                                type="button"
+                                title="View GRN Full Details"
+                                onClick={() => {
+                                  resetCreateGRNForm();
+                                  loadPOItems(row.poRef);
+                                  if (row.challanNo) setGrnChallanNo(row.challanNo);
+                                  if (row.receivedBy) setGrnReceivedBy(row.receivedBy);
+                                  if (row.inspectorName) setGrnInspectorName(row.inspectorName);
+                                  if (row.inspectionRemarks) setGrnInspectionRemarks(row.inspectionRemarks);
+                                  setIsViewOnlyMode(true);
+                                  setShowCreateGRN(true);
+                                }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#2563EB' }}
+                              >
+                                <Eye style={{ width: '15px', height: '15px' }} />
+                              </button>
+                              {row.status !== 'CLOSED / FULLY RECEIVED' && row.status !== 'Approved' && row.status !== 'Fully Accepted' && (
                                 <button
                                   type="button"
-                                  title="View GRN Full Details"
+                                  title="Edit Draft GRN"
                                   onClick={() => {
                                     resetCreateGRNForm();
                                     loadPOItems(row.poRef);
                                     if (row.challanNo) setGrnChallanNo(row.challanNo);
-                                    setIsViewOnlyMode(true);
+                                    if (row.receivedBy) setGrnReceivedBy(row.receivedBy);
+                                    if (row.inspectorName) setGrnInspectorName(row.inspectorName);
+                                    if (row.inspectionRemarks) setGrnInspectionRemarks(row.inspectionRemarks);
+                                    setEditingGrnId(row.id);
+                                    setIsViewOnlyMode(false);
                                     setShowCreateGRN(true);
                                   }}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#2563EB' }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#D97706' }}
                                 >
-                                  <Eye style={{ width: '15px', height: '15px' }} />
+                                  <Edit3 style={{ width: '15px', height: '15px' }} />
                                 </button>
-                                {row.status !== 'CLOSED / FULLY RECEIVED' && row.status !== 'Approved' && row.status !== 'Fully Accepted' && (
-                                  <button
-                                    type="button"
-                                    title="Edit Draft GRN"
-                                    onClick={() => {
-                                      resetCreateGRNForm();
-                                      loadPOItems(row.poRef);
-                                      if (row.challanNo) setGrnChallanNo(row.challanNo);
-                                      setEditingGrnId(row.id);
-                                      setIsViewOnlyMode(false);
-                                      setShowCreateGRN(true);
-                                    }}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#D97706' }}
-                                  >
-                                    <Edit3 style={{ width: '15px', height: '15px' }} />
-                                  </button>
-                                )}
+                              )}
+                              {row.status !== 'CLOSED / FULLY RECEIVED' && row.status !== 'Approved' && row.status !== 'Fully Accepted' && row.status !== 'Closed' && row.status !== 'CLOSED' && (
                                 <button
                                   type="button"
                                   title="Delete GRN"
@@ -3485,61 +3992,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 >
                                   <Trash2 style={{ width: '15px', height: '15px' }} />
                                 </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-
-                {/* Column 2: Quick Actions (Grid Span 3) */}
-                <div className="section-card" style={{ gridColumn: 'span 3', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>Quick Actions</strong>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', height: '100%' }}>
-                    {[
-                      { label: 'Create New GRN', icon: PlusCircle, action: () => { resetCreateGRNForm(); setShowCreateGRN(true); } },
-                      { label: 'Import GRN (Excel)', icon: UploadCloud, action: () => alert('Import GRN Excel: Select a file to upload batch receipt notes.') },
-                      { label: 'GRN from PO', icon: Package, action: () => { resetCreateGRNForm(); setShowCreateGRN(true); } },
-                      { label: 'Draft GRNs', icon: FileText, action: () => setSelectedRows(['GRN-2026-000124']) },
-                      { label: 'Return Note', icon: Truck, action: () => alert('Return Note module: Initiate vendor return for rejected materials.') },
-                      { label: 'GRN Report', icon: FileCheck, action: () => window.print() }
-                    ].map((act, idx) => {
-                      const ActIcon = act.icon || FileText;
-                      return (
-                        <button key={idx} 
-                        onClick={act.action || null}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          padding: '12px 8px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          backgroundColor: '#FFFFFF',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#F8FAFC';
-                          e.currentTarget.style.borderColor = '#CBD5E1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#FFFFFF';
-                          e.currentTarget.style.borderColor = '#E2E8F0';
-                        }}>
-                          <ActIcon style={{ width: '18px', height: '18px', color: '#2563EB' }} />
-                          <span style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textAlign: 'center' }}>{act.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
               </div>
             </>
           ) : (() => {
@@ -3586,29 +4046,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     {!isViewOnlyMode && (
                       <>
                         <button 
-                          onClick={() => {
-                            setShowCreateGRN(false);
-                            resetCreateGRNForm();
-                          }}
-                          style={{
-                            height: '38px',
-                            padding: '0 20px',
-                            borderRadius: '8px',
-                            border: '1px solid #2563EB',
-                            backgroundColor: '#FFFFFF',
-                            color: '#2563EB',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Save Draft
-                        </button>
-                        <button 
                           onClick={handleSaveAndReceive}
                           style={{
                             height: '38px',
-                            padding: '0 20px',
+                            padding: '0 16px',
                             borderRadius: '8px',
                             border: 'none',
                             backgroundColor: '#2563EB',
@@ -3619,6 +4060,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           }}
                         >
                           Save & Receive
+                        </button>
+                        <button 
+                          onClick={handleFullyReceived}
+                          title="Mark all items as received, close GRN, and close PO in Zoho Books"
+                          style={{
+                            height: '38px',
+                            padding: '0 18px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: '#16a34a',
+                            color: '#FFFFFF',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(22, 163, 74, 0.2)'
+                          }}
+                        >
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          Fully Received
                         </button>
                       </>
                     )}
@@ -3643,11 +4106,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <span style={{ fontSize: '10px', color: '#94A3B8' }}>Auto-generated</span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Receipt Date *</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          Receipt Date <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input type="date" defaultValue={new Date().toISOString().split('T')[0]} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Purchase Order *</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          Purchase Order <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <select 
                           value={selectedGRNPo} 
                           disabled={isViewOnlyMode}
@@ -3657,12 +4124,29 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           }}
                           style={{ height: '38px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                         >
-                          <option value="">Select PO No. ({livePOs.length} Live POs)</option>
-                          {livePOs.map((po) => (
-                            <option key={po.id || po.poNo} value={po.poNo || po.id}>
-                              {po.poNo} — {po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : po.vendor} ({po.amount})
-                            </option>
-                          ))}
+                          {(() => {
+                            const eligiblePOs = livePOs.filter(po => {
+                              const isSelected = po.poNo === selectedGRNPo || po.id === selectedGRNPo;
+                              const s = String(po.status || '').toUpperCase();
+                              const sType = String(po.statusType || '').toLowerCase();
+                              
+                              const isOpen = s === 'OPEN' || s === 'APPROVED' || sType === 'approved';
+                              const isPartiallyReceived = s.includes('PARTIALLY') || sType === 'partially_received';
+
+                              return isSelected || isOpen || isPartiallyReceived;
+                            });
+
+                            return (
+                              <>
+                                <option value="" disabled>Select Purchase Order ({eligiblePOs.length} Open / Partial POs)</option>
+                                {eligiblePOs.map((po) => (
+                                  <option key={po.id || po.poNo} value={po.poNo || po.id}>
+                                    {po.poNo} — {po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : po.vendor} ({po.status})
+                                  </option>
+                                ))}
+                              </>
+                            );
+                          })()}
                         </select>
                       </div>
                     </div>
@@ -3670,20 +4154,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     {/* Row 2: Vendor, Warehouse / Location */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Vendor *</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          Vendor <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input 
                           type="text" 
+                          readOnly 
                           value={selectedGRNVendor || ''} 
-                          disabled={isViewOnlyMode}
-                          placeholder="Select Vendor"
-                          onChange={(e) => setSelectedGRNVendor(e.target.value)}
-                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                          placeholder="Auto-populated from PO" 
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Warehouse / Location *</label>
-                        <select defaultValue="VRM Structures" disabled={isViewOnlyMode} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
-                          <option value="">Select Warehouse / Location</option>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          Warehouse / Location <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
+                        <select disabled={isViewOnlyMode} defaultValue="VRM Structures" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
+                          <option value="" disabled>Select Warehouse / Location</option>
                           <option value="VRM Structures">VRM Structures</option>
                           <option value="Stock Area">Stock Area</option>
                         </select>
@@ -3693,10 +4180,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     {/* Row 3: Delivery Challan No, Challan Date, Received By */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Delivery Challan No.</label>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          DC NO / Invoice No. <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
                         <input 
                           type="text" 
-                          placeholder="Enter Challan No." 
+                          placeholder="Enter DC NO / Invoice No." 
                           value={grnChallanNo}
                           disabled={isViewOnlyMode}
                           onChange={(e) => setGrnChallanNo(e.target.value)}
@@ -3708,8 +4197,17 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <input type="date" disabled={isViewOnlyMode} defaultValue={new Date().toISOString().split('T')[0]} style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Received By *</label>
-                        <input type="text" disabled={isViewOnlyMode} placeholder="Enter receiver name" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} />
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                          Received By <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          value={grnReceivedBy}
+                          disabled={isViewOnlyMode} 
+                          placeholder="Enter receiver name" 
+                          onChange={(e) => setGrnReceivedBy(e.target.value)}
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                        />
                       </div>
                     </div>
                   </div>
@@ -3721,7 +4219,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       {selectedGRNPo && (
                         <button 
                           type="button"
-                          onClick={() => setSelectedPOForDetail(selectedGRNPo)}
+                          onClick={() => onChangeTab('Purchase Orders', selectedGRNPo)}
                           style={{
                             padding: '4px 8px',
                             borderRadius: '6px',
@@ -4126,7 +4624,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspection Status *</label>
-                      <select defaultValue="Pending" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', fontWeight: 'bold' }}>
+                      <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', fontWeight: 'bold' }}>
+                        <option value="" disabled>Select Quality Inspection Status</option>
                         <option value="Pending">Pending Inspection</option>
                         <option value="Passed">Passed</option>
                         <option value="Failed">Failed</option>
@@ -4154,21 +4653,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspector Name</label>
                       <input 
                         type="text" 
+                        value={grnInspectorName}
+                        disabled={isViewOnlyMode}
                         placeholder="Enter Inspector Name..." 
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#0F172A', fontWeight: '600' }} 
+                        onChange={(e) => setGrnInspectorName(e.target.value)}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#0F172A', fontWeight: '600' }} 
                       />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspection Remarks</label>
-                      <textarea placeholder="Enter inspection remarks" style={{ height: '60px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '12px', resize: 'none' }} />
+                      <textarea 
+                        value={grnInspectionRemarks}
+                        disabled={isViewOnlyMode}
+                        placeholder="Enter inspection remarks" 
+                        onChange={(e) => setGrnInspectionRemarks(e.target.value)}
+                        style={{ height: '60px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '12px', resize: 'none', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                      />
                     </div>
                   </div>
 
                   {/* Card 5: 5. Documents (Span 8) */}
                   <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <strong style={{ fontSize: '14px', color: '#2563EB' }}>5. Documents</strong>
+                      <strong style={{ fontSize: '14px', color: '#2563EB' }}>
+                        5. Documents <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                      </strong>
                       <HelpCircle style={{ width: '14px', height: '14px', color: '#94A3B8' }} />
                     </div>
 
@@ -6828,18 +7338,30 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         })()}
                       </td>
                       <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <button style={{
-                          height: '28px',
-                          padding: '0 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #2563EB',
-                          backgroundColor: '#FFFFFF',
-                          color: '#2563EB',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}>
-                          Create PR
+                        <button 
+                          onClick={() => {
+                            if (typeof onChangeTab === 'function') {
+                              onChangeTab('Purchase Orders');
+                            }
+                          }}
+                          style={{
+                            height: '30px',
+                            padding: '0 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: '#2563EB',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          + Create PO
                         </button>
                       </td>
                       <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
@@ -8152,7 +8674,330 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       {activeTab === 'Items Directory' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
           
-          {viewingItem ? (
+          {isCreatingItem ? (
+            /* Dedicated Full-Screen Add New Product View Card */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
+              
+              {/* Header Navigation & Actions Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '14px', color: '#1E293B', fontWeight: '600' }}>Items Catalog / Add New Product</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => { setIsCreatingItem(false); setCreateStatus(null); }}
+                    style={{ border: '1px solid #cbd5e1', background: 'white', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateProductInZoho}
+                    disabled={isCreatingProduct}
+                    style={{ border: 'none', background: '#2563eb', color: 'white', padding: '9px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', opacity: isCreatingProduct ? 0.7 : 1 }}
+                  >
+                    <Plus style={{ width: '15px', height: '15px' }} />
+                    {isCreatingProduct ? 'Creating Product...' : 'Save Product & Sync to Zoho'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Toast / Status banner */}
+              {createStatus && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: createStatus.type === 'success' ? '#E6F7ED' : '#FEF3C7',
+                  color: createStatus.type === 'success' ? '#137333' : '#92400E',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  border: `1px solid ${createStatus.type === 'success' ? '#A7F3D0' : '#FDE68A'}`
+                }}>
+                  {createStatus.text}
+                </div>
+              )}
+
+              {/* Form Body Card */}
+              <div className="section-card" style={{ padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>Add New Product</h2>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Enter new product details to add to Control Room and sync with Zoho Books.</span>
+                </div>
+
+                {/* Section 1: Basic Information */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>1. Basic Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item / Product Name *</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Solar Panel 540W Monocrystalline"
+                        value={newItemData.name} 
+                        onChange={(e) => setNewItemData({ ...newItemData, name: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>SKU / Item Code</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. SP-540W-MONO"
+                        value={newItemData.sku} 
+                        onChange={(e) => setNewItemData({ ...newItemData, sku: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Product Type</label>
+                      <select
+                        value={newItemData.productType}
+                        onChange={(e) => setNewItemData({ ...newItemData, productType: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', outline: 'none' }}
+                      >
+                        <option value="goods">Goods (Physical Product)</option>
+                        <option value="service">Service</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Catalog Status</label>
+                      <select
+                        value={newItemData.status}
+                        onChange={(e) => setNewItemData({ ...newItemData, status: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', outline: 'none' }}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Pricing & Measurement */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>2. Pricing & Measurement</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Rate (₹) *</label>
+                      <input 
+                        type="number" 
+                        placeholder="e.g. 15000"
+                        value={newItemData.rate} 
+                        onChange={(e) => setNewItemData({ ...newItemData, rate: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Rate (₹)</label>
+                      <input 
+                        type="number" 
+                        placeholder="e.g. 12000"
+                        value={newItemData.purchaseRate} 
+                        onChange={(e) => setNewItemData({ ...newItemData, purchaseRate: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Unit of Measurement</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. NOS, KG, MTR, SET"
+                        value={newItemData.unit} 
+                        onChange={(e) => setNewItemData({ ...newItemData, unit: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Descriptions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>3. Descriptions & Remarks</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Description</label>
+                      <textarea 
+                        value={newItemData.description} 
+                        onChange={(e) => setNewItemData({ ...newItemData, description: e.target.value })}
+                        placeholder="Enter item description for sales..."
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Description</label>
+                      <textarea 
+                        value={newItemData.purchaseDescription} 
+                        onChange={(e) => setNewItemData({ ...newItemData, purchaseDescription: e.target.value })}
+                        placeholder="Enter item description for purchase..."
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : editingItem ? (
+            /* Dedicated Full-Screen Edit Item View Card */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
+              
+              {/* Header Navigation & Actions Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '14px', color: '#1E293B', fontWeight: '600' }}>Items Catalog / Edit Item</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setEditingItem(null)}
+                    style={{ border: '1px solid #cbd5e1', background: 'white', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveItemToZoho}
+                    disabled={isSavingItem}
+                    style={{ border: 'none', background: '#2563eb', color: 'white', padding: '9px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', opacity: isSavingItem ? 0.7 : 1 }}
+                  >
+                    <RotateCcw style={{ width: '14px', height: '14px', animation: isSavingItem ? 'spin 1s linear infinite' : 'none' }} />
+                    {isSavingItem ? 'Syncing to Zoho...' : 'Save & Sync with Zoho'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Toast / Status banner */}
+              {itemSaveStatus && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: itemSaveStatus.type === 'success' ? '#E6F7ED' : '#FEF3C7',
+                  color: itemSaveStatus.type === 'success' ? '#137333' : '#92400E',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  border: `1px solid ${itemSaveStatus.type === 'success' ? '#A7F3D0' : '#FDE68A'}`
+                }}>
+                  {itemSaveStatus.text}
+                </div>
+              )}
+
+              {/* Edit Form Body Card */}
+              <div className="section-card" style={{ padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>Edit Item — {editingItem.name || 'Material Item'}</h2>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>Item ID: {editingItem.itemId || 'Local Item'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>Status:</span>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      backgroundColor: editingItem.status === 'Active' ? '#E6F7ED' : '#FEE2E2',
+                      color: editingItem.status === 'Active' ? '#137333' : '#EF4444'
+                    }}>
+                      {editingItem.status || 'Active'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section 1: Basic Information */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>1. Basic Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item Name *</label>
+                      <input 
+                        type="text" 
+                        value={editingItem.name || ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>SKU / Item Code</label>
+                      <input 
+                        type="text" 
+                        value={editingItem.sku || ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, sku: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Catalog Status</label>
+                      <select
+                        value={editingItem.status || 'Active'}
+                        onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', outline: 'none' }}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Pricing & Measurement */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>2. Pricing & Measurement</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Rate (₹) *</label>
+                      <input 
+                        type="number" 
+                        value={editingItem.rate !== undefined ? editingItem.rate : ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, rate: Number(e.target.value) })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Rate (₹)</label>
+                      <input 
+                        type="number" 
+                        value={editingItem.purchaseRate !== undefined ? editingItem.purchaseRate : ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, purchaseRate: Number(e.target.value) })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Unit of Measurement</label>
+                      <input 
+                        type="text" 
+                        value={editingItem.unit || 'NOS'} 
+                        onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Descriptions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>3. Descriptions & Remarks</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Description</label>
+                      <textarea 
+                        value={editingItem.description || ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                        placeholder="Enter item description for sales orders..."
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Description</label>
+                      <textarea 
+                        value={editingItem.purchaseDescription || ''} 
+                        onChange={(e) => setEditingItem({ ...editingItem, purchaseDescription: e.target.value })}
+                        placeholder="Enter item description for purchase orders..."
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : viewingItem ? (
             /* Full Screen Item Detail View Card */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
               
@@ -8175,7 +9020,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  &larr; Back to Catalog
+                  Close
                 </button>
                 <div>
                   <span style={{
@@ -8286,12 +9131,36 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           ) : (
             /* Standard Items List Page View */
             <>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Items & Materials Catalog</h2>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>Browse and manage your active item catalog synced from Zoho Books.</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Items & Materials Catalog</h2>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Browse and manage your active item catalog synced with Zoho Books.</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsCreatingItem(true);
+                    setCreateStatus(null);
+                  }}
+                  style={{
+                    height: '38px',
+                    padding: '0 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Add New Product
+                </button>
               </div>
-
-              {/* Filter Bar */}
               <div className="section-card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px', flexWrap: 'wrap', alignItems: 'center' }}>
                   
@@ -8312,12 +9181,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <select 
                       value={selectedItemWarehouse}
                       onChange={(e) => { setSelectedItemWarehouse(e.target.value); setItemsCurrentPage(1); }}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 32px 0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none', appearance: 'none', WebkitAppearance: 'none' }}
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
                     >
                       <option value="All Warehouses">All Warehouses</option>
                       <option value="Main Warehouse">Main Warehouse</option>
                     </select>
-                    <ChevronDown style={{ position: 'absolute', right: '12px', width: '14px', height: '14px', color: '#64748b', pointerEvents: 'none' }} />
                   </div>
 
                   {/* Categories Selector */}
@@ -8325,13 +9193,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <select 
                       value={selectedItemCategory}
                       onChange={(e) => { setSelectedItemCategory(e.target.value); setItemsCurrentPage(1); }}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 32px 0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none', appearance: 'none', WebkitAppearance: 'none' }}
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
                     >
                       <option value="All Categories">All Categories</option>
                       <option value="Goods">Goods</option>
                       <option value="Services">Services</option>
                     </select>
-                    <ChevronDown style={{ position: 'absolute', right: '12px', width: '14px', height: '14px', color: '#64748b', pointerEvents: 'none' }} />
                   </div>
 
                   {/* Status Selector */}
@@ -8339,13 +9206,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <select 
                       value={selectedItemStatus}
                       onChange={(e) => { setSelectedItemStatus(e.target.value); setItemsCurrentPage(1); }}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 32px 0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none', appearance: 'none', WebkitAppearance: 'none' }}
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
                     >
                       <option value="All Status">All Status</option>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
-                    <ChevronDown style={{ position: 'absolute', right: '12px', width: '14px', height: '14px', color: '#64748b', pointerEvents: 'none' }} />
                   </div>
 
                   {/* Filters Button */}
@@ -8711,66 +9577,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             </>
           )}
 
-          {/* Edit Item Modal */}
-          {editingItem && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '90%', maxWidth: '450px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Edit Item</h3>
-                  <button onClick={() => setEditingItem(null)} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item Name</label>
-                    <input 
-                      type="text" 
-                      value={editingItem.name} 
-                      onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                      style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
-                    />
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Rate</label>
-                    <input 
-                      type="number" 
-                      value={editingItem.rate} 
-                      onChange={(e) => setEditingItem({ ...editingItem, rate: Number(e.target.value) })}
-                      style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
-                    />
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Description</label>
-                    <textarea 
-                      value={editingItem.description} 
-                      onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                      style={{ height: '80px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '8px 12px', fontSize: '13px', resize: 'none' }} 
-                    />
-                  </div>
-                </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button 
-                    onClick={() => setEditingItem(null)}
-                    style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? editingItem : it));
-                      setEditingItem(null);
-                    }}
-                    style={{ border: 'none', background: '#2563eb', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Delete Item Confirmation Modal */}
           {deleteConfirmItem && (
@@ -8789,8 +9596,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </button>
                   <button 
                     onClick={() => {
+                      const targetId = deleteConfirmItem.itemId || deleteConfirmItem.id || deleteConfirmItem.sku || deleteConfirmItem.name;
                       setItemsList(prev => prev.filter(it => it.itemId !== deleteConfirmItem.itemId));
                       setDeleteConfirmItem(null);
+
+                      if (targetId) {
+                        fetch(`/api/zoho/items/${encodeURIComponent(targetId)}`, { method: 'DELETE' })
+                          .then(res => res.json())
+                          .then(data => {
+                            console.log('Item deleted from Zoho & Control Room:', data);
+                            fetchItems();
+                          })
+                          .catch(err => console.error('Failed to delete item in backend:', err));
+                      }
                     }}
                     style={{ border: 'none', background: '#EF4444', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                   >
@@ -8885,235 +9703,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         </div>
       )}
 
-      {/* ==================== PO RECEIVING HISTORY & GRN HISTORY MODAL ==================== */}
-      {selectedPOForDetail && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.6)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 9999,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '850px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
-                    PO Receiving Details — {selectedPOForDetail}
-                  </h3>
-                  {poDetailData && (
-                    <span style={{ 
-                      padding: '4px 10px', 
-                      borderRadius: '20px', 
-                      fontSize: '11px', 
-                      fontWeight: '800',
-                      backgroundColor: poDetailData.statusType === 'closed' ? '#E6F7ED' : (poDetailData.statusType === 'partially_received' ? '#FEF3C7' : '#EFF6FF'),
-                      color: poDetailData.statusType === 'closed' ? '#137333' : (poDetailData.statusType === 'partially_received' ? '#D97706' : '#2563EB')
-                    }}>
-                      {poDetailData.status}
-                    </span>
-                  )}
-                </div>
-                <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
-                  Complete multi-delivery audit ledger and item receiving progress
-                </span>
-              </div>
-              <button 
-                onClick={() => setSelectedPOForDetail(null)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', color: '#64748B', cursor: 'pointer', padding: '4px' }}
-              >
-                ✕
-              </button>
-            </div>
 
-            {/* Content Body */}
-            {!poDetailData ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
-                Loading Purchase Order receiving history...
-              </div>
-            ) : (
-              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
-                {/* PO Header KPI Bar */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                  <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B', display: 'block' }}>VENDOR</span>
-                    <strong style={{ fontSize: '13px', color: '#0F172A' }}>{poDetailData.vendor}</strong>
-                  </div>
-                  <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B', display: 'block' }}>TOTAL ORDERED QTY</span>
-                    <strong style={{ fontSize: '15px', color: '#0F172A' }}>{poDetailData.totalOrderedQty}</strong>
-                  </div>
-                  <div style={{ backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '10px', border: '1px solid #DBEAFE' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', display: 'block' }}>TOTAL RECEIVED QTY</span>
-                    <strong style={{ fontSize: '15px', color: '#2563EB' }}>{poDetailData.totalReceivedQty}</strong>
-                  </div>
-                  <div style={{ backgroundColor: poDetailData.totalRemainingQty === 0 ? '#E6F7ED' : '#FEF2F2', padding: '12px', borderRadius: '10px', border: poDetailData.totalRemainingQty === 0 ? '1px solid #A7F3D0' : '1px solid #FECACA' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: poDetailData.totalRemainingQty === 0 ? '#137333' : '#DC2626', display: 'block' }}>REMAINING QTY</span>
-                    <strong style={{ fontSize: '15px', color: poDetailData.totalRemainingQty === 0 ? '#137333' : '#DC2626' }}>{poDetailData.totalRemainingQty}</strong>
-                  </div>
-                </div>
-
-                {/* Overall Receiving Progress Bar */}
-                <div style={{ backgroundColor: '#F1F5F9', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>Receiving Completion Progress</span>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB' }}>
-                      {poDetailData.totalReceivedQty} / {poDetailData.totalOrderedQty} Received — {poDetailData.receivingProgressPct}%
-                    </span>
-                  </div>
-                  <div style={{ height: '10px', width: '100%', backgroundColor: '#CBD5E1', borderRadius: '5px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.min(100, poDetailData.receivingProgressPct)}%`, backgroundColor: '#2563EB', transition: 'width 0.4s' }} />
-                  </div>
-                </div>
-
-                {/* Multi-Product Line Items Breakdown */}
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A', marginBottom: '10px' }}>
-                    Line Items Receiving Summary
-                  </h4>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left' }}>
-                        <th style={{ padding: '10px', color: '#475569' }}>Product / Material</th>
-                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Ordered Qty</th>
-                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Total Received</th>
-                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Remaining Qty</th>
-                        <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(poDetailData.items || []).map((it, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '10px', fontWeight: 'bold', color: '#0F172A' }}>
-                            {it.name}
-                            <span style={{ display: 'block', fontSize: '10px', color: '#64748B', fontWeight: 'normal' }}>{it.description}</span>
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{it.qty}</td>
-                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#2563EB' }}>{it.previouslyReceived}</td>
-                          <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: it.remainingQty === 0 ? '#137333' : '#DC2626' }}>{it.remainingQty}</td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
-                            <span style={{
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              backgroundColor: it.remainingQty === 0 ? '#E6F7ED' : '#FEF3C7',
-                              color: it.remainingQty === 0 ? '#137333' : '#D97706'
-                            }}>
-                              {it.remainingQty === 0 ? 'COMPLETED' : 'PENDING'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* GRN History Table */}
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A', marginBottom: '10px' }}>
-                    GRN Deliveries Audit History ({poDetailData.grnHistory ? poDetailData.grnHistory.length : 0})
-                  </h4>
-                  {(!poDetailData.grnHistory || poDetailData.grnHistory.length === 0) ? (
-                    <div style={{ padding: '16px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '8px', color: '#94A3B8', fontSize: '12px' }}>
-                      No GRNs recorded for this Purchase Order yet.
-                    </div>
-                  ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                      <thead>
-                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left' }}>
-                          <th style={{ padding: '10px', color: '#475569' }}>GRN Number</th>
-                          <th style={{ padding: '10px', color: '#475569' }}>GRN Date</th>
-                          <th style={{ padding: '10px', color: '#475569' }}>Challan No.</th>
-                          <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Received Qty</th>
-                          <th style={{ padding: '10px', color: '#475569', textAlign: 'center' }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {poDetailData.grnHistory.map((grn, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '10px', fontWeight: 'bold', color: '#2563EB' }}>{grn.grnNo}</td>
-                            <td style={{ padding: '10px', color: '#475569' }}>{grn.date}</td>
-                            <td style={{ padding: '10px', color: '#475569' }}>{grn.challanNo || '—'}</td>
-                            <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#137333' }}>+{grn.receivedQty || 0}</td>
-                            <td style={{ padding: '10px', textAlign: 'center' }}>
-                              <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#E6F7ED', color: '#137333' }}>
-                                {grn.status || 'Received'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-              </div>
-            )}
-
-            {/* Modal Footer */}
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button 
-                onClick={() => {
-                  const poNo = selectedPOForDetail;
-                  setSelectedPOForDetail(null);
-                  setShowCreateGRN(true);
-                  setSelectedGRNPo(poNo);
-                }}
-                style={{
-                  height: '38px',
-                  padding: '0 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #2563EB',
-                  backgroundColor: '#FFFFFF',
-                  color: '#2563EB',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                + Create New GRN for this PO
-              </button>
-
-              <button 
-                onClick={() => setSelectedPOForDetail(null)}
-                style={{
-                  height: '38px',
-                  padding: '0 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete GRN Confirmation Modal Popup */}
       {grnToDelete && (
@@ -9211,6 +9801,45 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 }}
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM MANDATORY VALIDATION MODAL */}
+      {grnValidationModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', width: '460px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', flexShrink: 0 }}>
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>{grnValidationModal.title || 'Mandatory Fields Required'}</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
+              </div>
+            </div>
+            {grnValidationModal.fields ? (
+              <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {grnValidationModal.fields.map((field, idx) => (
+                    <li key={idx}><strong>{field}</strong></li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', fontSize: '13px', color: '#DC2626', fontWeight: '500' }}>
+                {grnValidationModal.message}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <button 
+                onClick={() => setGrnValidationModal(null)} 
+                style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
+              >
+                OK, I'll fill it
               </button>
             </div>
           </div>

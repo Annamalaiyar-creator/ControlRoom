@@ -9,20 +9,25 @@ export default function DashboardFullReference() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthCode);
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
   const [poData, setPoData] = useState([]);
+  const [grnData, setGrnData] = useState([]);
   const [approvalCounts, setApprovalCounts] = useState({ posPending: 0, grnsPending: 0, invoicesPending: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Fetch live Zoho Purchase Orders & Approval Pending Counts
+  // Fetch live Zoho Purchase Orders, Approval Pending Counts & GRNs
   useEffect(() => {
     Promise.all([
       fetch('/api/zoho/purchaseorders').then((res) => res.json()).catch(() => []),
-      fetch('/api/zoho/approvals-pending').then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 }))
-    ]).then(([poResults, approvals]) => {
+      fetch('/api/zoho/approvals-pending').then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 })),
+      fetch('/api/grns').then((res) => res.json()).catch(() => [])
+    ]).then(([poResults, approvals, grnResults]) => {
       if (Array.isArray(poResults)) {
         setPoData(poResults);
       }
       if (approvals) {
         setApprovalCounts(approvals);
+      }
+      if (Array.isArray(grnResults)) {
+        setGrnData(grnResults);
       }
       setLoading(false);
     }).catch((err) => {
@@ -53,6 +58,39 @@ export default function DashboardFullReference() {
   const posRaisedCount = filteredPOs.length;
   const draftCount = filteredPOs.filter((po) => po.status === 'Draft' || po.statusType === 'draft').length;
   const approvedCount = filteredPOs.filter((po) => po.status === 'Approved' || po.statusType === 'approved').length;
+
+  // Helper & calculations for TODAY'S SNAPSHOT (Live Zoho Data)
+  const isToday = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    return d.getFullYear() === today.getFullYear() &&
+           d.getMonth() === today.getMonth() &&
+           d.getDate() === today.getDate();
+  };
+
+  const posRaisedToday = poData.filter(po => isToday(po.poDate));
+  const posRaisedTodayCount = posRaisedToday.length;
+  const poValueTodayNum = posRaisedToday.reduce((acc, po) => acc + parseAmt(po.amount), 0);
+  const poValueTodayStr = poValueTodayNum >= 100000 
+    ? `₹ ${(poValueTodayNum / 100000).toFixed(2)} L` 
+    : poValueTodayNum > 0
+      ? `₹ ${poValueTodayNum.toLocaleString('en-IN')}`
+      : '₹ 0.00';
+
+  const posApprovedTodayCount = posRaisedToday.filter(po => 
+    po.statusType === 'approved' || po.statusType === 'partially_received' || po.statusType === 'closed' || po.status === 'Approved' || po.status === 'OPEN'
+  ).length;
+
+  const posReceivedTodayCount = poData.filter(po => 
+    isToday(po.poDate) && (po.statusType === 'closed' || po.statusType === 'partially_received' || po.grnCount > 0)
+  ).length;
+
+  const grnsPostedTodayCount = grnData.filter(grn => isToday(grn.date || grn.grnDate || grn.createdAt)).length;
+  const pendingGRNsCount = poData.filter(po => 
+    (po.statusType === 'approved' || po.status === 'OPEN') && (!po.grnCount || po.grnCount === 0)
+  ).length;
 
   // Monthly aggregated data for PO Value Trend chart (last 6 months)
   const monthNames = [
@@ -730,27 +768,27 @@ export default function DashboardFullReference() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Raised Today</span>
-              <strong style={{ fontSize: '16px', color: '#2563EB', fontWeight: '800', lineHeight: '1' }}>6</strong>
+              <strong style={{ fontSize: '16px', color: '#2563EB', fontWeight: '800', lineHeight: '1' }}>{posRaisedTodayCount}</strong>
             </div>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>PO Value Today</span>
-              <strong style={{ fontSize: '14px', color: '#0F172A', fontWeight: '800', lineHeight: '1', whiteSpace: 'nowrap' }}>₹ 32.48 L</strong>
+              <strong style={{ fontSize: '14px', color: '#0F172A', fontWeight: '800', lineHeight: '1', whiteSpace: 'nowrap' }}>{poValueTodayStr}</strong>
             </div>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Approved Today</span>
-              <strong style={{ fontSize: '16px', color: '#16A34A', fontWeight: '800', lineHeight: '1' }}>5</strong>
+              <strong style={{ fontSize: '16px', color: '#16A34A', fontWeight: '800', lineHeight: '1' }}>{posApprovedTodayCount}</strong>
             </div>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>POs Received Today</span>
-              <strong style={{ fontSize: '16px', color: '#EA580C', fontWeight: '800', lineHeight: '1' }}>3</strong>
+              <strong style={{ fontSize: '16px', color: '#EA580C', fontWeight: '800', lineHeight: '1' }}>{posReceivedTodayCount}</strong>
             </div>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>GRNs Posted Today</span>
-              <strong style={{ fontSize: '16px', color: '#9333EA', fontWeight: '800', lineHeight: '1' }}>5</strong>
+              <strong style={{ fontSize: '16px', color: '#9333EA', fontWeight: '800', lineHeight: '1' }}>{grnsPostedTodayCount}</strong>
             </div>
             <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>
               <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2', display: 'flex', alignItems: 'center', minHeight: '24px' }}>Pending GRNs</span>
-              <strong style={{ fontSize: '16px', color: '#DC2626', fontWeight: '800', lineHeight: '1' }}>7</strong>
+              <strong style={{ fontSize: '16px', color: '#DC2626', fontWeight: '800', lineHeight: '1' }}>{pendingGRNsCount}</strong>
             </div>
           </div>
         </div>

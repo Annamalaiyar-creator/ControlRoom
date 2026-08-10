@@ -15,8 +15,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab })
       icon: ShoppingCart,
       items: [
         { label: 'Purchase Orders', icon: ShoppingCart },
-        { label: 'Requests for Purchase', icon: FileText },
-        { label: 'Quotations', icon: FileQuestion }
+        { label: 'Goods Receipt Note', icon: PackageCheck }
       ]
     },
     {
@@ -31,7 +30,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab })
       title: 'Receiving & Inventory',
       icon: Boxes,
       items: [
-        { label: 'Goods Receipt Note', icon: PackageCheck },
         { label: 'Material Reorder', icon: AlertTriangle },
         { label: 'Stock Status', icon: Boxes },
         { label: 'Price Comparison', icon: GitCompare },

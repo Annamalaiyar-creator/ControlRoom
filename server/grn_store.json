@@ -1,1 +1,146 @@
-[]
+[
+  {
+    "id": "GRN-1786359913836",
+    "grnNo": "GRN-2026-00104",
+    "poRef": "PO-00082",
+    "poNo": "PO-00082",
+    "poId": "PO-00082",
+    "vendor": "Annamalaiyar",
+    "date": "10 Aug 2026",
+    "challanNo": "DC-FINAL",
+    "receivedQty": 500,
+    "acceptedQty": 500,
+    "rejectedQty": 0,
+    "receivedBy": "Annamlaiyar",
+    "inspectorName": "annamalaiyar",
+    "inspectionRemarks": "PO Marked as Fully Received & Closed",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Raw Steel",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "MT",
+        "ordered": 1000,
+        "prev": 500,
+        "remaining": 500,
+        "now": 500,
+        "accepted": 500,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1786359838406",
+    "grnNo": "GRN-2026-00103",
+    "poRef": "PO-00082",
+    "poNo": "PO-00082",
+    "poId": "PO-00082",
+    "vendor": "Annamalaiyar",
+    "date": "10 Aug 2026",
+    "challanNo": "500000",
+    "receivedQty": 500,
+    "acceptedQty": 500,
+    "rejectedQty": 0,
+    "receivedBy": "Annamalaiyar",
+    "inspectorName": "Annamalaiyar",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Raw Steel",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "MT",
+        "ordered": 1000,
+        "prev": 0,
+        "remaining": 1000,
+        "now": 500,
+        "accepted": 500,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1786357044897",
+    "grnNo": "GRN-2026-00102",
+    "poRef": "PO-00079",
+    "poNo": "PO-00079",
+    "poId": "PO-00079",
+    "vendor": "Annamalaiyar",
+    "date": "10 Aug 2026",
+    "challanNo": "123123234",
+    "receivedQty": 1000,
+    "acceptedQty": 1000,
+    "rejectedQty": 0,
+    "receivedBy": "Annamalaiyar",
+    "inspectorName": "Annamalaiyar",
+    "inspectionRemarks": "good",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Mini Rail",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "pcs",
+        "ordered": 2000,
+        "prev": 1000,
+        "remaining": 2000,
+        "now": 1000,
+        "accepted": 1000,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1786357000173",
+    "grnNo": "GRN-2026-00101",
+    "poRef": "PO-00079",
+    "poNo": "PO-00079",
+    "poId": "PO-00079",
+    "vendor": "Annamalaiyar",
+    "date": "10 Aug 2026",
+    "challanNo": "12312334324",
+    "receivedQty": 1000,
+    "acceptedQty": 1000,
+    "rejectedQty": 0,
+    "receivedBy": "Arannamaaiyar",
+    "inspectorName": "Annamalaiyar",
+    "inspectionRemarks": "remark",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Mini Rail",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "pcs",
+        "ordered": 2000,
+        "prev": 0,
+        "remaining": 2000,
+        "now": 1000,
+        "accepted": 1000,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "zohoBillPosted": false
+  }
+]

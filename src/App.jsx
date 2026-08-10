@@ -18,9 +18,17 @@ import { useEffect } from 'react';
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [targetPoNo, setTargetPoNo] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [itemsList, setItemsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleTabChange = (tab, targetPo = null) => {
+    if (targetPo) {
+      setTargetPoNo(targetPo);
+    }
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -61,7 +69,7 @@ function App() {
         collapsed={sidebarCollapsed} 
         onToggle={toggleSidebar} 
         activeTab={activeTab} 
-        onChangeTab={setActiveTab} 
+        onChangeTab={handleTabChange} 
       />
 
       {/* Main View Wrapper */}
@@ -78,11 +86,11 @@ function App() {
               {(activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
                 <PerformaInvoiceView />
               ) : activeTab === 'Purchase Orders' ? (
-                <PurchaseOrdersView />
+                <PurchaseOrdersView targetPoNo={targetPoNo} clearTargetPo={() => setTargetPoNo(null)} />
               ) : activeTab === 'Zoho Integration' ? (
                 <ZohoIntegrationView />
               ) : (
-                <OtherViews activeTab={activeTab} onChangeTab={setActiveTab} />
+                <OtherViews activeTab={activeTab} onChangeTab={handleTabChange} />
               )}
             </div>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy } from 'lucide-react';
 
 const PRESET_MATERIALS = [
   { name: 'GI Steel Coil 2mm', account: 'Raw Material', unit: 'MT', rate: 45000, tax: 18 },
@@ -13,7 +13,7 @@ const PRESET_MATERIALS = [
   { name: 'Industrial Fan 5KW', account: 'Raw Material', unit: 'KW', rate: 18500, tax: 18 }
 ];
 
-export default function PurchaseOrdersView() {
+export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +45,7 @@ export default function PurchaseOrdersView() {
   };
 
   const [statusFilter, setStatusFilter] = useState('All');
+  const [filterDate, setFilterDate] = useState('');
   const [poTab, setPoTab] = useState('All');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +53,7 @@ export default function PurchaseOrdersView() {
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('All');
+    setFilterDate('');
     setPoTab('All');
     setCurrentPage(1);
   };
@@ -61,23 +63,43 @@ export default function PurchaseOrdersView() {
   const [zohoVendors, setZohoVendors] = useState([]);
   const [zohoItems, setZohoItems] = useState([]);
 
-  useEffect(() => {
-    const fetchZohoPOs = async () => {
-      setTableLoading(true);
-      try {
-        const response = await fetch('/api/zoho/purchaseorders');
-        if (response.ok) {
-          const zohoPOs = await response.json();
-          if (Array.isArray(zohoPOs)) {
-            setPoList(zohoPOs);
-          }
+  const fetchZohoPOs = async () => {
+    setTableLoading(true);
+    try {
+      const response = await fetch('/api/zoho/purchaseorders');
+      if (response.ok) {
+        const zohoPOs = await response.json();
+        if (Array.isArray(zohoPOs)) {
+          setPoList(prev => {
+            const merged = [...zohoPOs];
+            prev.forEach(p => {
+              const pNo = String(p.poNo || p.id || '').toLowerCase();
+              const pZohoId = String(p.zohoId || '').toLowerCase();
+              const matchIdx = merged.findIndex(m => {
+                const mNo = String(m.poNo || m.id || '').toLowerCase();
+                const mZohoId = String(m.zohoId || '').toLowerCase();
+                return (pNo && (mNo === pNo || mNo.includes(pNo) || pNo.includes(mNo))) || (pZohoId && mZohoId === pZohoId);
+              });
+              if (matchIdx !== -1) {
+                if (p.gstNo && p.gstNo !== '—' && (!merged[matchIdx].gstNo || merged[matchIdx].gstNo === '—')) {
+                  merged[matchIdx].gstNo = p.gstNo;
+                }
+              } else {
+                merged.unshift(p);
+              }
+            });
+            return merged;
+          });
         }
-      } catch (err) {
-        console.error("Error fetching Zoho POs:", err);
-      } finally {
-        setTableLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching Zoho POs:", err);
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const fetchZohoDropdowns = async () => {
       try {
         const vRes = await fetch('/api/zoho/vendors');
@@ -98,6 +120,28 @@ export default function PurchaseOrdersView() {
     fetchZohoDropdowns();
   }, []);
 
+  useEffect(() => {
+    if (targetPoNo && poList.length > 0) {
+      const normalize = (str) => String(str || '').replace(/[/_\-\s]/g, '').toLowerCase();
+      const targetClean = normalize(targetPoNo);
+
+      // Exact match after normalization
+      const found = poList.find(p => {
+        const pNoClean = normalize(p.poNo);
+        const pIdClean = normalize(p.id);
+        return pNoClean === targetClean || pIdClean === targetClean;
+      });
+
+      if (found) {
+        handleStartView(found);
+      } else {
+        setSearchQuery(targetPoNo);
+      }
+
+      if (clearTargetPo) clearTargetPo();
+    }
+  }, [targetPoNo, poList, clearTargetPo]);
+
   // Form Fields State (Start Fresh / Empty)
   const [vendorName, setVendorName] = useState('');
   const [branch, setBranch] = useState('');
@@ -115,11 +159,15 @@ export default function PurchaseOrdersView() {
   const [poDate, setPoDate] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30 Days');
-  const [purchaser, setPurchaser] = useState('Ravi Kumar (Purch1)');
-  const [shipmentPref, setShipmentPref] = useState('Road Transport');
+  const [purchaser, setPurchaser] = useState('Arun');
+  const [purchaserMode, setPurchaserMode] = useState('dropdown'); // 'dropdown' or 'type'
+  const [shipmentPref, setShipmentPref] = useState('Transport');
   const [currency, setCurrency] = useState('INR - Indian Rupee');
   const [project, setProject] = useState('');
   const [priority, setPriority] = useState('High');
+  const [scope, setScope] = useState('Vendor Scope');
+  const [transportName, setTransportName] = useState('');
+  const [viewingPoStatus, setViewingPoStatus] = useState('');
 
   // Items State (Dynamic array - start fresh empty)
   const [items, setItems] = useState([]);
@@ -127,7 +175,7 @@ export default function PurchaseOrdersView() {
   // Pricing Charges
   const [shippingCharges, setShippingCharges] = useState(0);
   const [otherCharges, setOtherCharges] = useState(0);
-  const [discountPct, setDiscountPct] = useState(1);
+  const [discountPct, setDiscountPct] = useState(0);
 
   // Attachments files list
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -150,6 +198,7 @@ export default function PurchaseOrdersView() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const uploadTimerRef = useRef(null);
+  const [validationErrorModal, setValidationErrorModal] = useState(null);
 
   const startMockUpload = (file) => {
     setIsUploading(true);
@@ -181,17 +230,13 @@ export default function PurchaseOrdersView() {
     const factor = (100 - Number(discountPct || 0)) / 100;
     const totalTax = items.reduce((sum, item) => {
       const itemTaxable = (Number(item.qty || 0) * Number(item.rate || 0)) * factor;
-      return sum + (itemTaxable * (Number(item.tax || 0) / 100));
+      const itemTaxPct = Number(item.tax !== undefined && item.tax !== '' ? item.tax : 18);
+      return sum + (itemTaxable * (itemTaxPct / 100));
     }, 0);
     return totalTax / 2;
   };
   const getSGST = () => {
-    const factor = (100 - Number(discountPct || 0)) / 100;
-    const totalTax = items.reduce((sum, item) => {
-      const itemTaxable = (Number(item.qty || 0) * Number(item.rate || 0)) * factor;
-      return sum + (itemTaxable * (Number(item.tax || 0) / 100));
-    }, 0);
-    return totalTax / 2;
+    return getCGST();
   };
   const getGrandTotal = () => {
     return getTaxableAmount() + getCGST() + getSGST() + Number(shippingCharges || 0) + Number(otherCharges || 0);
@@ -221,12 +266,58 @@ export default function PurchaseOrdersView() {
     setItems(updated);
   };
 
+  const [formErrors, setFormErrors] = useState({});
+  const [rejectingPo, setRejectingPo] = useState(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [approvingPo, setApprovingPo] = useState(null);
+  const [approvalRemarksInput, setApprovalRemarksInput] = useState('');
+
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
-    setShowSaveConfirm(true);
+    const isAppReq = String(approvalRequired).toUpperCase() === 'YES';
+    executeCreatePO(e, isAppReq ? 'Draft / Pending Approval' : 'OPEN');
   };
 
-  const executeCreatePO = () => {
+  const executeCreatePO = (e, targetStatus = 'Draft / Pending Approval') => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const statusToSave = typeof targetStatus === 'string' ? targetStatus : 'Draft / Pending Approval';
+    const isDraft = statusToSave === 'Draft' || statusToSave === 'DRAFT';
+
+    // Validate mandatory fields marked with red asterisk *
+    const missingFields = [];
+    if (!vendorName || String(vendorName).trim() === '') missingFields.push('Vendor Name');
+    if (!deliveryAddress || String(deliveryAddress).trim() === '') missingFields.push('Delivery Address');
+    if (!poDate || String(poDate).trim() === '') missingFields.push('PO Date');
+    if (!deliveryDate || String(deliveryDate).trim() === '') missingFields.push('Expected Delivery Date');
+    if (!paymentTerms || String(paymentTerms).trim() === '') missingFields.push('Payment Terms');
+    if (!purchaser || String(purchaser).trim() === '') missingFields.push('PO Issued By');
+    if (!shipmentPref || String(shipmentPref).trim() === '') missingFields.push('Shipment Preference');
+    if (!currency || String(currency).trim() === '') missingFields.push('Currency');
+    if (!priority || String(priority).trim() === '') missingFields.push('Priority');
+
+    const validItems = (items || []).filter(it => it && String(it.name || '').trim() !== '' && Number(it.qty) > 0);
+    if (validItems.length === 0) {
+      missingFields.push('Line Items (Must add at least 1 valid item with Name and Quantity)');
+    }
+
+    if (missingFields.length > 0) {
+      setValidationErrorModal({ fields: missingFields });
+      return;
+    }
+
+    let effectiveItems = validItems.map(it => ({
+      name: it.name,
+      account: it.account || 'Raw Material',
+      qty: Number(it.qty),
+      unit: it.unit || 'NOS',
+      rate: Number(it.rate) > 0 ? Number(it.rate) : 1000,
+      tax: (it.tax !== undefined && it.tax !== '' && !isNaN(Number(it.tax))) ? Number(it.tax) : 18
+    }));
+
+    setFormErrors({});
+    const statusTypeToSave = isDraft ? 'draft' : (statusToSave === 'WAITING FOR APPROVAL' ? 'pending' : 'approved');
+
     const today = new Date();
     const formattedDate = today.toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -240,14 +331,17 @@ export default function PurchaseOrdersView() {
       year: 'numeric'
     }) : 'Immediate';
 
+    const safePoNo = poNumber ? String(poNumber).toUpperCase() : '';
+    const safeGstNo = gstNo ? String(gstNo).toUpperCase() : 'N/A';
+
     const newPO = {
-      poNo: poNumber.toUpperCase() || ('PO-2026-' + String(poList.length + 1).padStart(3, '0')),
+      poNo: safePoNo || ('PO-' + String(poList.length + 1).padStart(5, '0')),
       vendor: vendorName || 'Fresh Vendor',
       branch: branch || '',
       contactPerson: contactPerson || '',
       contactNo: contactNo || '',
       email: email || '',
-      gstNo: gstNo.toUpperCase() || 'N/A',
+      gstNo: safeGstNo,
       deliveryType: deliveryType,
       deliveryAddress: deliveryAddress || '',
       billingAddress: billingAddress || '',
@@ -259,6 +353,8 @@ export default function PurchaseOrdersView() {
       currency: currency,
       project: project,
       priority: priority,
+      scope: scope,
+      transportName: shipmentPref === 'Transport' ? transportName : '',
       items: [...items],
       shippingCharges: shippingCharges,
       otherCharges: otherCharges,
@@ -269,8 +365,8 @@ export default function PurchaseOrdersView() {
       approver: approver,
       approvalPriority: approvalPriority,
       amount: '₹' + getGrandTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      status: editIdx !== null ? poList[editIdx].status : 'Pending Approval',
-      statusType: editIdx !== null ? poList[editIdx].statusType : 'pending',
+      status: statusToSave,
+      statusType: statusTypeToSave,
       pdfName: attachedFiles[0] ? attachedFiles[0].name : 'purchase_order.pdf'
     };
 
@@ -279,11 +375,103 @@ export default function PurchaseOrdersView() {
       updated[editIdx] = newPO;
       setPoList(updated);
       setEditIdx(null);
+
+      fetch('/api/zoho/purchaseorders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPO)
+      }).then(res => res.json()).then(data => {
+        if (data.success && data.po) {
+          setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
+        }
+        fetchZohoPOs();
+      }).catch(err => {
+        console.error('Failed to sync PO update:', err);
+        fetchZohoPOs();
+      });
     } else {
-      setPoList([newPO, ...poList]);
+      setPoList(prev => [newPO, ...prev]);
+
+      fetch('/api/zoho/purchaseorders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPO)
+      }).then(res => res.json()).then(data => {
+        if (data.success && data.po) {
+          setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
+        }
+        fetchZohoPOs();
+      }).catch(err => {
+        console.error('Failed to sync PO:', err);
+        fetchZohoPOs();
+      });
     }
 
     setShowSaveConfirm(false);
+    resetForm();
+    setPoTab('All');
+    setStatusFilter('All');
+    setCurrentPage(1);
+    setViewMode('list');
+  };
+
+  const handleApprovePoSubmit = (poTarget) => {
+    if (!poTarget) return;
+    const poId = poTarget.poNo || poTarget.id;
+    
+    fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        remarks: approvalRemarksInput || 'Approved by CEO',
+        approver: 'CEO / Operations Manager'
+      })
+    })
+      .then(res => res.json())
+      .then(() => {
+        setApprovingPo(null);
+        setApprovalRemarksInput('');
+        fetchZohoPOs();
+      })
+      .catch(() => {
+        setApprovingPo(null);
+        fetchZohoPOs();
+      });
+  };
+
+  const handleRejectPoSubmit = (poTarget) => {
+    if (!poTarget) return;
+    if (!rejectionReasonInput || String(rejectionReasonInput).trim() === '') {
+      alert('Rejection reason is mandatory when rejecting a Purchase Order.');
+      return;
+    }
+    const poId = poTarget.poNo || poTarget.id;
+
+    fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: rejectionReasonInput,
+        rejectedBy: 'CEO / Operations Manager'
+      })
+    })
+      .then(res => res.json())
+      .then(() => {
+        setRejectingPo(null);
+        setRejectionReasonInput('');
+        fetchZohoPOs();
+      })
+      .catch(() => {
+        setRejectingPo(null);
+        fetchZohoPOs();
+      });
+  };
+
+  const resetForm = () => {
+    setPoTab('All');
+    setSearchQuery('');
+    setStatusFilter('All');
+    setCurrentPage(1);
     setViewMode('list');
   };
 
@@ -314,15 +502,22 @@ export default function PurchaseOrdersView() {
     setPoDate(parseDateToInputFormat(po.poDate));
     setDeliveryDate(parseDateToInputFormat(po.deliveryDate));
     setPaymentTerms(po.paymentTerms || 'Net 30 Days');
-    setPurchaser(po.purchaser || 'Ravi Kumar (Purch1)');
-    setShipmentPref(po.shipmentPref || 'Road Transport');
+    setPurchaser(po.purchaser || 'Arun');
+    setShipmentPref(po.shipmentPref || 'Transport');
     setCurrency(po.currency || 'INR - Indian Rupee');
     setProject(po.project || '');
     setPriority(po.priority || 'High');
-    setItems(po.items || []);
+    setScope(po.scope || 'Vendor Scope');
+    setTransportName(po.transportName || '');
+    setViewingPoStatus(po.status || 'OPEN');
+    const sanitizedItems = (po.items || []).map(it => ({
+      ...it,
+      tax: (it.tax !== undefined && it.tax !== '' && !isNaN(Number(it.tax))) ? Number(it.tax) : 18
+    }));
+    setItems(sanitizedItems);
     setShippingCharges(po.shippingCharges || 0);
     setOtherCharges(po.otherCharges || 0);
-    setDiscountPct(po.discountPct !== undefined ? po.discountPct : 1);
+    setDiscountPct(po.discountPct !== undefined ? po.discountPct : 0);
     setNotes(po.notes || '');
     setTerms(po.terms || `1. Material should be as per the agreed specification and quality.
 2. Delivery should be made on or before the delivery date.
@@ -373,10 +568,80 @@ export default function PurchaseOrdersView() {
     }
   };
 
+  const handleStartClone = async (po) => {
+    setActiveDropdownIdx(null);
+    setEditIdx(null);
+    populateFormStates(po);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    setPoDate(todayStr);
+
+    try {
+      const res = await fetch('/api/zoho/next-po-number');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.nextPoNumber) {
+          setPoNumber(data.nextPoNumber);
+        }
+      }
+    } catch (e) {
+      setPoNumber('PO-' + String(poList.length + 1).padStart(5, '0'));
+    }
+
+    setViewMode('create');
+
+    if (po.id) {
+      setPoDetailLoading(true);
+      try {
+        const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
+        if (res.ok) {
+          const detail = await res.json();
+          populateFormStates(detail);
+          setPoDate(todayStr);
+          const nextRes = await fetch('/api/zoho/next-po-number');
+          if (nextRes.ok) {
+            const nextData = await nextRes.json();
+            if (nextData.nextPoNumber) {
+              setPoNumber(nextData.nextPoNumber);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load PO details for cloning from Zoho", err);
+      } finally {
+        setPoDetailLoading(false);
+      }
+    }
+  };
+
+  // Helper to calculate next PO number matching Zoho Books format (PO-000XX)
+  const getNextPoNumber = (list) => {
+    let maxNum = 43;
+    (list || []).forEach(p => {
+      const str = String(p.poNo || p.id || '');
+      const match = str.match(/^PO-(\d+)/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (val > maxNum && val < 2000) {
+          maxNum = val;
+        }
+      }
+    });
+    return 'PO-' + String(maxNum + 1).padStart(5, '0');
+  };
+
   // Triggers fresh form initialization
   const handleStartFreshPO = () => {
     setEditIdx(null);
-    setPoNumber('PO-2026-' + String(poList.length + 1).padStart(3, '0'));
+    setPoNumber(getNextPoNumber(poList));
+    fetch('/api/zoho/next-po-number')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.nextPoNo) {
+          setPoNumber(data.nextPoNo);
+        }
+      })
+      .catch(() => {});
     setVendorName('');
     setBranch('');
     setContactPerson('');
@@ -390,15 +655,17 @@ export default function PurchaseOrdersView() {
     setPoDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate('');
     setPaymentTerms('Net 30 Days');
-    setPurchaser('Ravi Kumar (Purch1)');
-    setShipmentPref('Road Transport');
+    setPurchaser('Arun');
+    setShipmentPref('Transport');
     setCurrency('INR - Indian Rupee');
     setProject('');
     setPriority('High');
+    setScope('Vendor Scope');
+    setTransportName('');
     setItems([]);
     setShippingCharges(0);
     setOtherCharges(0);
-    setDiscountPct(1);
+    setDiscountPct(0);
     setAttachedFiles([]);
     setNotes('');
     setTerms(`1. Material should be as per the agreed specification and quality.
@@ -414,9 +681,24 @@ export default function PurchaseOrdersView() {
   };
 
   const executeDeletePO = () => {
-    if (deleteIdx !== null) {
-      setPoList(poList.filter((_, i) => i !== deleteIdx));
+    if (deleteIdx !== null && poList[deleteIdx]) {
+      const targetPO = poList[deleteIdx];
+      const targetId = targetPO.id || targetPO.poNo || targetPO.zohoId;
+      
+      setPoList(prev => prev.filter((_, i) => i !== deleteIdx));
       setDeleteIdx(null);
+
+      if (targetId) {
+        fetch(`/api/zoho/purchaseorders/${encodeURIComponent(targetId)}`, {
+          method: 'DELETE'
+        }).then(res => res.json()).then(data => {
+          console.log('PO deleted from Zoho & Control Room:', data);
+          fetchZohoPOs();
+        }).catch(err => {
+          console.error('Failed to delete PO in backend:', err);
+          fetchZohoPOs();
+        });
+      }
     }
   };
 
@@ -436,23 +718,48 @@ export default function PurchaseOrdersView() {
     let bg = '';
     let text = '';
     let border = '';
+    let displayLabel = label || 'OPEN';
 
-    if (type === 'approved' || label === 'Approved') {
+    if (type === 'closed' || (label && (label.includes('CLOSED') || label.includes('Received')))) {
+      bg = '#dcfce7';
+      text = '#15803d';
+      border = '1px solid #86efac';
+      displayLabel = label || 'CLOSED / FULLY RECEIVED';
+    } else if (type === 'approved' || label === 'Approved' || label === 'OPEN' || label === 'Issued') {
       bg = '#f0fdf4';
       text = '#15803d';
       border = '1px solid #bbf7d0';
+      displayLabel = 'OPEN';
+    } else if (type === 'partially_received' || (label && label.includes('PARTIALLY'))) {
+      bg = '#fef3c7';
+      text = '#b45309';
+      border = '1px solid #fde68a';
+      displayLabel = 'OPEN / PARTIALLY RECEIVED';
     } else if (type === 'shipped' || label === 'Shipped') {
       bg = '#faf5ff';
       text = '#7e22ce';
       border = '1px solid #e9d5ff';
-    } else if (label === 'Draft') {
+      displayLabel = 'Shipped';
+    } else if (type === 'rejected' || label === 'REJECTED') {
+      bg = '#fee2e2';
+      text = '#dc2626';
+      border = '1px solid #fca5a5';
+      displayLabel = 'REJECTED';
+    } else if (label === 'Draft / Pending Approval' || label === 'WAITING FOR APPROVAL' || label === 'Pending Approval' || type === 'pending') {
       bg = '#fff7ed';
       text = '#c2410c';
-      border = '1px solid #fed7aa';
+      border = '1px solid #fdba74';
+      displayLabel = 'Draft / Pending Approval';
+    } else if (label === 'Draft' || label === 'DRAFT' || type === 'draft') {
+      bg = '#f1f5f9';
+      text = '#475569';
+      border = '1px solid #cbd5e1';
+      displayLabel = 'Draft';
     } else {
-      bg = '#eff6ff';
-      text = '#1d4ed8';
-      border = '1px solid #bfdbfe';
+      bg = '#f0fdf4';
+      text = '#15803d';
+      border = '1px solid #bbf7d0';
+      displayLabel = 'OPEN';
     }
 
     return (
@@ -472,7 +779,7 @@ export default function PurchaseOrdersView() {
         }}
       >
         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: text, display: 'inline-block' }} />
-        {label}
+        {displayLabel}
       </span>
     );
   };
@@ -482,19 +789,72 @@ export default function PurchaseOrdersView() {
       
       {/* ==================== VIEW 1: MAIN PO LIST SCREEN ==================== */}
       {viewMode === 'list' && (() => {
-        const uniqueStatuses = ['All', ...new Set(poList.map(po => po.status))];
+        const allStatusOptions = [
+          'All',
+          'Draft',
+          'Draft / Pending Approval',
+          'OPEN',
+          'OPEN / PARTIALLY RECEIVED',
+          'CLOSED / FULLY RECEIVED',
+          'REJECTED'
+        ];
+
         const filteredPOList = poList.filter(po => {
           const matchesSearch = po.poNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
             po.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
-          const matchesTab = poTab === 'All' || po.status === poTab;
-          return matchesSearch && matchesStatus && matchesTab;
+          
+          const matchesStatus = statusFilter === 'All' || 
+            (statusFilter === 'Draft' && (po.status === 'Draft' || po.statusType === 'draft')) ||
+            (statusFilter === 'Draft / Pending Approval' && (po.status === 'Draft / Pending Approval' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'pending')) ||
+            (statusFilter === 'OPEN' && (po.status === 'OPEN' || po.statusType === 'approved')) ||
+            (statusFilter === 'OPEN / PARTIALLY RECEIVED' && (po.status.includes('PARTIALLY') || po.statusType === 'partially_received')) ||
+            (statusFilter === 'CLOSED / FULLY RECEIVED' && (po.status.includes('CLOSED') || po.status.includes('FULLY RECEIVED') || po.statusType === 'closed')) ||
+            (statusFilter === 'REJECTED' && (po.status === 'REJECTED' || po.statusType === 'rejected')) ||
+            po.status === statusFilter;
+
+          const matchesTab = poTab === 'All' || 
+            (poTab === 'Draft' && (po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending')) ||
+            (poTab === 'Approved' && ((po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY'))) ||
+            (poTab === 'PARTIALLY_RECEIVED' && (po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received')) ||
+            (poTab === 'CLOSED' && (po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed')) ||
+            (poTab === 'REJECTED' && (po.status === 'REJECTED' || po.statusType === 'rejected')) ||
+            po.status === poTab;
+
+          let matchesDate = true;
+          if (filterDate) {
+            if (po.poDate) {
+              const pD = new Date(po.poDate);
+              const fD = new Date(filterDate);
+              if (!isNaN(pD.getTime()) && !isNaN(fD.getTime())) {
+                const pStr = pD.toISOString().split('T')[0];
+                const fStr = fD.toISOString().split('T')[0];
+                if (pStr !== fStr && !String(po.poDate).includes(filterDate)) {
+                  matchesDate = false;
+                }
+              } else if (!String(po.poDate).includes(filterDate)) {
+                matchesDate = false;
+              }
+            } else {
+              matchesDate = false;
+            }
+          }
+
+          return matchesSearch && matchesStatus && matchesTab && matchesDate;
+        });
+
+        const sortedPOList = [...filteredPOList].sort((a, b) => {
+          const parseNum = (item) => {
+            const str = String(item.poNo || item.id || '');
+            const match = str.match(/\d+/);
+            return match ? parseInt(match[0], 10) : 0;
+          };
+          return parseNum(b) - parseNum(a);
         });
 
         const indexOfLastRow = currentPage * rowsPerPage;
         const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-        const currentRows = filteredPOList.slice(indexOfFirstRow, indexOfLastRow);
-        const totalPages = Math.ceil(filteredPOList.length / rowsPerPage);
+        const currentRows = sortedPOList.slice(indexOfFirstRow, indexOfLastRow);
+        const totalPages = Math.ceil(sortedPOList.length / rowsPerPage);
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)', minWidth: 0, width: '100%' }}>
@@ -536,7 +896,7 @@ export default function PurchaseOrdersView() {
 
           {/* 1. FILTERS & SEARCH ROW CARD */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '380px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '340px' }}>
               <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
               <input
                 type="text"
@@ -548,23 +908,24 @@ export default function PurchaseOrdersView() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', cursor: 'pointer', backgroundColor: 'white', fontSize: '13px', color: '#475569' }}>
-                <span>Date Range</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
                 <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                <input
+                  type="date"
+                  value={filterDate}
+                  title="Filter by Date"
+                  onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
+                  style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'transparent' }}
+                />
               </div>
 
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 24px 0 10px', fontSize: '13px', backgroundColor: 'white', color: '#334155', minWidth: '130px', outline: 'none' }}>
-                {uniqueStatuses.map(s => (
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
+                {allStatusOptions.map(s => (
                   <option key={s} value={s}>
                     {s === 'All' ? 'Status: All' : s}
                   </option>
                 ))}
               </select>
-
-              <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 16px', height: '38px', cursor: 'pointer', backgroundColor: 'white', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
-                <Filter style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                <span>Filters</span>
-              </button>
 
               <button 
                 onClick={clearFilters} 
@@ -593,10 +954,11 @@ export default function PurchaseOrdersView() {
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
             {[
               { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
-              { id: 'Pending Approval', label: 'Pending Approval', count: poList.filter(po => po.status === 'Pending Approval').length, bg: '#fef3c7', fg: '#d97706' },
-              { id: 'Approved', label: 'Approved', count: poList.filter(po => po.status === 'Approved').length, bg: '#dcfce7', fg: '#166534' },
-              { id: 'Shipped', label: 'Shipped', count: poList.filter(po => po.status === 'Shipped').length, bg: '#faf5ff', fg: '#7e22ce' },
-              { id: 'Draft', label: 'Draft', count: poList.filter(po => po.status === 'Draft').length, bg: '#fee2e2', fg: '#991b1b' }
+              { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
+              { id: 'Approved', label: 'Approved (OPEN)', count: poList.filter(po => (po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY')).length, bg: '#dcfce7', fg: '#166534' },
+              { id: 'PARTIALLY_RECEIVED', label: 'Open / Partially Received', count: poList.filter(po => po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received').length, bg: '#fef3c7', fg: '#b45309' },
+              { id: 'CLOSED', label: 'Closed / Fully Received', count: poList.filter(po => po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed').length, bg: '#dcfce7', fg: '#15803d' },
+              { id: 'REJECTED', label: 'Rejected', count: poList.filter(po => po.status === 'REJECTED' || po.statusType === 'rejected').length, bg: '#fee2e2', fg: '#dc2626' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -739,6 +1101,16 @@ export default function PurchaseOrdersView() {
                                   <Eye style={{ width: '12px', height: '12px', color: '#3b82f6' }} />
                                   View
                                 </button>
+                                <button 
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     handleStartClone(po);
+                                   }}
+                                   style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: '500', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
+                                 >
+                                   <Copy style={{ width: '12px', height: '12px', color: '#6366f1' }} />
+                                   Clone PO
+                                 </button>
                                 {po.statusType !== 'approved' && po.statusType !== 'shipped' && (
                                   <button 
                                     onClick={(e) => {
@@ -750,6 +1122,32 @@ export default function PurchaseOrdersView() {
                                     <Edit style={{ width: '12px', height: '12px', color: '#10b981' }} />
                                     Edit
                                   </button>
+                                )}
+                                {(po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'pending') && (
+                                  <>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setApprovingPo(po);
+                                        setActiveDropdownIdx(null);
+                                      }}
+                                      style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', color: '#16a34a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
+                                    >
+                                      <CheckCircle style={{ width: '12px', height: '12px', color: '#16a34a' }} />
+                                      Approve PO
+                                    </button>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRejectingPo(po);
+                                        setActiveDropdownIdx(null);
+                                      }}
+                                      style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
+                                    >
+                                      <X style={{ width: '12px', height: '12px', color: '#dc2626' }} />
+                                      Reject PO
+                                    </button>
+                                  </>
                                 )}
                                 <button 
                                   onClick={(e) => {
@@ -876,6 +1274,21 @@ export default function PurchaseOrdersView() {
                   </button>
                   <button 
                     type="button"
+                    onClick={() => {
+                      const matchedPo = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
+                        poNo: poNumber, vendor: vendorName, branch, contactPerson, contactNo, email, gstNo,
+                        deliveryType, deliveryAddress, billingAddress, poDate, deliveryDate, paymentTerms,
+                        purchaser, shipmentPref, currency, project, priority, items, shippingCharges, otherCharges,
+                        discountPct, notes, terms, approvalRequired, approver
+                      };
+                      handleStartClone(matchedPo);
+                    }}
+                    style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#4338CA', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Copy style={{ width: '14px', height: '14px', color: '#4338CA' }} /> Clone PO
+                  </button>
+                  <button 
+                    type="button"
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Generate PDF
@@ -901,6 +1314,14 @@ export default function PurchaseOrdersView() {
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Generate PDF
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => executeCreatePO(e, 'Draft')}
+                    style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#c2410c', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FileText style={{ width: '15px', height: '15px' }} />
+                    Save as Draft
                   </button>
                   <button 
                     type="button"
@@ -966,6 +1387,59 @@ export default function PurchaseOrdersView() {
             /* ==================== PREMIUM READ-ONLY PO DOCUMENT LAYOUT ==================== */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               
+              {/* Visual PO Workflow History Timeline */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '13px', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>PO Lifecycle & Workflow History</strong>
+                  <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>PO Ref: {poNumber}</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', padding: '10px 0' }}>
+                  {(() => {
+                    const st = String(viewingPoStatus || 'OPEN').trim();
+                    const isClosed = st.includes('CLOSED') || st.includes('FULLY RECEIVED');
+                    const isPartial = st.includes('PARTIALLY');
+                    const isOpen = st === 'OPEN' || st === 'Approved' || st === 'Issued';
+                    const isPending = st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                    const isDraft = st === 'Draft' || st === 'DRAFT';
+
+                    return [
+                      { label: 'Created (Draft)', done: true, current: isDraft },
+                      { label: 'Draft / Pending Approval', done: !isDraft, current: isPending },
+                      { label: 'Approved (OPEN)', done: (isOpen || isPartial || isClosed), current: isOpen },
+                      { label: 'GRN Progress', done: (isPartial || isClosed), current: isPartial },
+                      { label: 'Closed / Fully Received', done: isClosed, current: isClosed }
+                    ];
+                  })().map((step, idx, arr) => (
+                    <React.Fragment key={idx}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 2, flex: 1 }}>
+                        <div style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          backgroundColor: step.current ? (step.label.includes('Closed') ? '#166534' : '#2563EB') : (step.done ? '#16A34A' : '#E2E8F0'),
+                          color: (step.current || step.done) ? '#FFFFFF' : '#64748B',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          boxShadow: step.current ? '0 0 0 4px #DBEAFE' : 'none'
+                        }}>
+                          {step.done ? '✓' : (idx + 1)}
+                        </div>
+                        <span style={{ fontSize: '10px', fontWeight: step.current ? 'bold' : '600', color: step.current ? (step.label.includes('Closed') ? '#166534' : '#2563EB') : (step.done ? '#166534' : '#64748B'), textAlign: 'center' }}>
+                          {step.label}
+                        </span>
+                      </div>
+                      {idx < arr.length - 1 && (
+                        <div style={{ height: '2px', backgroundColor: step.done ? '#16A34A' : '#E2E8F0', flex: 1, marginTop: '-16px' }} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+
               {/* Official Purchase Order Header Card */}
               <div className="section-card" style={{ padding: '30px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', borderTop: '4px solid #2563EB', backgroundColor: '#FFFFFF', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                 
@@ -985,8 +1459,8 @@ export default function PurchaseOrdersView() {
                         borderRadius: '12px',
                         fontSize: '10px',
                         fontWeight: 'bold',
-                        backgroundColor: priority === 'High' ? '#FEE2E2' : '#EFF6FF',
-                        color: priority === 'High' ? '#EF4444' : '#2563EB'
+                        backgroundColor: (priority === 'Critical' || priority === 'High') ? '#FEE2E2' : (priority === 'Medium' ? '#FEF3C7' : '#EFF6FF'),
+                        color: (priority === 'Critical' || priority === 'High') ? '#EF4444' : (priority === 'Medium' ? '#D97706' : '#2563EB')
                       }}>{priority} Priority</span>
                     </div>
                   </div>
@@ -1009,7 +1483,7 @@ export default function PurchaseOrdersView() {
                     <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>{paymentTerms}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748B', display: 'block', textTransform: 'uppercase', fontSize: '9px', fontWeight: 'bold' }}>Purchaser</span>
+                    <span style={{ color: '#64748B', display: 'block', textTransform: 'uppercase', fontSize: '9px', fontWeight: 'bold' }}>PO Issued By</span>
                     <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>{purchaser}</strong>
                   </div>
                 </div>
@@ -1060,8 +1534,11 @@ export default function PurchaseOrdersView() {
                     </thead>
                     <tbody>
                       {items.map((item, idx) => {
-                        const total = item.qty * item.rate;
-                        const taxAmt = total * (item.tax / 100);
+                        const itemTax = (item.tax !== undefined && item.tax !== '' && !isNaN(Number(item.tax))) ? Number(item.tax) : 18;
+                        const qtyNum = Number(item.qty) || 0;
+                        const rateNum = Number(item.rate) || 0;
+                        const total = qtyNum * rateNum;
+                        const taxAmt = total * (itemTax / 100);
                         const finalAmt = total + taxAmt;
                         return (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -1075,10 +1552,10 @@ export default function PurchaseOrdersView() {
                               )}
                             </td>
                             <td style={{ padding: '10px 8px', color: '#475569' }}>{item.account}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>{item.qty}</td>
+                            <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>{qtyNum}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{item.unit}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right' }}>{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{item.tax}%</td>
+                            <td style={{ padding: '10px 8px', textAlign: 'right' }}>{rateNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{itemTax}%</td>
                             <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: '#0F172A' }}>{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           </tr>
                         );
@@ -1156,10 +1633,22 @@ export default function PurchaseOrdersView() {
                       <span>Approval required from <strong>{approver}</strong></span>
                     </div>
                   )}
+                  {scope && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+                      <span>Scope: <strong>{scope}</strong></span>
+                    </div>
+                  )}
                   {shipmentPref && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
                       <span>Shipment Preference: <strong>{shipmentPref}</strong></span>
+                    </div>
+                  )}
+                  {shipmentPref === 'Transport' && transportName && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#06B6D4' }} />
+                      <span>Transport Name: <strong>{transportName}</strong></span>
                     </div>
                   )}
                   {project && (
@@ -1182,29 +1671,32 @@ export default function PurchaseOrdersView() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Name *</label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <select 
-                        value={vendorName} 
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setVendorName(val);
-                          const found = zohoVendors.find(v => v.name === val);
-                          if (found) {
-                            setContactPerson(found.contact || '');
-                            setContactNo(found.phone || '');
-                          }
-                        }} 
-                        required 
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 32px 0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', width: '100%', cursor: 'pointer', outline: 'none', appearance: 'none', WebkitAppearance: 'none' }}
-                      >
-                        <option value="">Select Zoho Vendor...</option>
-                        {zohoVendors.map((v, idx) => (
-                          <option key={idx} value={v.name}>{v.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown style={{ position: 'absolute', right: '12px', width: '14px', height: '14px', color: '#64748b', pointerEvents: 'none' }} />
-                    </div>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Vendor Name <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <select 
+                      value={vendorName} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVendorName(val);
+                        const found = zohoVendors.find(v => v.name === val);
+                        if (found) {
+                          setContactPerson(found.contact || '');
+                          setContactNo(found.phone || found.mobile || '');
+                          setEmail(found.email || '');
+                          setGstNo(found.gstin || found.gstNo || '33ABCDE1234F1Z5');
+                          const vAddr = found.billingAddress || found.address || found.registeredAddress || `${val}, Main Road, Industrial Estate, Tamil Nadu - 600028`;
+                          setBillingAddress(vAddr);
+                        }
+                      }} 
+                      required 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', width: '100%', cursor: 'pointer', outline: 'none' }}
+                    >
+                      <option value="" disabled>Select Zoho Vendor...</option>
+                      {zohoVendors.map((v, idx) => (
+                        <option key={idx} value={v.name}>{v.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Branch</label>
@@ -1243,20 +1735,30 @@ export default function PurchaseOrdersView() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Delivery Address *</label>
-                    <textarea value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} rows="3" required style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }} />
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Delivery Address <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <textarea 
+                      value={deliveryAddress} 
+                      onChange={(e) => setDeliveryAddress(e.target.value)} 
+                      rows="3" 
+                      required 
+                      placeholder="Enter destination delivery address..." 
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }} 
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Billing Address</label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={sameAsDelivery} onChange={(e) => {
-                          setSameAsDelivery(e.target.checked);
-                          if (e.target.checked) setBillingAddress(deliveryAddress);
-                        }} /> Same as delivery
-                      </label>
+                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563eb', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>Auto-populated from Vendor</span>
                     </div>
-                    <textarea value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} disabled={sameAsDelivery} rows="3" style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', backgroundColor: sameAsDelivery ? '#f8fafc' : 'white' }} />
+                    <textarea 
+                      value={billingAddress} 
+                      readOnly 
+                      rows="3" 
+                      placeholder="Select vendor to auto-populate billing address..." 
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', backgroundColor: '#f8fafc', color: '#334155', fontWeight: '500' }} 
+                    />
                   </div>
                 </div>
 
@@ -1273,18 +1775,24 @@ export default function PurchaseOrdersView() {
                     <span style={{ fontSize: '10px', color: '#94a3b8' }}>(Auto Generated)</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>PO Date *</label>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      PO Date <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
                     <input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Expected Delivery Date *</label>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Expected Delivery Date <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
                     <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Payment Terms *</label>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Payment Terms <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
                     <select value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
                       <option>Net 30 Days</option>
                       <option>Net 45 Days</option>
@@ -1293,43 +1801,75 @@ export default function PurchaseOrdersView() {
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Purchaser / Buyer *</label>
-                    <select value={purchaser} onChange={(e) => setPurchaser(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>Ravi Kumar (Purch1)</option>
-                      <option>Manoj Kumar (Purch2)</option>
-                      <option>Arun Kumar (Procurement Admin)</option>
-                    </select>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      PO Issued By <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value="Arun" 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Shipment Preference *</label>
-                    <select value={shipmentPref} onChange={(e) => setShipmentPref(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>Road Transport</option>
-                      <option>Air Cargo</option>
-                      <option>Rail Freight</option>
-                      <option>Sea Freight</option>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Shipment Preference <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <select value={shipmentPref} onChange={(e) => setShipmentPref(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}>
+                      <option value="" disabled>Select Shipment Preference</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Dedicated Vehicle">Dedicated Vehicle</option>
+                      <option value="Own Vehicle">Own Vehicle</option>
                     </select>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: shipmentPref === 'Transport' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Currency *</label>
-                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>INR - Indian Rupee</option>
-                      <option>USD - US Dollar</option>
-                      <option>EUR - Euro</option>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Scope <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <select value={scope} onChange={(e) => setScope(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}>
+                      <option value="Vendor Scope">Vendor Scope</option>
+                      <option value="VRM Scope">VRM Scope</option>
                     </select>
                   </div>
+
+                  {shipmentPref === 'Transport' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                        Transport Name / Carrier <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={transportName} 
+                        onChange={(e) => setTransportName(e.target.value)} 
+                        placeholder="e.g. A2B transport, Blackbird..." 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }} 
+                      />
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Project</label>
-                    <input type="text" value={project} onChange={(e) => setProject(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Currency <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value="INR - Indian Rupee" 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Priority *</label>
-                    <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>High</option>
-                      <option>Medium</option>
-                      <option>Low</option>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                      Priority <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                    </label>
+                    <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}>
+                      <option value="Critical">Critical</option>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
                     </select>
                   </div>
                 </div>
@@ -1361,28 +1901,37 @@ export default function PurchaseOrdersView() {
                         return (
                           <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '8px 12px' }}>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
-                              <select 
-                                value={item.name} 
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const found = zohoItems.find(zi => zi.name === val);
-                                  handleItemChange(idx, 'name', val);
-                                  if (found) {
-                                    handleItemChange(idx, 'rate', found.rate || 0);
-                                    handleItemChange(idx, 'unit', (found.unit || 'NOS').toUpperCase());
-                                  }
-                                }} 
-                                required 
-                                style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 28px 0 8px', fontSize: '12px', backgroundColor: 'white', color: '#334155', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', outline: 'none' }}
-                              >
-                                <option value="">Select Zoho Item...</option>
-                                {zohoItems.map((zi, zidx) => (
-                                  <option key={zidx} value={zi.name}>{zi.name}</option>
-                                ))}
-                              </select>
-                              <ChevronDown style={{ position: 'absolute', right: '8px', width: '12px', height: '12px', color: '#64748b', pointerEvents: 'none' }} />
-                            </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <select 
+                                  value={item.name} 
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const found = zohoItems.find(zi => zi.name === val);
+                                    handleItemChange(idx, 'name', val);
+                                    if (found) {
+                                      handleItemChange(idx, 'rate', found.rate || 0);
+                                      handleItemChange(idx, 'unit', (found.unit || 'NOS').toUpperCase());
+                                      if (found.description && !item.description) {
+                                        handleItemChange(idx, 'description', found.description);
+                                      }
+                                    }
+                                  }} 
+                                  required 
+                                  style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', color: '#334155', cursor: 'pointer', outline: 'none' }}
+                                >
+                                  <option value="" disabled>Select Zoho Item...</option>
+                                  {zohoItems.map((zi, zidx) => (
+                                    <option key={zidx} value={zi.name}>{zi.name}</option>
+                                  ))}
+                                </select>
+                                <input 
+                                  type="text" 
+                                  value={item.description || ''} 
+                                  onChange={(e) => handleItemChange(idx, 'description', e.target.value)} 
+                                  placeholder="Enter item description / specifications..." 
+                                  style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '11px', backgroundColor: '#f8fafc', color: '#334155', outline: 'none' }} 
+                                />
+                              </div>
                             </td>
                             <td style={{ padding: '8px 12px' }}>
                               <select value={item.account} onChange={(e) => handleItemChange(idx, 'account', e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 6px', fontSize: '12px' }}>
@@ -1407,7 +1956,11 @@ export default function PurchaseOrdersView() {
                               <input type="number" value={item.rate} onChange={(e) => handleItemChange(idx, 'rate', e.target.value === '' ? '' : Number(e.target.value))} required style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', textAlign: 'right' }} />
                             </td>
                             <td style={{ padding: '8px 12px' }}>
-                              <select value={item.tax} onChange={(e) => handleItemChange(idx, 'tax', Number(e.target.value))} style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 4px', fontSize: '12px' }}>
+                              <select 
+                                value={item.tax !== undefined && item.tax !== '' ? Number(item.tax) : 18} 
+                                onChange={(e) => handleItemChange(idx, 'tax', Number(e.target.value))} 
+                                style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 4px', fontSize: '12px' }}
+                              >
                                 <option value={18}>18%</option>
                                 <option value={16}>16%</option>
                                 <option value={12}>12%</option>
@@ -1625,6 +2178,99 @@ export default function PurchaseOrdersView() {
                   setViewMode('list');
                 }} style={{ backgroundColor: '#ffedd5', color: '#ea580c', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>Discard Changes</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CEO REJECTION MODAL */}
+      {rejectingPo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '450px', padding: '20px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ backgroundColor: '#dc2626', color: 'white', fontSize: '12px', fontWeight: '800', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.15em' }}>
+              REJECT PURCHASE ORDER
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Reject PO {rejectingPo.poNo}?</h3>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{rejectingPo.vendor}</strong> | Amount: <strong>{rejectingPo.amount}</strong></span>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#dc2626' }}>Rejection Reason (Mandatory) *</label>
+                <textarea 
+                  value={rejectionReasonInput}
+                  onChange={(e) => setRejectionReasonInput(e.target.value)}
+                  placeholder="Enter detailed reason for rejecting this PO..."
+                  style={{ height: '70px', borderRadius: '8px', border: '1.5px solid #fca5a5', padding: '8px 12px', fontSize: '12px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                <button onClick={() => { setRejectingPo(null); setRejectionReasonInput(''); }} style={{ border: 'none', backgroundColor: 'transparent', color: '#64748b', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => handleRejectPoSubmit(rejectingPo)} style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Confirm Rejection</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CEO APPROVAL MODAL */}
+      {approvingPo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '450px', padding: '20px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ backgroundColor: '#16a34a', color: 'white', fontSize: '12px', fontWeight: '800', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.15em' }}>
+              APPROVE PURCHASE ORDER
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Approve PO {approvingPo.poNo}?</h3>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{approvingPo.vendor}</strong> | Amount: <strong>{approvingPo.amount}</strong></span>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Approval Remarks (Optional)</label>
+                <textarea 
+                  value={approvalRemarksInput}
+                  onChange={(e) => setApprovalRemarksInput(e.target.value)}
+                  placeholder="Enter approval remarks or notes..."
+                  style={{ height: '60px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '8px 12px', fontSize: '12px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                <button onClick={() => { setApprovingPo(null); setApprovalRemarksInput(''); }} style={{ border: 'none', backgroundColor: 'transparent', color: '#64748b', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => handleApprovePoSubmit(approvingPo)} style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Approve & Issue PO</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM MANDATORY VALIDATION MODAL */}
+      {validationErrorModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', width: '460px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', flexShrink: 0 }}>
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Mandatory Fields Required</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
+              </div>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {validationErrorModal.fields.map((field, idx) => (
+                  <li key={idx}><strong>{field}</strong></li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <button 
+                onClick={() => setValidationErrorModal(null)} 
+                style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
+              >
+                OK, I'll fill it
+              </button>
             </div>
           </div>
         </div>
