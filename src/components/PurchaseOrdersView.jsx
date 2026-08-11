@@ -800,25 +800,31 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         ];
 
         const filteredPOList = poList.filter(po => {
-          const matchesSearch = po.poNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            po.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+          if (!po) return false;
+          const pNo = String(po.poNo || po.id || '');
+          const pVend = String(po.vendor || po.companyName || '');
+          const matchesSearch = pNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            pVend.toLowerCase().includes(searchQuery.toLowerCase());
           
+          const statusStr = String(po.status || '');
+          const statusTypeStr = String(po.statusType || '');
+
           const matchesStatus = statusFilter === 'All' || 
-            (statusFilter === 'Draft' && (po.status === 'Draft' || po.statusType === 'draft')) ||
-            (statusFilter === 'Draft / Pending Approval' && (po.status === 'Draft / Pending Approval' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'pending')) ||
-            (statusFilter === 'OPEN' && (po.status === 'OPEN' || po.statusType === 'approved')) ||
-            (statusFilter === 'OPEN / PARTIALLY RECEIVED' && (po.status.includes('PARTIALLY') || po.statusType === 'partially_received')) ||
-            (statusFilter === 'CLOSED / FULLY RECEIVED' && (po.status.includes('CLOSED') || po.status.includes('FULLY RECEIVED') || po.statusType === 'closed')) ||
-            (statusFilter === 'REJECTED' && (po.status === 'REJECTED' || po.statusType === 'rejected')) ||
-            po.status === statusFilter;
+            (statusFilter === 'Draft' && (statusStr === 'Draft' || statusTypeStr === 'draft')) ||
+            (statusFilter === 'Draft / Pending Approval' && (statusStr === 'Draft / Pending Approval' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'pending')) ||
+            (statusFilter === 'OPEN' && (statusStr === 'OPEN' || statusTypeStr === 'approved')) ||
+            (statusFilter === 'OPEN / PARTIALLY RECEIVED' && (statusStr.includes('PARTIALLY') || statusTypeStr === 'partially_received')) ||
+            (statusFilter === 'CLOSED / FULLY RECEIVED' && (statusStr.includes('CLOSED') || statusStr.includes('FULLY RECEIVED') || statusTypeStr === 'closed')) ||
+            (statusFilter === 'REJECTED' && (statusStr === 'REJECTED' || statusTypeStr === 'rejected')) ||
+            statusStr === statusFilter;
 
           const matchesTab = poTab === 'All' || 
-            (poTab === 'Draft' && (po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending')) ||
-            (poTab === 'Approved' && ((po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY'))) ||
-            (poTab === 'PARTIALLY_RECEIVED' && (po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received')) ||
-            (poTab === 'CLOSED' && (po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed')) ||
-            (poTab === 'REJECTED' && (po.status === 'REJECTED' || po.statusType === 'rejected')) ||
-            po.status === poTab;
+            (poTab === 'Draft' && (statusStr === 'Draft' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'draft' || statusTypeStr === 'pending')) ||
+            (poTab === 'Approved' && ((statusStr === 'OPEN' || statusStr === 'Approved' || statusTypeStr === 'approved') && !statusStr.includes('PARTIALLY'))) ||
+            (poTab === 'PARTIALLY_RECEIVED' && (statusStr === 'OPEN / PARTIALLY RECEIVED' || statusStr.includes('PARTIALLY') || statusTypeStr === 'partially_received')) ||
+            (poTab === 'CLOSED' && (statusStr === 'CLOSED / FULLY RECEIVED' || statusStr === 'CLOSED' || statusTypeStr === 'closed')) ||
+            (poTab === 'REJECTED' && (statusStr === 'REJECTED' || statusTypeStr === 'rejected')) ||
+            statusStr === poTab;
 
           let matchesDate = true;
           if (filterDate) {
