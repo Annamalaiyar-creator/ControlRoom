@@ -4,8 +4,59 @@ import dotenv from 'dotenv';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ognmvcpzlebrvdynunwh.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nbm12Y3B6bGVicnZkeW51bndoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0MjA3ODYsImV4cCI6MjEwMTk5Njc4Nn0.x3NIpkDHzNa9dMQ9pnz4qGiy0ZBeAX98Hzbj54AHSfo';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// In-memory cache for Supabase store sync
+let supabaseMemoryStore = {
+  po_store: null,
+  vendor_store: null,
+  item_store: null,
+  grn_store: null
+};
+
+// Async background sync with Supabase
+const syncStoreWithSupabase = async (key, localData) => {
+  try {
+    const { data, error } = await supabase
+      .from('controlroom_store')
+      .select('data')
+      .eq('key', key)
+      .single();
+
+    if (!error && data && data.data) {
+      supabaseMemoryStore[key] = data.data;
+      return data.data;
+    }
+
+    // If table/record doesn't exist yet, seed Supabase with localData
+    if (localData && localData.length > 0) {
+      await supabase
+        .from('controlroom_store')
+        .upsert({ key, data: localData, updated_at: new Date().toISOString() });
+    }
+  } catch (err) {
+    // Silent fallback to local file system
+  }
+  return supabaseMemoryStore[key] || localData;
+};
+
+const pushStoreToSupabase = async (key, storeData) => {
+  supabaseMemoryStore[key] = storeData;
+  try {
+    await supabase
+      .from('controlroom_store')
+      .upsert({ key, data: storeData, updated_at: new Date().toISOString() });
+  } catch (err) {
+    // Silent fallback
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -209,10 +260,15 @@ const getStoreFilePath = (filename) => {
 };
 
 const loadLocalPOs = () => {
+  if (supabaseMemoryStore.po_store && supabaseMemoryStore.po_store.length > 0) {
+    return supabaseMemoryStore.po_store;
+  }
   try {
     const filePath = getStoreFilePath('po_store.json');
     if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      pushStoreToSupabase('po_store', data);
+      return data;
     }
   } catch (err) {
     console.error('Error loading local POs:', err);
@@ -221,6 +277,7 @@ const loadLocalPOs = () => {
 };
 
 const saveLocalPOs = (pos) => {
+  pushStoreToSupabase('po_store', pos);
   try {
     const filePath = getStoreFilePath('po_store.json');
     fs.writeFileSync(filePath, JSON.stringify(pos, null, 2), 'utf8');
@@ -230,10 +287,15 @@ const saveLocalPOs = (pos) => {
 };
 
 const loadLocalVendors = () => {
+  if (supabaseMemoryStore.vendor_store && supabaseMemoryStore.vendor_store.length > 0) {
+    return supabaseMemoryStore.vendor_store;
+  }
   try {
     const filePath = getStoreFilePath('vendor_store.json');
     if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      pushStoreToSupabase('vendor_store', data);
+      return data;
     }
   } catch (err) {
     console.error('Error loading local vendors:', err);
@@ -242,6 +304,7 @@ const loadLocalVendors = () => {
 };
 
 const saveLocalVendors = (vendors) => {
+  pushStoreToSupabase('vendor_store', vendors);
   try {
     const filePath = getStoreFilePath('vendor_store.json');
     fs.writeFileSync(filePath, JSON.stringify(vendors, null, 2), 'utf8');
