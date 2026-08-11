@@ -151,8 +151,8 @@
     "approver": "Velmurugan Rathinam (CEO)",
     "approvalPriority": "High",
     "amount": "₹2,36,000.00",
-    "status": "Draft / Pending Approval",
-    "statusType": "draft",
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "statusType": "partially_received",
     "items": [
       {
         "name": "Mini Rail",
@@ -162,7 +162,8 @@
         "rate": 1000,
         "tax": 18
       }
-    ]
+    ],
+    "order_status": "received"
   },
   {
     "id": "4080449000000079005",

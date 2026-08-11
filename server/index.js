@@ -354,10 +354,15 @@ const getGRNStorePath = () => {
 };
 
 const loadLocalGRNs = () => {
+  if (supabaseMemoryStore.grn_store && supabaseMemoryStore.grn_store.length > 0) {
+    return supabaseMemoryStore.grn_store;
+  }
   try {
     const storePath = getGRNStorePath();
     if (fs.existsSync(storePath)) {
-      return JSON.parse(fs.readFileSync(storePath, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+      pushStoreToSupabase('grn_store', data);
+      return data;
     }
   } catch (err) {
     console.error('Error loading local GRNs:', err);
@@ -2279,14 +2284,10 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
 
 
 const saveLocalGRNs = (grns) => {
+  pushStoreToSupabase('grn_store', grns);
   try {
-    let storePath = path.resolve(process.cwd(), 'server', 'grn_store.json');
-    try {
-      fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
-    } catch (e) {
-      storePath = '/tmp/grn_store.json';
-      fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
-    }
+    let storePath = getGRNStorePath();
+    fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
   } catch (err) {
     console.error('Error saving local GRNs:', err);
   }
