@@ -18,9 +18,9 @@ export default function DashboardFullReference() {
   // Fetch live Zoho Purchase Orders, Approval Pending Counts & GRNs
   useEffect(() => {
     Promise.all([
-      fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 6000 }).then((res) => res.json()).catch(() => []),
-      fetchWithTimeout('/api/zoho/approvals-pending', { timeout: 6000 }).then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 })),
-      fetchWithTimeout('/api/grns', { timeout: 6000 }).then((res) => res.json()).catch(() => [])
+      fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 25000 }).then((res) => res.json()).catch(() => []),
+      fetchWithTimeout('/api/zoho/approvals-pending', { timeout: 25000 }).then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 })),
+      fetchWithTimeout('/api/grns', { timeout: 25000 }).then((res) => res.json()).catch(() => [])
     ]).then(([poResults, approvals, grnResults]) => {
       if (Array.isArray(poResults)) {
         setPoData(poResults);

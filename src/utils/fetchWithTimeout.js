@@ -1,5 +1,5 @@
 export async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 8000, ...fetchOptions } = options;
+  const { timeout = 25000, ...fetchOptions } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {

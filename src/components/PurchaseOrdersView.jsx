@@ -66,7 +66,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const fetchZohoPOs = async () => {
     setTableLoading(true);
     try {
-      const response = await fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 6000 });
+      const response = await fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 25000 });
       if (response.ok) {
         const zohoPOs = await response.json();
         if (Array.isArray(zohoPOs)) {
@@ -102,12 +102,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   useEffect(() => {
     const fetchZohoDropdowns = async () => {
       try {
-        const vRes = await fetchWithTimeout('/api/zoho/vendors', { timeout: 6000 });
+        const vRes = await fetchWithTimeout('/api/zoho/vendors', { timeout: 25000 });
         if (vRes.ok) {
           const vData = await vRes.json();
           setZohoVendors(vData || []);
         }
-        const iRes = await fetchWithTimeout('/api/zoho/items', { timeout: 6000 });
+        const iRes = await fetchWithTimeout('/api/zoho/items', { timeout: 25000 });
         if (iRes.ok) {
           const iData = await iRes.json();
           setZohoItems(iData || []);
