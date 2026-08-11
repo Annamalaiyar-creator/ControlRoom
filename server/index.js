@@ -18,15 +18,25 @@ app.use(cors({
 app.use(express.json());
 
 const loadCredentialsFromEnv = () => {
-  const credentials = { orgId: '', apiToken: '', connected: false };
-  
-  // First check system process.env (essential for Render / Cloud deployments)
-  credentials.orgId = process.env.ZOHO_ORG_ID || '';
-  credentials.apiToken = process.env.ZOHO_REFRESH_TOKEN || '';
-  credentials.connected = !!(credentials.orgId && credentials.apiToken);
+  const DEFAULT_ORG_ID = '60082137608';
+  const DEFAULT_REFRESH_TOKEN = '1000.69cd7dbd3da3ab8f107f8addf5e9e04c.87b4757d889f6ebd95a1bf897147a1c7';
+  const DEFAULT_CLIENT_ID = '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K';
+  const DEFAULT_CLIENT_SECRET = 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13';
 
+  // Override old legacy VRM org ID (60020613233) with new ARMS AI credentials
+  if (!process.env.ZOHO_CLIENT_ID || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_CLIENT_ID = DEFAULT_CLIENT_ID;
+  if (!process.env.ZOHO_CLIENT_SECRET || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_CLIENT_SECRET = DEFAULT_CLIENT_SECRET;
+  if (!process.env.ZOHO_ORG_ID || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_ORG_ID = DEFAULT_ORG_ID;
+  if (!process.env.ZOHO_REFRESH_TOKEN || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_REFRESH_TOKEN = DEFAULT_REFRESH_TOKEN;
+
+  const credentials = { 
+    orgId: process.env.ZOHO_ORG_ID || DEFAULT_ORG_ID, 
+    apiToken: process.env.ZOHO_REFRESH_TOKEN || DEFAULT_REFRESH_TOKEN, 
+    connected: true 
+  };
+  
   // Fallback to local .env file if process.env is empty
-  if (!credentials.connected) {
+  if (!credentials.orgId || !credentials.apiToken) {
     try {
       const envPath = path.resolve(process.cwd(), '.env');
       if (fs.existsSync(envPath)) {
