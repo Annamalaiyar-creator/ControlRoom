@@ -6,7 +6,7 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
 
   const defaultPurchaseOrders = [
     {
-      poNo: 'VRM/PO/26-07-086',
+      poNo: 'ARMS/PO/26-07-086',
       vendor: 'AKEYEM SONS',
       poDate: '23-Jul-26',
       deliveryDate: '28-Jul-26',
@@ -15,7 +15,7 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       statusType: 'approved'
     },
     {
-      poNo: 'VRM/PO/26-07-085',
+      poNo: 'ARMS/PO/26-07-085',
       vendor: 'ARUMUGA STEEL',
       poDate: '22-Jul-26',
       deliveryDate: '27-Jul-26',
@@ -24,31 +24,31 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       statusType: 'approved'
     },
     {
-      poNo: 'VRM/PO/26-07-084',
+      poNo: 'ARMS/PO/26-07-084',
       vendor: 'VAIBOV POLES',
       poDate: '21-Jul-26',
       deliveryDate: '30-Jul-26',
-      amount: '₹21,64,400',
-      status: 'Approved',
-      statusType: 'approved'
+      amount: '₹14,20,000',
+      status: 'Pending',
+      statusType: 'pending'
     },
     {
-      poNo: 'VRM/PO/26-07-083',
-      vendor: 'KPR Mill',
+      poNo: 'ARMS/PO/26-07-083',
+      vendor: 'JINDAL STEEL',
       poDate: '20-Jul-26',
-      deliveryDate: '26-Jul-26',
-      amount: '₹17,88,000',
-      status: 'Part. Received',
-      statusType: 'in-progress'
-    },
-    {
-      poNo: 'VRM/PO/26-07-082',
-      vendor: 'SHREE GANESH TRADERS',
-      poDate: '19-Jul-26',
       deliveryDate: '25-Jul-26',
-      amount: '₹14,36,000',
+      amount: '₹88,90,400',
       status: 'Approved',
       statusType: 'approved'
+    },
+    {
+      poNo: 'ARMS/PO/26-07-082',
+      vendor: 'TATA STEEL LTD',
+      poDate: '19-Jul-26',
+      deliveryDate: '24-Jul-26',
+      amount: '₹64,15,000',
+      status: 'Pending',
+      statusType: 'pending'
     }
   ];
 

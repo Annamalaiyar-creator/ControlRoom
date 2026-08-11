@@ -1446,9 +1446,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                 {/* Header Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1E293B', margin: 0, letterSpacing: '-0.5px' }}>VRM STRUCTURES PVT LTD</h1>
-                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>No.684, Podalakur Road, Nellore - 524002, Nellore, Nellore, Nellore, Nellore</span>
-                    <span style={{ fontSize: '11px', color: '#64748B' }}>GSTIN: 37AAACT2727Q1ZS | contact@vrmstructures.com</span>
+                    <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1E293B', margin: 0, letterSpacing: '-0.5px' }}>ARMS AI PVT LTD</h1>
+                    <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>No.684, Podalakur Road, Nellore - 524002, Nellore</span>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>GSTIN: 37AAACT2727Q1ZS | contact@armsai.com</span>
                   </div>
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '1px' }}>PURCHASE ORDER</div>
@@ -1831,7 +1831,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     </label>
                     <select value={scope} onChange={(e) => setScope(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}>
                       <option value="Vendor Scope">Vendor Scope</option>
-                      <option value="VRM Scope">VRM Scope</option>
+                      <option value="ARMS AI Scope">ARMS AI Scope</option>
                     </select>
                   </div>
 

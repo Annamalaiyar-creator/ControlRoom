@@ -112,13 +112,49 @@ const saveCredentialsToEnv = (orgId, apiToken, clientId, clientSecret) => {
 };
 
 // 1. Check Connection Status and Credentials
-app.get('/api/zoho/status', (req, res) => {
+app.get('/api/zoho/status', async (req, res) => {
+  let orgName = zohoSession.organizationName || 'ARMS AI';
+  if (zohoSession.connected && zohoSession.apiToken) {
+    try {
+      const accessToken = await getZohoAccessToken();
+      const options = {
+        hostname: 'www.zohoapis.in',
+        port: 443,
+        path: '/books/v3/organizations',
+        method: 'GET',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
+        }
+      };
+      const orgData = await new Promise((resolve) => {
+        const r = https.request(options, (resp) => {
+          let body = '';
+          resp.on('data', c => body += c);
+          resp.on('end', () => {
+            try { resolve(JSON.parse(body)); } catch(e) { resolve(null); }
+          });
+        });
+        r.on('error', () => resolve(null));
+        r.end();
+      });
+      if (orgData && Array.isArray(orgData.organizations)) {
+        const matched = orgData.organizations.find(o => String(o.organization_id) === String(zohoSession.orgId)) || orgData.organizations[0];
+        if (matched && matched.name) {
+          orgName = matched.name;
+          zohoSession.organizationName = matched.name;
+        }
+      }
+    } catch(err) {
+      console.error('Error fetching org name from Zoho:', err.message);
+    }
+  }
+
   res.json({
     connected: zohoSession.connected,
     orgId: zohoSession.orgId,
     apiToken: zohoSession.apiToken,
     clientId: process.env.ZOHO_CLIENT_ID || '',
-    organizationName: 'ARMS AI'
+    organizationName: orgName
   });
 });
 
@@ -151,7 +187,7 @@ app.post('/api/zoho/disconnect', (req, res) => {
     connected: false,
     orgId: '',
     apiToken: '',
-    organizationName: 'VRM Structures Pvt Ltd'
+    organizationName: 'ARMS AI'
   };
   
   // Wipe from .env

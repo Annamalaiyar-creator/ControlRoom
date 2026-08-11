@@ -16,7 +16,7 @@ export default function ZohoIntegrationView() {
 
   const [status, setStatus] = useState({
     connected: true,
-    organizationName: 'VRM Energy Consultancy Services Pvt Ltd',
+    organizationName: 'ARMS AI',
     orgId: '60027663246'
   });
 
@@ -339,7 +339,7 @@ export default function ZohoIntegrationView() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '4px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
               <div>
                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 'bold', display: 'block' }}>ORGANIZATION NAME</span>
-                <strong style={{ fontSize: '13px', color: '#0F172A' }}>{status.organizationName || 'VRM Energy Consultancy'}</strong>
+                <strong style={{ fontSize: '13px', color: '#0F172A' }}>{status.organizationName || 'ARMS AI'}</strong>
               </div>
               <div>
                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 'bold', display: 'block' }}>ORGANIZATION ID</span>

@@ -4169,9 +4169,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           Warehouse / Location <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <select disabled={isViewOnlyMode} defaultValue="VRM Structures" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
+                        <select disabled={isViewOnlyMode} defaultValue="ARMS AI Main Facility" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
                           <option value="" disabled>Select Warehouse / Location</option>
-                          <option value="VRM Structures">VRM Structures</option>
+                          <option value="ARMS AI Main Facility">ARMS AI Main Facility</option>
                           <option value="Stock Area">Stock Area</option>
                         </select>
                       </div>
@@ -9672,11 +9672,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Corporate Entity Name</label>
-                  <input type="text" defaultValue="VRM Structures Pvt Ltd" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+                  <input type="text" defaultValue="ARMS AI Pvt Ltd" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>System Notification Email</label>
-                  <input type="email" defaultValue="procurements@vrm.com" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+                  <input type="email" defaultValue="procurements@armsai.com" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
