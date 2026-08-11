@@ -23,44 +23,17 @@ const loadCredentialsFromEnv = () => {
   const DEFAULT_CLIENT_ID = '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K';
   const DEFAULT_CLIENT_SECRET = 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13';
 
-  // Override old legacy VRM org ID (60020613233) with new ARMS AI credentials
-  if (!process.env.ZOHO_CLIENT_ID || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_CLIENT_ID = DEFAULT_CLIENT_ID;
-  if (!process.env.ZOHO_CLIENT_SECRET || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_CLIENT_SECRET = DEFAULT_CLIENT_SECRET;
-  if (!process.env.ZOHO_ORG_ID || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_ORG_ID = DEFAULT_ORG_ID;
-  if (!process.env.ZOHO_REFRESH_TOKEN || process.env.ZOHO_ORG_ID === '60020613233') process.env.ZOHO_REFRESH_TOKEN = DEFAULT_REFRESH_TOKEN;
+  // Force active ARMS AI Zoho credentials
+  process.env.ZOHO_CLIENT_ID = DEFAULT_CLIENT_ID;
+  process.env.ZOHO_CLIENT_SECRET = DEFAULT_CLIENT_SECRET;
+  process.env.ZOHO_ORG_ID = DEFAULT_ORG_ID;
+  process.env.ZOHO_REFRESH_TOKEN = DEFAULT_REFRESH_TOKEN;
 
-  const credentials = { 
-    orgId: process.env.ZOHO_ORG_ID || DEFAULT_ORG_ID, 
-    apiToken: process.env.ZOHO_REFRESH_TOKEN || DEFAULT_REFRESH_TOKEN, 
+  return { 
+    orgId: DEFAULT_ORG_ID, 
+    apiToken: DEFAULT_REFRESH_TOKEN, 
     connected: true 
   };
-  
-  // Fallback to local .env file if process.env is empty
-  if (!credentials.orgId || !credentials.apiToken) {
-    try {
-      const envPath = path.resolve(process.cwd(), '.env');
-      if (fs.existsSync(envPath)) {
-        const content = fs.readFileSync(envPath, 'utf8');
-        const lines = content.split('\n');
-        for (const line of lines) {
-          const parts = line.split('=');
-          if (parts.length >= 2) {
-            const key = parts[0].trim();
-            const value = parts.slice(1).join('=').trim();
-            if (key === 'ZOHO_ORG_ID') {
-              credentials.orgId = value;
-            } else if (key === 'ZOHO_REFRESH_TOKEN') {
-              credentials.apiToken = value;
-            }
-          }
-        }
-      }
-      credentials.connected = !!(credentials.orgId && credentials.apiToken);
-    } catch (err) {
-      console.error("Failed to load credentials from .env file:", err);
-    }
-  }
-  return credentials;
 };
 
 const initialCreds = loadCredentialsFromEnv();
