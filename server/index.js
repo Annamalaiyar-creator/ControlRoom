@@ -224,13 +224,22 @@ app.post('/api/zoho/sync', async (req, res) => {
   }
 });
 
-// Local PO Store file path & helpers
-const poStoreFilePath = path.resolve(process.cwd(), 'server', 'po_store.json');
+// Local Store file path & helpers
+const getStoreFilePath = (filename) => {
+  const p1 = path.join(__dirname, filename);
+  if (fs.existsSync(p1)) return p1;
+  const p2 = path.resolve(process.cwd(), 'server', filename);
+  if (fs.existsSync(p2)) return p2;
+  const p3 = path.resolve(process.cwd(), filename);
+  if (fs.existsSync(p3)) return p3;
+  return p1;
+};
 
 const loadLocalPOs = () => {
   try {
-    if (fs.existsSync(poStoreFilePath)) {
-      return JSON.parse(fs.readFileSync(poStoreFilePath, 'utf8'));
+    const filePath = getStoreFilePath('po_store.json');
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
   } catch (err) {
     console.error('Error loading local POs:', err);
@@ -240,19 +249,18 @@ const loadLocalPOs = () => {
 
 const saveLocalPOs = (pos) => {
   try {
-    fs.writeFileSync(poStoreFilePath, JSON.stringify(pos, null, 2), 'utf8');
+    const filePath = getStoreFilePath('po_store.json');
+    fs.writeFileSync(filePath, JSON.stringify(pos, null, 2), 'utf8');
   } catch (err) {
     console.error('Error saving local POs:', err);
   }
 };
 
-const vendorStoreFilePath = path.resolve(process.cwd(), 'server', 'vendor_store.json');
-const itemStoreFilePath = path.resolve(process.cwd(), 'server', 'item_store.json');
-
 const loadLocalVendors = () => {
   try {
-    if (fs.existsSync(vendorStoreFilePath)) {
-      return JSON.parse(fs.readFileSync(vendorStoreFilePath, 'utf8'));
+    const filePath = getStoreFilePath('vendor_store.json');
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
   } catch (err) {
     console.error('Error loading local vendors:', err);
@@ -262,7 +270,8 @@ const loadLocalVendors = () => {
 
 const saveLocalVendors = (vendors) => {
   try {
-    fs.writeFileSync(vendorStoreFilePath, JSON.stringify(vendors, null, 2), 'utf8');
+    const filePath = getStoreFilePath('vendor_store.json');
+    fs.writeFileSync(filePath, JSON.stringify(vendors, null, 2), 'utf8');
   } catch (err) {
     console.error('Error saving local vendors:', err);
   }
@@ -270,8 +279,9 @@ const saveLocalVendors = (vendors) => {
 
 const loadLocalItems = () => {
   try {
-    if (fs.existsSync(itemStoreFilePath)) {
-      return JSON.parse(fs.readFileSync(itemStoreFilePath, 'utf8'));
+    const filePath = getStoreFilePath('item_store.json');
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
   } catch (err) {
     console.error('Error loading local items:', err);
@@ -281,18 +291,15 @@ const loadLocalItems = () => {
 
 const saveLocalItems = (items) => {
   try {
-    fs.writeFileSync(itemStoreFilePath, JSON.stringify(items, null, 2), 'utf8');
+    const filePath = getStoreFilePath('item_store.json');
+    fs.writeFileSync(filePath, JSON.stringify(items, null, 2), 'utf8');
   } catch (err) {
     console.error('Error saving local items:', err);
   }
 };
 
 const getGRNStorePath = () => {
-  const localPath = path.resolve(process.cwd(), 'server', 'grn_store.json');
-  try {
-    if (fs.existsSync(localPath)) return localPath;
-  } catch (e) {}
-  return '/tmp/grn_store.json';
+  return getStoreFilePath('grn_store.json');
 };
 
 const loadLocalGRNs = () => {
