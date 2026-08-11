@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, TrendingUp, Package, FileText, ShoppingCart, Truck, Calendar, Filter } from 'lucide-react';
 
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
+
 export default function DashboardFullReference() {
   const now = new Date();
   const currentMonthCode = String(now.getMonth() + 1).padStart(2, '0'); // e.g. "08" for August
@@ -16,9 +18,9 @@ export default function DashboardFullReference() {
   // Fetch live Zoho Purchase Orders, Approval Pending Counts & GRNs
   useEffect(() => {
     Promise.all([
-      fetch('/api/zoho/purchaseorders').then((res) => res.json()).catch(() => []),
-      fetch('/api/zoho/approvals-pending').then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 })),
-      fetch('/api/grns').then((res) => res.json()).catch(() => [])
+      fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 6000 }).then((res) => res.json()).catch(() => []),
+      fetchWithTimeout('/api/zoho/approvals-pending', { timeout: 6000 }).then((res) => res.json()).catch(() => ({ posPending: 0, grnsPending: 0, invoicesPending: 0 })),
+      fetchWithTimeout('/api/grns', { timeout: 6000 }).then((res) => res.json()).catch(() => [])
     ]).then(([poResults, approvals, grnResults]) => {
       if (Array.isArray(poResults)) {
         setPoData(poResults);
