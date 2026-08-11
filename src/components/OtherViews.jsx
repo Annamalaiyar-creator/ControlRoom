@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, 
+  Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, AlertTriangle,
   TrendingUp, Users, CheckCircle, Clock, ShieldAlert, Award, 
   MapPin, Phone, Mail, FileCheck, CheckSquare, XCircle, ArrowRight, ArrowLeft,
   TrendingDown, DollarSign, Calendar, Edit3, SlidersHorizontal, Filter,
@@ -27,6 +27,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [grnToDelete, setGrnToDelete] = useState(null);
   const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
   const [editingGrnId, setEditingGrnId] = useState(null);
+  const [deleteDocConfirmIdx, setDeleteDocConfirmIdx] = useState(null);
+  const [activeDocPreviewModal, setActiveDocPreviewModal] = useState(null);
 
   const [grnReceivedBy, setGrnReceivedBy] = useState('');
   const [grnInspectorName, setGrnInspectorName] = useState('');
@@ -245,7 +247,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       receivedBy: grnReceivedBy || '',
       inspectorName: grnInspectorName || '',
       inspectionRemarks: grnInspectionRemarks || '',
-      items: grnItems
+      items: grnItems,
+      documents: grnDocs
     };
 
     fetch('/api/grns', {
@@ -341,6 +344,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       inspectorName: grnInspectorName || 'Quality Inspector',
       inspectionRemarks: grnInspectionRemarks || 'PO Marked as Fully Received & Closed',
       items: completedItems,
+      documents: grnDocs,
       status: 'CLOSED / FULLY RECEIVED',
       forceClosePO: true
     };
@@ -3956,6 +3960,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   if (row.receivedBy) setGrnReceivedBy(row.receivedBy);
                                   if (row.inspectorName) setGrnInspectorName(row.inspectorName);
                                   if (row.inspectionRemarks) setGrnInspectionRemarks(row.inspectionRemarks);
+                                  if (row.documents && Array.isArray(row.documents) && row.documents.length > 0) {
+                                    setGrnDocs(row.documents);
+                                  } else {
+                                    setGrnDocs([{
+                                      title: 'Delivery Challan *',
+                                      filename: `Challan_${row.challanNo || 'Doc'}.pdf`,
+                                      size: '1.2 MB',
+                                      url: `data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nE3NPQ7CMAwG4D1T5Awhdtz8iZ0BiQEZqBslFiQkxPn9tJW6vOD3fV92120bhhF4R6mFNBp0FspbUQo7V4m0y2a3b0/b7fg87uPz/DzsT/txfF7v4/7m72m7nve7bZ7Xz+Pj/v2/L74BQ44l6gplbmRzdHJlYW0KZW5kb2JqCjMgMCBvYmoKOTYKZW5kb2JqCjEgMCBvYmoKPDwvVHlwZS9QYWdlL1BhcmludCA0IDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNSAwIFI+Pj4+L0NvbnRlbnRzIDIgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9QYWdlcy9Db3VudCAxL0tpZHNbMSAwIFJdPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCjYgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDQgMCBSPj4KZXhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDE2MSAwMDAwMCBuIAowMDAwMDAwMDE5IDAwMDAwIG4gCjAwMDAwMDAxNDIgMDAwMDAgbiAKMDAwMDAwMDI1NSAwMDAwMCBuIAowMDAwMDAwMzAyIDAwMDAwIG4gCjAwMDAwMDAzNjkgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDcvUm9vdCA2IDAgUj4+CnN0YXJ0eHJlZgo0MTgKJSVFT0YK`
+                                    }]);
+                                  }
                                   setIsViewOnlyMode(true);
                                   setShowCreateGRN(true);
                                 }}
@@ -4172,9 +4186,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           Warehouse / Location <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <select disabled={isViewOnlyMode} defaultValue="ARMS AI Main Facility" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
+                        <select disabled={isViewOnlyMode} defaultValue="VRM Structures" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}>
                           <option value="" disabled>Select Warehouse / Location</option>
-                          <option value="ARMS AI Main Facility">ARMS AI Main Facility</option>
+                          <option value="VRM Structures">VRM Structures</option>
                           <option value="Stock Area">Stock Area</option>
                         </select>
                       </div>
@@ -4633,23 +4647,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </select>
                     </div>
 
-                    {/* Inspection Checklist */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                      {[
-                        { label: 'Material Condition', status: 'Passed' },
-                        { label: 'Quantity Verification', status: 'Passed' },
-                        { label: 'Dimension / Specification Check', status: 'Passed' },
-                        { label: 'Coating / Quality Check', status: 'Passed' }
-                      ].map((chk, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '12px', color: '#475569' }}>{chk.label}</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 'bold' }}>
-                            {chk.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspector Name</label>
                       <input 
@@ -4691,10 +4688,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <FileText style={{ width: '24px', height: '24px', color: '#10B981' }} />
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span 
-                                onClick={() => {
-                                  if (doc.url) window.open(doc.url, '_blank');
-                                  else alert(`Viewing uploaded file: ${doc.filename}`);
-                                }}
+                                onClick={() => setActiveDocPreviewModal({
+                                  title: doc.title || 'Document Preview',
+                                  filename: doc.filename,
+                                  url: doc.url
+                                })}
                                 style={{ fontSize: '11px', fontWeight: '600', color: '#2563EB', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }}
                                 title="Click to view document"
                               >
@@ -4705,58 +4703,227 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           </div>
                           <div style={{ display: 'flex', gap: '10px', marginTop: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                             <span 
-                              onClick={() => {
-                                if (doc.url) window.open(doc.url, '_blank');
-                                else alert(`Viewing document: ${doc.filename}`);
-                              }}
+                              onClick={() => setActiveDocPreviewModal({
+                                title: doc.title || 'Document Preview',
+                                filename: doc.filename,
+                                url: doc.url
+                              })}
                               style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
                               <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
                             </span>
-                            <Trash2 
-                              onClick={() => setGrnDocs(grnDocs.filter((_, i) => i !== idx))}
-                              style={{ width: '14px', height: '14px', color: '#94A3B8', cursor: 'pointer' }} 
-                            />
+                            {!isViewOnlyMode && (
+                              <Trash2 
+                                onClick={() => setDeleteDocConfirmIdx(idx)}
+                                style={{ width: '14px', height: '14px', color: '#EF4444', cursor: 'pointer' }} 
+                              />
+                            )}
                           </div>
                         </div>
                       ))}
 
-                      {/* Upload Box */}
-                      <label 
-                        style={{ border: '2px dashed #CBD5E1', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#F8FAFC', cursor: 'pointer', transition: 'border-color 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2563EB'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
-                      >
-                        <input 
-                          type="file" 
-                          multiple 
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          style={{ display: 'none' }} 
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            if (files.length > 0) {
-                              const newDocs = files.map((file, i) => {
-                                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-                                const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
-                                const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
-                                return {
-                                  title,
-                                  filename: file.name,
-                                  size: `${sizeMB} MB`,
-                                  url: URL.createObjectURL(file),
-                                  rawFile: file
-                                };
-                              });
-                              setGrnDocs(prev => [...prev, ...newDocs]);
-                            }
-                          }}
-                        />
-                        <UploadCloud style={{ width: '20px', height: '20px', color: '#2563EB' }} />
-                        <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold' }}>+ Upload File</span>
-                        <span style={{ fontSize: '8px', color: '#94A3B8', textAlign: 'center' }}>PDF, JPG, PNG (Max 10MB)</span>
-                      </label>
+                      {/* Document Delete Confirmation Modal */}
+                      {deleteDocConfirmIdx !== null && (
+                        <div style={{
+                          position: 'fixed',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                          backdropFilter: 'blur(4px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 99999
+                        }}>
+                          <div style={{
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            width: '420px',
+                            maxWidth: '90%',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <AlertTriangle style={{ width: '22px', height: '22px', color: '#EF4444' }} />
+                              </div>
+                              <div>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Confirm Document Deletion</h3>
+                                <span style={{ fontSize: '12px', color: '#64748B' }}>Action cannot be undone</span>
+                              </div>
+                            </div>
+                            
+                            <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
+                              Are you sure you want to delete the uploaded document <strong>"{grnDocs[deleteDocConfirmIdx]?.filename || 'Attachment'}"</strong>?
+                            </p>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                              <button 
+                                onClick={() => setDeleteDocConfirmIdx(null)}
+                                style={{ height: '36px', padding: '0 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setGrnDocs(grnDocs.filter((_, i) => i !== deleteDocConfirmIdx));
+                                  setDeleteDocConfirmIdx(null);
+                                }}
+                                style={{ height: '36px', padding: '0 18px', borderRadius: '8px', border: 'none', backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                              >
+                                Yes, Delete Document
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upload Box (Only available in Edit / Create mode) */}
+                      {!isViewOnlyMode && (
+                        <label 
+                          style={{ border: '2px dashed #CBD5E1', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#F8FAFC', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2563EB'}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
+                        >
+                          <input 
+                            type="file" 
+                            multiple 
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            style={{ display: 'none' }} 
+                            onChange={async (e) => {
+                              const files = Array.from(e.target.files || []);
+                              if (files.length > 0) {
+                                const docPromises = files.map((file, i) => new Promise((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onload = (evt) => {
+                                    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                                    const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
+                                    const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
+                                    resolve({
+                                      title,
+                                      filename: file.name,
+                                      size: `${sizeMB} MB`,
+                                      url: evt.target.result
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }));
+                                const newDocs = await Promise.all(docPromises);
+                                setGrnDocs(prev => [...prev, ...newDocs]);
+                              }
+                            }}
+                          />
+                          <UploadCloud style={{ width: '20px', height: '20px', color: '#2563EB' }} />
+                          <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold' }}>+ Upload File</span>
+                          <span style={{ fontSize: '8px', color: '#94A3B8', textAlign: 'center' }}>PDF, JPG, PNG (Max 10MB)</span>
+                        </label>
+                      )}
                     </div>
+
+                    {/* Section: Previously Uploaded Documents for this PO (ONLY shown when creating a NEW GRN for an OPEN / PARTIALLY RECEIVED PO) */}
+                    {!isViewOnlyMode && !editingGrnId && poReceivingHistory && poReceivingHistory.length > 0 && (
+                      <div style={{ marginTop: '16px', borderTop: '1px dashed #CBD5E1', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <FileText style={{ width: '15px', height: '15px', color: '#2563EB' }} />
+                          Previously Uploaded Documents for PO ({selectedGRNPo})
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                          {poReceivingHistory.map((prevGrn, pIdx) => {
+                            const firstDoc = (prevGrn.documents && prevGrn.documents.length > 0) ? prevGrn.documents[0] : null;
+                            const docUrl = firstDoc ? firstDoc.url : prevGrn.docUrl;
+
+                            return (
+                              <div key={pIdx} style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#334155' }}>{prevGrn.grnNo} — DC: {prevGrn.challanNo || 'N/A'}</div>
+                                  <div style={{ fontSize: '9px', color: '#64748B' }}>Received Date: {prevGrn.date || '—'} | Qty Accepted: {prevGrn.acceptedQty || 0}</div>
+                                </div>
+                                <span 
+                                  onClick={() => setActiveDocPreviewModal({
+                                    title: `Previous Receipt: ${prevGrn.grnNo}`,
+                                    filename: `Delivery Challan: ${prevGrn.challanNo || 'N/A'}`,
+                                    url: docUrl,
+                                    details: prevGrn
+                                  })}
+                                  style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Inline Document Preview Modal */}
+                  {activeDocPreviewModal && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                      backdropFilter: 'blur(6px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 999999
+                    }}>
+                      <div style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '16px',
+                        width: '900px',
+                        maxWidth: '94%',
+                        height: '85vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        overflow: 'hidden'
+                      }}>
+                        {/* Header */}
+                        <div style={{ padding: '16px 24px', backgroundColor: '#0F172A', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FileText style={{ width: '20px', height: '20px', color: '#38BDF8' }} />
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold' }}>{activeDocPreviewModal.title || 'Document Viewer'}</h3>
+                              <span style={{ fontSize: '11px', color: '#94A3B8' }}>{activeDocPreviewModal.filename || 'Uploaded Document'}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => setActiveDocPreviewModal(null)}
+                            style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '22px', cursor: 'pointer', padding: '4px', lineHeight: 1 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ flex: 1, backgroundColor: '#F8FAFC', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'auto' }}>
+                          {activeDocPreviewModal.url ? (
+                            activeDocPreviewModal.url.startsWith('data:image') ? (
+                              <img src={activeDocPreviewModal.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                            ) : (
+                              <iframe src={activeDocPreviewModal.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px' }} />
+                            )
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', maxWidth: '480px' }}>
+                              <FileText style={{ width: '48px', height: '48px', color: '#2563EB', margin: '0 auto 12px' }} />
+                              <h4 style={{ margin: '0 0 6px', color: '#0F172A', fontSize: '16px' }}>Receipt Record</h4>
+                              <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 12px' }}>
+                                Reference: <strong>{activeDocPreviewModal.details?.grnNo}</strong> | Delivery Challan: <strong>{activeDocPreviewModal.details?.challanNo || 'N/A'}</strong>
+                              </p>
+                              <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', justifyContent: 'center', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                                <span>Date: <strong>{activeDocPreviewModal.details?.date || '—'}</strong></span>
+                                <span>Accepted Qty: <strong>{activeDocPreviewModal.details?.acceptedQty || 0}</strong></span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Card 6: 6. GRN Summary (Span 4) */}
                   <div className="section-card" style={{ gridColumn: 'span 4', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>

@@ -378,8 +378,8 @@
     "approver": "Velmurugan Rathinam (CEO)",
     "approvalPriority": "High",
     "amount": "₹5,44,000.00",
-    "status": "Draft",
-    "statusType": "draft",
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "statusType": "partially_received",
     "items": [
       {
         "name": "Aluminium Profiles",
@@ -393,7 +393,8 @@
         "remainingQty": 2000
       }
     ],
-    "zohoId": "4080449000000080001"
+    "zohoId": "4080449000000080001",
+    "order_status": "received"
   },
   {
     "id": "4080449000000078001",

@@ -14,6 +14,77 @@ const PRESET_MATERIALS = [
   { name: 'Industrial Fan 5KW', account: 'Raw Material', unit: 'KW', rate: 18500, tax: 18 }
 ];
 
+const TERMS_PRESETS = [
+  {
+    key: 'inverter',
+    label: 'Solar Inverter',
+    text: `1. Inverter shall be supplied as per approved technical specifications and make/model mentioned in the PO.
+2. Material should be new, unused, and supplied with original manufacturer warranty certificate.
+3. Supplier shall provide required documents including test certificates, datasheets, manuals, and warranty details along with material.
+4. Delivery shall be completed within the agreed timeline from the date of PO.
+5. Any damage/defect found during inspection shall be replaced by the supplier at no additional cost.
+6. Payment will be released before dispatch of the material.
+7. Warranty support and service shall be provided by the supplier/manufacturer as per warranty conditions.
+8. Material shall be properly packed to avoid any transit damage.
+9. GST and other applicable taxes shall be as per agreed quotation.
+10. Supplier shall ensure the inverter is compatible with the required solar system specifications.`
+  },
+  {
+    key: 'solar_panels',
+    label: 'Solar Panels',
+    text: `1. Supply of solar panels shall be as per the approved specifications and PO requirements.
+2. Panels shall be new, unused, and free from any manufacturing defects.
+3. Manufacturer's warranty documents shall be provided along with the material.
+4. Material shall be supplied with all relevant test certificates and compliance documents.
+5. Any damaged, defective, or short-supplied material shall be replaced by the supplier at no additional cost.
+6. Delivery shall be made as per the agreed schedule mentioned in the PO.
+7. Packing and transportation shall be in the supplier's scope to ensure safe delivery.
+8. GST and other applicable taxes shall be clearly mentioned in the invoice.
+9. Payment shall be made as per the mutually agreed payment terms mentioned in the PO.
+10. Final acceptance of the material is subject to inspection at the delivery site.`
+  },
+  {
+    key: 'general_material',
+    label: 'General Material',
+    text: `1. Material shall be supplied as per the specifications and quantity mentioned in the Purchase Order.
+2. Material must be free from rust, defects, and physical damage.
+3. Delivery shall be made as per the committed schedule.
+4. Supplier shall provide a tax invoice along with the material.
+5. Any rejected material due to quality issues shall be replaced by the supplier at no additional cost.
+6. Material shall be properly packed to avoid damage during transit.
+7. Any deviation from the PO specifications must be approved before dispatch.
+8. Payment Terms: 100% payment shall be made before dispatch of the material.`
+  },
+  {
+    key: 'aluminium_profile',
+    label: 'Aluminium Profile',
+    text: `1. Material: Aluminium Profile as per approved drawing/specification.
+2. Quantity: As per Purchase Order.
+3. Quality: Material should be free from dents, scratches, bends, and manufacturing defects.
+4. Test Certificate: Material Test Certificate (MTC) to be provided along with the material.
+5. Delivery: Material to be supplied as per the delivery schedule mentioned in the PO.
+6. Packing: Proper packing to be ensured to avoid transit damage.
+7. Inspection: Material is subject to inspection and acceptance at our site.
+8. Payment Terms: 30 days credit from the date of material receipt and invoice submission.
+9. Taxes: GST shall be applicable as per government norms.
+10. Rejected or damaged material, if any, shall be replaced by the supplier at no additional cost.`
+  },
+  {
+    key: 'cables',
+    label: 'Cables (AC, DC & Earthing)',
+    text: `1. Material shall be supplied as per approved specification, make, size, and quantity mentioned in the Purchase Order.
+2. Cable shall be new, unused, and supplied with proper packing.
+3. Material should be free from defects and damage; any defective material found will be replaced by the supplier at their cost.
+4. Cable length, size, and quality shall be as per PO requirement and manufacturer standards.
+5. Test certificates / quality certificates shall be provided along with the material, if required.
+6. Delivery shall be completed within the agreed timeline mentioned in the PO.
+7. Material should be supplied with proper invoice and required documents.
+8. Payment will be released before dispatch of the material.
+9. Any shortage in quantity or transit damage shall be informed and resolved by the supplier.
+10. Warranty shall be as per manufacturer’s standard terms.`
+  }
+];
+
 export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
@@ -183,12 +254,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
   // Notes & T&C
   const [notes, setNotes] = useState('');
-  const [terms, setTerms] = useState(`1. Material should be as per the agreed specification and quality.
-2. Delivery should be made on or before the delivery date.
-3. Payment will be released as per the agreed payment terms.
-4. Any delay in delivery may attract penalty as per company policy.
-5. All disputes are subject to the jurisdiction of Nellore courts.`);
-  const [useDefaultTerms, setUseDefaultTerms] = useState(true);
+  const [terms, setTerms] = useState('');
+  const [useDefaultTerms, setUseDefaultTerms] = useState(false);
+  const [selectedTermsPreset, setSelectedTermsPreset] = useState('');
 
   // Approval
   const [approvalRequired, setApprovalRequired] = useState('Yes');
@@ -669,12 +737,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
     setDiscountPct(0);
     setAttachedFiles([]);
     setNotes('');
-    setTerms(`1. Material should be as per the agreed specification and quality.
-2. Delivery should be made on or before the delivery date.
-3. Payment will be released as per the agreed payment terms.
-4. Any delay in delay may attract penalty as per company policy.
-5. All disputes are subject to the jurisdiction of Nellore courts.`);
-    setUseDefaultTerms(true);
+    setTerms('');
+    setSelectedTermsPreset('');
+    setUseDefaultTerms(false);
     setApprovalRequired('Yes');
     setApprover('Velmurugan Rathinam (CEO)');
     setApprovalPriority('High');
@@ -2010,21 +2075,66 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" placeholder="Add remarks for internal reference..." style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }} />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Terms & Conditions</label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#475569', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={useDefaultTerms} onChange={(e) => {
-                          setUseDefaultTerms(e.target.checked);
-                          if (e.target.checked) setTerms(`1. Material should be as per the agreed specification and quality.
-2. Delivery should be made on or before the delivery date.
-3. Payment will be released as per the agreed payment terms.
-4. Any delay in delay may attract penalty as per company policy.
-5. All disputes are subject to the jurisdiction of Nellore courts.`);
-                        }} /> Use Default
-                      </label>
+                      <span style={{ fontSize: '10px', color: '#94A3B8' }}>Select a preset to auto-fill</span>
                     </div>
-                    <textarea value={terms} onChange={(e) => setTerms(e.target.value)} disabled={useDefaultTerms} rows="4" style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', backgroundColor: useDefaultTerms ? '#f8fafc' : 'white' }} />
+
+                    {/* Clean Preset Pill Buttons */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTermsPreset('');
+                          setTerms('');
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          border: selectedTermsPreset === '' ? '1px dashed #64748B' : '1px solid #CBD5E1',
+                          backgroundColor: selectedTermsPreset === '' ? '#F1F5F9' : '#FFFFFF',
+                          color: selectedTermsPreset === '' ? '#0F172A' : '#64748B',
+                          fontSize: '11px',
+                          fontWeight: selectedTermsPreset === '' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        Clear / Custom
+                      </button>
+                      {TERMS_PRESETS.map((p) => (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTermsPreset(p.key);
+                            setTerms(p.text);
+                          }}
+                          style={{
+                            padding: '5px 12px',
+                            borderRadius: '6px',
+                            border: selectedTermsPreset === p.key ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                            backgroundColor: selectedTermsPreset === p.key ? '#2563EB' : '#FFFFFF',
+                            color: selectedTermsPreset === p.key ? '#FFFFFF' : '#475569',
+                            fontSize: '11px',
+                            fontWeight: selectedTermsPreset === p.key ? '600' : '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea 
+                      value={terms} 
+                      onChange={(e) => setTerms(e.target.value)} 
+                      rows="6" 
+                      placeholder="Select a preset above or type custom Terms & Conditions..."
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', minHeight: '130px', backgroundColor: '#FFFFFF' }} 
+                    />
                   </div>
                 </div>
 

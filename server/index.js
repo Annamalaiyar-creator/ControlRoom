@@ -2406,6 +2406,7 @@ app.post('/api/grns', async (req, res) => {
     inspectorName: grnData.inspectorName || '—',
     inspectionRemarks: grnData.inspectionRemarks || '—',
     items: grnData.items || [],
+    documents: grnData.documents || [],
     status: calculatedStatus,
     zohoBillPosted: false
   };

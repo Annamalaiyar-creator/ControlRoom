@@ -1,5 +1,41 @@
 [
   {
+    "id": "GRN-1786429046285",
+    "grnNo": "GRN-2026-00107",
+    "poRef": "PO-00076",
+    "poNo": "PO-00076",
+    "poId": "PO-00076",
+    "vendor": "Apex Infra Systems",
+    "date": "11 Aug 2026",
+    "challanNo": "12312342",
+    "receivedQty": 1000,
+    "acceptedQty": 1000,
+    "rejectedQty": 0,
+    "receivedBy": "Ar.Annamalaiyar",
+    "inspectorName": "Hi sdas",
+    "inspectionRemarks": "sadasdas",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Aluminium Profiles",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "NOS",
+        "ordered": 2000,
+        "prev": 0,
+        "remaining": 2000,
+        "now": 1000,
+        "accepted": 1000,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
     "id": "GRN-1786427055177",
     "grnNo": "GRN-2026-00106",
     "poRef": "PO-00080",
