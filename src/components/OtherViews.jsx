@@ -4130,6 +4130,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               const s = String(po.status || '').toUpperCase();
                               const sType = String(po.statusType || '').toLowerCase();
                               
+                              const isClosed = s.includes('CLOSED') || s.includes('FULLY RECEIVED') || sType === 'closed';
+                              if (isClosed && !isSelected) return false;
+
                               const isOpen = s === 'OPEN' || s === 'APPROVED' || sType === 'approved';
                               const isPartiallyReceived = s.includes('PARTIALLY') || sType === 'partially_received';
 

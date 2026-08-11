@@ -2463,10 +2463,27 @@ app.post('/api/grns', async (req, res) => {
       const poTargetId = grnData.poId || grnData.poRef || grnData.poNo;
       if (poTargetId) {
         await createZohoPurchaseReceive(accessToken, poTargetId, newGRN);
+        if (isFullyReceived || calculatedStatus === 'CLOSED / FULLY RECEIVED' || grnData.status === 'CLOSED / FULLY RECEIVED') {
+          await markZohoPOClosed(accessToken, poTargetId);
+        }
       }
     } catch (err) {
       console.error('Failed to post bill/create receive in Zoho Books:', err);
     }
+  }
+
+  // Update status in local PO store & Supabase
+  if (calculatedStatus === 'CLOSED / FULLY RECEIVED') {
+    const localPOs = loadLocalPOs();
+    const targetClean = String(grnData.poRef || grnData.poNo || '').toLowerCase();
+    const updated = localPOs.map(p => {
+      const pNo = String(p.poNo || p.id || '').toLowerCase();
+      if (pNo && (pNo === targetClean || targetClean.includes(pNo) || pNo.includes(targetClean))) {
+        return { ...p, status: 'CLOSED / FULLY RECEIVED', statusType: 'closed' };
+      }
+      return p;
+    });
+    saveLocalPOs(updated);
   }
 
   grns.unshift(newGRN);

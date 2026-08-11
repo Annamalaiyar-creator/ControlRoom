@@ -1,5 +1,41 @@
 [
   {
+    "id": "GRN-1786427055177",
+    "grnNo": "GRN-2026-00106",
+    "poRef": "PO-00080",
+    "poNo": "PO-00080",
+    "poId": "PO-00080",
+    "vendor": "Annamalaiyar",
+    "date": "11 Aug 2026",
+    "challanNo": "asdasda",
+    "receivedQty": 4,
+    "acceptedQty": 4,
+    "rejectedQty": 0,
+    "receivedBy": "asdsada",
+    "inspectorName": "Quality Inspector",
+    "inspectionRemarks": "PO Marked as Fully Received & Closed",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Aluminium Profiles",
+        "sku": "SKU-101",
+        "desc": "—",
+        "uom": "NOS",
+        "ordered": 10,
+        "prev": 6,
+        "remaining": 10,
+        "now": 4,
+        "accepted": 4,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
     "id": "GRN-1786426621662",
     "grnNo": "GRN-2026-00105",
     "poRef": "PO-00080",
