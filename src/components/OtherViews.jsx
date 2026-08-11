@@ -4627,9 +4627,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspection Status *</label>
-                      <select defaultValue="" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', fontWeight: 'bold' }}>
-                        <option value="" disabled>Select Quality Inspection Status</option>
-                        <option value="Pending">Pending Inspection</option>
+                      <select defaultValue="Passed" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', fontWeight: 'bold' }}>
                         <option value="Passed">Passed</option>
                         <option value="Failed">Failed</option>
                       </select>
@@ -4638,14 +4636,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     {/* Inspection Checklist */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                       {[
-                        { label: 'Material Condition', status: 'Pending' },
-                        { label: 'Quantity Verification', status: 'Pending' },
-                        { label: 'Dimension / Specification Check', status: 'Pending' },
-                        { label: 'Coating / Quality Check', status: 'Pending' }
+                        { label: 'Material Condition', status: 'Passed' },
+                        { label: 'Quantity Verification', status: 'Passed' },
+                        { label: 'Dimension / Specification Check', status: 'Passed' },
+                        { label: 'Coating / Quality Check', status: 'Passed' }
                       ].map((chk, idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', color: '#475569' }}>{chk.label}</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569', fontSize: '10px', fontWeight: 'bold' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 'bold' }}>
                             {chk.status}
                           </span>
                         </div>
@@ -4692,12 +4690,29 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FileText style={{ width: '24px', height: '24px', color: '#10B981' }} />
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '11px', fontWeight: '600', color: '#334155', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.filename}</span>
+                              <span 
+                                onClick={() => {
+                                  if (doc.url) window.open(doc.url, '_blank');
+                                  else alert(`Viewing uploaded file: ${doc.filename}`);
+                                }}
+                                style={{ fontSize: '11px', fontWeight: '600', color: '#2563EB', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }}
+                                title="Click to view document"
+                              >
+                                {doc.filename}
+                              </span>
                               <span style={{ fontSize: '9px', color: '#94A3B8' }}>{doc.size}</span>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '10px', marginTop: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '6px', justifyContent: 'flex-end' }}>
-                            <Eye style={{ width: '14px', height: '14px', color: '#94A3B8', cursor: 'pointer' }} />
+                          <div style={{ display: 'flex', gap: '10px', marginTop: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <span 
+                              onClick={() => {
+                                if (doc.url) window.open(doc.url, '_blank');
+                                else alert(`Viewing document: ${doc.filename}`);
+                              }}
+                              style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
+                            </span>
                             <Trash2 
                               onClick={() => setGrnDocs(grnDocs.filter((_, i) => i !== idx))}
                               style={{ width: '14px', height: '14px', color: '#94A3B8', cursor: 'pointer' }} 
@@ -4727,7 +4742,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 return {
                                   title,
                                   filename: file.name,
-                                  size: `${sizeMB} MB`
+                                  size: `${sizeMB} MB`,
+                                  url: URL.createObjectURL(file),
+                                  rawFile: file
                                 };
                               });
                               setGrnDocs(prev => [...prev, ...newDocs]);
@@ -5963,7 +5980,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9', padding: '8px 0' }}>
                               <div>
                                 <div style={{ color: '#64748B', fontWeight: 'bold' }}>Bill To</div>
-                                <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>VRM Structures Pvt Ltd</strong>
+                                <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>ARMS AI Pvt Ltd</strong>
                                 <div style={{ color: '#64748B' }}>Nellore - 524002</div>
                                 <div style={{ color: '#64748B' }}>GSTIN: 37AAFCV0146D1Z1</div>
                               </div>
