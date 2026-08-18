@@ -1,7 +1,14 @@
-import React from 'react';
-import { Bell, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, HelpCircle, ChevronDown, User, Shield, LogOut, Factory, ShoppingCart } from 'lucide-react';
 
-export default function Header({ activeTab }) {
+export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal }) {
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
+
+  const isProdAdmin = userRole === 'Production Admin';
+  const userName = isProdAdmin ? 'Senthil Kumar' : 'Arun';
+  const avatarLetter = isProdAdmin ? 'S' : 'A';
+  const roleBadgeColor = isProdAdmin ? '#9333EA' : '#2563EB';
+
   return (
     <header 
       className="top-navigation" 
@@ -15,7 +22,8 @@ export default function Header({ activeTab }) {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0 var(--spacing-24)',
-        boxShadow: 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)',
+        position: 'relative'
       }}
     >
       {/* Left side: Breadcrumb */}
@@ -35,8 +43,8 @@ export default function Header({ activeTab }) {
       </div>
 
       {/* Right side: Actions & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+
         {/* Help and Support */}
         <button 
           title="Help & Support"
@@ -51,8 +59,6 @@ export default function Header({ activeTab }) {
             justifyContent: 'center',
             transition: 'color 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
         >
           <HelpCircle style={{ width: '20px', height: '20px' }} />
         </button>
@@ -72,11 +78,8 @@ export default function Header({ activeTab }) {
             justifyContent: 'center',
             transition: 'color 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
         >
           <Bell style={{ width: '20px', height: '20px' }} />
-          {/* Notification Dot */}
           <span 
             style={{
               position: 'absolute',
@@ -94,15 +97,18 @@ export default function Header({ activeTab }) {
         {/* Vertical Separator */}
         <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--color-border)' }} />
 
-        {/* Profile Details */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+        {/* Profile Details Dropdown Trigger */}
+        <div 
+          onClick={() => setShowRoleMenu(!showRoleMenu)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', position: 'relative' }}
+        >
           {/* Circular Profile Photo Initials Avatar */}
           <div 
             style={{
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              backgroundColor: '#2563eb',
+              backgroundColor: roleBadgeColor,
               color: 'white',
               display: 'flex',
               alignItems: 'center',
@@ -112,20 +118,75 @@ export default function Header({ activeTab }) {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
-            A
+            {avatarLetter}
           </div>
           {/* Name of the person */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--color-text-primary)', lineHeight: '1.2' }}>
-              Arun
+              {userName}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>
-              Procurement Admin
+            <span style={{ fontSize: '10px', color: roleBadgeColor, fontWeight: 'bold' }}>
+              {userRole}
             </span>
           </div>
+          <ChevronDown style={{ width: '14px', height: '14px', color: '#64748B' }} />
+
+          {/* Role & Login Menu Popup */}
+          {showRoleMenu && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: '42px',
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                width: '240px',
+                padding: '8px',
+                zIndex: 99999,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: '8px 10px', borderBottom: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#0F172A' }}>{userName}</div>
+                <div style={{ fontSize: '10px', color: '#64748B' }}>{isProdAdmin ? 'senthil@armsai.com' : 'arun@armsai.com'}</div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #F1F5F9', marginTop: '4px', paddingTop: '4px' }}>
+                <button
+                  onClick={() => {
+                    setShowRoleMenu(false);
+                    onOpenLoginModal && onOpenLoginModal();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: '#EF4444',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <LogOut style={{ width: '15px', height: '15px' }} />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
     </header>
   );
 }
+

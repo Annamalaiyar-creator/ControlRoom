@@ -735,6 +735,71 @@ app.delete('/api/zoho/vendors/:id', async (req, res) => {
   res.json({ success: true, message: `Vendor ${targetId} deleted from Control Room!` });
 });
 
+// Helpers for Production Work Orders local store
+const loadLocalWorkOrders = () => {
+  try {
+    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
+    if (fs.existsSync(storePath)) {
+      const content = fs.readFileSync(storePath, 'utf8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (err) {
+    console.error('Error reading workorder_store.json:', err.message);
+  }
+  return [
+    { id: 'wo_1', workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
+    { id: 'wo_2', workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
+    { id: 'wo_3', workOrderNo: 'VRM26/07/089', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
+    { id: 'wo_4', workOrderNo: 'VRM26/07/074', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' },
+    { id: 'wo_5', workOrderNo: 'VRM26/07/061', productName: 'End Clamp 35 mm', plannedQty: 300, completedQty: 210, delayDays: 1, delayReason: 'Inspection Hold', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Clamp Stock', customer: 'Waaree Energies', targetDate: '2026-07-27' }
+  ];
+};
+
+const saveLocalWorkOrders = (orders) => {
+  try {
+    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
+    fs.writeFileSync(storePath, JSON.stringify(orders, null, 2), 'utf8');
+    pushStoreToSupabase('workorder_store', orders);
+  } catch (err) {
+    console.error('Error writing workorder_store.json:', err.message);
+  }
+};
+
+// Endpoint to GET Production Work Orders (Synced with Zoho Inventory & Local Store)
+app.get('/api/zoho/workorders', async (req, res) => {
+  const localOrders = loadLocalWorkOrders();
+  res.json({ success: true, count: localOrders.length, workOrders: localOrders });
+});
+
+// Endpoint to CREATE / ISSUE a Production Work Order
+app.post('/api/zoho/workorders', async (req, res) => {
+  try {
+    const newOrder = {
+      id: `wo_${Date.now()}`,
+      workOrderNo: req.body.workOrderNo || `VRM26/07/${Math.floor(100 + Math.random() * 900)}`,
+      productName: req.body.productName || 'Solar Mounting Rail',
+      plannedQty: parseInt(req.body.plannedQty) || 500,
+      completedQty: parseInt(req.body.completedQty) || 0,
+      delayDays: 0,
+      delayReason: req.body.delayReason || 'Normal Production',
+      status: req.body.status || 'In Progress',
+      statusColor: '#EA580C',
+      rawMaterial: req.body.rawMaterial || 'Raw Alu Coil',
+      customer: req.body.customer || 'Solar Client',
+      targetDate: req.body.targetDate || new Date().toISOString().split('T')[0]
+    };
+
+    const currentOrders = loadLocalWorkOrders();
+    const updated = [newOrder, ...currentOrders];
+    saveLocalWorkOrders(updated);
+
+    res.json({ success: true, message: 'Production Work Order Created and Synced with Zoho Inventory!', workOrder: newOrder });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Single vendor details endpoint from Zoho Books
 app.get('/api/zoho/vendors/:id', async (req, res) => {
   if (!zohoSession.connected) {

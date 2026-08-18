@@ -929,10 +929,10 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         const totalPages = Math.ceil(sortedPOList.length / rowsPerPage);
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)', minWidth: 0, width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
           
           {/* Header section with Action Button */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                 Purchase Orders (PO)
@@ -957,7 +957,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                 gap: '6px',
                 padding: '0 16px',
                 borderRadius: '8px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
               }}
             >
               <Plus style={{ width: '14px', height: '14px' }} />
@@ -965,11 +967,10 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
             </button>
           </div>
 
-
           {/* 1. FILTERS & SEARCH ROW CARD */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '340px' }}>
-              <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '320px', maxWidth: '100%', boxSizing: 'border-box' }}>
+              <Search style={{ width: '15px', height: '15px', color: '#64748b', flexShrink: 0 }} />
               <input
                 type="text"
                 placeholder="Search Purchase Orders (PO No, Vendor Name)..."
@@ -979,19 +980,19 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
-                <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                <Calendar style={{ width: '14px', height: '14px', color: '#64748b', flexShrink: 0 }} />
                 <input
                   type="date"
                   value={filterDate}
                   title="Filter by Date"
                   onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
-                  style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'transparent' }}
+                  style={{ border: 'none', outline: 'none', fontSize: '12px', color: '#334155', backgroundColor: 'transparent' }}
                 />
               </div>
 
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '12px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
                 {allStatusOptions.map(s => (
                   <option key={s} value={s}>
                     {s === 'All' ? 'Status: All' : s}
@@ -1014,6 +1015,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   borderRadius: '8px', 
                   height: '38px',
                   width: '38px',
+                  flexShrink: 0,
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -1058,25 +1060,26 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           </div>
 
           {/* PO Table */}
-          <div className="section-card" style={{ padding: 0, overflowX: 'auto', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box' }}>
-            <div className="table-responsive" style={{ border: 'none', borderRadius: 0, margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
+          <div className="section-card" style={{ padding: 0, overflowX: 'auto', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
+            <div className="table-responsive" style={{ border: 'none', borderRadius: '16px', margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
               <table className="ds-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ width: '40px', textAlign: 'center' }}>
+                  <tr style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#475569', height: '48px' }}>
+                    <th style={{ width: '48px', textAlign: 'center', padding: '12px 14px' }}>
                       <input 
                         type="checkbox" 
                         onChange={(e) => handleSelectAll(e, filteredPOList)}
                         checked={filteredPOList.length > 0 && filteredPOList.every(po => selectedPOs.includes(po.poNo))}
+                        style={{ cursor: 'pointer', borderRadius: '4px' }}
                       />
                     </th>
-                    <th>PO No.</th>
-                    <th>Vendor Name</th>
-                    <th>PO Date</th>
-                    <th>Expected Delivery</th>
-                    <th>Total Value</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'center' }}>Actions</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>PO No.</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Vendor Name</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>PO Date</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Expected Delivery</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Total Value</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Status</th>
+                    <th style={{ fontWeight: '700', padding: '12px 14px', textAlign: 'right', color: '#334155' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, AlertTriangle,
-  TrendingUp, Users, CheckCircle, Clock, ShieldAlert, Award, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, AlertTriangle, X,
+  TrendingUp, Users, CheckCircle, Clock, ShieldAlert, Award,
   MapPin, Phone, Mail, FileCheck, CheckSquare, XCircle, ArrowRight, ArrowLeft,
   TrendingDown, DollarSign, Calendar, Edit3, SlidersHorizontal, Filter,
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ExternalLink,
-  Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2
+  Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
+  ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw
 } from 'lucide-react';
+import CreateWorkOrderPage from './CreateWorkOrderPage';
 
 export default function OtherViews({ activeTab, onChangeTab }) {
   // Common states
@@ -33,6 +35,217 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [grnReceivedBy, setGrnReceivedBy] = useState('');
   const [grnInspectorName, setGrnInspectorName] = useState('');
   const [grnInspectionRemarks, setGrnInspectionRemarks] = useState('');
+
+  // Top-level state for Production Admin views to obey React Hook rules
+  const [prodActiveSubTab, setProdActiveSubTab] = useState('All');
+  const [prodSearchQueryText, setProdSearchQueryText] = useState('');
+  const [prodFilterDateVal, setProdFilterDateVal] = useState('');
+  const [prodFilterStatusSelect, setProdFilterStatusSelect] = useState('All');
+
+  const [showBOMForm, setShowBOMForm] = useState(false);
+  const [showWorkOrderForm, setShowWorkOrderForm] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [custFormName, setCustFormName] = useState('');
+  const [custFormCompany, setCustFormCompany] = useState('');
+  const [custFormMobile, setCustFormMobile] = useState('');
+  const [custFormEmail, setCustFormEmail] = useState('');
+  
+  // Structured Billing Address
+  const [custFormBillingAddress, setCustFormBillingAddress] = useState('');
+  const [custFormBillingCity, setCustFormBillingCity] = useState('');
+  const [custFormBillingState, setCustFormBillingState] = useState('');
+  const [custFormBillingPincode, setCustFormBillingPincode] = useState('');
+
+  // Structured Delivery Address
+  const [custFormSameAsBilling, setCustFormSameAsBilling] = useState(false);
+  const [custFormDeliveryAddress, setCustFormDeliveryAddress] = useState('');
+  const [custFormDeliveryCity, setCustFormDeliveryCity] = useState('');
+  const [custFormDeliveryState, setCustFormDeliveryState] = useState('');
+  const [custFormDeliveryPincode, setCustFormDeliveryPincode] = useState('');
+
+  const [customerList, setCustomerList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_customer_list');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [
+      { code: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', c3: 'Rajesh Kumar', c4: '+91 98765 43210', c5: 'rajesh@vikramsolar.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
+      { code: 'Tata Power Renewable', c2: 'Tata Power Ltd', c3: 'Anish Sharma', c4: '+91 98123 45678', c5: 'anish.s@tatapower.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
+      { code: 'Apex Infra Systems', c2: 'Apex Infra Ltd', c3: 'Priya Sundaram', c4: '+91 99400 11223', c5: 'priya@apexinfra.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' }
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_customer_list', JSON.stringify(customerList));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [customerList]);
+
+  const [customerActionMenuIdx, setCustomerActionMenuIdx] = useState(null);
+  const [viewingCustomer, setViewingCustomer] = useState(null);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [previewAddressProofModal, setPreviewAddressProofModal] = useState(null);
+
+  const [bomStore, setBomStore] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_bom_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [
+      {
+        bomCode: 'BOM-101',
+        date: '2026-07-10',
+        customerName: 'Vikram Solar Pvt Ltd',
+        companyName: 'Vikram Solar Pvt Ltd',
+        mobile: '+91 98765 43210',
+        email: 'rajesh@vikramsolar.com',
+        billingAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
+        deliveryAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
+        paymentType: '100% Advance',
+        status: 'Pending Confirmation', // Draft, Pending Confirmation, Edited / Pending Confirmation, Sent to Production, Pending Payment Details, Payment Uploaded
+        items: [
+          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 4, rate: 250, confirmed: false },
+          { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: 6, rate: 45, confirmed: false },
+          { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: 4, rate: 40, confirmed: false }
+        ],
+        payments: {
+          advance50Uploaded: false,
+          dispatch50Uploaded: false,
+          advance100Uploaded: false,
+          net30Uploaded: false,
+          proofDoc: null
+        },
+        dispatchPacking: [],
+        accountsVerification: {
+          paymentStatus: null, // 100% Received, 50% Received, Credit Payment
+          hardCopyReceived: false,
+          softCopyReceived: false
+        },
+        invoiceConfirmed: false,
+        invoiceDeducted: false,
+        grandTotal: 1430
+      },
+      {
+        bomCode: 'BOM-102',
+        date: '2026-07-12',
+        customerName: 'Tata Power Renewable',
+        companyName: 'Tata Power Ltd',
+        mobile: '+91 98123 45678',
+        email: 'anish.s@tatapower.com',
+        billingAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
+        deliveryAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
+        paymentType: '50% Advance + 50% Dispatch',
+        status: 'Sent to Production',
+        items: [
+          { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, confirmed: true },
+          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, confirmed: true }
+        ],
+        payments: {
+          advance50Uploaded: true,
+          dispatch50Uploaded: false,
+          proofDoc: 'payment_proof_50pct.pdf'
+        },
+        dispatchPacking: [
+          { name: 'Long Rail 3000 mm', bomQty: 8, packed: true },
+          { name: 'Mini Rail 100 mm', bomQty: 12, packed: true }
+        ],
+        accountsVerification: {
+          paymentStatus: '50% Received',
+          hardCopyReceived: true,
+          softCopyReceived: true
+        },
+        invoiceConfirmed: false,
+        invoiceDeducted: false,
+        grandTotal: 17400
+      }
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [bomStore]);
+
+  const [bomActionMenuIdx, setBomActionMenuIdx] = useState(null);
+  const [confirmingBomModal, setConfirmingBomModal] = useState(null); // Full BOM object being confirmed by Salesperson
+  const [uploadPaymentModal, setUploadPaymentModal] = useState(null); // Full BOM object uploading payment proof
+  const [paymentProofFile, setPaymentProofFile] = useState(null);
+  const [paymentStageType, setPaymentStageType] = useState('100% Advance'); // '100% Advance' | '50% Advance' | '50% Dispatch' | 'Net 30 Days'
+  const [dispatchPackingModal, setDispatchPackingModal] = useState(null); // Full BOM object being packed by Dispatch Head
+  const [accountsVerificationModal, setAccountsVerificationModal] = useState(null); // Full BOM object being verified by Accounts Team
+  const [isAccountsViewOnly, setIsAccountsViewOnly] = useState(false); // Controls View mode vs Verification mode
+  const [accountsBomViewMode, setAccountsBomViewMode] = useState('paper'); // 'paper' | 'table'
+  const [viewingProofDocModal, setViewingProofDocModal] = useState(null); // BOM object or proof doc being viewed in detail
+  const [showSoftCopyModal, setShowSoftCopyModal] = useState(false);
+  const [softCopyMode, setSoftCopyMode] = useState('upload'); // 'upload' | 'camera'
+  const [selectedSoftCopyFile, setSelectedSoftCopyFile] = useState(null);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraErrorMsg, setCameraErrorMsg] = useState('');
+  const cameraVideoRef = useRef(null);
+  const cameraCanvasRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+
+  const [newBomCode, setNewBomCode] = useState('');
+  const [newBomProductName, setNewBomProductName] = useState('');
+  const [newBomSku, setNewBomSku] = useState('');
+  const [newBomRevision, setNewBomRevision] = useState('');
+  const [newBomTargetQty, setNewBomTargetQty] = useState('');
+  const [newBomStatus, setNewBomStatus] = useState('ACTIVE');
+  const [newBomDeliveryAddress, setNewBomDeliveryAddress] = useState('');
+  const [newBomDeliveryStreet, setNewBomDeliveryStreet] = useState('');
+  const [newBomDeliveryCity, setNewBomDeliveryCity] = useState('');
+  const [newBomDeliveryState, setNewBomDeliveryState] = useState('');
+  const [newBomDeliveryPincode, setNewBomDeliveryPincode] = useState('');
+  const [newBomPaymentType, setNewBomPaymentType] = useState('100% Paid');
+  const [newBomCreditDays, setNewBomCreditDays] = useState(7);
+  const [sameAsBilling, setSameAsBilling] = useState(false);
+  const [newBomDeliveryProofDoc, setNewBomDeliveryProofDoc] = useState(null);
+  const [newBomPaymentProofDoc, setNewBomPaymentProofDoc] = useState(null);
+  const [newBomRemarks, setNewBomRemarks] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [bomConfirmModal, setBomConfirmModal] = useState(null); // { type: 'cancel' | 'draft' | 'create' }
+  const [reuploadAddressProofModal, setReuploadAddressProofModal] = useState(null); // BOM object requiring address proof re-upload
+  const [reuploadProofFile, setReuploadProofFile] = useState(null);
+  const [updatePaymentModal, setUpdatePaymentModal] = useState(null); // BOM object for updating payment (Partial/Credit)
+  const [updatePaymentFile, setUpdatePaymentFile] = useState(null);
+  const [updatePaymentNotes, setUpdatePaymentNotes] = useState('');
+
+  const [bomMaterialsList, setBomMaterialsList] = useState([]);
+
+  const [bomRoutingSteps, setBomRoutingSteps] = useState([
+    { stepNo: 1, opName: 'Uncoiling & Cut to Length', machine: 'CNC Cutting Machine', cycleTime: '3.5 sec', setupTime: '10 mins', skill: 'Skilled Operator' },
+    { stepNo: 2, opName: 'Precision Slot Punching', machine: 'Punching Machine #1', cycleTime: '4.0 sec', setupTime: '15 mins', skill: 'Skilled Operator' },
+    { stepNo: 3, opName: 'Quality Inspection & Deburring', machine: 'QC Station #1', cycleTime: '2.0 sec', setupTime: '5 mins', skill: 'QC Inspector' },
+    { stepNo: 4, opName: 'Final Stacking & Packing', machine: 'Packing Bench', cycleTime: '5.0 sec', setupTime: '5 mins', skill: 'Assembly Worker' }
+  ]);
+
+  // Reset sub-form view state whenever switching main tabs/side menu items
+  useEffect(() => {
+    setShowBOMForm(false);
+    setShowWorkOrderForm(false);
+    setShowCustomerForm(false);
+    setViewingCustomer(null);
+    setEditingCustomer(null);
+  }, [activeTab]);
 
   // Reset GRN modal state to clean initial state
   const resetCreateGRNForm = () => {
@@ -96,21 +309,21 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     const vendorName = found ? found.vendor : 'Vendor';
     const targetId = found ? (found.id || selectedId) : selectedId;
     const poRef = found ? (found.poNo || selectedId) : selectedId;
-    
+
     setSelectedGRNPo(poRef);
     setSelectedGRNVendor(vendorName);
-    
+
     Promise.all([
-      fetch(`/api/zoho/purchaseorders/${encodeURIComponent(targetId)}`).then(res => res.json()),
-      fetch(`/api/po-receiving-history/${encodeURIComponent(poRef)}`).then(res => res.json())
+      fetch(`/api/zoho/purchaseorders/${encodeURIComponent(targetId)}`).then(res => res.ok ? res.json().catch(() => null) : null),
+      fetch(`/api/po-receiving-history/${encodeURIComponent(poRef)}`).then(res => res.ok ? res.json().catch(() => null) : null)
     ])
       .then(([detail, historyData]) => {
-        let rawItems = (detail && Array.isArray(detail.items) && detail.items.length > 0) 
-          ? detail.items 
+        let rawItems = (detail && Array.isArray(detail.items) && detail.items.length > 0)
+          ? detail.items
           : [
-              { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', qty: 3000, unit: 'NOS' },
-              { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', qty: 1000, unit: 'Set' }
-            ];
+            { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', qty: 3000, unit: 'NOS' },
+            { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', qty: 1000, unit: 'Set' }
+          ];
 
         const historyTotals = (historyData && historyData.itemReceivedTotals) ? historyData.itemReceivedTotals : {};
         const historyList = (historyData && historyData.grnHistory) ? historyData.grnHistory : [];
@@ -118,7 +331,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         const items = rawItems.map((it, idx) => {
           const itemId = it.id || it.itemId || it.lineItemId || `PO-ITEM-${idx}`;
           const itemName = (it.name || '').trim().toLowerCase();
-          
+
           let prev = 0;
           if (historyTotals[itemId] !== undefined) {
             prev = Number(historyTotals[itemId]);
@@ -161,7 +374,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     if (selectedPOForDetail) {
       const found = livePOs.find(p => p.poNo === selectedPOForDetail || p.id === selectedPOForDetail);
       const targetId = found ? found.id : selectedPOForDetail;
-      
+
       fetch(`/api/zoho/purchaseorders/${targetId}`)
         .then(res => res.json())
         .then(data => setPoDetailData(data))
@@ -224,9 +437,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
     if (invalidItem) {
       const remaining = Math.max(0, (invalidItem.ordered || 0) - (invalidItem.prev || 0));
-      setGrnValidationModal({ 
-        title: 'Validation Error', 
-        message: `Received quantity (${invalidItem.now}) for "${invalidItem.name}" cannot exceed the pending quantity of ${remaining}.` 
+      setGrnValidationModal({
+        title: 'Validation Error',
+        message: `Received quantity (${invalidItem.now}) for "${invalidItem.name}" cannot exceed the pending quantity of ${remaining}.`
       });
       return;
     }
@@ -307,9 +520,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     }
 
     if (!grnDocs || grnDocs.length === 0) {
-      setGrnValidationModal({ 
-        title: 'Mandatory Document Required', 
-        message: 'You must upload / attach at least one Document (DC, Invoice, or Delivery Note) to proceed with receiving this GRN.' 
+      setGrnValidationModal({
+        title: 'Mandatory Document Required',
+        message: 'You must upload / attach at least one Document (DC, Invoice, or Delivery Note) to proceed with receiving this GRN.'
       });
       return;
     }
@@ -389,10 +602,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const handleDeleteGRN = (targetId) => {
     const targetItem = grnList.find(g => g.id === targetId || g.grnNo === targetId);
     if (targetItem && (
-      targetItem.status === 'CLOSED / FULLY RECEIVED' || 
-      targetItem.status === 'Approved' || 
-      targetItem.status === 'Fully Accepted' || 
-      targetItem.status === 'Closed' || 
+      targetItem.status === 'CLOSED / FULLY RECEIVED' ||
+      targetItem.status === 'Approved' ||
+      targetItem.status === 'Fully Accepted' ||
+      targetItem.status === 'Closed' ||
       targetItem.status === 'CLOSED'
     )) {
       alert('Fully received or approved GRNs cannot be deleted.');
@@ -506,16 +719,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     }
 
     return (
-      <span style={{ 
-        display: 'inline-flex', 
-        alignItems: 'center', 
-        gap: '5px', 
-        padding: '4px 10px', 
-        borderRadius: '6px', 
-        fontSize: '11px', 
-        fontWeight: 'bold', 
-        backgroundColor: colors.bg, 
-        color: colors.color, 
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '4px 10px',
+        borderRadius: '6px',
+        fontSize: '11px',
+        fontWeight: 'bold',
+        backgroundColor: colors.bg,
+        color: colors.color,
         border: `1px solid ${colors.border}`,
         whiteSpace: 'nowrap'
       }}>
@@ -541,16 +754,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     }
 
     return (
-      <span style={{ 
-        display: 'inline-flex', 
-        alignItems: 'center', 
-        gap: '5px', 
-        padding: '4px 10px', 
-        borderRadius: '6px', 
-        fontSize: '11px', 
-        fontWeight: 'bold', 
-        backgroundColor: colors.bg, 
-        color: colors.color, 
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '4px 10px',
+        borderRadius: '6px',
+        fontSize: '11px',
+        fontWeight: 'bold',
+        backgroundColor: colors.bg,
+        color: colors.color,
         border: `1px solid ${colors.border}`,
         whiteSpace: 'nowrap'
       }}>
@@ -596,7 +809,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [prProject, setPrProject] = useState('N/A');
   const [prCostCenter, setPrCostCenter] = useState('PROD-1001 - Production');
   const [prPurpose, setPrPurpose] = useState('');
-  
+
   // Requisition items list state
   const [prItems, setPrItems] = useState([
     { name: 'GI Steel Coil 2mm', desc: '', unit: 'MT', qty: '', date: '', vendor: 'N/A' }
@@ -649,8 +862,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           }}
         >
           {options.map((opt, i) => (
-            typeof opt === 'object' 
-              ? <option key={i} value={opt.value}>{opt.label}</option> 
+            typeof opt === 'object'
+              ? <option key={i} value={opt.value}>{opt.label}</option>
               : <option key={i} value={opt}>{opt}</option>
           ))}
         </select>
@@ -845,7 +1058,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     try {
       setIsCreatingProduct(true);
       setCreateStatus(null);
-      
+
       const payload = {
         name: newItemData.name.trim(),
         rate: Number(newItemData.rate) || 0,
@@ -872,7 +1085,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
       setItemsList(prev => [createdItem, ...prev]);
       setCreateStatus({ type: 'success', text: result.message || 'Product created successfully and added to Zoho Books!' });
-      
+
       setTimeout(() => {
         setIsCreatingItem(false);
         setCreateStatus(null);
@@ -915,7 +1128,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     try {
       setIsSavingItem(true);
       setItemSaveStatus(null);
-      
+
       const payload = {
         name: editingItem.name,
         rate: Number(editingItem.rate) || 0,
@@ -940,7 +1153,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       }
 
       setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? { ...it, ...editingItem, ...payload } : it));
-      
+
       setTimeout(() => {
         setEditingItem(null);
         setItemSaveStatus(null);
@@ -1055,7 +1268,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           if (data.email) setVEmail(data.email);
           if (data.phone) setVPhone(data.phone);
 
-          setGstLookupStatus({ type: 'success', msg: `✓ Verified: Official Details Loaded for ${data.legalName}` });
+          setGstLookupStatus({ type: 'success', msg: `Verified: Official Details Loaded for ${data.legalName}` });
         }
       }
     } catch (err) {
@@ -1131,13 +1344,110 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [stockLocationFilter, setStockLocationFilter] = useState('All');
 
   // Invoice State
-  const [invoiceList, setInvoiceList] = useState([]);
+  const [viewingInvoiceModal, setViewingInvoiceModal] = useState(null);
+  const [invoiceModalActiveTab, setInvoiceModalActiveTab] = useState('Invoice Items');
+  const [closeInvoiceReasonModal, setCloseInvoiceReasonModal] = useState(null);
+  const [closeReasonText, setCloseReasonText] = useState('');
+  const [pendingDcModal, setPendingDcModal] = useState(null);
+  const [confirmInvoiceSuccessModal, setConfirmInvoiceSuccessModal] = useState(null);
+  const INITIAL_INVOICES = [
+    {
+      invNo: 'INV-2026-102',
+      date: '12 Jul 2026',
+      vendor: 'Tata Power Renewable',
+      poNo: 'BOM-102',
+      grnNo: 'GRN-VERIFIED',
+      invAmt: '₹ 17,400.00',
+      poVal: '₹ 17,400.00',
+      grnVal: '₹ 17,400.00',
+      diff: '0.00',
+      match: 'Matched',
+      pay: 'Ready',
+      status: 'Ready for Payment',
+      items: [
+        { code: 'PRD-001', name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, selected: true },
+        { code: 'PRD-002', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, selected: false }
+      ]
+    },
+    {
+      invNo: 'INV-2026-088',
+      date: '02 Jul 2026',
+      vendor: 'Apex Infra Systems',
+      poNo: 'BOM-098',
+      grnNo: 'GRN-1824',
+      invAmt: '₹ 45,000.00',
+      poVal: '₹ 45,000.00',
+      grnVal: '₹ 45,000.00',
+      diff: '0.00',
+      match: 'Matched',
+      pay: 'Ready',
+      status: 'Ready for Payment',
+      items: [
+        { code: 'PRD-101', name: 'Steel Pipe', category: '2 inch GI Pipe', qty: 100, rate: 400, selected: true },
+        { code: 'PRD-102', name: 'Flange', category: '2 inch MS Flange', qty: 50, rate: 100, selected: false }
+      ]
+    },
+    {
+      invNo: 'INV-2026-075',
+      date: '25 Jun 2026',
+      vendor: 'Vikram Solar Pvt Ltd',
+      poNo: 'BOM-092',
+      grnNo: 'GRN-1811',
+      invAmt: '₹ 28,500.00',
+      poVal: '₹ 28,500.00',
+      grnVal: '₹ 28,500.00',
+      diff: '0.00',
+      match: 'Matched',
+      pay: 'Ready',
+      status: 'Ready for Payment',
+      items: [
+        { code: 'PRD-201', name: 'Solar Cable 4sqmm', category: 'DC Solar Cable', qty: 500, rate: 50, selected: true },
+        { code: 'PRD-202', name: 'MC4 Connector Pair', category: 'Connectors', qty: 70, rate: 50, selected: true }
+      ]
+    }
+  ];
+
+  const [invoiceList, setInvoiceList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_invoice_list_store');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error parsing stored invoice list', e);
+    }
+    return INITIAL_INVOICES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_invoice_list_store', JSON.stringify(invoiceList));
+    } catch (e) {
+      console.error('Error saving invoice list to localStorage', e);
+    }
+  }, [invoiceList]);
 
   // Payments State
-  const [paymentList, setPaymentList] = useState([
+  const INITIAL_PAYMENTS = [
     { id: 'PAY-48901', vendor: 'Tata Steel Ltd.', amount: '₹12,74,908.00', mode: 'RTGS', ref: 'RTGS-N887410B', date: '31 Jul 2026', status: 'Completed' },
     { id: 'PAY-48902', vendor: 'UltraTech Cement', amount: '₹9,00,000.00', mode: 'NEFT', ref: 'NEFT-T5420108', date: '28 Jul 2026', status: 'Scheduled' }
-  ]);
+  ];
+
+  const [paymentList, setPaymentList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_payment_list_store');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error loading paymentList', e);
+    }
+    return INITIAL_PAYMENTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_payment_list_store', JSON.stringify(paymentList));
+    } catch (e) {
+      console.error('Error saving paymentList', e);
+    }
+  }, [paymentList]);
 
   // Vendor Performance scorecard
   const vendorPerformance = [
@@ -1156,7 +1466,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   ];
 
   // Low Stock / Reorder Alerts
-  const [reorderAlerts, setReorderAlerts] = useState([
+  const INITIAL_REORDER_ALERTS = [
     { id: 1, name: 'Aluminium Rail 4.2m', sku: 'AL-RAIL-4.2', category: 'Rails', warehouse: 'Main Warehouse', stock: '120', percent: '12%', minLevel: '500', uom: 'Nos', leadTime: '7 Days', reorderQty: '880', val: '8,80,000', status: 'Critical', coverage: '2 Days', level: 12 },
     { id: 2, name: 'Mid Clamp', sku: 'MC-01', category: 'Clamps', warehouse: 'Main Warehouse', stock: '250', percent: '17%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,250', val: '3,12,500', status: 'Critical', coverage: '3 Days', level: 17 },
     { id: 3, name: 'End Clamp', sku: 'EC-01', category: 'Clamps', warehouse: 'Regional Warehouse', stock: '300', percent: '20%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,200', val: '2,40,000', status: 'Critical', coverage: '3 Days', level: 20 },
@@ -1167,10 +1477,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     { id: 8, name: 'Cable Clip', sku: 'CC-01', category: 'Accessories', warehouse: 'Regional Warehouse', stock: '3,200', percent: '35%', minLevel: '9,000', uom: 'Nos', leadTime: '3 Days', reorderQty: '5,800', val: '58,000', status: 'Low Stock', coverage: '6 Days', level: 35 },
     { id: 9, name: 'Earthing Lug', sku: 'EL-01', category: 'Electrical', warehouse: 'Main Warehouse', stock: '220', percent: '37%', minLevel: '600', uom: 'Nos', leadTime: '6 Days', reorderQty: '380', val: '45,600', status: 'Low Stock', coverage: '7 Days', level: 37 },
     { id: 10, name: 'UV Cable Tie 300mm', sku: 'CT-300', category: 'Accessories', warehouse: 'Regional Warehouse', stock: '1,400', percent: '38%', minLevel: '3,600', uom: 'Nos', leadTime: '3 Days', reorderQty: '2,200', val: '26,400', status: 'Low Stock', coverage: '8 Days', level: 38 }
-  ]);
+  ];
+
+  const [reorderAlerts, setReorderAlerts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_reorder_alerts_store');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error loading reorderAlerts', e);
+    }
+    return INITIAL_REORDER_ALERTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_reorder_alerts_store', JSON.stringify(reorderAlerts));
+    } catch (e) {
+      console.error('Error saving reorderAlerts', e);
+    }
+  }, [reorderAlerts]);
 
   // Stock status registry
-  const [stockRegistry, setStockRegistry] = useState([
+  const INITIAL_STOCK_REGISTRY = [
     { code: 'AL-001', item: 'Aluminium Rail 4.2m', category: 'Rails', location: 'Main Warehouse', stock: '120', allocated: '30', incoming: '500', minLevel: '500', val: '8,80,000', status: 'Low Stock' },
     { code: 'MC-001', item: 'Mid Clamp', category: 'Clamps', location: 'Main Warehouse', stock: '850', allocated: '100', incoming: '1,000', minLevel: '1,500', val: '3,12,500', status: 'Low Stock' },
     { code: 'EC-001', item: 'End Clamp', category: 'Clamps', location: 'Regional Warehouse', stock: '2,400', allocated: '200', incoming: '-', minLevel: '1,000', val: '2,40,000', status: 'In Stock' },
@@ -1179,7 +1507,25 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     { code: 'WS-008', item: 'Spring Washer M8', category: 'Fasteners', location: 'Main Warehouse', stock: '950', allocated: '50', incoming: '-', minLevel: '500', val: '41,000', status: 'In Stock' },
     { code: 'LF-001', item: 'L-Foot', category: 'Accessories', location: 'Main Warehouse', stock: '160', allocated: '20', incoming: '-', minLevel: '200', val: '64,000', status: 'Low Stock' },
     { code: 'CC-001', item: 'Cable Clip', category: 'Accessories', location: 'Regional Warehouse', stock: '3,200', allocated: '100', incoming: '-', minLevel: '1,000', val: '58,000', status: 'In Stock' }
-  ]);
+  ];
+
+  const [stockRegistry, setStockRegistry] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_stock_registry_store');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error loading stockRegistry', e);
+    }
+    return INITIAL_STOCK_REGISTRY;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_stock_registry_store', JSON.stringify(stockRegistry));
+    } catch (e) {
+      console.error('Error saving stockRegistry', e);
+    }
+  }, [stockRegistry]);
 
   // Price comparison ledger
   const priceComparison = [
@@ -1192,14 +1538,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const handleCreateRFP = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (prItems.length === 0) return;
-    
+
     const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+    const formattedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
       `, ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
 
     const firstItem = prItems[0];
-    const itemSummary = prItems.length > 1 
-      ? `${firstItem.name} (+ ${prItems.length - 1} items)` 
+    const itemSummary = prItems.length > 1
+      ? `${firstItem.name} (+ ${prItems.length - 1} items)`
       : firstItem.name;
     const qtySummary = `${firstItem.qty} ${firstItem.unit}`;
 
@@ -1215,13 +1561,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       date: formattedDate
     };
     setRfpList([newRFP, ...rfpList]);
-    
+
     // Auto-increment PR number
     try {
       const parts = prNumber.split('-');
       const nextNum = parseInt(parts[2]) + 1;
       setPrNumber(`${parts[0]}-${parts[1]}-${nextNum}`);
-    } catch(err) {
+    } catch (err) {
       setPrNumber(`PR-2026-${198 + rfpList.length + 1}`);
     }
 
@@ -1316,7 +1662,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      
+
       {/* ==================== 1. REQUESTS FOR PURCHASE SCREEN ==================== */}
       {activeTab === 'Requests for Purchase' && (() => {
         // Unique options for filters
@@ -1328,7 +1674,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         // Filter logic
         const filteredRfpList = rfpList.filter(item => {
           const query = searchQuery.toLowerCase();
-          const matchesSearch = !searchQuery || 
+          const matchesSearch = !searchQuery ||
             item.id.toLowerCase().includes(query) ||
             item.requester.toLowerCase().includes(query) ||
             item.req.toLowerCase().includes(query) ||
@@ -1400,8 +1746,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Requests for Purchase (RFP)</h2>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>Submit and authorize purchase requisition sheets</span>
                 </div>
-                <button 
-                  onClick={() => setShowForm(true)} 
+                <button
+                  onClick={() => setShowForm(true)}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: 'bold', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
                 >
                   <PlusCircle style={{ width: '16px', height: '16px' }} />
@@ -1648,19 +1994,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <span>Filters</span>
                     </button>
 
-                    <button 
-                      onClick={clearFilters} 
+                    <button
+                      onClick={clearFilters}
                       title="Clear Filters"
-                      style={{ 
-                        background: '#f1f5f9', 
-                        border: '1px solid #cbd5e1', 
-                        color: '#475569', 
-                        cursor: 'pointer', 
-                        padding: '0', 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: '8px', 
+                        borderRadius: '8px',
                         height: '38px',
                         width: '38px',
                         transition: 'all 0.15s ease'
@@ -1705,8 +2051,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <thead>
                       <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <th style={{ padding: '12px 16px', width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             onChange={handleSelectAll}
                             checked={currentRows.length > 0 && currentRows.every(r => selectedPRs.includes(r.id))}
                           />
@@ -1732,7 +2078,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       ) : (
                         currentRows.map((rfp, idx) => {
                           const isChecked = selectedPRs.includes(rfp.id);
-                          
+
                           // Priority colors
                           let priColor = '#64748b';
                           let priBg = '#f1f5f9';
@@ -1768,17 +2114,17 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           }
 
                           return (
-                            <tr 
-                              key={rfp.id} 
-                              style={{ 
+                            <tr
+                              key={rfp.id}
+                              style={{
                                 borderBottom: idx === currentRows.length - 1 ? 'none' : '1px solid #f1f5f9',
                                 backgroundColor: isChecked ? '#f8fafc' : 'transparent',
                                 transition: 'background-color 0.15s ease'
                               }}
                             >
                               <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={isChecked}
                                   onChange={() => handleSelectRow(rfp.id)}
                                 />
@@ -1796,7 +2142,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               </td>
                               <td style={{ padding: '14px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>{rfp.date}</td>
                               <td style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                                <div 
+                                <div
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setActiveRfpActionMenu(activeRfpActionMenu === rfp.id ? null : rfp.id);
@@ -1807,7 +2153,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 </div>
                                 {activeRfpActionMenu === rfp.id && (
                                   <>
-                                    <div 
+                                    <div
                                       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
                                       onClick={(e) => { e.stopPropagation(); setActiveRfpActionMenu(null); }}
                                     />
@@ -1825,7 +2171,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       flexDirection: 'column',
                                       padding: '4px 0'
                                     }}>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setViewingRfp(rfp);
@@ -1835,7 +2181,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         View Details
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setEditingRfp(rfp);
@@ -1845,7 +2191,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         Edit
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setDeleteConfirmRfp(rfp);
@@ -1873,13 +2219,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <div>
                       Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredRfpList.length)} of {filteredRfpList.length} entries
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>Rows per page:</span>
-                        <select 
-                          value={rowsPerPage} 
-                          onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
+                        <select
+                          value={rowsPerPage}
+                          onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                           style={{ height: '30px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', padding: '0 4px', backgroundColor: 'white' }}
                         >
                           <option value={5}>5</option>
@@ -1890,14 +2236,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </div>
 
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button 
+                        <button
                           disabled={currentPage === 1}
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                           style={{ border: '1px solid #cbd5e1', background: currentPage === 1 ? '#f1f5f9' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
                         >
                           <ChevronLeft style={{ width: '14px', height: '14px' }} />
                         </button>
-                        
+
                         {(() => {
                           let start = Math.max(1, currentPage - 1);
                           let end = start + 3;
@@ -1924,7 +2270,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           ));
                         })()}
 
-                        <button 
+                        <button
                           disabled={currentPage === totalPages}
                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                           style={{ border: '1px solid #cbd5e1', background: currentPage === totalPages ? '#f1f5f9' : 'white', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
@@ -1976,7 +2322,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button 
+                    <button
                       onClick={() => setViewingRfp(null)}
                       style={{ border: 'none', background: '#2563eb', color: 'white', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
@@ -1995,47 +2341,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Edit RFP — {editingRfp.id}</h3>
                     <button onClick={() => setEditingRfp(null)} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
                   </div>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Requester</label>
-                      <input 
-                        type="text" 
-                        value={editingRfp.requester} 
+                      <input
+                        type="text"
+                        value={editingRfp.requester}
                         onChange={(e) => setEditingRfp({ ...editingRfp, requester: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item Requested</label>
-                      <input 
-                        type="text" 
-                        value={editingRfp.req} 
+                      <input
+                        type="text"
+                        value={editingRfp.req}
                         onChange={(e) => setEditingRfp({ ...editingRfp, req: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Quantity</label>
-                      <input 
-                        type="text" 
-                        value={editingRfp.qty} 
+                      <input
+                        type="text"
+                        value={editingRfp.qty}
                         onChange={(e) => setEditingRfp({ ...editingRfp, qty: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setEditingRfp(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setRfpList(prev => prev.map(r => r.id === editingRfp.id ? editingRfp : r));
                         setEditingRfp(null);
@@ -2058,13 +2404,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     Are you sure you want to delete RFP request <strong>{deleteConfirmRfp.id}</strong>? This action cannot be undone.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setDeleteConfirmRfp(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setRfpList(prev => prev.filter(r => r.id !== deleteConfirmRfp.id));
                         setDeleteConfirmRfp(null);
@@ -2092,7 +2438,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         // Apply filters
         const filteredVendors = vendorList.filter(vendor => {
           const query = vSearchQuery.toLowerCase();
-          const matchesSearch = !query || 
+          const matchesSearch = !query ||
             vendor.name.toLowerCase().includes(query) ||
             vendor.code.toLowerCase().includes(query) ||
             vendor.contact.toLowerCase().includes(query) ||
@@ -2183,8 +2529,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 </div>
                 {showForm ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setVendorConfirmModal({
                         show: true,
                         action: 'draft',
@@ -2192,13 +2538,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         message: 'Are you sure you want to save this vendor information as a Draft?',
                         confirmLabel: 'Save Draft',
                         confirmBtnColor: '#475569'
-                      })} 
+                      })}
                       style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
                     >
                       Save as Draft
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setVendorConfirmModal({
                         show: true,
                         action: 'cancel',
@@ -2206,14 +2552,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         message: 'Are you sure you want to cancel? Any entered vendor information will be cleared.',
                         confirmLabel: 'Discard Changes',
                         confirmBtnColor: '#EF4444'
-                      })} 
+                      })}
                       style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
                     >
                       Cancel
                     </button>
                     <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setVendorConfirmModal({
                           show: true,
                           action: 'submit',
@@ -2221,7 +2567,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           message: 'Are you sure you want to submit this vendor for onboarding approval & review?',
                           confirmLabel: 'Submit Vendor',
                           confirmBtnColor: '#2563eb'
-                        })} 
+                        })}
                         style={{ height: '36px', border: 'none', backgroundColor: '#2563eb', color: 'white', padding: '0 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', borderRight: '1px solid rgba(255,255,255,0.2)' }}
                       >
                         Submit for Review
@@ -2232,8 +2578,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
                 ) : (
-                  <button 
-                    onClick={() => setShowForm(true)} 
+                  <button
+                    onClick={() => setShowForm(true)}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: 'bold', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
                   >
                     <PlusCircle style={{ width: '16px', height: '16px' }} />
@@ -2247,7 +2593,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               <form onSubmit={handleCreateVendor} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
                 {/* Left Column (Forms) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  
+
                   {/* 1. Basic Information */}
                   <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>1. Basic Information</h3>
@@ -2280,8 +2626,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                             GST Number <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                           </label>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => handleGstFetch(vGST)}
                             disabled={isGstFetching || !vGST || vGST.trim().length < 2}
                             style={{ border: 'none', background: 'none', color: (isGstFetching || !vGST || vGST.trim().length < 2) ? '#94a3b8' : '#2563eb', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
@@ -2289,19 +2635,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             {isGstFetching ? '⏳ Fetching GST...' : '🔍 Auto-Fetch Details'}
                           </button>
                         </div>
-                        <input 
-                          type="text" 
-                          value={vGST} 
+                        <input
+                          type="text"
+                          value={vGST}
                           onChange={(e) => {
                             const val = e.target.value.toUpperCase();
                             setVGST(val);
                             if (val.replace(/[^A-Z0-9]/gi, '').length >= 10) {
                               handleGstFetch(val);
                             }
-                          }} 
+                          }}
                           maxLength={15}
-                          placeholder="Enter 15-digit GSTIN (e.g. 37AAACT2727Q1ZS)" 
-                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }} 
+                          placeholder="Enter 15-digit GSTIN (e.g. 37AAACT2727Q1ZS)"
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}
                         />
                         {gstLookupStatus && (
                           <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 'bold' }}>{gstLookupStatus.msg}</span>
@@ -2504,7 +2850,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                 {/* Right Column (Sidebar cards) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  
+
                   {/* 5. Documents */}
                   <div className="section-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#2563eb', margin: 0 }}>5. Documents</h3>
@@ -2596,7 +2942,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
+                    <button
                       onClick={() => setViewingVendor(null)}
                       style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', fontWeight: 'bold', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
                     >
@@ -2797,9 +3143,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
-                    <select 
-                      value={vStatusFilter} 
-                      onChange={(e) => { setVStatusFilter(e.target.value); setVCurrentPage(1); }} 
+                    <select
+                      value={vStatusFilter}
+                      onChange={(e) => { setVStatusFilter(e.target.value); setVCurrentPage(1); }}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}
                     >
                       <option value="All">Status: All</option>
@@ -2809,19 +3155,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <option value="Blacklisted">Blacklisted</option>
                     </select>
 
-                    <button 
-                      onClick={clearVendorFilters} 
+                    <button
+                      onClick={clearVendorFilters}
                       title="Clear Filters"
-                      style={{ 
-                        background: '#f1f5f9', 
-                        border: '1px solid #cbd5e1', 
-                        color: '#475569', 
-                        cursor: 'pointer', 
-                        padding: '0', 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: '8px', 
+                        borderRadius: '8px',
                         height: '38px',
                         width: '38px',
                         transition: 'all 0.15s ease'
@@ -2872,8 +3218,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <thead>
                       <tr style={{ backgroundColor: '#fafbfc', borderBottom: '1px solid #e2e8f0' }}>
                         <th style={{ width: '40px', padding: '12px 16px', textAlign: 'center' }}>
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             onChange={handleSelectAllVendors}
                             checked={currentVendorRows.length > 0 && currentVendorRows.every(row => selectedVendors.includes(row.code))}
                             style={{ cursor: 'pointer' }}
@@ -2921,17 +3267,17 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           }
 
                           return (
-                            <tr 
-                              key={vendor.code} 
-                              style={{ 
+                            <tr
+                              key={vendor.code}
+                              style={{
                                 borderBottom: idx === currentVendorRows.length - 1 ? 'none' : '1px solid #f1f5f9',
                                 backgroundColor: isChecked ? '#f8fafc' : 'transparent',
                                 transition: 'background-color 0.2s'
                               }}
                             >
                               <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={isChecked}
                                   onChange={() => handleSelectVendorRow(vendor.code)}
                                   style={{ cursor: 'pointer' }}
@@ -2945,7 +3291,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               </td>
                               <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.terms}</td>
                               <td style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', cursor: 'pointer', position: 'relative' }}>
-                                <div 
+                                <div
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setActiveVendorActionMenu(activeVendorActionMenu === vendor.code ? null : vendor.code);
@@ -2956,7 +3302,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 </div>
                                 {activeVendorActionMenu === vendor.code && (
                                   <>
-                                    <div 
+                                    <div
                                       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
                                       onClick={(e) => { e.stopPropagation(); setActiveVendorActionMenu(null); }}
                                     />
@@ -2974,7 +3320,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       flexDirection: 'column',
                                       padding: '4px 0'
                                     }}>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleOpenVendorDetails(vendor);
@@ -2984,7 +3330,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         View Details
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setEditingVendor(vendor);
@@ -2994,7 +3340,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         Edit Vendor
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setDeleteConfirmVendor(vendor);
@@ -3034,14 +3380,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         </div>
 
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button 
+                          <button
                             disabled={vCurrentPage === 1}
                             onClick={() => setVCurrentPage(prev => Math.max(prev - 1, 1))}
                             style={{ border: '1px solid #cbd5e1', background: vCurrentPage === 1 ? '#f1f5f9' : 'white', cursor: vCurrentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
                           >
                             <ChevronLeft style={{ width: '14px', height: '14px' }} />
                           </button>
-                          
+
                           {(() => {
                             let start = Math.max(1, vCurrentPage - 1);
                             let end = start + 3;
@@ -3068,7 +3414,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             ));
                           })()}
 
-                          <button 
+                          <button
                             disabled={vCurrentPage === totalVendorPages}
                             onClick={() => setVCurrentPage(prev => Math.min(prev + 1, totalVendorPages))}
                             style={{ border: '1px solid #cbd5e1', background: vCurrentPage === totalVendorPages ? '#f1f5f9' : 'white', cursor: vCurrentPage === totalVendorPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
@@ -3091,57 +3437,57 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Edit Vendor Profile</h3>
                     <button onClick={() => setEditingVendor(null)} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
                   </div>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Vendor Name</label>
-                      <input 
-                        type="text" 
-                        value={editingVendor.name} 
+                      <input
+                        type="text"
+                        value={editingVendor.name}
                         onChange={(e) => setEditingVendor({ ...editingVendor, name: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Primary Contact</label>
-                      <input 
-                        type="text" 
-                        value={editingVendor.contact} 
+                      <input
+                        type="text"
+                        value={editingVendor.contact}
                         onChange={(e) => setEditingVendor({ ...editingVendor, contact: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Phone Number</label>
-                      <input 
-                        type="text" 
-                        value={editingVendor.phone} 
+                      <input
+                        type="text"
+                        value={editingVendor.phone}
                         onChange={(e) => setEditingVendor({ ...editingVendor, phone: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Payment Terms</label>
-                      <input 
-                        type="text" 
-                        value={editingVendor.terms} 
+                      <input
+                        type="text"
+                        value={editingVendor.terms}
                         onChange={(e) => setEditingVendor({ ...editingVendor, terms: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setEditingVendor(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setVendorList(prev => prev.map(v => v.code === editingVendor.code ? editingVendor : v));
                         setEditingVendor(null);
@@ -3164,18 +3510,18 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     Are you sure you want to delete vendor <strong>{deleteConfirmVendor.name}</strong> ({deleteConfirmVendor.code})? This action cannot be undone.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setDeleteConfirmVendor(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         const targetId = deleteConfirmVendor.id || deleteConfirmVendor.code || deleteConfirmVendor.name;
                         setVendorList(prev => prev.filter(v => v.code !== deleteConfirmVendor.code && v.id !== deleteConfirmVendor.id));
                         setDeleteConfirmVendor(null);
-                        
+
                         if (targetId) {
                           fetch(`/api/zoho/vendors/${encodeURIComponent(targetId)}`, { method: 'DELETE' })
                             .then(res => res.json())
@@ -3204,14 +3550,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     {vendorConfirmModal.message}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setVendorConfirmModal({ ...vendorConfirmModal, show: false })}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => {
                         const act = vendorConfirmModal.action;
@@ -3313,7 +3659,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-            
+
             {/* Header info */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -3355,19 +3701,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <span>Filters</span>
                 </button>
 
-                <button 
-                  onClick={clearQuotationFilters} 
+                <button
+                  onClick={clearQuotationFilters}
                   title="Clear Filters"
-                  style={{ 
-                    background: '#f1f5f9', 
-                    border: '1px solid #cbd5e1', 
-                    color: '#475569', 
-                    cursor: 'pointer', 
-                    padding: '0', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  style={{
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#475569',
+                    cursor: 'pointer',
+                    padding: '0',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '8px', 
+                    borderRadius: '8px',
                     height: '38px',
                     width: '38px',
                     transition: 'all 0.15s ease'
@@ -3471,7 +3817,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             </td>
                             <td style={{ padding: '14px 16px', color: '#475569' }}>{row.salesPerson}</td>
                             <td style={{ textAlign: 'center', padding: '14px 16px', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                              <div 
+                              <div
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setActiveQuotationActionMenu(activeQuotationActionMenu === row.id ? null : row.id);
@@ -3482,7 +3828,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               </div>
                               {activeQuotationActionMenu === row.id && (
                                 <>
-                                  <div 
+                                  <div
                                     style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
                                     onClick={(e) => { e.stopPropagation(); setActiveQuotationActionMenu(null); }}
                                   />
@@ -3500,7 +3846,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     flexDirection: 'column',
                                     padding: '4px 0'
                                   }}>
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setViewingQuotation(row);
@@ -3510,7 +3856,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     >
                                       View Details
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setEditingQuotation(row);
@@ -3520,7 +3866,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     >
                                       Edit
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setDeleteConfirmQuotation(row);
@@ -3657,7 +4003,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button 
+                    <button
                       onClick={() => setViewingQuotation(null)}
                       style={{ border: 'none', background: '#2563eb', color: 'white', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
@@ -3676,47 +4022,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0F172A' }}>Edit Quotation — {editingQuotation.id}</h3>
                     <button onClick={() => setEditingQuotation(null)} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
                   </div>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Customer</label>
-                      <input 
-                        type="text" 
-                        value={editingQuotation.customer} 
+                      <input
+                        type="text"
+                        value={editingQuotation.customer}
                         onChange={(e) => setEditingQuotation({ ...editingQuotation, customer: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Project</label>
-                      <input 
-                        type="text" 
-                        value={editingQuotation.project} 
+                      <input
+                        type="text"
+                        value={editingQuotation.project}
                         onChange={(e) => setEditingQuotation({ ...editingQuotation, project: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Amount</label>
-                      <input 
-                        type="text" 
-                        value={editingQuotation.amount} 
+                      <input
+                        type="text"
+                        value={editingQuotation.amount}
                         onChange={(e) => setEditingQuotation({ ...editingQuotation, amount: e.target.value })}
-                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} 
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
                       />
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setEditingQuotation(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setQuotationsList(prev => prev.map(q => q.id === editingQuotation.id ? editingQuotation : q));
                         setEditingQuotation(null);
@@ -3739,13 +4085,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     Are you sure you want to delete quotation <strong>{deleteConfirmQuotation.id}</strong>? This action cannot be undone.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button 
+                    <button
                       onClick={() => setDeleteConfirmQuotation(null)}
                       style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setQuotationsList(prev => prev.filter(q => q.id !== deleteConfirmQuotation.id));
                         setDeleteConfirmQuotation(null);
@@ -3765,7 +4111,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       {/* ==================== 4. GOODS RECEIPT NOTE (GRN) SCREEN ==================== */}
       {activeTab === 'Goods Receipt Note' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {!showCreateGRN ? (
             <>
               {/* List View Header */}
@@ -3775,7 +4121,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <span style={{ fontSize: '12px', color: '#64748b' }}>Record goods received against Purchase Order</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedGRNPo('');
                       setSelectedGRNVendor('');
@@ -3803,11 +4149,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </button>
                 </div>
               </div>
-              
+
               {/* Search / Filter GRN Card */}
               <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <strong style={{ fontSize: '15px', color: '#0F172A' }}>Search / Filter GRN</strong>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>GRN No.</label>
@@ -3937,13 +4283,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <td style={{ padding: '12px 4px', color: '#64748B' }}>{row.date}</td>
                           <td style={{ padding: '12px 4px', fontWeight: '600', color: '#0F172A' }}>{row.val || '₹ 2,48,500'}</td>
                           <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                            <span style={{ 
-                              padding: '2px 8px', 
-                              borderRadius: '4px', 
-                              fontSize: '11px', 
-                              fontWeight: 'bold', 
-                              backgroundColor: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#E6F7ED' : '#FEF3D6', 
-                              color: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#137333' : '#B06000' 
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              backgroundColor: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#E6F7ED' : '#FEF3D6',
+                              color: (row.status === 'Approved' || row.status === 'Fully Accepted' || row.status === 'CLOSED / FULLY RECEIVED') ? '#137333' : '#B06000'
                             }}>
                               {row.status}
                             </span>
@@ -4026,7 +4372,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
+
                 {/* Form Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -4038,7 +4384,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
+                    <button
                       onClick={() => {
                         setShowCreateGRN(false);
                         resetCreateGRNForm();
@@ -4059,7 +4405,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </button>
                     {!isViewOnlyMode && (
                       <>
-                        <button 
+                        <button
                           onClick={handleSaveAndReceive}
                           style={{
                             height: '38px',
@@ -4075,7 +4421,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         >
                           Save & Receive
                         </button>
-                        <button 
+                        <button
                           onClick={handleFullyReceived}
                           title="Mark all items as received, close GRN, and close PO in Zoho Books"
                           style={{
@@ -4104,14 +4450,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                 {/* Form Body layout */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '20px' }}>
-                  
+
                   {/* Card 1: 1. GRN Information (Span 8) */}
                   <div className="section-card" style={{ gridColumn: 'span 8', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <strong style={{ fontSize: '14px', color: '#2563EB' }}>1. GRN Information</strong>
                       <HelpCircle style={{ width: '14px', height: '14px', color: '#94A3B8' }} />
                     </div>
-                    
+
                     {/* Row 1: GRN No, Receipt Date, Purchase Order */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -4129,8 +4475,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           Purchase Order <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <select 
-                          value={selectedGRNPo} 
+                        <select
+                          value={selectedGRNPo}
                           disabled={isViewOnlyMode}
                           onChange={(e) => {
                             const poNo = e.target.value;
@@ -4143,7 +4489,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               const isSelected = po.poNo === selectedGRNPo || po.id === selectedGRNPo;
                               const s = String(po.status || '').toUpperCase();
                               const sType = String(po.statusType || '').toLowerCase();
-                              
+
                               const isClosed = s.includes('CLOSED') || s.includes('FULLY RECEIVED') || sType === 'closed';
                               if (isClosed && !isSelected) return false;
 
@@ -4174,12 +4520,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           Vendor <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <input 
-                          type="text" 
-                          readOnly 
-                          value={selectedGRNVendor || ''} 
-                          placeholder="Auto-populated from PO" 
-                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
+                        <input
+                          type="text"
+                          readOnly
+                          value={selectedGRNVendor || ''}
+                          placeholder="Auto-populated from PO"
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -4200,13 +4546,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           DC NO / Invoice No. <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <input 
-                          type="text" 
-                          placeholder="Enter DC NO / Invoice No." 
+                        <input
+                          type="text"
+                          placeholder="Enter DC NO / Invoice No."
                           value={grnChallanNo}
                           disabled={isViewOnlyMode}
                           onChange={(e) => setGrnChallanNo(e.target.value)}
-                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -4217,13 +4563,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                           Received By <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                         </label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={grnReceivedBy}
-                          disabled={isViewOnlyMode} 
-                          placeholder="Enter receiver name" 
+                          disabled={isViewOnlyMode}
+                          placeholder="Enter receiver name"
                           onChange={(e) => setGrnReceivedBy(e.target.value)}
-                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                          style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}
                         />
                       </div>
                     </div>
@@ -4234,7 +4580,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ fontSize: '14px', color: '#2563EB' }}>2. Purchase Order Summary</strong>
                       {selectedGRNPo && (
-                        <button 
+                        <button
                           type="button"
                           onClick={() => onChangeTab('Purchase Orders', selectedGRNPo)}
                           style={{
@@ -4277,10 +4623,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   <strong style={{ fontSize: '16px', color: '#0F172A' }}>{selectedGRNPo}</strong>
                                   <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{selectedGRNVendor || 'Vendor'}</div>
                                 </div>
-                                <span style={{ 
-                                  padding: '4px 10px', 
-                                  borderRadius: '20px', 
-                                  fontSize: '10px', 
+                                <span style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '10px',
                                   fontWeight: '800',
                                   backgroundColor: totPrev + totNow >= totOrd && totOrd > 0 ? '#E6F7ED' : '#FEF3C7',
                                   color: totPrev + totNow >= totOrd && totOrd > 0 ? '#137333' : '#D97706'
@@ -4376,204 +4722,204 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             </tr>
                           ) : (
                             grnItems.map((item, idx) => (
-                            <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                              <td style={{ padding: '10px 4px', color: '#94A3B8', verticalAlign: 'top', paddingTop: '16px' }}>{idx + 1}</td>
-                              <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A', minWidth: '280px', verticalAlign: 'top' }}>
-                                <input 
-                                  type="text" 
-                                  value={item.name} 
-                                  disabled={isViewOnlyMode}
-                                  placeholder="Enter Material / Item Name..."
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, name: val } : it);
-                                    setGrnItems(updated);
-                                  }}
-                                  style={{ width: '100%', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 10px', fontSize: '12px', fontWeight: '700', color: '#0F172A', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                />
-                                <div style={{ marginTop: '6px' }}>
-                                  <textarea 
-                                    value={item.desc || ''} 
+                              <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                                <td style={{ padding: '10px 4px', color: '#94A3B8', verticalAlign: 'top', paddingTop: '16px' }}>{idx + 1}</td>
+                                <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A', minWidth: '280px', verticalAlign: 'top' }}>
+                                  <input
+                                    type="text"
+                                    value={item.name}
                                     disabled={isViewOnlyMode}
-                                    placeholder="Enter Item / Material Description..."
+                                    placeholder="Enter Material / Item Name..."
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, desc: val } : it);
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, name: val } : it);
                                       setGrnItems(updated);
                                     }}
-                                    style={{ 
-                                      width: '100%', 
-                                      minHeight: '54px', 
-                                      border: '1px solid #CBD5E1', 
-                                      borderRadius: '6px', 
-                                      padding: '6px 10px', 
-                                      fontSize: '11px', 
-                                      color: '#334155', 
-                                      resize: 'vertical',
-                                      boxSizing: 'border-box',
-                                      backgroundColor: '#F8FAFC',
-                                      lineHeight: '1.4'
-                                    }} 
+                                    style={{ width: '100%', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 10px', fontSize: '12px', fontWeight: '700', color: '#0F172A', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
                                   />
-                                </div>
-                              </td>
-                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                 <input 
-                                   type="text" 
-                                   value={item.uom} 
-                                   disabled={isViewOnlyMode}
-                                   onChange={(e) => {
-                                     const val = e.target.value;
-                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, uom: val } : it);
-                                     setGrnItems(updated);
-                                   }}
-                                   style={{ width: '50px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                 />
-                               </td>
-                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                 <input 
-                                   type="number" 
-                                   value={item.ordered} 
-                                   disabled={isViewOnlyMode}
-                                   onChange={(e) => {
-                                     const val = Number(e.target.value);
-                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, ordered: val } : it);
-                                     setGrnItems(updated);
-                                   }}
-                                   style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', fontWeight: '600', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                 />
-                               </td>
-                               <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                 <input 
-                                   type="number" 
-                                   value={item.prev} 
-                                   disabled={isViewOnlyMode}
-                                   onChange={(e) => {
-                                     const val = Number(e.target.value);
-                                     const updated = grnItems.map(it => it.id === item.id ? { ...it, prev: val } : it);
-                                     setGrnItems(updated);
-                                   }}
-                                   style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                 />
-                               </td>
-                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                  <input 
-                                    type="number" 
-                                    value={item.now} 
+                                  <div style={{ marginTop: '6px' }}>
+                                    <textarea
+                                      value={item.desc || ''}
+                                      disabled={isViewOnlyMode}
+                                      placeholder="Enter Item / Material Description..."
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const updated = grnItems.map(it => it.id === item.id ? { ...it, desc: val } : it);
+                                        setGrnItems(updated);
+                                      }}
+                                      style={{
+                                        width: '100%',
+                                        minHeight: '54px',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '6px',
+                                        padding: '6px 10px',
+                                        fontSize: '11px',
+                                        color: '#334155',
+                                        resize: 'vertical',
+                                        boxSizing: 'border-box',
+                                        backgroundColor: '#F8FAFC',
+                                        lineHeight: '1.4'
+                                      }}
+                                    />
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <input
+                                    type="text"
+                                    value={item.uom}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, uom: val } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ width: '50px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <input
+                                    type="number"
+                                    value={item.ordered}
                                     disabled={isViewOnlyMode}
                                     onChange={(e) => {
                                       const val = Number(e.target.value);
-                                      const maxAllowed = Math.max(0, item.ordered - item.prev);
-                                      const hasErr = val > maxAllowed;
-                                      const updated = grnItems.map(it => it.id === item.id ? { 
-                                        ...it, 
-                                        now: val, 
-                                        accepted: val - (it.rejected || 0),
-                                        error: hasErr ? `Exceeds remaining PO quantity of ${maxAllowed}` : null
-                                      } : it);
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, ordered: val } : it);
                                       setGrnItems(updated);
                                     }}
-                                    style={{ 
-                                      width: '65px', 
-                                      height: '34px', 
-                                      border: item.error ? '1.5px solid #DC2626' : '1px solid #CBD5E1', 
-                                      borderRadius: '6px', 
-                                      textAlign: 'center', 
-                                      fontSize: '11px',
-                                      fontWeight: 'bold',
-                                      backgroundColor: item.error ? '#FEF2F2' : (isViewOnlyMode ? '#F8FAFC' : '#FFFFFF'),
-                                      color: item.error ? '#DC2626' : '#0F172A'
-                                    }} 
+                                    style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', fontWeight: '600', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
                                   />
-                                  {item.error && (
-                                    <span style={{ fontSize: '8px', color: '#DC2626', fontWeight: 'bold', marginTop: '2px', lineHeight: '1' }}>
-                                      Max {item.ordered - item.prev}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                <input 
-                                  type="number" 
-                                  value={item.accepted} 
-                                  disabled={isViewOnlyMode}
-                                  onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, accepted: val, rejected: it.now - val } : it);
-                                    setGrnItems(updated);
-                                  }}
-                                  style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                />
-                              </td>
-                              <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                                <input 
-                                  type="number" 
-                                  value={item.rejected} 
-                                  disabled={isViewOnlyMode}
-                                  onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, rejected: val, accepted: it.now - val } : it);
-                                    setGrnItems(updated);
-                                  }}
-                                  style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', color: item.rejected > 0 ? '#C5221F' : '#334155', fontWeight: item.rejected > 0 ? 'bold' : 'normal', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                />
-                              </td>
-                              <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
-                                <select 
-                                  value={item.reason} 
-                                  disabled={isViewOnlyMode}
-                                  onChange={(e) => {
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, reason: e.target.value } : it);
-                                    setGrnItems(updated);
-                                  }}
-                                  style={{ height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', padding: '0 6px' }}
-                                >
-                                  <option>—</option>
-                                  <option>Damaged</option>
-                                  <option>Thread Issue</option>
-                                  <option>Wrong Specs</option>
-                                </select>
-                              </td>
-                              <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
-                                <input 
-                                  type="text" 
-                                  value={item.batch} 
-                                  disabled={isViewOnlyMode}
-                                  onChange={(e) => {
-                                    const updated = grnItems.map(it => it.id === item.id ? { ...it, batch: e.target.value } : it);
-                                    setGrnItems(updated);
-                                  }}
-                                  style={{ width: '90px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 8px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }} 
-                                />
-                              </td>
-                              <td style={{ padding: '10px 2px', textAlign: 'center', verticalAlign: 'top', paddingTop: '14px' }}>
-                                {!isViewOnlyMode && (
-                                  <button
-                                    type="button"
-                                    title="Delete Item"
-                                    onClick={() => {
-                                      setGrnItems(grnItems.filter(it => it.id !== item.id));
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <input
+                                    type="number"
+                                    value={item.prev}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, prev: val } : it);
+                                      setGrnItems(updated);
                                     }}
-                                    style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      color: '#EF4444',
-                                      cursor: 'pointer',
-                                      padding: '4px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      borderRadius: '4px'
+                                    style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <input
+                                      type="number"
+                                      value={item.now}
+                                      disabled={isViewOnlyMode}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        const maxAllowed = Math.max(0, item.ordered - item.prev);
+                                        const hasErr = val > maxAllowed;
+                                        const updated = grnItems.map(it => it.id === item.id ? {
+                                          ...it,
+                                          now: val,
+                                          accepted: val - (it.rejected || 0),
+                                          error: hasErr ? `Exceeds remaining PO quantity of ${maxAllowed}` : null
+                                        } : it);
+                                        setGrnItems(updated);
+                                      }}
+                                      style={{
+                                        width: '65px',
+                                        height: '34px',
+                                        border: item.error ? '1.5px solid #DC2626' : '1px solid #CBD5E1',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: item.error ? '#FEF2F2' : (isViewOnlyMode ? '#F8FAFC' : '#FFFFFF'),
+                                        color: item.error ? '#DC2626' : '#0F172A'
+                                      }}
+                                    />
+                                    {item.error && (
+                                      <span style={{ fontSize: '8px', color: '#DC2626', fontWeight: 'bold', marginTop: '2px', lineHeight: '1' }}>
+                                        Max {item.ordered - item.prev}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <input
+                                    type="number"
+                                    value={item.accepted}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, accepted: val, rejected: it.now - val } : it);
+                                      setGrnItems(updated);
                                     }}
+                                    style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                                  <input
+                                    type="number"
+                                    value={item.rejected}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, rejected: val, accepted: it.now - val } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ width: '55px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '11px', color: item.rejected > 0 ? '#C5221F' : '#334155', fontWeight: item.rejected > 0 ? 'bold' : 'normal', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
+                                  <select
+                                    value={item.reason}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, reason: e.target.value } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', padding: '0 6px' }}
                                   >
-                                    <Trash2 style={{ width: '15px', height: '15px' }} />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          )))}
-                          
+                                    <option>—</option>
+                                    <option>Damaged</option>
+                                    <option>Thread Issue</option>
+                                    <option>Wrong Specs</option>
+                                  </select>
+                                </td>
+                                <td style={{ padding: '10px 4px', verticalAlign: 'top' }}>
+                                  <input
+                                    type="text"
+                                    value={item.batch}
+                                    disabled={isViewOnlyMode}
+                                    onChange={(e) => {
+                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, batch: e.target.value } : it);
+                                      setGrnItems(updated);
+                                    }}
+                                    style={{ width: '90px', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 8px', fontSize: '11px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '10px 2px', textAlign: 'center', verticalAlign: 'top', paddingTop: '14px' }}>
+                                  {!isViewOnlyMode && (
+                                    <button
+                                      type="button"
+                                      title="Delete Item"
+                                      onClick={() => {
+                                        setGrnItems(grnItems.filter(it => it.id !== item.id));
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#EF4444',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '4px'
+                                      }}
+                                    >
+                                      <Trash2 style={{ width: '15px', height: '15px' }} />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            )))}
+
                         </tbody>
                       </table>
                     </div>
@@ -4598,7 +4944,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                       {!isViewOnlyMode && (
                         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                          <button 
+                          <button
                             type="button"
                             onClick={() => {
                               const newItem = {
@@ -4638,7 +4984,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   {/* Card 4: 4. Quality Inspection (Span 4) */}
                   <div className="section-card" style={{ gridColumn: 'span 4', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <strong style={{ fontSize: '14px', color: '#2563EB' }}>4. Quality Inspection</strong>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspection Status *</label>
                       <select defaultValue="Passed" style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', fontWeight: 'bold' }}>
@@ -4649,24 +4995,24 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspector Name</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={grnInspectorName}
                         disabled={isViewOnlyMode}
-                        placeholder="Enter Inspector Name..." 
+                        placeholder="Enter Inspector Name..."
                         onChange={(e) => setGrnInspectorName(e.target.value)}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#0F172A', fontWeight: '600' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#0F172A', fontWeight: '600' }}
                       />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Inspection Remarks</label>
-                      <textarea 
+                      <textarea
                         value={grnInspectionRemarks}
                         disabled={isViewOnlyMode}
-                        placeholder="Enter inspection remarks" 
+                        placeholder="Enter inspection remarks"
                         onChange={(e) => setGrnInspectionRemarks(e.target.value)}
-                        style={{ height: '60px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '12px', resize: 'none', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }} 
+                        style={{ height: '60px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '12px', resize: 'none', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF', color: '#334155' }}
                       />
                     </div>
                   </div>
@@ -4687,7 +5033,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FileText style={{ width: '24px', height: '24px', color: '#10B981' }} />
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span 
+                              <span
                                 onClick={() => setActiveDocPreviewModal({
                                   title: doc.title || 'Document Preview',
                                   filename: doc.filename,
@@ -4702,7 +5048,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '10px', marginTop: '4px', borderTop: '1px solid #F1F5F9', paddingTop: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <span 
+                            <span
                               onClick={() => setActiveDocPreviewModal({
                                 title: doc.title || 'Document Preview',
                                 filename: doc.filename,
@@ -4713,9 +5059,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
                             </span>
                             {!isViewOnlyMode && (
-                              <Trash2 
+                              <Trash2
                                 onClick={() => setDeleteDocConfirmIdx(idx)}
-                                style={{ width: '14px', height: '14px', color: '#EF4444', cursor: 'pointer' }} 
+                                style={{ width: '14px', height: '14px', color: '#EF4444', cursor: 'pointer' }}
                               />
                             )}
                           </div>
@@ -4754,19 +5100,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 <span style={{ fontSize: '12px', color: '#64748B' }}>Action cannot be undone</span>
                               </div>
                             </div>
-                            
+
                             <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
                               Are you sure you want to delete the uploaded document <strong>"{grnDocs[deleteDocConfirmIdx]?.filename || 'Attachment'}"</strong>?
                             </p>
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-                              <button 
+                              <button
                                 onClick={() => setDeleteDocConfirmIdx(null)}
                                 style={{ height: '36px', padding: '0 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                               >
                                 Cancel
                               </button>
-                              <button 
+                              <button
                                 onClick={() => {
                                   setGrnDocs(grnDocs.filter((_, i) => i !== deleteDocConfirmIdx));
                                   setDeleteDocConfirmIdx(null);
@@ -4782,16 +5128,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                       {/* Upload Box (Only available in Edit / Create mode) */}
                       {!isViewOnlyMode && (
-                        <label 
+                        <label
                           style={{ border: '2px dashed #CBD5E1', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#F8FAFC', cursor: 'pointer', transition: 'border-color 0.2s' }}
                           onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2563EB'}
                           onMouseLeave={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
                         >
-                          <input 
-                            type="file" 
-                            multiple 
+                          <input
+                            type="file"
+                            multiple
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            style={{ display: 'none' }} 
+                            style={{ display: 'none' }}
                             onChange={async (e) => {
                               const files = Array.from(e.target.files || []);
                               if (files.length > 0) {
@@ -4840,7 +5186,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#334155' }}>{prevGrn.grnNo} — DC: {prevGrn.challanNo || 'N/A'}</div>
                                   <div style={{ fontSize: '9px', color: '#64748B' }}>Received Date: {prevGrn.date || '—'} | Qty Accepted: {prevGrn.acceptedQty || 0}</div>
                                 </div>
-                                <span 
+                                <span
                                   onClick={() => setActiveDocPreviewModal({
                                     title: `Previous Receipt: ${prevGrn.grnNo}`,
                                     filename: `Delivery Challan: ${prevGrn.challanNo || 'N/A'}`,
@@ -4891,7 +5237,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               <span style={{ fontSize: '11px', color: '#94A3B8' }}>{activeDocPreviewModal.filename || 'Uploaded Document'}</span>
                             </div>
                           </div>
-                          <button 
+                          <button
                             onClick={() => setActiveDocPreviewModal(null)}
                             style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '22px', cursor: 'pointer', padding: '4px', lineHeight: 1 }}
                           >
@@ -4928,9 +5274,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   {/* Card 6: 6. GRN Summary (Span 4) */}
                   <div className="section-card" style={{ gridColumn: 'span 4', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <strong style={{ fontSize: '14px', color: '#2563EB' }}>6. GRN Summary</strong>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '14px', height: '100%' }}>
-                      
+
                       {/* Summary list */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
@@ -4963,7 +5309,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC' }}>
                         <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 'bold' }}>GRN Status</span>
                         <strong style={{ fontSize: '12px', color: '#137333' }}>Ready to Receive</strong>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#137333', fontWeight: 'bold' }}>
                             <Check style={{ width: '10px', height: '10px' }} />
@@ -4991,1349 +5337,575 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         </div>
       )}
 
-      {/* ==================== 5. INVOICE MANAGEMENT SCREEN ==================== */}
-      {activeTab === 'Invoice Management' && (
+      {/* ==================== 6. PAYMENTS SCREEN ==================== */}
+
+      {activeTab === 'Upload Invoice' && (
+        /* ==================== UPLOAD VENDOR INVOICE VIEW ==================== */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Header / Top bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Invoice Ledger (3-Way Matching)</h2>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>Match invoices with Purchase Orders and GRNs to ensure accuracy before payment.</span>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Upload Vendor Invoice</h2>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>Upload invoice and link with PO and GRN to perform 3-way matching</span>
             </div>
-            
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input 
-                  type="text" 
-                  defaultValue="01 Jul 2026 – 03 Aug 2026" 
-                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 36px 0 12px', fontSize: '13px', width: '180px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }} 
-                />
-                <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
-              </div>
-              
-              <button 
-                onClick={() => onChangeTab('Upload Invoice')}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => onChangeTab('Invoice Management')}
                 style={{
                   height: '38px',
-                  padding: '0 16px',
+                  padding: '0 20px',
                   borderRadius: '8px',
-                  border: '1px solid #DBEAFE',
+                  border: '1px solid #E2E8F0',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onChangeTab('Invoice Management')}
+                style={{
+                  height: '38px',
+                  padding: '0 20px',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
                   backgroundColor: '#FFFFFF',
                   color: '#2563EB',
                   fontSize: '13px',
                   fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
                   cursor: 'pointer'
                 }}
               >
-                <UploadCloud style={{ width: '16px', height: '16px', color: '#2563EB' }} />
-                Upload Invoice
+                Save Draft
               </button>
-              
-              <button style={{
-                height: '38px',
-                padding: '0 16px',
-                borderRadius: '8px',
-                border: '1px solid #D1FAE5',
-                backgroundColor: '#FFFFFF',
-                color: '#065F46',
-                fontSize: '13px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer'
-              }}>
-                <FileText style={{ width: '16px', height: '16px', color: '#10B981' }} />
-                Export Excel
+              <button
+                onClick={() => {
+                  onChangeTab('Invoice Management');
+                  setSelectedInvoice('INV-1042');
+                  setShowDrawer(true);
+                }}
+                style={{
+                  height: '38px',
+                  padding: '0 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Upload & Match
               </button>
             </div>
           </div>
 
-          {(() => {
-            const countAll = invoiceList.length;
-            const countReady = invoiceList.filter(i => i.status === 'Ready for Payment').length;
-            const countHold = invoiceList.filter(i => i.status === 'On Hold').length;
+          {/* Main content grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px', alignItems: 'start' }}>
 
-            const displayList = invoiceList.filter(i => {
-              const query = invSearchQuery.toLowerCase();
-              const matchesSearch = !invSearchQuery || 
-                i.invNo.toLowerCase().includes(query) ||
-                i.poNo.toLowerCase().includes(query) ||
-                i.vendor.toLowerCase().includes(query) ||
-                i.matchStatus.toLowerCase().includes(query);
-              const matchesStatus = invStatusFilter === 'All' || i.status === invStatusFilter;
-              const matchesTab = invoiceTab === 'All' || i.status === invoiceTab;
-              return matchesSearch && matchesStatus && matchesTab;
-            });
+            {/* Left Column (Forms & Details) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            return (
-              <>
-                {/* 1. FILTERS & SEARCH ROW CARD */}
-                <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                  {/* First row: Search bar + Filters button + Reset */}
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
-                      <input 
-                        type="text" 
-                        placeholder="Search invoice / vendor / PO / GRN..." 
-                        value={invSearchQuery}
-                        onChange={(e) => setInvSearchQuery(e.target.value)}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 36px 0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
-                      />
-                      <Search style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
-                    </div>
-                    
+              {/* Section 1: Upload Invoice */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1. Upload Invoice</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+                  {/* Drag & Drop Box */}
+                  <div style={{
+                    border: '2px dashed #3B82F6',
+                    borderRadius: '8px',
+                    backgroundColor: '#EFF6FF',
+                    padding: '24px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                  }}>
+                    <UploadCloud style={{ width: '28px', height: '28px', color: '#3B82F6' }} />
+                    <span style={{ fontSize: '12px', color: '#1E293B', fontWeight: '500' }}>Drag & Drop invoice here or</span>
                     <button style={{
-                      height: '38px',
-                      padding: '0 16px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: '#2563EB',
-                      color: '#FFFFFF',
-                      fontSize: '13px',
-                      fontWeight: '600',
+                      padding: '6px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      color: '#2563EB',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}>Browse Files</button>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>PDF, JPG, PNG • Max 10 MB</span>
+                  </div>
+
+                  {/* Uploaded File Item */}
+                  <div style={{
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    backgroundColor: '#FFFFFF',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#16A34A', fontWeight: 'bold' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                      <span>Invoice uploaded</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #E2E8F0', padding: '10px', borderRadius: '6px', backgroundColor: '#F8FAFC' }}>
+                      <FileText style={{ width: '20px', height: '20px', color: '#2563EB' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1E293B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>ABC_Metals_Invoice_INV-1042.pdf</div>
+                        <div style={{ fontSize: '10px', color: '#64748B' }}>1.24 MB</div>
+                      </div>
+                      <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', display: 'flex', alignItems: 'center' }}>
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Section 2: Invoice Information */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Information (Extracted by AI)</strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      backgroundColor: '#DCFCE7',
+                      color: '#166534',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer'
+                      gap: '4px'
                     }}>
-                      <Filter style={{ width: '14px', height: '14px' }} />
-                      Filters
-                    </button>
-                    
-                    <button 
-                      onClick={() => {
-                        setInvSearchQuery('');
-                        setInvStatusFilter('All');
-                        setInvoiceTab('All');
-                      }}
-                      style={{
-                        height: '38px',
-                        padding: '0 16px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        color: '#475569',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Reset
-                    </button>
-                  </div>
-
-                  {/* Dropdown Filters Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
-                    {[
-                      { label: 'Vendor', options: ['All Vendors', 'ABC Metals Pvt Ltd', 'XYZ Solar Pvt Ltd', 'Steel Authority Ltd'] },
-                      { label: 'PO Reference', options: ['All POs', 'PO-2451', 'PO-2455', 'PO-2460'] },
-                      { label: 'GRN Reference', options: ['All GRNs', 'GRN-1820', 'GRN-1824', 'GRN-1829'] },
-                      { label: 'Match Status', options: ['All Statuses', 'Matched', 'Review', 'Mismatch'] },
-                      { label: 'Payment Status', options: ['All Payments', 'Ready', 'Hold', 'Blocked'] },
-                      { label: 'Amount Range', options: ['All Amounts', 'Under ₹1L', '₹1L - ₹5L', 'Above ₹5L'] }
-                    ].map((filter, idx) => (
-                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>{filter.label}</label>
-                        <select style={{ height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '11px', backgroundColor: '#FFFFFF', color: '#475569' }}>
-                          {filter.options.map((opt, oIdx) => <option key={oIdx}>{opt}</option>)}
-                        </select>
-                      </div>
-                    ))}
+                      <span>AI Extraction Complete</span>
+                    </span>
+                    <button style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      color: '#475569',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}>Re-extract</button>
                   </div>
                 </div>
 
-                {/* 2. STATUS TABS ROW */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-                  {[
-                    { id: 'All', label: 'All Invoices', count: countAll, bg: '#e2e8f0', fg: '#475569' },
-                    { id: 'Ready for Payment', label: 'Ready for Payment', count: countReady, bg: '#dcfce7', fg: '#166534' },
-                    { id: 'On Hold', label: 'On Hold', count: countHold, bg: '#fee2e2', fg: '#991b1b' }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setInvoiceTab(tab.id)}
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        padding: '10px 4px',
-                        fontSize: '13px',
-                        fontWeight: 'bold',
-                        color: invoiceTab === tab.id ? '#2563eb' : '#64748b',
-                        borderBottom: invoiceTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <span>{tab.label}</span>
-                      <span style={{ fontSize: '10px', fontWeight: 'bold', backgroundColor: tab.bg, color: tab.fg, padding: '1px 6px', borderRadius: '10px' }}>
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Number *</label>
+                    <input type="text" defaultValue="INV-1042" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Date *</label>
+                    <input type="text" defaultValue="03 Aug 2026" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Vendor *</label>
+                    <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
+                      <option>ABC Metals Pvt Ltd</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Amount *</label>
+                    <input type="text" defaultValue="₹ 4,85,000.00" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>GSTIN</label>
+                    <input type="text" defaultValue="37AABCA1234B1Z5" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Due Date</label>
+                    <input type="text" defaultValue="17 Aug 2026" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Link Documents for Matching */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Link Documents for Matching</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Purchase Order *</label>
+                    <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
+                      <option>PO-2451</option>
+                    </select>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>PO Date: 28 Jul 2026 | PO Value: ₹ 4,85,000.00</span>
+                    <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Check style={{ width: '10px', height: '10px' }} /> PO found
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Goods Receipt Note *</label>
+                    <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
+                      <option>GRN-1820</option>
+                    </select>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>GRN Date: 31 Jul 2026 | GRN Value: ₹ 4,85,000.00</span>
+                    <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Check style={{ width: '10px', height: '10px' }} /> GRN found
+                    </span>
+                  </div>
+
+                  {/* How it works info box */}
+                  <div style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    padding: '12px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <strong style={{ color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Info style={{ width: '14px', height: '14px', color: '#2563EB' }} /> How it works
+                    </strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#475569' }}>
+                      <div>1. PO &rarr; What we ordered</div>
+                      <div>2. GRN &rarr; What we received</div>
+                      <div>3. Invoice &rarr; What vendor billed</div>
+                    </div>
+                    <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: 'bold', marginTop: '2px' }}>System will match all 3 for accuracy.</span>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Section 4: Invoice Items Preview */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Items Preview (Extracted)</strong>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', backgroundColor: '#F8FAFC' }}>
+                      <th style={{ padding: '8px 10px' }}>#</th>
+                      <th style={{ padding: '8px 10px' }}>Item Description</th>
+                      <th style={{ padding: '8px 10px' }}>HSN / SAC</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Unit</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (₹)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Amount (₹)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>GST (%)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>GST Amt (₹)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '8px 10px' }}>1</td>
+                      <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>Aluminium Rail 4.2m</td>
+                      <td style={{ padding: '8px 10px' }}>76109090</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>500</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>Nos</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>800.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>4,00,000.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>18%</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>72,000.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold' }}>4,72,000.00</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '8px 10px' }}>2</td>
+                      <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>Mid Clamp</td>
+                      <td style={{ padding: '8px 10px' }}>73269099</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>500</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>Nos</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>170.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>85,000.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>16%</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>15,300.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold' }}>1,00,300.00</td>
+                    </tr>
+                    <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
+                      <td colSpan="6" style={{ padding: '8px 10px', textAlign: 'right' }}>Total (Before Tax)</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>4,85,000.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>Total GST</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>87,300.00</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', color: '#2563EB' }}>₹ 5,72,300.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Notes & Attachments row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="section-card" style={{ padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <strong style={{ fontSize: '11px', color: '#475569' }}>Notes</strong>
+                  <textarea
+                    defaultValue="Payment terms as per agreement."
+                    style={{
+                      height: '60px',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      padding: '8px',
+                      fontSize: '12px',
+                      boxSizing: 'border-box',
+                      resize: 'none'
+                    }}
+                  />
+                </div>
+                <div className="section-card" style={{ padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <strong style={{ fontSize: '11px', color: '#475569' }}>Attachments (Optional)</strong>
+                  <button style={{
+                    height: '36px',
+                    borderRadius: '6px',
+                    border: '1px dashed #3B82F6',
+                    backgroundColor: '#EFF6FF',
+                    color: '#2563EB',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>+ Add Attachment</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column (Live Document extracted preview & 3-Way Match Preview) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              {/* INVOICE PREVIEW (Extracted Document Rendering) */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Preview (Extracted)</strong>
+                  <Maximize2 style={{ width: '14px', height: '14px', color: '#64748B', cursor: 'pointer' }} />
                 </div>
 
-                    {/* 2. MAIN LAYOUT: FULL-WIDTH TABLE & DRAWER PANEL */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
-                      
-                      {/* Invoice Ledger List Card (Full Width) */}
-                      <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <strong style={{ fontSize: '14px', color: '#0F172A' }}>Invoice Ledger List (248)</strong>
-                        
-                        <div style={{ overflowX: 'auto' }}>
-                          <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '950px !important' }}>
-                            <thead>
-                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                                <th style={{ padding: '8px 6px', textAlign: 'left' }}>Invoice No.</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'left' }}>Invoice Date</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'left' }}>Vendor</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'left' }}>PO No.</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'left' }}>GRN No.</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'right' }}>Invoice Amount (₹)</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'right' }}>PO Value (₹)</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'right' }}>GRN Value (₹)</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'right' }}>Difference (₹)</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'center' }}>Match Status</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'center' }}>Payment Status</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'center', width: '80px' }}>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {invoicesList.map((row) => {
-                                const isSelected = selectedInvoice === row.invNo;
-                                return (
-                                  <tr 
-                                    key={row.invNo} 
-                                    onClick={() => { setSelectedInvoice(row.invNo); setShowDrawer(true); }}
-                                    style={{ 
-                                      borderBottom: '1px solid #F1F5F9',
-                                      cursor: 'pointer',
-                                      backgroundColor: isSelected ? '#EFF6FF' : 'transparent',
-                                      transition: 'background-color 0.15s ease'
-                                    }}
-                                  >
-                                    <td style={{ padding: '10px 6px', fontWeight: 'bold', color: '#2563EB' }}>{row.invNo}</td>
-                                    <td style={{ padding: '10px 6px', color: '#475569' }}>{row.date}</td>
-                                    <td style={{ padding: '10px 6px', fontWeight: '600', color: '#1E293B' }}>{row.vendor}</td>
-                                    <td style={{ padding: '10px 6px', color: '#2563EB', fontWeight: '600' }}>{row.poNo}</td>
-                                    <td style={{ padding: '10px 6px', color: '#475569' }}>{row.grnNo}</td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: '600', color: '#1E293B' }}>{row.invAmt}</td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'right', color: '#475569' }}>{row.poVal}</td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'right', color: '#475569' }}>{row.grnVal}</td>
-                                    <td style={{ 
-                                      padding: '10px 6px', 
-                                      textAlign: 'right', 
-                                      fontWeight: 'bold',
-                                      color: row.diff === '0.00' ? '#64748B' : (row.match === 'Review' ? '#D97706' : '#EF4444')
-                                    }}>{row.diff}</td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                                      <span style={{
-                                        padding: '3px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        backgroundColor: row.match === 'Matched' ? '#DCFCE7' : (row.match === 'Review' ? '#FEF3C7' : '#FEE2E2'),
-                                        color: row.match === 'Matched' ? '#166534' : (row.match === 'Review' ? '#B45309' : '#991B1B')
-                                      }}>{row.match}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                                      <span style={{
-                                        padding: '3px 8px',
-                                        borderRadius: '12px',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        backgroundColor: row.pay === 'Ready' ? '#DCFCE7' : (row.pay === 'Hold' ? '#DBEAFE' : '#FEE2E2'),
-                                        color: row.pay === 'Ready' ? '#166534' : (row.pay === 'Hold' ? '#1E40AF' : '#991B1B')
-                                      }}>{row.pay}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                                        <button 
-                                          onClick={(e) => { 
-                                            e.stopPropagation();
-                                            setSelectedInvoice(row.invNo); 
-                                            setShowDrawer(true); 
-                                          }}
-                                          style={{
-                                            padding: '4px 10px',
-                                            borderRadius: '6px',
-                                            border: '1px solid #2563EB',
-                                            backgroundColor: isSelected ? '#2563EB' : '#EFF6FF',
-                                            color: isSelected ? '#FFFFFF' : '#2563EB',
-                                            fontWeight: 'bold',
-                                            fontSize: '10px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                        >
-                                          <span>View</span>
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                {/* Paper Mockup box */}
+                <div style={{
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  padding: '16px',
+                  fontSize: '10px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <strong style={{ fontSize: '12px', color: '#0F172A' }}>ABC METALS PVT LTD</strong>
+                      <div style={{ color: '#64748B', marginTop: '2px' }}>GSTIN: 37AABCA1234B1Z5</div>
+                      <div style={{ color: '#64748B' }}>#12, Industrial Area, Coimbatore - 641 021</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <strong style={{ fontSize: '11px', color: '#0F172A' }}>TAX INVOICE</strong>
+                      <div style={{ color: '#64748B', marginTop: '2px' }}>Invoice No: <strong>INV-1042</strong></div>
+                      <div style={{ color: '#64748B' }}>Invoice Date: 03 Aug 2026</div>
+                      <div style={{ color: '#64748B' }}>Due Date: 17 Aug 2026</div>
+                    </div>
+                  </div>
 
-                        {/* Pagination block */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginTop: '6px' }}>
-                          <span style={{ fontSize: '11px', color: '#64748B' }}>Showing 1 to 10 of 248 entries</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <button style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                                <ChevronLeft style={{ width: '12px', height: '12px' }} />
-                              </button>
-                              {[1, 2, 3, 4].map((page, pIdx) => (
-                                <button key={pIdx} style={{ 
-                                  width: '28px', 
-                                  height: '28px', 
-                                  border: '1px solid #E2E8F0', 
-                                  borderRadius: '6px', 
-                                  backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF', 
-                                  color: page === 1 ? '#FFFFFF' : '#475569', 
-                                  fontSize: '11px', 
-                                  fontWeight: 'bold', 
-                                  cursor: 'pointer' 
-                                }}>
-                                  {page}
-                                </button>
-                              ))}
-                              <button style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                                <ChevronRight style={{ width: '12px', height: '12px' }} />
-                              </button>
-                            </div>
-                            <select style={{ height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 6px', fontSize: '11px', backgroundColor: '#FFFFFF', color: '#475569' }}>
-                              <option>10 / page</option>
-                            </select>
-                          </div>
-                        </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9', padding: '8px 0' }}>
+                    <div>
+                      <div style={{ color: '#64748B', fontWeight: 'bold' }}>Bill To</div>
+                      <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>ARMS AI Pvt Ltd</strong>
+                      <div style={{ color: '#64748B' }}>Nellore - 524002</div>
+                      <div style={{ color: '#64748B' }}>GSTIN: 37AAFCV0146D1Z1</div>
+                    </div>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ color: '#64748B', fontWeight: 'bold' }}>Total Amount</div>
+                      <strong style={{ fontSize: '14px', color: '#2563EB', display: 'block', margin: '4px 0' }}>₹ 5,72,300.00</strong>
+                      <span style={{ fontSize: '8px', color: '#64748B' }}>(Rupees Five Lakh Seventy Two Thousand Three Hundred Only)</span>
+                    </div>
+                  </div>
 
-                      </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '9px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                        <th style={{ padding: '4px 0' }}>#</th>
+                        <th style={{ padding: '4px 0' }}>Item Description</th>
+                        <th style={{ padding: '4px 0' }}>HSN/SAC</th>
+                        <th style={{ padding: '4px 0', textAlign: 'center' }}>Qty</th>
+                        <th style={{ padding: '4px 0', textAlign: 'right' }}>Rate (₹)</th>
+                        <th style={{ padding: '4px 0', textAlign: 'right' }}>Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '4px 0' }}>1</td>
+                        <td style={{ padding: '4px 0', fontWeight: 'bold' }}>Aluminium Rail 4.2m</td>
+                        <td style={{ padding: '4px 0' }}>76109090</td>
+                        <td style={{ padding: '4px 0', textAlign: 'center' }}>500</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>800.00</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>4,00,000.00</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '4px 0' }}>2</td>
+                        <td style={{ padding: '4px 0', fontWeight: 'bold' }}>Mid Clamp</td>
+                        <td style={{ padding: '4px 0' }}>73269099</td>
+                        <td style={{ padding: '4px 0', textAlign: 'center' }}>500</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>170.00</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>85,000.00</td>
+                      </tr>
+                      <tr style={{ borderTop: '1px solid #F1F5F9' }}>
+                        <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>Subtotal</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>4,85,000.00</td>
+                      </tr>
+                      <tr>
+                        <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>CGST (9%)</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>43,650.00</td>
+                      </tr>
+                      <tr>
+                        <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>SGST (9%)</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right' }}>43,650.00</td>
+                      </tr>
+                      <tr style={{ fontWeight: 'bold', borderTop: '1px solid #E2E8F0' }}>
+                        <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>Total Amount</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', color: '#2563EB' }}>₹ 5,72,300.00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
-                      {/* Match Status Legend */}
-                      <div className="section-card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Match Status Legend</strong>
-                        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', fontSize: '11px' }}>
-                          {[
-                            { color: '#16A34A', label: 'Matched', desc: 'PO, GRN & Invoice match' },
-                            { color: '#D97706', label: 'Review', desc: 'Minor difference found' },
-                            { color: '#EF4444', label: 'Mismatch', desc: 'Major difference found' },
-                            { color: '#94A3B8', label: 'Incomplete', desc: 'Missing PO or GRN' }
-                          ].map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }} />
-                              <strong style={{ color: '#1E293B' }}>{item.label}</strong>
-                              <span style={{ color: '#64748B' }}>{item.desc}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                {/* Preview controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', fontSize: '11px', color: '#475569' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <span>1 / 2</span>
+                    <span style={{ cursor: 'pointer' }}>Zoom 100%</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Download style={{ width: '14px', height: '14px' }} /> Download
+                    </span>
+                    <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Printer style={{ width: '14px', height: '14px' }} /> Print
+                    </span>
+                  </div>
+                </div>
 
-                      {/* COLLAPSIBLE SLIDE-OVER DRAWER */}
-                      {showDrawer && (() => {
-                        const invoiceData = {
-                          'INV-1042': {
-                            vendor: 'ABC Metals Pvt Ltd',
-                            date: '02 Aug 2026',
-                            dueDate: '17 Aug 2026',
-                            status: 'Ready for Payment',
-                            statusColor: '#16A34A',
-                            statusBg: '#DCFCE7',
-                            poNo: 'PO-2451',
-                            grnNo: 'GRN-1820',
-                            poVal: '₹ 4,85,000.00',
-                            grnVal: '₹ 4,85,000.00',
-                            invVal: '₹ 4,85,000.00',
-                            diff: '₹ 0.00',
-                            bannerText: '3-WAY MATCH PASSED',
-                            bannerBg: '#F0FDF4',
-                            bannerBorder: '#DCFCE7',
-                            bannerColor: '#16A34A',
-                            bannerDesc: 'PO, GRN & Invoice match perfectly.',
-                            hasCheck1: true,
-                            hasCheck2: true,
-                            hasCheck3: true,
-                            poItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '500 Nos', rate: '800.00', amt: '4,00,000.00' },
-                              { name: 'Mid Clamp', qty: '500 Nos', rate: '170.00', amt: '85,000.00' }
-                            ],
-                            grnItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '500 Nos', accepted: '500 Nos', rate: '800.00', amt: '4,00,000.00' },
-                              { name: 'Mid Clamp', qty: '500 Nos', accepted: '500 Nos', rate: '170.00', amt: '85,000.00' }
-                            ],
-                            invItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '500 Nos', rate: '800.00', amt: '4,00,000.00' },
-                              { name: 'Mid Clamp', qty: '500 Nos', rate: '170.00', amt: '85,000.00' }
-                            ]
-                          },
-                          'INV-1043': {
-                            vendor: 'XYZ Solar Pvt Ltd',
-                            date: '02 Aug 2026',
-                            dueDate: '17 Aug 2026',
-                            status: 'On Hold (Review)',
-                            statusColor: '#D97706',
-                            statusBg: '#FEF3C7',
-                            poNo: 'PO-2455',
-                            grnNo: 'GRN-1824',
-                            poVal: '₹ 2,30,000.00',
-                            grnVal: '₹ 2,30,000.00',
-                            invVal: '₹ 2,40,000.00',
-                            diff: '₹ 10,000.00',
-                            bannerText: 'QUANTITY VARIANCE FOUND (HOLD)',
-                            bannerBg: '#FFFBEB',
-                            bannerBorder: '#FEF3C7',
-                            bannerColor: '#D97706',
-                            bannerDesc: 'Invoice quantity is higher than ordered/received quantity.',
-                            hasCheck1: true,
-                            hasCheck2: true,
-                            hasCheck3: false,
-                            poItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '200 Nos', rate: '800.00', amt: '1,60,000.00' },
-                              { name: 'Mid Clamp', qty: '411 Nos', rate: '170.00', amt: '70,000.00' }
-                            ],
-                            grnItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '200 Nos', accepted: '200 Nos', rate: '800.00', amt: '1,60,000.00' },
-                              { name: 'Mid Clamp', qty: '411 Nos', accepted: '411 Nos', rate: '170.00', amt: '70,000.00' }
-                            ],
-                            invItems: [
-                              { name: 'Aluminium Rail 4.2m', qty: '200 Nos', rate: '800.00', amt: '1,60,000.00' },
-                              { name: 'Mid Clamp', qty: '470 Nos', rate: '170.00', amt: '80,000.00' }
-                            ]
-                          },
-                          'INV-1044': {
-                            vendor: 'Steel Authority Ltd',
-                            date: '01 Aug 2026',
-                            dueDate: '16 Aug 2026',
-                            status: 'Blocked (Mismatch)',
-                            statusColor: '#EF4444',
-                            statusBg: '#FEE2E2',
-                            poNo: 'PO-2460',
-                            grnNo: 'GRN-1829',
-                            poVal: '₹ 8,00,000.00',
-                            grnVal: '₹ 7,50,000.00',
-                            invVal: '₹ 8,20,000.00',
-                            diff: '₹ 70,000.00',
-                            bannerText: '3-WAY MATCH MISMATCH (BLOCKED)',
-                            bannerBg: '#FEF2F2',
-                            bannerBorder: '#FEE2E2',
-                            bannerColor: '#EF4444',
-                            bannerDesc: 'Price & quantity variance detected across PO, GRN, and Invoice.',
-                            hasCheck1: true,
-                            hasCheck2: false,
-                            hasCheck3: false,
-                            poItems: [
-                              { name: 'Steel Rods 12mm', qty: '10 Tons', rate: '80,000.00', amt: '8,00,000.00' }
-                            ],
-                            grnItems: [
-                              { name: 'Steel Rods 12mm', qty: '10 Tons', accepted: '9.38 Tons', rate: '80,000.00', amt: '7,50,000.00' }
-                            ],
-                            invItems: [
-                              { name: 'Steel Rods 12mm', qty: '10.25 Tons', rate: '80,000.00', amt: '8,20,000.00' }
-                            ]
-                          }
-                        };
+              </div>
 
-                        const det = invoiceData[selectedInvoice] || invoiceData['INV-1042'];
+              {/* 3-WAY MATCH PREVIEW */}
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3-Way Match Preview</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
 
-                        return (
-                          <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            width: '100vw',
-                            height: '100vh',
-                            backgroundColor: 'rgba(15, 23, 42, 0.3)',
-                            backdropFilter: 'blur(4px)',
-                            zIndex: 9999,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            animation: 'fadeIn 0.2s ease-out'
-                          }} onClick={() => setShowDrawer(false)}>
-                            
-                            {/* Drawer Panel */}
-                            <div style={{
-                              width: '580px',
-                              height: '100%',
-                              backgroundColor: '#FFFFFF',
-                              boxShadow: '-8px 0 24px rgba(0, 0, 0, 0.08)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '20px',
-                              padding: '24px',
-                              boxSizing: 'border-box',
-                              overflowY: 'auto',
-                              animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                            }} onClick={(e) => e.stopPropagation()}>
-                              
-                              {/* Header */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>Invoice Details</strong>
-                                  <span style={{
-                                    padding: '3px 8px',
-                                    borderRadius: '12px',
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    backgroundColor: det.statusBg,
-                                    color: det.statusColor
-                                  }}>{det.status}</span>
-                                </div>
-                                <button 
-                                  onClick={() => setShowDrawer(false)}
-                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center' }}
-                                >
-                                  <XCircle style={{ width: '22px', height: '22px', color: '#94A3B8' }} />
-                                </button>
-                              </div>
+                  {/* PO Value box */}
+                  <div style={{
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>PO (PO-2451)</span>
+                    <span style={{ fontSize: '10px', color: '#475569' }}>PO Value</span>
+                    <strong style={{ fontSize: '12px', color: '#2563EB' }}>₹ 4,85,000.00</strong>
+                    <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
+                  </div>
 
-                              {/* Fields Grid */}
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 16px', fontSize: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Invoice No.</div>
-                                  <strong style={{ color: '#0F172A' }}>{selectedInvoice}</strong>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Invoice Amount</div>
-                                  <strong style={{ color: '#0F172A', fontSize: '14px' }}>{det.invVal}</strong>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Invoice Date</div>
-                                  <strong style={{ color: '#475569' }}>{det.date}</strong>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Due Date</div>
-                                  <strong style={{ color: '#475569' }}>{det.dueDate}</strong>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Vendor</div>
-                                  <strong style={{ color: '#475569' }}>{det.vendor}</strong>
-                                </div>
-                                <div>
-                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Status</div>
-                                  <strong style={{ color: det.statusColor }}>{det.status}</strong>
-                                </div>
-                              </div>
+                  {/* GRN Value box */}
+                  <div style={{
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold' }}>GRN (GRN-1820)</span>
+                    <span style={{ fontSize: '10px', color: '#475569' }}>GRN Value</span>
+                    <strong style={{ fontSize: '12px', color: '#16A34A' }}>₹ 4,85,000.00</strong>
+                    <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
+                  </div>
 
-                              {/* Tabs */}
-                              <div style={{ display: 'flex', borderBottom: '1px solid #F1F5F9', gap: '16px', fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
-                                <span style={{ color: '#2563EB', borderBottom: '2px solid #2563EB', paddingBottom: '8px', cursor: 'pointer' }}>3-Way Matching</span>
-                                <span style={{ paddingBottom: '8px', cursor: 'pointer' }}>Invoice Info</span>
-                                <span style={{ paddingBottom: '8px', cursor: 'pointer' }}>Documents</span>
-                                <span style={{ paddingBottom: '8px', cursor: 'pointer' }}>Notes</span>
-                                <span style={{ paddingBottom: '8px', cursor: 'pointer' }}>History</span>
-                              </div>
+                  {/* Invoice Value box */}
+                  <div style={{
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <span style={{ fontSize: '10px', color: '#6b21a8', fontWeight: 'bold' }}>Invoice (INV-1042)</span>
+                    <span style={{ fontSize: '10px', color: '#475569' }}>Invoice Value</span>
+                    <strong style={{ fontSize: '12px', color: '#6b21a8' }}>₹ 4,85,000.00</strong>
+                    <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
+                  </div>
 
-                              {/* Matching Cards with Connective Checkmarks */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
-                                
-                                {/* Connecting Line background */}
-                                <div style={{ position: 'absolute', right: '14px', top: '20px', bottom: '20px', width: '2px', backgroundColor: '#E2E8F0', zIndex: 0 }} />
+                </div>
 
-                                {/* Card 1: PO */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 1 }}>
-                                  <div className="section-card" style={{ flex: 1, padding: '12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-                                      <span style={{ fontWeight: 'bold', color: '#2563EB' }}>1. Purchase Order ({det.poNo})</span>
-                                      <strong style={{ color: '#475569' }}>PO Value: {det.poVal}</strong>
-                                    </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                      <thead>
-                                        <tr style={{ color: '#64748B' }}>
-                                          <th style={{ padding: '2px 0' }}>Item</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'center' }}>Ordered Qty</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Rate (₹)</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Amount (₹)</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {det.poItems.map((item, idx) => (
-                                          <tr key={idx}>
-                                            <td style={{ padding: '2px 0', fontWeight: '500' }}>{item.name}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'center' }}>{item.qty}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.rate}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.amt}</td>
-                                          </tr>
-                                        ))}
-                                        <tr style={{ borderTop: '1px solid #F1F5F9', fontWeight: 'bold' }}>
-                                          <td style={{ padding: '4px 0' }}>Total</td>
-                                          <td></td>
-                                          <td></td>
-                                          <td style={{ textAlign: 'right' }}>{det.poVal}</td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                  <div style={{ width: '30px', display: 'flex', justifyContent: 'center' }}>
-                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: det.hasCheck1 ? '#16A34A' : '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
-                                      {det.hasCheck1 ? <Check style={{ width: '12px', height: '12px' }} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>!</span>}
-                                    </span>
-                                  </div>
-                                </div>
+                {/* Match banner */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F0FDF4', borderRadius: '8px', padding: '12px', border: '1px solid #DCFCE7' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#16A34A', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                    <div>
+                      <strong style={{ fontSize: '11px', color: '#16A34A', display: 'block' }}>3-WAY MATCH PASSED</strong>
+                      <span style={{ fontSize: '10px', color: '#15803D' }}>All values are matched</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '9px', color: '#15803D', display: 'block' }}>Difference</span>
+                    <strong style={{ fontSize: '12px', color: '#16A34A' }}>₹ 0.00</strong>
+                  </div>
+                </div>
 
-                                {/* Card 2: GRN */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 1 }}>
-                                  <div className="section-card" style={{ flex: 1, padding: '12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-                                      <span style={{ fontWeight: 'bold', color: '#16A34A' }}>2. Goods Receipt Note ({det.grnNo})</span>
-                                      <strong style={{ color: '#475569' }}>GRN Value: {det.grnVal}</strong>
-                                    </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                      <thead>
-                                        <tr style={{ color: '#64748B' }}>
-                                          <th style={{ padding: '2px 0' }}>Item</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'center' }}>Received Qty</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'center' }}>Accepted Qty</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Rate (₹)</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Value (₹)</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {det.grnItems.map((item, idx) => (
-                                          <tr key={idx}>
-                                            <td style={{ padding: '2px 0', fontWeight: '500' }}>{item.name}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'center' }}>{item.qty}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'center' }}>{item.accepted}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.rate}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.amt}</td>
-                                          </tr>
-                                        ))}
-                                        <tr style={{ borderTop: '1px solid #F1F5F9', fontWeight: 'bold' }}>
-                                          <td style={{ padding: '4px 0' }}>Total</td>
-                                          <td></td>
-                                          <td></td>
-                                          <td></td>
-                                          <td style={{ textAlign: 'right' }}>{det.grnVal}</td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                  <div style={{ width: '30px', display: 'flex', justifyContent: 'center' }}>
-                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: det.hasCheck2 ? '#16A34A' : '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
-                                      {det.hasCheck2 ? <Check style={{ width: '12px', height: '12px' }} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>!</span>}
-                                    </span>
-                                  </div>
-                                </div>
+                {/* Payment status banner */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Payment Status</span>
+                    <strong style={{ fontSize: '12px', color: '#16A34A' }}>Ready for Approval</strong>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onChangeTab('Invoice Management');
+                      setSelectedInvoice('INV-1042');
+                      setShowDrawer(true);
+                    }}
+                    style={{
+                      height: '34px',
+                      padding: '0 16px',
+                      borderRadius: '6px',
+                      border: '1px solid #D97706',
+                      backgroundColor: '#FFFFFF',
+                      color: '#D97706',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Send for Approval
+                  </button>
+                </div>
 
-                                {/* Card 3: Invoice */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 1 }}>
-                                  <div className="section-card" style={{ flex: 1, padding: '12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-                                      <span style={{ fontWeight: 'bold', color: '#6b21a8' }}>3. Vendor Invoice ({selectedInvoice})</span>
-                                      <strong style={{ color: '#475569' }}>Invoice Value: {det.invVal}</strong>
-                                    </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                      <thead>
-                                        <tr style={{ color: '#64748B' }}>
-                                          <th style={{ padding: '2px 0' }}>Item</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'center' }}>Invoiced Qty</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Rate (₹)</th>
-                                          <th style={{ padding: '2px 0', textAlign: 'right' }}>Amount (₹)</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {det.invItems.map((item, idx) => (
-                                          <tr key={idx}>
-                                            <td style={{ padding: '2px 0', fontWeight: '500' }}>{item.name}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'center' }}>{item.qty}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.rate}</td>
-                                            <td style={{ padding: '2px 0', textAlign: 'right' }}>{item.amt}</td>
-                                          </tr>
-                                        ))}
-                                        <tr style={{ borderTop: '1px solid #F1F5F9', fontWeight: 'bold' }}>
-                                          <td style={{ padding: '4px 0' }}>Total</td>
-                                          <td></td>
-                                          <td></td>
-                                          <td style={{ textAlign: 'right' }}>{det.invVal}</td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                  <div style={{ width: '30px', display: 'flex', justifyContent: 'center' }}>
-                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: det.hasCheck3 ? '#16A34A' : '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
-                                      {det.hasCheck3 ? <Check style={{ width: '12px', height: '12px' }} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>!</span>}
-                                    </span>
-                                  </div>
-                                </div>
+              </div>
 
-                              </div>
+            </div>
 
-                              {/* 3-Way Match Dynamic Card */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: det.bannerBg, borderRadius: '8px', padding: '12px', border: `1px solid ${det.bannerBorder}` }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: det.bannerColor, fontWeight: 'bold', fontSize: '11px' }}>
-                                  {det.status === 'Ready for Payment' ? <CheckCircle style={{ width: '14px', height: '14px' }} /> : <XCircle style={{ width: '14px', height: '14px' }} />}
-                                  <span>{det.bannerText}</span>
-                                </div>
-                                <div style={{ fontSize: '10px', color: '#475569', marginBottom: '4px' }}>
-                                  {det.bannerDesc}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '10px', color: det.bannerColor, flexWrap: 'wrap' }}>
-                                  <div style={{ backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${det.bannerBorder}` }}>
-                                    PO: <strong style={{ marginLeft: '4px' }}>{det.poVal}</strong>
-                                  </div>
-                                  <span>|</span>
-                                  <div style={{ backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${det.bannerBorder}` }}>
-                                    GRN: <strong style={{ marginLeft: '4px' }}>{det.grnVal}</strong>
-                                  </div>
-                                  <span>|</span>
-                                  <div style={{ backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${det.bannerBorder}` }}>
-                                    Invoice: <strong style={{ marginLeft: '4px' }}>{det.invVal}</strong>
-                                  </div>
-                                  <span style={{ margin: '0 4px' }}>|</span>
-                                  <div style={{ backgroundColor: det.statusBg, padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold' }}>
-                                    Diff: <strong style={{ marginLeft: '4px' }}>{det.diff}</strong>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                                <button style={{
-                                  flex: 1,
-                                  height: '38px',
-                                  borderRadius: '8px',
-                                  border: '1px solid #DBEAFE',
-                                  backgroundColor: '#FFFFFF',
-                                  color: '#2563EB',
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  cursor: 'pointer'
-                                }}>
-                                  View Documents
-                                </button>
-                                <button style={{
-                                  flex: 1,
-                                  height: '38px',
-                                  borderRadius: '8px',
-                                  border: 'none',
-                                  backgroundColor: '#2563EB',
-                                  color: '#FFFFFF',
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  cursor: 'pointer'
-                                }}>
-                                  Send for Approval
-                                </button>
-                                {det.status === 'Ready for Payment' ? (
-                                  <button style={{
-                                    flex: 1,
-                                    height: '38px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: '#16A34A',
-                                    color: '#FFFFFF',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                  }}>
-                                    Approve Payment
-                                  </button>
-                                ) : (
-                                  <button style={{
-                                    flex: 1,
-                                    height: '38px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: '#EF4444',
-                                    color: '#FFFFFF',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                  }}>
-                                    Reject & Re-route
-                                  </button>
-                                )}
-                              </div>
-
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      </div>
-                    </>
-                  );
-            })()}
           </div>
-        )}
 
-      {/* ==================== 6. PAYMENTS SCREEN ==================== */}
-
-      {activeTab === 'Upload Invoice' && (
-                          /* ==================== UPLOAD VENDOR INVOICE VIEW ==================== */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Header / Top bar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Upload Vendor Invoice</h2>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>Upload invoice and link with PO and GRN to perform 3-way matching</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button 
-                          onClick={() => onChangeTab('Invoice Management')}
-                          style={{
-                            height: '38px',
-                            padding: '0 20px',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                            backgroundColor: '#FFFFFF',
-                            color: '#475569',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          onClick={() => onChangeTab('Invoice Management')}
-                          style={{
-                            height: '38px',
-                            padding: '0 20px',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                            backgroundColor: '#FFFFFF',
-                            color: '#2563EB',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Save Draft
-                        </button>
-                        <button 
-                          onClick={() => {
-                            onChangeTab('Invoice Management');
-                            setSelectedInvoice('INV-1042');
-                            setShowDrawer(true);
-                          }}
-                          style={{
-                            height: '38px',
-                            padding: '0 20px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            backgroundColor: '#2563EB',
-                            color: '#FFFFFF',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Upload & Match
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Main content grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px', alignItems: 'start' }}>
-                      
-                      {/* Left Column (Forms & Details) */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        
-                        {/* Section 1: Upload Invoice */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1. Upload Invoice</strong>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            
-                            {/* Drag & Drop Box */}
-                            <div style={{
-                              border: '2px dashed #3B82F6',
-                              borderRadius: '8px',
-                              backgroundColor: '#EFF6FF',
-                              padding: '24px',
-                              textAlign: 'center',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '10px'
-                            }}>
-                              <UploadCloud style={{ width: '28px', height: '28px', color: '#3B82F6' }} />
-                              <span style={{ fontSize: '12px', color: '#1E293B', fontWeight: '500' }}>Drag & Drop invoice here or</span>
-                              <button style={{
-                                padding: '6px 16px',
-                                borderRadius: '6px',
-                                border: '1px solid #E2E8F0',
-                                backgroundColor: '#FFFFFF',
-                                color: '#2563EB',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                              }}>Browse Files</button>
-                              <span style={{ fontSize: '10px', color: '#64748B' }}>PDF, JPG, PNG • Max 10 MB</span>
-                            </div>
-
-                            {/* Uploaded File Item */}
-                            <div style={{
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '8px',
-                              backgroundColor: '#FFFFFF',
-                              padding: '16px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'center',
-                              gap: '12px'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#16A34A', fontWeight: 'bold' }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
-                                <span>Invoice uploaded</span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #E2E8F0', padding: '10px', borderRadius: '6px', backgroundColor: '#F8FAFC' }}>
-                                <FileText style={{ width: '20px', height: '20px', color: '#2563EB' }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1E293B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>ABC_Metals_Invoice_INV-1042.pdf</div>
-                                  <div style={{ fontSize: '10px', color: '#64748B' }}>1.24 MB</div>
-                                </div>
-                                <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', display: 'flex', alignItems: 'center' }}>
-                                  <Trash2 style={{ width: '16px', height: '16px' }} />
-                                </button>
-                              </div>
-                            </div>
-
-                          </div>
-                        </div>
-
-                        {/* Section 2: Invoice Information */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Information (Extracted by AI)</strong>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <span style={{
-                                padding: '3px 8px',
-                                borderRadius: '12px',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                backgroundColor: '#DCFCE7',
-                                color: '#166534',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <span>AI Extraction Complete</span>
-                              </span>
-                              <button style={{
-                                padding: '4px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid #E2E8F0',
-                                backgroundColor: '#FFFFFF',
-                                color: '#475569',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                              }}>Re-extract</button>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Number *</label>
-                              <input type="text" defaultValue="INV-1042" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Date *</label>
-                              <input type="text" defaultValue="03 Aug 2026" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Vendor *</label>
-                              <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
-                                <option>ABC Metals Pvt Ltd</option>
-                              </select>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Invoice Amount *</label>
-                              <input type="text" defaultValue="₹ 4,85,000.00" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>GSTIN</label>
-                              <input type="text" defaultValue="37AABCA1234B1Z5" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Due Date</label>
-                              <input type="text" defaultValue="17 Aug 2026" style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px' }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Section 3: Link Documents for Matching */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Link Documents for Matching</strong>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Purchase Order *</label>
-                              <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
-                                <option>PO-2451</option>
-                              </select>
-                              <span style={{ fontSize: '10px', color: '#64748B' }}>PO Date: 28 Jul 2026 | PO Value: ₹ 4,85,000.00</span>
-                              <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Check style={{ width: '10px', height: '10px' }} /> PO found
-                              </span>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Goods Receipt Note *</label>
-                              <select style={{ height: '36px', padding: '0 10px', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '12px', backgroundColor: '#FFFFFF' }}>
-                                <option>GRN-1820</option>
-                              </select>
-                              <span style={{ fontSize: '10px', color: '#64748B' }}>GRN Date: 31 Jul 2026 | GRN Value: ₹ 4,85,000.00</span>
-                              <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Check style={{ width: '10px', height: '10px' }} /> GRN found
-                              </span>
-                            </div>
-
-                            {/* How it works info box */}
-                            <div style={{
-                              backgroundColor: '#F8FAFC',
-                              borderRadius: '8px',
-                              border: '1px solid #E2E8F0',
-                              padding: '12px',
-                              fontSize: '11px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
-                            }}>
-                              <strong style={{ color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Info style={{ width: '14px', height: '14px', color: '#2563EB' }} /> How it works
-                              </strong>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#475569' }}>
-                                <div>1. PO &rarr; What we ordered</div>
-                                <div>2. GRN &rarr; What we received</div>
-                                <div>3. Invoice &rarr; What vendor billed</div>
-                              </div>
-                              <span style={{ fontSize: '10px', color: '#2563EB', fontWeight: 'bold', marginTop: '2px' }}>System will match all 3 for accuracy.</span>
-                            </div>
-
-                          </div>
-                        </div>
-
-                        {/* Section 4: Invoice Items Preview */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Items Preview (Extracted)</strong>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
-                            <thead>
-                              <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', backgroundColor: '#F8FAFC' }}>
-                                <th style={{ padding: '8px 10px' }}>#</th>
-                                <th style={{ padding: '8px 10px' }}>Item Description</th>
-                                <th style={{ padding: '8px 10px' }}>HSN / SAC</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'center' }}>Unit</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (₹)</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Amount (₹)</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'center' }}>GST (%)</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>GST Amt (₹)</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Total (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                <td style={{ padding: '8px 10px' }}>1</td>
-                                <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>Aluminium Rail 4.2m</td>
-                                <td style={{ padding: '8px 10px' }}>76109090</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>500</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>Nos</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>800.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>4,00,000.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>18%</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>72,000.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold' }}>4,72,000.00</td>
-                              </tr>
-                              <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                <td style={{ padding: '8px 10px' }}>2</td>
-                                <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>Mid Clamp</td>
-                                <td style={{ padding: '8px 10px' }}>73269099</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>500</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>Nos</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>170.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>85,000.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>16%</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>15,300.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold' }}>1,00,300.00</td>
-                              </tr>
-                              <tr style={{ fontWeight: 'bold', backgroundColor: '#F8FAFC' }}>
-                                <td colSpan="6" style={{ padding: '8px 10px', textAlign: 'right' }}>Total (Before Tax)</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>4,85,000.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>Total GST</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>87,300.00</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right', color: '#2563EB' }}>₹ 5,72,300.00</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Notes & Attachments row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                          <div className="section-card" style={{ padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <strong style={{ fontSize: '11px', color: '#475569' }}>Notes</strong>
-                            <textarea
-                              defaultValue="Payment terms as per agreement."
-                              style={{
-                                height: '60px',
-                                borderRadius: '6px',
-                                border: '1px solid #E2E8F0',
-                                padding: '8px',
-                                fontSize: '12px',
-                                boxSizing: 'border-box',
-                                resize: 'none'
-                              }}
-                            />
-                          </div>
-                          <div className="section-card" style={{ padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <strong style={{ fontSize: '11px', color: '#475569' }}>Attachments (Optional)</strong>
-                            <button style={{
-                              height: '36px',
-                              borderRadius: '6px',
-                              border: '1px dashed #3B82F6',
-                              backgroundColor: '#EFF6FF',
-                              color: '#2563EB',
-                              fontWeight: 'bold',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px'
-                            }}>
-                              <span>+ Add Attachment</span>
-                            </button>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Right Column (Live Document extracted preview & 3-Way Match Preview) */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        
-                        {/* INVOICE PREVIEW (Extracted Document Rendering) */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Preview (Extracted)</strong>
-                            <Maximize2 style={{ width: '14px', height: '14px', color: '#64748B', cursor: 'pointer' }} />
-                          </div>
-
-                          {/* Paper Mockup box */}
-                          <div style={{
-                            border: '1px solid #E2E8F0',
-                            borderRadius: '8px',
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px',
-                            fontSize: '10px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <strong style={{ fontSize: '12px', color: '#0F172A' }}>ABC METALS PVT LTD</strong>
-                                <div style={{ color: '#64748B', marginTop: '2px' }}>GSTIN: 37AABCA1234B1Z5</div>
-                                <div style={{ color: '#64748B' }}>#12, Industrial Area, Coimbatore - 641 021</div>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <strong style={{ fontSize: '11px', color: '#0F172A' }}>TAX INVOICE</strong>
-                                <div style={{ color: '#64748B', marginTop: '2px' }}>Invoice No: <strong>INV-1042</strong></div>
-                                <div style={{ color: '#64748B' }}>Invoice Date: 03 Aug 2026</div>
-                                <div style={{ color: '#64748B' }}>Due Date: 17 Aug 2026</div>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9', padding: '8px 0' }}>
-                              <div>
-                                <div style={{ color: '#64748B', fontWeight: 'bold' }}>Bill To</div>
-                                <strong style={{ color: '#1E293B', display: 'block', marginTop: '2px' }}>ARMS AI Pvt Ltd</strong>
-                                <div style={{ color: '#64748B' }}>Nellore - 524002</div>
-                                <div style={{ color: '#64748B' }}>GSTIN: 37AAFCV0146D1Z1</div>
-                              </div>
-                              <div style={{ backgroundColor: '#F8FAFC', padding: '8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                <div style={{ color: '#64748B', fontWeight: 'bold' }}>Total Amount</div>
-                                <strong style={{ fontSize: '14px', color: '#2563EB', display: 'block', margin: '4px 0' }}>₹ 5,72,300.00</strong>
-                                <span style={{ fontSize: '8px', color: '#64748B' }}>(Rupees Five Lakh Seventy Two Thousand Three Hundred Only)</span>
-                              </div>
-                            </div>
-
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '9px' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
-                                  <th style={{ padding: '4px 0' }}>#</th>
-                                  <th style={{ padding: '4px 0' }}>Item Description</th>
-                                  <th style={{ padding: '4px 0' }}>HSN/SAC</th>
-                                  <th style={{ padding: '4px 0', textAlign: 'center' }}>Qty</th>
-                                  <th style={{ padding: '4px 0', textAlign: 'right' }}>Rate (₹)</th>
-                                  <th style={{ padding: '4px 0', textAlign: 'right' }}>Amount (₹)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td style={{ padding: '4px 0' }}>1</td>
-                                  <td style={{ padding: '4px 0', fontWeight: 'bold' }}>Aluminium Rail 4.2m</td>
-                                  <td style={{ padding: '4px 0' }}>76109090</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'center' }}>500</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>800.00</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>4,00,000.00</td>
-                                </tr>
-                                <tr>
-                                  <td style={{ padding: '4px 0' }}>2</td>
-                                  <td style={{ padding: '4px 0', fontWeight: 'bold' }}>Mid Clamp</td>
-                                  <td style={{ padding: '4px 0' }}>73269099</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'center' }}>500</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>170.00</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>85,000.00</td>
-                                </tr>
-                                <tr style={{ borderTop: '1px solid #F1F5F9' }}>
-                                  <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>Subtotal</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>4,85,000.00</td>
-                                </tr>
-                                <tr>
-                                  <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>CGST (9%)</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>43,650.00</td>
-                                </tr>
-                                <tr>
-                                  <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>SGST (9%)</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right' }}>43,650.00</td>
-                                </tr>
-                                <tr style={{ fontWeight: 'bold', borderTop: '1px solid #E2E8F0' }}>
-                                  <td colSpan="5" style={{ padding: '4px 0', textAlign: 'right' }}>Total Amount</td>
-                                  <td style={{ padding: '4px 0', textAlign: 'right', color: '#2563EB' }}>₹ 5,72,300.00</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* Preview controls */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', fontSize: '11px', color: '#475569' }}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <span>1 / 2</span>
-                              <span style={{ cursor: 'pointer' }}>Zoom 100%</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                              <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Download style={{ width: '14px', height: '14px' }} /> Download
-                              </span>
-                              <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Printer style={{ width: '14px', height: '14px' }} /> Print
-                              </span>
-                            </div>
-                          </div>
-
-                        </div>
-
-                        {/* 3-WAY MATCH PREVIEW */}
-                        <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3-Way Match Preview</strong>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                            
-                            {/* PO Value box */}
-                            <div style={{
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '8px',
-                              padding: '12px',
-                              textAlign: 'center',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
-                            }}>
-                              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 'bold' }}>PO (PO-2451)</span>
-                              <span style={{ fontSize: '10px', color: '#475569' }}>PO Value</span>
-                              <strong style={{ fontSize: '12px', color: '#2563EB' }}>₹ 4,85,000.00</strong>
-                              <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
-                            </div>
-
-                            {/* GRN Value box */}
-                            <div style={{
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '8px',
-                              padding: '12px',
-                              textAlign: 'center',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
-                            }}>
-                              <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: 'bold' }}>GRN (GRN-1820)</span>
-                              <span style={{ fontSize: '10px', color: '#475569' }}>GRN Value</span>
-                              <strong style={{ fontSize: '12px', color: '#16A34A' }}>₹ 4,85,000.00</strong>
-                              <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
-                            </div>
-
-                            {/* Invoice Value box */}
-                            <div style={{
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '8px',
-                              padding: '12px',
-                              textAlign: 'center',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
-                            }}>
-                              <span style={{ fontSize: '10px', color: '#6b21a8', fontWeight: 'bold' }}>Invoice (INV-1042)</span>
-                              <span style={{ fontSize: '10px', color: '#475569' }}>Invoice Value</span>
-                              <strong style={{ fontSize: '12px', color: '#6b21a8' }}>₹ 4,85,000.00</strong>
-                              <span style={{ margin: '4px auto 0 auto', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
-                            </div>
-
-                          </div>
-
-                          {/* Match banner */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F0FDF4', borderRadius: '8px', padding: '12px', border: '1px solid #DCFCE7' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#16A34A', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
-                              <div>
-                                <strong style={{ fontSize: '11px', color: '#16A34A', display: 'block' }}>3-WAY MATCH PASSED</strong>
-                                <span style={{ fontSize: '10px', color: '#15803D' }}>All values are matched</span>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <span style={{ fontSize: '9px', color: '#15803D', display: 'block' }}>Difference</span>
-                              <strong style={{ fontSize: '12px', color: '#16A34A' }}>₹ 0.00</strong>
-                            </div>
-                          </div>
-
-                          {/* Payment status banner */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                            <div>
-                              <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Payment Status</span>
-                              <strong style={{ fontSize: '12px', color: '#16A34A' }}>Ready for Approval</strong>
-                            </div>
-                            <button 
-                              onClick={() => {
-                                onChangeTab('Invoice Management');
-                                setSelectedInvoice('INV-1042');
-                                setShowDrawer(true);
-                              }}
-                              style={{
-                                height: '34px',
-                                padding: '0 16px',
-                                borderRadius: '6px',
-                                border: '1px solid #D97706',
-                                backgroundColor: '#FFFFFF',
-                                color: '#D97706',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Send for Approval
-                            </button>
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                  </div>
+        </div>
 
       )}
       {activeTab === 'Payments' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -6361,13 +5933,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
             return (
               <div style={{ display: 'grid', gridTemplateColumns: showPaymentPanel ? '1fr 380px' : '1fr', gap: '20px', alignItems: 'start', width: '100%' }}>
-                
+
                 {/* Left Side: Search, List Table, Metrics */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
-                  
+
                   {/* Summary Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr 1fr', gap: '20px' }}>
-                    
+
                     {/* Payment Mode Summary */}
                     <div className="section-card" style={{ padding: '18px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF' }}>
                       <strong style={{ fontSize: '13px', color: '#0F172A', fontWeight: '700', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>Payment Mode Summary</strong>
@@ -6426,7 +5998,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <div style={{ padding: '16px 20px 0 20px' }}>
                         <strong style={{ fontSize: '13px', color: '#0F172A', fontWeight: '700' }}>Payment Status Distribution</strong>
                       </div>
-                      
+
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px', position: 'relative' }}>
                         {/* SVG Donut */}
                         <div style={{ position: 'relative', width: '130px', height: '130px' }}>
@@ -6462,7 +6034,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1E293B', display: 'block', marginBottom: '8px' }}>
                           Status Breakdown
                         </span>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {[
                             { name: 'Paid', count: '33 Bills', percentage: '59.0%', color: '#10B981', amount: '₹ 1.76 Cr' },
@@ -6538,8 +6110,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       Filters
                     </button>
 
-                    <button 
-                      onClick={() => { setPaySearchQuery(''); }} 
+                    <button
+                      onClick={() => { setPaySearchQuery(''); }}
                       style={{ height: '38px', padding: '0 16px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: '#2563EB', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
                     >
                       Reset
@@ -6569,10 +6141,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             const row = paymentsData[key];
                             const isSelected = selectedPayment === key;
                             return (
-                              <tr 
+                              <tr
                                 key={key}
                                 onClick={() => { setSelectedPayment(key); setShowPaymentPanel(true); }}
-                                style={{ 
+                                style={{
                                   borderBottom: '1px solid #F1F5F9',
                                   cursor: 'pointer',
                                   backgroundColor: isSelected ? '#EFF6FF' : 'transparent',
@@ -6598,7 +6170,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 <td style={{ padding: '12px 8px', color: '#64748B', fontFamily: 'monospace' }}>{row.refNo}</td>
                                 <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                    <button 
+                                    <button
                                       onClick={() => { setSelectedPayment(key); setShowPaymentPanel(true); }}
                                       style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563EB', padding: 0 }}
                                     >
@@ -6651,7 +6223,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 {/* Right Side: Payment Details side-panel */}
                 {showPaymentPanel && (
                   <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '0', animation: 'fadeIn 0.2s ease-out' }}>
-                    
+
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ fontSize: '13px', color: '#0F172A' }}>Payment Details</strong>
@@ -6664,7 +6236,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           backgroundColor: selected.statusBg,
                           color: selected.statusColor
                         }}>{selected.status}</span>
-                        <button 
+                        <button
                           onClick={() => setShowPaymentPanel(false)}
                           style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 0 }}
                         >
@@ -6693,8 +6265,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       ].map((item, idx) => (
                         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: '8px' }}>
                           <span style={{ color: '#64748B' }}>{item.label}</span>
-                          <strong style={{ 
-                            color: '#1E293B', 
+                          <strong style={{
+                            color: '#1E293B',
                             fontFamily: item.isMono ? 'monospace' : 'inherit',
                             fontSize: item.isBold ? '12px' : '11px'
                           }}>{item.val}</strong>
@@ -6718,7 +6290,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           </div>
                         ))}
                       </div>
-                      <button 
+                      <button
                         onClick={() => onChangeTab('Invoice Management')}
                         style={{
                           marginTop: '4px',
@@ -6887,7 +6459,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
           {/* Six Scorecards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            
+
             {/* Card 1: On-Time Delivery */}
             <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', borderRadius: '12px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -7084,7 +6656,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
           {/* Bottom Tables Row (Two Columns) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            
+
             {/* Top Performing Vendors */}
             <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -7238,7 +6810,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       {/* ==================== 9. MATERIAL REORDER ALERTS SCREEN ==================== */}
       {activeTab === 'Material Reorder' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {/* Page Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -7248,7 +6820,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Monitor low stock materials and take action before they run out.</span>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px' }}>
               <button style={{
                 height: '38px',
@@ -7269,7 +6841,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </button>
             </div>
           </div>
-          
+
           {/* Search / Filter Card */}
           <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr 1fr auto', gap: '16px', alignItems: 'flex-end' }}>
@@ -7328,13 +6900,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
           {/* Top Widget Row (Reorder Summary, Top Materials at Risk) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            
+
             {/* Reorder Summary Card (By Status) */}
             <div className="section-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '16px 24px 0 24px' }}>
                 <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#0F172A' }}>Reorder Summary (By Status)</span>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 24px', position: 'relative' }}>
                 {/* SVG Donut */}
                 <div style={{ position: 'relative', width: '150px', height: '150px' }}>
@@ -7370,7 +6942,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E293B', display: 'block', marginBottom: '12px' }}>
                   Reorder Summary Breakdown
                 </span>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {[
                     { name: 'Critical', count: '18 Items', percentage: '22.0%', color: '#EF4444' },
@@ -7422,12 +6994,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           {item.coverage}
                         </span>
                       </div>
-                      
+
                       {/* Meter bar */}
                       <div style={{ width: '100%', height: '6px', backgroundColor: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ 
-                          width: `${item.level}%`, 
-                          height: '100%', 
+                        <div style={{
+                          width: `${item.level}%`,
+                          height: '100%',
                           backgroundColor: item.status === 'Critical' ? '#EF4444' : '#F59E0B',
                           borderRadius: '3px'
                         }}></div>
@@ -7443,7 +7015,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           {/* Middle Row: Reorder Alerts List Table (Full Width) */}
           <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <strong style={{ fontSize: '15px', color: '#0F172A' }}>Reorder Alerts List (81 Items)</strong>
-            
+
             <div style={{ overflowX: 'auto' }}>
               <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
@@ -7484,13 +7056,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B' }}>{row.uom}</td>
                       <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.leadTime}</td>
                       <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <span style={{ 
-                          padding: '4px 10px', 
-                          borderRadius: '6px', 
-                          fontSize: '11px', 
-                          fontWeight: 'bold', 
-                          backgroundColor: '#EFF6FF', 
-                          color: '#1E40AF' 
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          backgroundColor: '#EFF6FF',
+                          color: '#1E40AF'
                         }}>
                           {row.reorderQty}
                         </span>
@@ -7505,16 +7077,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
                           }
                           return (
-                            <span style={{ 
-                              display: 'inline-flex', 
-                              alignItems: 'center', 
-                              gap: '5px', 
-                              padding: '4px 10px', 
-                              borderRadius: '6px', 
-                              fontSize: '11px', 
-                              fontWeight: 'bold', 
-                              backgroundColor: colors.bg, 
-                              color: colors.color, 
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              backgroundColor: colors.bg,
+                              color: colors.color,
                               border: `1px solid ${colors.border}`,
                               whiteSpace: 'nowrap'
                             }}>
@@ -7525,7 +7097,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         })()}
                       </td>
                       <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <button 
+                        <button
                           onClick={() => {
                             if (typeof onChangeTab === 'function') {
                               onChangeTab('Purchase Orders');
@@ -7569,16 +7141,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
                   {[1, 2, 3, 4].map((page) => (
-                    <button key={page} style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      border: '1px solid #E2E8F0', 
-                      borderRadius: '6px', 
-                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF', 
-                      color: page === 1 ? '#FFFFFF' : '#475569', 
-                      fontSize: '12px', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer' 
+                    <button key={page} style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '6px',
+                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF',
+                      color: page === 1 ? '#FFFFFF' : '#475569',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
                     }}>
                       {page}
                     </button>
@@ -7597,7 +7169,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           {/* Quick Actions Card (Full Width Row) */}
           <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <strong style={{ fontSize: '14px', color: '#0F172A' }}>Quick Actions</strong>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {[
                 { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
@@ -7606,30 +7178,30 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               ].map((act, idx) => {
                 const ActIcon = act.icon || FileText;
                 return (
-                  <button key={idx} 
-                  onClick={act.action || null}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px 6px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    height: '75px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F8FAFC';
-                    e.currentTarget.style.borderColor = '#CBD5E1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#E2E8F0';
-                  }}>
+                  <button key={idx}
+                    onClick={act.action || null}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px 6px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      height: '75px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      e.currentTarget.style.borderColor = '#CBD5E1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#E2E8F0';
+                    }}>
                     <ActIcon style={{ width: '18px', height: '18px', color: '#2563EB' }} />
                     <span style={{ fontSize: '10px', fontWeight: '600', color: '#475569', textAlign: 'center', lineHeight: '1.2' }}>{act.label}</span>
                   </button>
@@ -7661,7 +7233,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Stock Status Inventory</h2>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Real-time stock valuation ledger and warehouse storage registry</span>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px' }}>
               <button style={{
                 height: '38px',
@@ -7680,7 +7252,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <Download style={{ width: '16px', height: '16px', color: '#475569' }} />
                 Export
               </button>
-              <button 
+              <button
                 onClick={() => setShowAddStockForm(true)}
                 style={{
                   height: '38px',
@@ -7766,13 +7338,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
           {/* Top Widget Row (Stock Health, Top Low Stock Items) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            
+
             {/* Stock Health Card */}
             <div className="section-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '16px 24px 0 24px' }}>
                 <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#0F172A' }}>Stock Health</span>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 24px', position: 'relative' }}>
                 {/* SVG Donut */}
                 <div style={{ position: 'relative', width: '150px', height: '150px' }}>
@@ -7808,7 +7380,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E293B', display: 'block', marginBottom: '12px' }}>
                   Stock Health Breakdown
                 </span>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {[
                     { name: 'In Stock', count: '1,102 Items', percentage: '86.0%', color: '#10B981' },
@@ -7863,7 +7435,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           {/* Bottom Row: Stock Status List Table (Full Width) */}
           <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <strong style={{ fontSize: '15px', color: '#0F172A' }}>Stock Status List (1,284 Items)</strong>
-            
+
             <div style={{ overflowX: 'auto' }}>
               <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
@@ -7915,16 +7487,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
                             }
                             return (
-                              <span style={{ 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                gap: '5px', 
-                                padding: '4px 10px', 
-                                borderRadius: '6px', 
-                                fontSize: '11px', 
-                                fontWeight: 'bold', 
-                                backgroundColor: colors.bg, 
-                                color: colors.color, 
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                backgroundColor: colors.bg,
+                                color: colors.color,
                                 border: `1px solid ${colors.border}`,
                                 whiteSpace: 'nowrap'
                               }}>
@@ -7953,16 +7525,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
                   {[1, 2, 3, 4].map((page) => (
-                    <button key={page} style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      border: '1px solid #E2E8F0', 
-                      borderRadius: '6px', 
-                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF', 
-                      color: page === 1 ? '#FFFFFF' : '#475569', 
-                      fontSize: '12px', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer' 
+                    <button key={page} style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '6px',
+                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF',
+                      color: page === 1 ? '#FFFFFF' : '#475569',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
                     }}>
                       {page}
                     </button>
@@ -7981,17 +7553,17 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           {/* Quick Actions Card (Full Width Row) */}
           <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <strong style={{ fontSize: '14px', color: '#0F172A' }}>Quick Actions</strong>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
               {[
-                { 
-                  label: 'Stock Adjustment', 
-                  icon: Edit3, 
+                {
+                  label: 'Stock Adjustment',
+                  icon: Edit3,
                   color: '#8B5CF6',
                   action: () => setShowAddStockForm(true)
                 },
-                { 
-                  label: 'Stock Transfer', 
+                {
+                  label: 'Stock Transfer',
                   svg: (
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10B981' }}>
                       <polyline points="17 1 21 5 17 9"></polyline>
@@ -8009,30 +7581,30 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               ].map((act, idx) => {
                 const ActIcon = act.icon || null;
                 return (
-                  <button key={idx} 
-                  onClick={act.action || null}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px 6px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    height: '75px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F8FAFC';
-                    e.currentTarget.style.borderColor = '#CBD5E1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#E2E8F0';
-                  }}>
+                  <button key={idx}
+                    onClick={act.action || null}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px 6px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      height: '75px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      e.currentTarget.style.borderColor = '#CBD5E1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#E2E8F0';
+                    }}>
                     {ActIcon ? (
                       <ActIcon style={{ width: '18px', height: '18px', color: act.color || '#2563EB' }} />
                     ) : (
@@ -8064,9 +7636,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>New Stock</h2>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Manually add inventory into a selected warehouse</span>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
+              <button
                 onClick={() => setShowAddStockForm(false)}
                 style={{
                   height: '38px',
@@ -8082,7 +7654,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleAddStockSubmit}
                 style={{
                   height: '38px',
@@ -8098,7 +7670,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               >
                 Save Draft
               </button>
-              <button 
+              <button
                 onClick={handleAddStockSubmit}
                 style={{
                   height: '38px',
@@ -8125,7 +7697,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
             {/* Left Column (70%) */}
             <div style={{ flex: '1 1 70%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
+
               {/* 1. STOCK ENTRY DETAILS */}
               <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -8137,7 +7709,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Entry Type <span style={{ color: '#EF4444' }}>*</span></label>
-                    <select 
+                    <select
                       value={stockEntry.entryType}
                       onChange={(e) => setStockEntry({ ...stockEntry, entryType: e.target.value })}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
@@ -8149,7 +7721,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Warehouse <span style={{ color: '#EF4444' }}>*</span></label>
-                    <select 
+                    <select
                       value={stockEntry.warehouse}
                       onChange={(e) => setStockEntry({ ...stockEntry, warehouse: e.target.value })}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
@@ -8161,11 +7733,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Entry Date <span style={{ color: '#EF4444' }}>*</span></label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={stockEntry.entryDate}
                         onChange={(e) => setStockEntry({ ...stockEntry, entryDate: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                       />
                       <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
                     </div>
@@ -8175,7 +7747,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Reason <span style={{ color: '#EF4444' }}>*</span></label>
-                    <select 
+                    <select
                       value={stockEntry.reason}
                       onChange={(e) => setStockEntry({ ...stockEntry, reason: e.target.value })}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
@@ -8187,20 +7759,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Reference No.</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={stockEntry.refNo}
                       onChange={(e) => setStockEntry({ ...stockEntry, refNo: e.target.value })}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Added By</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={stockEntry.addedBy}
                       disabled
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#64748B', width: '100%', boxSizing: 'border-box' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#64748B', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -8215,10 +7787,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
-                    <input 
-                      type="text" 
-                      placeholder="Search Material / SKU / Barcode" 
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                    <input
+                      type="text"
+                      placeholder="Search Material / SKU / Barcode"
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                     />
                     <Search style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', left: '12px' }} />
                   </div>
@@ -8271,7 +7843,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <div style={{ fontSize: '10px', color: '#64748B' }}>{item.currentStock.split(' ')[1]}</div>
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                            <input 
+                            <input
                               type="number"
                               value={item.qty}
                               onChange={(e) => {
@@ -8288,7 +7860,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             {(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                            <button 
+                            <button
                               onClick={() => {
                                 const newItems = addStockItems.filter(it => it.id !== item.id);
                                 setAddStockItems(newItems);
@@ -8304,7 +7876,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </table>
                 </div>
 
-                <button 
+                <button
                   onClick={() => {
                     const nextId = addStockItems.length > 0 ? Math.max(...addStockItems.map(i => i.id)) + 1 : 1;
                     setAddStockItems([...addStockItems, { id: nextId, name: 'New Material Item', sku: `SKU-${nextId}`, category: 'General', currentStock: '0 Nos', qty: 100, uom: 'Nos', rate: 10.00 }]);
@@ -8340,30 +7912,30 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Batch / Lot No.</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={stockDetails.batchNo}
                       onChange={(e) => setStockDetails({ ...stockDetails, batchNo: e.target.value })}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Supplier</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={stockDetails.supplier}
                       onChange={(e) => setStockDetails({ ...stockDetails, supplier: e.target.value })}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Manufacturing Date</label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={stockDetails.mfgDate}
                         onChange={(e) => setStockDetails({ ...stockDetails, mfgDate: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                       />
                       <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
                     </div>
@@ -8374,19 +7946,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Expiry Date</label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Select date"
                         value={stockDetails.expiryDate}
                         onChange={(e) => setStockDetails({ ...stockDetails, expiryDate: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                       />
                       <Calendar style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', right: '12px' }} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Storage Location</label>
-                    <select 
+                    <select
                       value={stockDetails.storageLocation}
                       onChange={(e) => setStockDetails({ ...stockDetails, storageLocation: e.target.value })}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
@@ -8398,11 +7970,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>Remarks / Notes</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={stockDetails.remarks}
                       onChange={(e) => setStockDetails({ ...stockDetails, remarks: e.target.value })}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -8456,9 +8028,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <div style={{ fontSize: '9px', color: '#94A3B8' }}>{doc.size}</div>
                           </div>
                           <Download style={{ width: '14px', height: '14px', color: '#64748B', cursor: 'pointer' }} />
-                          <Trash2 
+                          <Trash2
                             onClick={() => setStockDocs(stockDocs.filter(d => d.name !== doc.name))}
-                            style={{ width: '14px', height: '14px', color: '#EF4444', cursor: 'pointer' }} 
+                            style={{ width: '14px', height: '14px', color: '#EF4444', cursor: 'pointer' }}
                           />
                         </div>
                       ))}
@@ -8471,7 +8043,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
             {/* Right Column (30%) */}
             <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '20px', flexShrink: 0 }}>
-              
+
               {/* STOCK ENTRY SUMMARY */}
               <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -8499,7 +8071,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               {/* AMOUNT SUMMARY */}
               <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <strong style={{ fontSize: '13px', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount Summary</strong>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748B' }}>Total Items</span>
@@ -8616,7 +8188,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               Price Summary (vs Previous 30 Days)
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              
+
               {/* Card 1: PRICE INCREASED */}
               <div className="section-card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid #FEE2E2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <strong style={{ fontSize: '12px', color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price Increased (32)</strong>
@@ -8817,16 +8389,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <ChevronLeft style={{ width: '14px', height: '14px' }} />
                   </button>
                   {[1, 2, 3, 4].map((page) => (
-                    <button key={page} style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      border: '1px solid #E2E8F0', 
-                      borderRadius: '6px', 
-                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF', 
-                      color: page === 1 ? '#FFFFFF' : '#475569', 
-                      fontSize: '12px', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer' 
+                    <button key={page} style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '6px',
+                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF',
+                      color: page === 1 ? '#FFFFFF' : '#475569',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
                     }}>
                       {page}
                     </button>
@@ -8860,11 +8432,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       {/* ==================== 11.5. ITEMS DIRECTORY SCREEN ==================== */}
       {activeTab === 'Items Directory' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-          
+
           {isCreatingItem ? (
             /* Dedicated Full-Screen Add New Product View Card */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
-              
+
               {/* Header Navigation & Actions Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -8917,22 +8489,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item / Product Name *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. Solar Panel 540W Monocrystalline"
-                        value={newItemData.name} 
+                        value={newItemData.name}
                         onChange={(e) => setNewItemData({ ...newItemData, name: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>SKU / Item Code</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. SP-540W-MONO"
-                        value={newItemData.sku} 
+                        value={newItemData.sku}
                         onChange={(e) => setNewItemData({ ...newItemData, sku: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -8966,32 +8538,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Rate (₹) *</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         placeholder="e.g. 15000"
-                        value={newItemData.rate} 
+                        value={newItemData.rate}
                         onChange={(e) => setNewItemData({ ...newItemData, rate: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Rate (₹)</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         placeholder="e.g. 12000"
-                        value={newItemData.purchaseRate} 
+                        value={newItemData.purchaseRate}
                         onChange={(e) => setNewItemData({ ...newItemData, purchaseRate: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Unit of Measurement</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. NOS, KG, MTR, SET"
-                        value={newItemData.unit} 
+                        value={newItemData.unit}
                         onChange={(e) => setNewItemData({ ...newItemData, unit: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -9003,20 +8575,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Description</label>
-                      <textarea 
-                        value={newItemData.description} 
+                      <textarea
+                        value={newItemData.description}
                         onChange={(e) => setNewItemData({ ...newItemData, description: e.target.value })}
                         placeholder="Enter item description for sales..."
-                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Description</label>
-                      <textarea 
-                        value={newItemData.purchaseDescription} 
+                      <textarea
+                        value={newItemData.purchaseDescription}
                         onChange={(e) => setNewItemData({ ...newItemData, purchaseDescription: e.target.value })}
                         placeholder="Enter item description for purchase..."
-                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -9026,7 +8598,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           ) : editingItem ? (
             /* Dedicated Full-Screen Edit Item View Card */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
-              
+
               {/* Header Navigation & Actions Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -9094,20 +8666,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Item Name *</label>
-                      <input 
-                        type="text" 
-                        value={editingItem.name || ''} 
+                      <input
+                        type="text"
+                        value={editingItem.name || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>SKU / Item Code</label>
-                      <input 
-                        type="text" 
-                        value={editingItem.sku || ''} 
+                      <input
+                        type="text"
+                        value={editingItem.sku || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, sku: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -9130,29 +8702,29 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Rate (₹) *</label>
-                      <input 
-                        type="number" 
-                        value={editingItem.rate !== undefined ? editingItem.rate : ''} 
+                      <input
+                        type="number"
+                        value={editingItem.rate !== undefined ? editingItem.rate : ''}
                         onChange={(e) => setEditingItem({ ...editingItem, rate: Number(e.target.value) })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Rate (₹)</label>
-                      <input 
-                        type="number" 
-                        value={editingItem.purchaseRate !== undefined ? editingItem.purchaseRate : ''} 
+                      <input
+                        type="number"
+                        value={editingItem.purchaseRate !== undefined ? editingItem.purchaseRate : ''}
                         onChange={(e) => setEditingItem({ ...editingItem, purchaseRate: Number(e.target.value) })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Unit of Measurement</label>
-                      <input 
-                        type="text" 
-                        value={editingItem.unit || 'NOS'} 
+                      <input
+                        type="text"
+                        value={editingItem.unit || 'NOS'}
                         onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }} 
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -9164,20 +8736,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Sales Description</label>
-                      <textarea 
-                        value={editingItem.description || ''} 
+                      <textarea
+                        value={editingItem.description || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
                         placeholder="Enter item description for sales orders..."
-                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Purchase Description</label>
-                      <textarea 
-                        value={editingItem.purchaseDescription || ''} 
+                      <textarea
+                        value={editingItem.purchaseDescription || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, purchaseDescription: e.target.value })}
                         placeholder="Enter item description for purchase orders..."
-                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }} 
+                        style={{ height: '90px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', resize: 'vertical', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -9187,10 +8759,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           ) : viewingItem ? (
             /* Full Screen Item Detail View Card */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0 }}>
-              
+
               {/* Navigation Header Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button 
+                <button
                   onClick={() => setViewingItem(null)}
                   style={{
                     display: 'flex',
@@ -9225,7 +8797,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
               {/* Document Sheet Card */}
               <div className="section-card" style={{ padding: '32px', borderRadius: '16px', borderTop: '4px solid #2563EB', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                
+
                 {/* Header Information */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #F1F5F9', paddingBottom: '20px' }}>
                   <div>
@@ -9240,11 +8812,11 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                 {/* Properties Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '28px 24px' }}>
-                  
+
                   {/* Column 1: Financials */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderRight: '1px solid #F1F5F9', paddingRight: '16px' }}>
                     <strong style={{ fontSize: '12px', color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Details</strong>
-                    
+
                     <div>
                       <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Sales Rate</span>
                       <strong style={{ fontSize: '15px', color: '#1E293B' }}>₹ {(viewingItem.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
@@ -9262,7 +8834,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   {/* Column 2: Inventory & Stocks */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderRight: '1px solid #F1F5F9', paddingRight: '16px' }}>
                     <strong style={{ fontSize: '12px', color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Inventory & Stock</strong>
-                    
+
                     <div>
                       <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Stock On Hand</span>
                       <strong style={{ fontSize: '15px', color: '#1E293B' }}>{viewingItem.stockOnHand}</strong>
@@ -9280,7 +8852,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   {/* Column 3: Accounting Setup */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <strong style={{ fontSize: '12px', color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Accounts Mapping</strong>
-                    
+
                     <div>
                       <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Sales Account</span>
                       <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingItem.salesAccount}</strong>
@@ -9350,22 +8922,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
               <div className="section-card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  
+
                   {/* Search Input */}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '260px' }}>
                     <Search style={{ width: '15px', height: '15px', color: '#94A3B8', position: 'absolute', left: '12px' }} />
-                    <input 
-                      type="text" 
-                      placeholder="Search by Material / SKU / Code." 
+                    <input
+                      type="text"
+                      placeholder="Search by Material / SKU / Code."
                       value={itemSearchQuery}
                       onChange={(e) => { setItemSearchQuery(e.target.value); setItemsCurrentPage(1); }}
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box', outline: 'none' }} 
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box', outline: 'none' }}
                     />
                   </div>
 
                   {/* Warehouses Selector */}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '160px', flexShrink: 0 }}>
-                    <select 
+                    <select
                       value={selectedItemWarehouse}
                       onChange={(e) => { setSelectedItemWarehouse(e.target.value); setItemsCurrentPage(1); }}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
@@ -9377,7 +8949,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                   {/* Categories Selector */}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '160px', flexShrink: 0 }}>
-                    <select 
+                    <select
                       value={selectedItemCategory}
                       onChange={(e) => { setSelectedItemCategory(e.target.value); setItemsCurrentPage(1); }}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
@@ -9390,7 +8962,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                   {/* Status Selector */}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '150px', flexShrink: 0 }}>
-                    <select 
+                    <select
                       value={selectedItemStatus}
                       onChange={(e) => { setSelectedItemStatus(e.target.value); setItemsCurrentPage(1); }}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B', width: '100%', cursor: 'pointer', outline: 'none' }}
@@ -9421,7 +8993,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </button>
 
                   {/* Reset Button */}
-                  <span 
+                  <span
                     onClick={() => {
                       setItemSearchQuery('');
                       setSelectedItemWarehouse('All Warehouses');
@@ -9444,7 +9016,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <thead>
                       <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                         <th style={{ padding: '14px 16px', textAlign: 'center', width: '40px' }}>
-                          <input 
+                          <input
                             type="checkbox"
                             checked={(() => {
                               const query = itemSearchQuery.toLowerCase().trim();
@@ -9532,13 +9104,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         const indexOfLastItemRow = itemsCurrentPage * itemsRowsPerPage;
                         const indexOfFirstItemRow = indexOfLastItemRow - itemsRowsPerPage;
                         const currentItemRows = filtered.slice(indexOfFirstItemRow, indexOfLastItemRow);
-                        
+
                         return currentItemRows.length > 0 ? (
                           currentItemRows.map((item, idx) => (
                             <tr key={item.itemId || idx} className="table-row-hover" style={{ borderBottom: idx === currentItemRows.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                               <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={selectedItems.includes(item.itemId)}
                                   onChange={() => {
                                     if (selectedItems.includes(item.itemId)) {
@@ -9554,8 +9126,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '500' }}>{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                               <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748b' }}>{item.unit}</td>
                               <td style={{ padding: '14px 16px' }}>
-                                {item.description && item.description.length > 60 
-                                  ? `${item.description.substring(0, 60)}...` 
+                                {item.description && item.description.length > 60
+                                  ? `${item.description.substring(0, 60)}...`
                                   : (item.description || '')}
                               </td>
                               <td style={{ padding: '14px 16px', textAlign: 'center' }}>
@@ -9571,7 +9143,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 </span>
                               </td>
                               <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                                <div 
+                                <div
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setActiveItemActionMenu(activeItemActionMenu === item.itemId ? null : item.itemId);
@@ -9582,7 +9154,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 </div>
                                 {activeItemActionMenu === item.itemId && (
                                   <>
-                                    <div 
+                                    <div
                                       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
                                       onClick={(e) => { e.stopPropagation(); setActiveItemActionMenu(null); }}
                                     />
@@ -9600,7 +9172,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       flexDirection: 'column',
                                       padding: '4px 0'
                                     }}>
-                                      <button 
+                                      <button
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           setActiveItemActionMenu(null);
@@ -9621,7 +9193,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         View Details
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           setActiveItemActionMenu(null);
@@ -9642,7 +9214,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       >
                                         Edit
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setDeleteConfirmItem(item);
@@ -9669,7 +9241,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </tbody>
                   </table>
                 </div>
- 
+
                 {/* Pagination footer */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #f1f5f9', backgroundColor: 'white' }}>
                   {(() => {
@@ -9689,7 +9261,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       if (selectedItemStatus !== 'All Status' && selectedItemStatus !== item.status) return false;
                       return true;
                     });
-                    
+
                     return (
                       <>
                         <span style={{ fontSize: '13px', color: '#64748b' }}>
@@ -9775,13 +9347,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   Are you sure you want to delete item <strong>{deleteConfirmItem.name}</strong>? This action cannot be undone.
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button 
+                  <button
                     onClick={() => setDeleteConfirmItem(null)}
                     style={{ border: '1px solid #cbd5e1', background: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       const targetId = deleteConfirmItem.itemId || deleteConfirmItem.id || deleteConfirmItem.sku || deleteConfirmItem.name;
                       setItemsList(prev => prev.filter(it => it.itemId !== deleteConfirmItem.itemId));
@@ -9845,50 +9417,7471 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         </div>
       )}
 
-      {/* ==================== 13. SETTINGS SCREENS ==================== */}
-      {(activeTab === 'Procurement Settings' || activeTab === 'Approval Workflows') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>{activeTab} Management</h2>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>Setup corporate preferences and authority hierarchies</span>
-          </div>
+      {/* ==================== 14. PRODUCTION ADMIN DEDICATED PAGES (EXACT PURCHASE ORDERS SCREENSHOT TEMPLATE) ==================== */}
+      {(![
+        'Goods Receipt Note', 'Vendor Management', 'Vendor Performance', 'Material Reorder',
+        'Stock Status', 'Price Comparison', 'Items Directory', 'Payments',
+        'Spend Analytics', 'Procurement Reports', 'Spend Reports', 'Supplier Reports',
+        'Procurement Settings', 'Approval Workflows'
+      ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
+        'Quality Control', 'Machine Maintenance', 'Inventory (Raw Material)', 'BOM / Routing', 'BOM', 'Customer Management',
+        'Production Reports', 'Efficiency Reports', 'Downtime Analytics',
+        'Add Work Order', 'Record Production', 'Report Downtime', 'Dispatch Orders', 'Accounts Verification', 'Invoice Management'
+      ].includes(activeTab)) && (() => {
+        try {
+          // If viewing an individual Invoice in full screen
+          if (activeTab === 'Invoice Management' && viewingInvoiceModal) {
+            const inv = viewingInvoiceModal;
+            const invNoText = inv.invNo || inv.code || 'INV-00027';
+            const bomRefText = inv.poNo || inv.c3 || 'BOM-00007';
+            const customerText = inv.vendor || inv.c2 || 'ABC Industries';
+            const invDateText = inv.date || inv.c4 || '21 May 2025';
+            const paymentTypeText = inv.paymentType || '100% Advance';
+            const isFullAdvance = paymentTypeText === '100% Advance';
+            const is50Percent = paymentTypeText === '50% Advance / 50% Dispatch';
 
-          {activeTab === 'Procurement Settings' ? (
-            <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <strong style={{ fontSize: '14px' }}>System Preferences</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Corporate Entity Name</label>
-                  <input type="text" defaultValue="ARMS AI Pvt Ltd" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+            const totalAmtRaw = typeof inv.invAmt === 'number'
+              ? inv.invAmt
+              : parseFloat((inv.invAmt || inv.c5 || '76523').toString().replace(/[^0-9.]/g, '')) || 17400;
+
+            const subtotal = totalAmtRaw / 1.18;
+            const taxGst = totalAmtRaw - subtotal;
+
+            const advanceAmt = isFullAdvance ? totalAmtRaw : (is50Percent ? totalAmtRaw * 0.5 : totalAmtRaw);
+            const balanceAmt = isFullAdvance ? 0 : (is50Percent ? totalAmtRaw * 0.5 : 0);
+            const paymentStatusText = inv.pay || (balanceAmt === 0 ? 'Verified & Paid (100%)' : 'Ready for Payment');
+
+            // Look up matching BOM from bomStore to sync items & dispatch checkboxes
+            const matchingBom = bomStore.find(b =>
+              b.bomCode === inv.poNo ||
+              b.bomCode === inv.code ||
+              b.bomCode === inv.c3 ||
+              b.bomCode === bomRefText ||
+              (b.salesOrderNo && (b.salesOrderNo === inv.poNo || b.salesOrderNo === inv.c3)) ||
+              (b.bomCode && inv.invNo && inv.invNo.endsWith(b.bomCode.replace('BOM-', '')))
+            );
+
+            // ALWAYS check matchingBom items first so dispatch packing verification state (packed true/false) is source of truth
+            const rawItems = (matchingBom && matchingBom.items && matchingBom.items.length > 0)
+              ? matchingBom.items
+              : (inv.items && inv.items.length > 0)
+                ? inv.items
+                : null;
+
+            const itemsList = rawItems ? rawItems.map((it, idx) => {
+              let selectedState = undefined;
+
+              // 1. Check matchingBom dispatchPacking verification checklist by index or name
+              if (matchingBom && matchingBom.dispatchPacking && Array.isArray(matchingBom.dispatchPacking) && matchingBom.dispatchPacking.length > 0) {
+                if (matchingBom.dispatchPacking[idx] && matchingBom.dispatchPacking[idx].packed !== undefined) {
+                  selectedState = Boolean(matchingBom.dispatchPacking[idx].packed);
+                } else {
+                  const matchInDispatch = matchingBom.dispatchPacking.find(dp =>
+                    dp.name === it.name || dp.code === it.code || (it.name && dp.name && dp.name.toLowerCase().trim() === it.name.toLowerCase().trim())
+                  );
+                  if (matchInDispatch !== undefined && matchInDispatch.packed !== undefined) {
+                    selectedState = Boolean(matchInDispatch.packed);
+                  }
+                }
+              }
+
+              // 2. Check item level properties (selected or packed)
+              if (selectedState === undefined) {
+                if (it.selected !== undefined) selectedState = Boolean(it.selected);
+                else if (it.packed !== undefined) selectedState = Boolean(it.packed);
+                else selectedState = false;
+              }
+
+              const qty = it.qty || it.bomQty || 1;
+              const rate = it.rate || it.unitPrice || 1000;
+              return {
+                code: it.code || `PRD-00${idx + 1}`,
+                name: it.name || `Product ${idx + 1}`,
+                desc: it.desc || it.category || 'High grade mounting component',
+                uom: it.uom || 'Nos',
+                bomQty: qty,
+                invQty: qty,
+                rate: rate,
+                discount: it.discount || 0,
+                tax: it.tax || 18,
+                amt: it.amt || (qty * rate * 1.18),
+                selected: selectedState
+              };
+            }) : [
+              { code: 'PRD-001', name: 'Long Rail 3000 mm', desc: '3 Meter Heavy Duty Rail', uom: 'Nos', bomQty: 8, invQty: 8, rate: 1800.00, discount: 0, tax: 18, amt: 14400.00 * 1.18, selected: true },
+              { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Aluminum Mounting Rail', uom: 'Nos', bomQty: 12, invQty: 12, rate: 250.00, discount: 0, tax: 18, amt: 3000.00 * 1.18, selected: false }
+            ];
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Back Header Bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    onClick={() => setViewingInvoiceModal(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back to Invoice List
+                  </button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {/* Print button */}
+                    <button
+                      onClick={() => window.print()}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '8px',
+                        padding: '0 16px',
+                        height: '38px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Printer style={{ width: '15px', height: '15px', color: '#475569' }} /> Print
+                    </button>
+
+                    {/* Download button */}
+                    <button
+                      onClick={() => alert(`Downloading Invoice ${invNoText} PDF...`)}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '8px',
+                        padding: '0 16px',
+                        height: '38px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Download style={{ width: '15px', height: '15px', color: '#475569' }} /> Download
+                    </button>
+
+                    {/* Confirm Invoice primary button */}
+                    {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
+                      <div
+                        style={{
+                          backgroundColor: '#DCFCE7',
+                          color: '#166534',
+                          border: '1px solid #86EFAC',
+                          borderRadius: '8px',
+                          padding: '0 18px',
+                          height: '38px',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px', color: '#166534' }} /> Invoice Completed
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setInvoiceList(prev => prev.map(item => (item.invNo === inv.invNo || item.code === inv.code) ? { ...item, status: 'Invoice Confirmed', match: 'Matched', pay: 'Completed & Locked' } : item));
+                          setViewingInvoiceModal(null);
+                          setConfirmInvoiceSuccessModal(invNoText);
+                        }}
+                        style={{
+                          backgroundColor: '#3B82F6',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0 20px',
+                          height: '38px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px', color: '#FFFFFF' }} /> Confirm Invoice
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>System Notification Email</label>
-                  <input type="email" defaultValue="procurements@armsai.com" style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+
+                {/* CARD 1: TOP HEADER METRICS & INVOICE SUMMARY */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: '24px',
+                  display: 'grid',
+                  gridTemplateColumns: '1.2fr 1fr',
+                  gap: '24px'
+                }}>
+                  {/* Left Header Section */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '12px',
+                        backgroundColor: '#EEF2FF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#4F46E5'
+                      }}>
+                        <Receipt style={{ width: '26px', height: '26px' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>Invoice Number</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
+                          <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                            INVOICE PENDING
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px', fontSize: '12px' }}>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Related BOM</div>
+                        <strong style={{ color: '#2563EB' }}>{bomRefText}</strong>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Invoice Date</div>
+                        <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Customer</div>
+                        <strong style={{ color: '#2563EB' }}>{customerText}</strong>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Due Date</div>
+                        <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Payment Type</div>
+                        <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
+                      </div>
+
+                      {/* Delivery Address & Proof Status */}
+                      <div>
+                        {(() => {
+                          const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
+                          const bAddr = inv.billingAddress || matchingBom?.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
+                          const dAddr = inv.deliveryAddress || matchingBom?.deliveryAddress || bAddr;
+
+                          return (
+                            <div>
+                              <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Truck style={{ width: '12px', height: '12px', color: '#4F46E5' }} /> Delivery Address & Proof
+                              </div>
+                              {addressProofDoc ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '3px', backgroundColor: '#EFF6FF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                                  <FileText style={{ width: '12px', height: '12px', color: '#2563EB' }} />
+                                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {addressProofDoc.name}
+                                  </span>
+                                  <button
+                                    onClick={() => setPreviewAddressProofModal({
+                                      name: addressProofDoc.name,
+                                      size: addressProofDoc.size || '1.2 MB',
+                                      customer: customerText,
+                                      billingAddress: bAddr,
+                                      deliveryAddress: dAddr,
+                                      bomRef: bomRefText
+                                    })}
+                                    style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                  >
+                                    <Eye style={{ width: '10px', height: '10px' }} /> View Proof
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '8px', display: 'inline-block', marginTop: '2px' }}>
+                                  ✓ Same as Billing Address
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Invoice Summary Box */}
+                  <div style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    justify: 'center'
+                  }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Invoice Summary</h4>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                      <span>Subtotal (Before Tax)</span>
+                      <strong style={{ color: '#0F172A' }}>₹ {subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                      <span>Tax (18% GST)</span>
+                      <strong style={{ color: '#0F172A' }}>₹ {taxGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                      <span>Shipping Charges</span>
+                      <strong style={{ color: '#0F172A' }}>₹ 0.00</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                      <span>Discount</span>
+                      <strong style={{ color: '#0F172A' }}>- ₹ 0.00</strong>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #CBD5E1', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Grand Total</span>
+                      <strong style={{ fontSize: '20px', fontWeight: '800', color: '#4F46E5' }}>
+                        ₹ {totalAmtRaw.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+
+                    <div style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginTop: '2px' }}>
+                      Amount in Words: <strong>Rupees {totalAmtRaw.toLocaleString('en-IN')} Only</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CARD 2: INVOICE ITEMS TABTABLE */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  {/* Tabs */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', gap: '24px' }}>
+                    {['Invoice Items', 'Additional Information'].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setInvoiceModalActiveTab(t)}
+                        style={{
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          padding: '10px 0',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          color: invoiceModalActiveTab === t ? '#4F46E5' : '#64748B',
+                          borderBottom: invoiceModalActiveTab === t ? '2px solid #4F46E5' : '2px solid transparent',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* TAB CONTENT: INVOICE ITEMS */}
+                  {invoiceModalActiveTab === 'Invoice Items' && (() => {
+                    const packedItems = itemsList.filter(it => it.selected !== false);
+                    const unpackedItems = itemsList.filter(it => it.selected === false);
+                    const packedTotal = packedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
+                    const unpackedTotal = unpackedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
+
+                    const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
+                    const bAddr = inv.billingAddress || matchingBom?.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
+                    const dAddr = inv.deliveryAddress || matchingBom?.deliveryAddress || bAddr;
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* TABLE 1: PACKED & DISPATCHED ITEMS (GREEN THEME) */}
+                        <div style={{ borderRadius: '12px', border: '1px solid #86EFAC', backgroundColor: '#F0FDF4', overflow: 'hidden', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <CheckCircle style={{ width: '18px', height: '18px', color: '#166534' }} />
+                              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#166534' }}>
+                                1. Packed & Dispatched Items ({packedItems.length})
+                              </h4>
+                            </div>
+                            <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                              Ready for Invoice / Delivery
+                            </span>
+                          </div>
+
+                          <div style={{ overflowX: 'auto', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#F0FDF4', color: '#166534', borderBottom: '1px solid #DCFCE7' }}>
+                                  <th style={{ padding: '10px', textAlign: 'center', width: '120px' }}>Status</th>
+                                  <th style={{ padding: '10px' }}>Product Code</th>
+                                  <th style={{ padding: '10px' }}>Product Name</th>
+                                  <th style={{ padding: '10px' }}>Description</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>UOM</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>BOM Qty</th>
+                                  <th style={{ padding: '10px', textAlign: 'right' }}>Unit Price</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>Tax (%)</th>
+                                  <th style={{ padding: '10px', textAlign: 'right' }}>Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {packedItems.length > 0 ? packedItems.map((it, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                      <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>
+                                        ✓ Packed
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 1}`}</td>
+                                    <td style={{ padding: '10px', fontWeight: '700', color: '#0F172A' }}>{it.name}</td>
+                                    <td style={{ padding: '10px', color: '#64748B' }}>{it.desc || it.category || 'High grade component'}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.uom || 'Nos'}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#166534' }}>{it.bomQty || it.qty}</td>
+                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>₹ {parseFloat(it.rate || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.tax || 18}%</td>
+                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#166534' }}>
+                                      ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                )) : (
+                                  <tr>
+                                    <td colSpan={9} style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontStyle: 'italic' }}>
+                                      No items packed in dispatch yet.
+                                    </td>
+                                  </tr>
+                                )}
+                                <tr style={{ backgroundColor: '#F0FDF4', fontWeight: '800' }}>
+                                  <td colSpan={8} style={{ padding: '10px', textAlign: 'right', color: '#166534' }}>Subtotal (Packed Items)</td>
+                                  <td style={{ padding: '10px', textAlign: 'right', color: '#166534', fontSize: '13px' }}>
+                                    ₹ {packedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* TABLE 2: UNPACKED / MISSING / PENDING ITEMS (RED THEME BELOW) */}
+                        <div style={{ borderRadius: '12px', border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', overflow: 'hidden', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <AlertCircle style={{ width: '18px', height: '18px', color: '#DC2626' }} />
+                              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#991B1B' }}>
+                                2. Unpacked / Pending Items ({unpackedItems.length}) — Pending Dispatch
+                              </h4>
+                            </div>
+                            <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                              ⚠️ Hold / Create Subsequent Delivery DC
+                            </span>
+                          </div>
+
+                          <div style={{ overflowX: 'auto', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #FEE2E2' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#FEF2F2', color: '#991B1B', borderBottom: '1px solid #FEE2E2' }}>
+                                  <th style={{ padding: '10px', textAlign: 'center', width: '120px' }}>Status</th>
+                                  <th style={{ padding: '10px' }}>Product Code</th>
+                                  <th style={{ padding: '10px' }}>Product Name</th>
+                                  <th style={{ padding: '10px' }}>Description</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>UOM</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>BOM Qty</th>
+                                  <th style={{ padding: '10px', textAlign: 'right' }}>Unit Price</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>Tax (%)</th>
+                                  <th style={{ padding: '10px', textAlign: 'right' }}>Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {unpackedItems.length > 0 ? unpackedItems.map((it, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFF5F5' }}>
+                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                      <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>
+                                        ✕ Unpacked
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 1}`}</td>
+                                    <td style={{ padding: '10px', fontWeight: '700', color: '#991B1B' }}>{it.name}</td>
+                                    <td style={{ padding: '10px', color: '#64748B' }}>{it.desc || it.category || 'High grade component'}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.uom || 'Nos'}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#DC2626' }}>{it.bomQty || it.qty}</td>
+                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>₹ {parseFloat(it.rate || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.tax || 18}%</td>
+                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#DC2626' }}>
+                                      ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                )) : (
+                                  <tr>
+                                    <td colSpan={9} style={{ padding: '16px', textAlign: 'center', color: '#166534', fontWeight: '700' }}>
+                                      All BOM items are fully packed & dispatched! No pending items.
+                                    </td>
+                                  </tr>
+                                )}
+                                {unpackedItems.length > 0 && (
+                                  <tr style={{ backgroundColor: '#FEF2F2', fontWeight: '800' }}>
+                                    <td colSpan={8} style={{ padding: '10px', textAlign: 'right', color: '#991B1B' }}>Pending Subtotal (Unpacked Items)</td>
+                                    <td style={{ padding: '10px', textAlign: 'right', color: '#DC2626', fontSize: '13px' }}>
+                                      ₹ {unpackedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* COMPACT ADDRESS & PROOF STRIP BELOW ITEMS */}
+                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Truck style={{ width: '16px', height: '16px' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>DELIVERY DESTINATION</div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{dAddr}</div>
+                            </div>
+                          </div>
+
+                          <div>
+                            {addressProofDoc ? (
+                              <button
+                                onClick={() => setPreviewAddressProofModal({
+                                  name: addressProofDoc.name,
+                                  size: addressProofDoc.size || '1.2 MB',
+                                  customer: customerText,
+                                  billingAddress: bAddr,
+                                  deliveryAddress: dAddr,
+                                  bomRef: bomRefText
+                                })}
+                                style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                              >
+                                <FileText style={{ width: '14px', height: '14px' }} /> View Address Proof ({addressProofDoc.name})
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '8px' }}>
+                                ✓ Matches Billing Address (No Proof Required)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* TAB CONTENT: ADDITIONAL INFORMATION (ADDRESSES & MANDATORY ADDRESS PROOF) */}
+                  {invoiceModalActiveTab === 'Additional Information' && (() => {
+                    const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
+                    const bObj = inv.billingAddressObj || matchingBom?.billingAddressObj || {};
+                    const dObj = inv.deliveryAddressObj || matchingBom?.deliveryAddressObj || {};
+                    const bAddr = inv.billingAddress || matchingBom?.billingAddress || bObj.address || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058';
+                    const dAddr = inv.deliveryAddress || matchingBom?.deliveryAddress || dObj.address || bAddr;
+                    const isSame = Boolean(inv.sameAsBilling || matchingBom?.sameAsBilling || (bAddr.trim() === dAddr.trim()));
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                          {/* Billing Address Card */}
+                          <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                                <FileText style={{ width: '15px', height: '15px' }} />
+                              </div>
+                              <div>
+                                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Registered Billing Address</h4>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address for GST invoicing & books</span>
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
+                              {bAddr}
+                            </div>
+                          </div>
+
+                          {/* Delivery Address Card */}
+                          <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                                  <Truck style={{ width: '15px', height: '15px' }} />
+                                </div>
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Physical Delivery Destination</h4>
+                                  <span style={{ fontSize: '11px', color: '#64748B' }}>Shipping address for goods delivery</span>
+                                </div>
+                              </div>
+                              {isSame && (
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px' }}>
+                                  Same as Billing
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
+                              {dAddr}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ADDRESS PROOF DOCUMENT PREVIEW CARD */}
+                        <div style={{ backgroundColor: addressProofDoc ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${addressProofDoc ? '#86EFAC' : '#E2E8F0'}`, borderRadius: '14px', padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: addressProofDoc ? '#DCFCE7' : '#EFF6FF', color: addressProofDoc ? '#166534' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FileCheck style={{ width: '20px', height: '20px' }} />
+                              </div>
+                              <div>
+                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: addressProofDoc ? '#166534' : '#0F172A' }}>
+                                  Delivery Address Proof Document
+                                </h4>
+                                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                                  {addressProofDoc ? `Mandatory proof attached for alternate delivery address: ${addressProofDoc.name}` : 'Delivery address matches registered billing address. No separate proof required.'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {addressProofDoc ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  onClick={() => setPreviewAddressProofModal({
+                                    name: addressProofDoc.name,
+                                    size: addressProofDoc.size || '1.2 MB',
+                                    customer: customerText,
+                                    billingAddress: bAddr,
+                                    deliveryAddress: dAddr,
+                                    bomRef: bomRefText
+                                  })}
+                                  style={{ border: 'none', backgroundColor: '#166534', color: 'white', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(22,101,52,0.2)' }}
+                                >
+                                  <Eye style={{ width: '14px', height: '14px' }} /> View Address Proof
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const targetCode = inv.poNo || inv.invNo || inv.code || (matchingBom && matchingBom.bomCode);
+                                    const nowIso = new Date().toISOString();
+                                    const timeFormatted = new Date(nowIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' });
+
+                                    setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.bomCode === inv.poNo || b.bomCode === inv.code) ? {
+                                      ...b,
+                                      addressProofReuploadRequested: true,
+                                      reuploadRequestedAt: nowIso,
+                                      reuploadReason: 'Invoice desk requested address proof re-upload'
+                                    } : b));
+
+                                    setInvoiceList(prev => prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
+                                      ...i,
+                                      addressProofReuploadRequested: true,
+                                      reuploadRequestedAt: nowIso
+                                    } : i));
+
+                                    alert(`📩 Re-upload Request sent to Sales/BOM desk for (${targetCode || 'Order'}).\nTimestamp: ${timeFormatted}`);
+                                  }}
+                                  style={{ border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#DC2626', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                  <RotateCcw style={{ width: '13px', height: '13px' }} /> Request Re-upload
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '10px' }}>
+                                ✓ Verified & Compliant
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* CARD 3: BOTTOM PANEL (PAYMENT INFO & TIMELINE) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  {/* Payment Information Box */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Receipt style={{ width: '18px', height: '18px', color: '#059669' }} />
+                        <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Payment Information</h4>
+                      </div>
+                      <button
+                        onClick={() => alert(`Viewing Payment Details for ${invNoText}`)}
+                        style={{
+                          border: '1px solid #BFDBFE',
+                          backgroundColor: '#EFF6FF',
+                          color: '#2563EB',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Eye style={{ width: '14px', height: '14px' }} /> View Payment Details
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                      <div>
+                        <span style={{ color: '#64748B', fontSize: '11px' }}>Payment Status</span>
+                        <div>
+                          <span style={{
+                            backgroundColor: balanceAmt === 0 ? '#DCFCE7' : '#FEF3C7',
+                            color: balanceAmt === 0 ? '#166534' : '#B45309',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            fontWeight: '800'
+                          }}>
+                            {paymentStatusText}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', fontSize: '11px' }}>Advance Received</span>
+                        <div style={{ fontWeight: '700', color: '#0F172A' }}>
+                          ₹ {advanceAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} {isFullAdvance ? '(100%)' : (is50Percent ? '(50%)' : '')}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', fontSize: '11px' }}>Balance Amount</span>
+                        <div style={{ fontWeight: '700', color: balanceAmt === 0 ? '#166534' : '#DC2626' }}>
+                          ₹ {balanceAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', fontSize: '11px' }}>Payment Due Date</span>
+                        <div style={{ fontWeight: '700', color: '#0F172A' }}>{invDateText}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invoice Timeline Box */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Invoice Workflow Timeline</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', paddingLeft: '16px', borderLeft: '2px solid #E2E8F0' }}>
+                      {[
+                        { title: 'Accounts Verification Completed', date: `${invDateText}, 10:15 AM`, user: 'Accounts Executive', role: 'Accounts Team', color: '#16A34A' },
+                        { title: 'Invoice Auto-Generated', date: `${invDateText}, 10:16 AM`, user: 'ControlRoom Engine', role: 'System Automated', color: '#2563EB' },
+                        { title: 'Pending Invoice Confirmation', date: `${invDateText}, 10:20 AM`, user: 'Invoice Executive', role: 'Invoice Team', color: '#D97706' }
+                      ].map((tl, i) => (
+                        <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{
+                            position: 'absolute',
+                            left: '-22px',
+                            top: '4px',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: tl.color
+                          }} />
+                          <div>
+                            <strong style={{ fontSize: '12px', color: '#0F172A' }}>{tl.title}</strong>
+                            <div style={{ fontSize: '10px', color: '#64748B' }}>{tl.date}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', fontSize: '10px' }}>
+                            <strong style={{ color: '#475569' }}>{tl.user}</strong>
+                            <span style={{ display: 'block', color: '#94A3B8' }}>{tl.role}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            );
+          }
+
+          // Domain-specific Page Configs for all Production Admin views using the Purchase Orders 5-part layout template
+          const configs = {
+            'Invoice Management': {
+              title: 'Invoice Ledger & 3-Way Matching',
+              subtitle: 'Verified Invoices, 3-Way Matching against BOM/PO/GRN, and payment ledger tracking',
+              actionText: '',
+              searchPlaceholder: 'Search Invoices (Invoice No, Customer / Vendor, BOM Ref)...',
+              tabs: [
+                { id: 'All', label: 'All Invoices', count: (invoiceList || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Ready for Payment', label: 'Ready for Payment', count: (invoiceList || []).filter(i => i.status === 'Ready for Payment' || i.pay === 'Ready').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'On Hold', label: 'On Hold', count: (invoiceList || []).filter(i => i.status === 'On Hold' || i.pay === 'Hold').length, bg: '#fee2e2', fg: '#991b1b' }
+              ],
+              headers: ['Invoice No.', 'Customer / Vendor', 'BOM Ref', 'Invoice Date', 'Invoice Amount (₹)', 'Payment Status', 'Status', 'Action'],
+              rows: (invoiceList || []).map(i => {
+                const isConfirmed = i.status === 'Invoice Confirmed' || i.status === 'Completed' || i.status === 'Confirmed' || i.pay === 'Completed & Locked';
+                const isReady = i.status === 'Ready for Payment' || i.pay === 'Ready';
+
+                return {
+                  ...i,
+                  code: i.invNo,
+                  c2: i.vendor,
+                  c3: i.poNo || 'BOM-001',
+                  c4: i.date,
+                  c5: i.invAmt,
+                  c6: i.pay || 'Ready for Payment',
+                  status: i.status || 'Ready for Payment',
+                  stBg: isConfirmed ? '#DCFCE7' : (isReady ? '#EFF6FF' : '#FEF3C7'),
+                  stFg: isConfirmed ? '#166534' : (isReady ? '#2563EB' : '#B45309'),
+                  stBorder: isConfirmed ? '1px solid #86EFAC' : (isReady ? '1px solid #BFDBFE' : '1px solid #FDE68A'),
+                  tabGroup: i.status || 'Ready for Payment'
+                };
+              })
+            },
+            'Accounts Verification': {
+              title: 'Accounts Verification & Document Control',
+              subtitle: 'Verify customer payment status (100% / 50% / Credit) and Hard/Soft copy BOM receipt',
+              actionText: '',
+              searchPlaceholder: 'Search Accounts Verification (BOM Code, Customer Name)...',
+              tabs: [
+                { id: 'All', label: 'All Accounts Verification Orders', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' }
+              ],
+              headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Status', 'Document Receipt', 'Status', 'Action'],
+              rows: (bomStore || []).map(b => {
+                const acc = b.accountsVerification || {};
+                const isVerified = Boolean(
+                  acc.verified ||
+                  b.status === 'Accounts Verified & Passed to Invoice' ||
+                  (acc.hardCopyReceived && acc.softCopyReceived && (acc.paymentStatus || b.paymentType === 'Net 30 Days'))
+                );
+                const payStatus = acc.paymentStatus || (b.paymentType === 'Net 30 Days' ? 'Credit Payment' : '100% Received');
+                const docStatus = acc.hardCopyReceived && acc.softCopyReceived
+                  ? 'Both Received (Hard + Soft)'
+                  : acc.hardCopyReceived
+                    ? 'Only Hard Copy Received'
+                    : acc.softCopyReceived
+                      ? 'Only Soft Copy Received'
+                      : 'Pending Documents';
+
+                return {
+                  ...b,
+                  code: b.bomCode,
+                  c2: b.customerName,
+                  c3: b.paymentType,
+                  c4: payStatus,
+                  c5: docStatus,
+                  c6: undefined,
+                  status: isVerified ? 'ACCOUNTS VERIFIED' : 'PENDING VERIFICATION',
+                  stBg: isVerified ? '#DCFCE7' : '#FEF3C7',
+                  stFg: isVerified ? '#166534' : '#B45309',
+                  stBorder: isVerified ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+                  isAccountsDone: isVerified,
+                  tabGroup: 'All'
+                };
+              })
+            },
+            'Dispatch Orders': {
+              title: 'Dispatch & Packing Fulfillment Center',
+              subtitle: 'Verify goods packing, track dispatch progress, and release shipments for approved Sales BOM orders',
+              actionText: '',
+              searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
+              tabs: [
+                { id: 'All', label: 'All Orders', count: (bomStore || []).length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status !== 'Closed' && b.status !== 'CLOSED' && !b.status.includes('Packed') && b.status !== 'Partially Packed').length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed) && b.status !== 'Closed' && b.status !== 'CLOSED')).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed) && b.status !== 'Closed' && b.status !== 'CLOSED')).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED').length, bg: '#F1F5F9', fg: '#475569' }
+              ],
+              headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
+              rows: (bomStore || []).map(b => {
+                const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
+                const totalItemsCount = (b.dispatchPacking || b.items || []).length;
+                const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
+                const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
+                const isClosed = b.status === 'Closed' || b.status === 'CLOSED';
+
+                let statusLabel = 'PENDING DISPATCH PACKING';
+                let stBg = '#FFF7ED';
+                let stFg = '#C2410C';
+                let stBorder = '1px solid #FED7AA';
+                let tabGroup = 'PendingPacking';
+
+                if (isClosed) {
+                  statusLabel = 'CLOSED';
+                  stBg = '#F1F5F9';
+                  stFg = '#475569';
+                  stBorder = '1px solid #CBD5E1';
+                  tabGroup = 'Closed';
+                } else if (isFullyPacked || b.status === 'Packed & Ready for Dispatch') {
+                  statusLabel = 'PACKED & READY FOR DISPATCH';
+                  stBg = '#DCFCE7';
+                  stFg = '#166534';
+                  stBorder = '1px solid #86EFAC';
+                  tabGroup = 'Packed';
+                } else if (isPartiallyPacked || b.status === 'Partially Packed') {
+                  statusLabel = 'PARTIALLY PACKED';
+                  stBg = '#FEF3C7';
+                  stFg = '#B45309';
+                  stBorder = '1px solid #FDE68A';
+                  tabGroup = 'PartiallyPacked';
+                }
+
+                return {
+                  ...b,
+                  code: b.bomCode,
+                  c2: b.customerName,
+                  c3: b.paymentType,
+                  c4: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
+                  c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                  status: statusLabel,
+                  stBg: stBg,
+                  stFg: stFg,
+                  stBorder: stBorder,
+                  tabGroup: tabGroup
+                };
+              })
+            },
+            'Production Orders': {
+              title: 'Production Orders (PO)',
+              subtitle: 'Generate, tracking and dispatch management of corporate Production Orders',
+              actionText: '+ Create PO',
+              searchPlaceholder: 'Search Production Orders (PO No, Customer Name)...',
+              tabs: [
+                { id: 'All', label: 'All Orders', count: 49, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft / Pending Approval', count: 20, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Open', label: 'Approved (OPEN)', count: 27, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Partial', label: 'Open / Partially Received', count: 0, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Closed', label: 'Closed / Fully Received', count: 2, bg: '#dcfce7', fg: '#15803d' },
+                { id: 'Rejected', label: 'Rejected', count: 0, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['PO No.', 'Customer / Vendor Name', 'PO Date', 'Expected Delivery', 'Total Quantity / Value', 'Status'],
+              rows: [
+                { code: 'PO-2026-081', c2: 'Vikram Solar Pvt Ltd', c3: '2026-08-11', c4: '2026-08-28', c5: '1,500 Nos (₹ 2,301.00)', status: 'OPEN', stBg: '#f0fdf4', stFg: '#15803d', stBorder: '1px solid #bbf7d0', tabGroup: 'Open' },
+                { code: 'PO-2026-080', c2: 'Tata Power Renewable', c3: '2026-08-09', c4: '2026-08-24', c5: '600 Nos (₹ 69,62,000.00)', status: 'CLOSED / FULLY RECEIVED', stBg: '#f0fdf4', stFg: '#15803d', stBorder: '1px solid #bbf7d0', tabGroup: 'Closed' },
+                { code: 'PO-2026-079', c2: 'Apex Infra Systems', c3: '2026-08-09', c4: '2026-08-17', c5: '1,300 Nos (₹ 5,56,960.00)', status: 'CLOSED / FULLY RECEIVED', stBg: '#f0fdf4', stFg: '#15803d', stBorder: '1px solid #bbf7d0', tabGroup: 'Closed' },
+                { code: 'PO-2026-078', c2: 'Adani Solar Energy', c3: '2026-08-09', c4: '2026-08-18', c5: '400 Nos (₹ 5,56,960.00)', status: 'Draft', stBg: '#f1f5f9', stFg: '#475569', stBorder: '1px solid #cbd5e1', tabGroup: 'Draft' },
+                { code: 'PO-2026-077', c2: 'Sterling & Wilson', c3: '2026-08-09', c4: '2026-08-19', c5: '280 Nos (₹ 5,56,960.00)', status: 'OPEN', stBg: '#f0fdf4', stFg: '#15803d', stBorder: '1px solid #bbf7d0', tabGroup: 'Open' },
+                { code: 'PO-2026-076', c2: 'Waaree Energies Ltd', c3: '2026-08-10', c4: '2026-08-25', c5: '1,200 Nos (₹ 69,62,000.00)', status: 'OPEN', stBg: '#f0fdf4', stFg: '#15803d', stBorder: '1px solid #bbf7d0', tabGroup: 'Open' }
+              ]
+            },
+            'Work Orders': {
+              title: 'Work Orders & Shop Floor Execution',
+              subtitle: 'Zoho Inventory synced manufacturing work orders and shop floor dispatch',
+              actionText: '+ Create Work Order',
+              searchPlaceholder: 'Search Work Orders (WO No, Product Name, Material)...',
+              tabs: [
+                { id: 'All', label: 'All Work Orders', count: 142, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Draft / Pending', count: 18, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'InProgress', label: 'In Progress', count: 48, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Ready', label: 'Material Ready', count: 86, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Overdue', label: 'Overdue Jobs', count: 8, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Work Order No.', 'Product Name', 'Raw Material Required', 'Planned Qty', 'Completed Qty', 'Warehouse Store', 'Status'],
+              rows: [
+                { code: 'WO-VRM-118', c2: 'Mini Rail 100 mm', c3: 'Raw Aluminum Coil 1.5mm', c4: '500 Nos', c5: '360 Nos', c6: 'RM Store #1', status: 'OVERDUE', stBg: '#fee2e2', stFg: '#dc2626', stBorder: '1px solid #fca5a5', tabGroup: 'Overdue' },
+                { code: 'WO-VRM-101', c2: 'Long Rail 3000 mm', c3: 'HDG Steel Profile Stock', c4: '200 Nos', c5: '120 Nos', c6: 'RM Store #2', status: 'OVERDUE', stBg: '#fee2e2', stFg: '#dc2626', stBorder: '1px solid #fca5a5', tabGroup: 'Overdue' },
+                { code: 'WO-VRM-089', c2: 'Mid Clamp 35 mm', c3: 'Alu Fastener Bar', c4: '1,500 Nos', c5: '1,100 Nos', c6: 'RM Store #1', status: 'IN PROGRESS', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'InProgress' },
+                { code: 'WO-VRM-074', c2: 'Alu. Bracket', c3: 'Alu Extrusion 6063-T6', c4: '400 Nos', c5: '260 Nos', c6: 'RM Store #3', status: 'IN PROGRESS', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'InProgress' },
+                { code: 'WO-VRM-061', c2: 'End Clamp 35 mm', c3: 'Alu Clamp Stock', c4: '300 Nos', c5: '210 Nos', c6: 'RM Store #1', status: 'MATERIAL READY', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Ready' }
+              ]
+            },
+            'Planning & Scheduling': {
+              title: 'Production Planning & Shift Scheduling',
+              subtitle: 'Master production schedule, shift allocation, and capacity planning',
+              actionText: '+ Add Schedule Shift',
+              searchPlaceholder: 'Search Schedules (Schedule ID, Line Name, Shift Lead)...',
+              tabs: [
+                { id: 'All', label: 'All Schedules', count: 62, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Shift1', label: '1st Shift', count: 24, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Shift2', label: '2nd Shift', count: 22, bg: '#dbeafe', fg: '#1e40af' },
+                { id: 'Shift3', label: '3rd Shift', count: 12, bg: '#f3e8ff', fg: '#6b21a8' },
+                { id: 'Maint', label: 'Planned Maintenance', count: 4, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Shift / Schedule ID', 'Time Window', 'Assigned Line / Machine', 'Target Qty', 'Actual Produced', 'Shift Lead', 'Status'],
+              rows: [
+                { code: 'SCH-2026-01', c2: '06:00 AM - 02:00 PM', c3: 'CNC Cutting & Punching #1', c4: '2,640 Nos', c5: '2,438 Nos', c6: 'R. Karthik', status: 'COMPLETED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Shift1' },
+                { code: 'SCH-2026-02', c2: '02:00 PM - 10:00 PM', c3: 'Roll Forming Line', c4: '2,640 Nos', c5: '2,424 Nos', c6: 'M. Arul', status: 'COMPLETED', stBg: '#dbeafe', stFg: '#1e40af', stBorder: '1px solid #bfdbfe', tabGroup: 'Shift2' },
+                { code: 'SCH-2026-03', c2: '10:00 PM - 06:00 AM', c3: 'Maintenance & Tool Room', c4: '0 Nos (Setup)', c5: '0 Nos', c6: 'S. Praveen', status: 'MAINTENANCE', stBg: '#f3e8ff', stFg: '#6b21a8', stBorder: '1px solid #e9d5ff', tabGroup: 'Maint' }
+              ]
+            },
+            'Production Monitoring': {
+              title: 'Real-Time Production & Telemetry Monitoring',
+              subtitle: 'Live shop floor machine telemetry, cycle speeds, and output tracking',
+              actionText: 'Live Telemetry Active',
+              searchPlaceholder: 'Search Machines (Line Code, Machine Name, Operator)...',
+              tabs: [
+                { id: 'All', label: 'All Lines', count: 8, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Running', label: 'Running Lines', count: 6, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Idle', label: 'Idle Lines', count: 1, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Maint', label: 'Under Maintenance', count: 1, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Machine Line Code', 'Machine Name', 'Operating Speed', 'Today Output', 'Operator In-Charge', 'Power Rating', 'Status'],
+              rows: [
+                { code: 'LINE-A1', c2: 'CNC Cutting Machine', c3: '140 RPM', c4: '1,102 Nos', c5: 'R. Karthik', c6: '15 KW', status: 'RUNNING', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Running' },
+                { code: 'LINE-A2', c2: 'Punching Machine - 1', c3: '95 Strokes/min', c4: '912 Nos', c5: 'M. Arul', c6: '22 KW', status: 'RUNNING', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Running' },
+                { code: 'LINE-A3', c2: 'Punching Machine - 2', c3: '0 RPM', c4: '678 Nos', c5: 'S. Praveen', c6: '22 KW', status: 'MAINTENANCE', stBg: '#fee2e2', stFg: '#dc2626', stBorder: '1px solid #fca5a5', tabGroup: 'Maint' },
+                { code: 'LINE-B1', c2: 'Drilling Machine', c3: '210 RPM', c4: '546 Nos', c5: 'K. Manoj', c6: '11 KW', status: 'RUNNING', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Running' },
+                { code: 'LINE-B2', c2: 'Tapping Machine', c3: '80 RPM', c4: '322 Nos', c5: 'P. Kumar', c6: '9 KW', status: 'IDLE', stBg: '#fef3c7', stFg: '#b45309', stBorder: '1px solid #fde68a', tabGroup: 'Idle' }
+              ]
+            },
+            'Quality Control': {
+              title: 'Quality Control & Inspection Audits',
+              subtitle: 'Quality rejection certificates, inspection audits, and QC sign-offs',
+              actionText: '+ Create QC Audit',
+              searchPlaceholder: 'Search QC Audits (QC Cert No, Product Name, Inspector)...',
+              tabs: [
+                { id: 'All', label: 'All Audits', count: 124, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Approved', label: 'Approved Yield', count: 108, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Defects', label: 'Passed With Defect', count: 11, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Pending', label: 'Pending Cert', count: 5, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['QC Cert No.', 'Product Name', 'Inspected Qty', 'Passed Qty', 'Rejected Qty', 'Defect Category', 'Status'],
+              rows: [
+                { code: 'QC-2026-104', c2: 'Mini Rail 100 mm', c3: '1,456 Nos', c4: '1,402 Nos', c5: '54 Nos', c6: 'Dimensional Out', status: 'PASSED WITH DEFECTS', stBg: '#fef3c7', stFg: '#b45309', stBorder: '1px solid #fde68a', tabGroup: 'Defects' },
+                { code: 'QC-2026-105', c2: 'Long Rail 3000 mm', c3: '566 Nos', c4: '538 Nos', c5: '28 Nos', c6: 'Surface Scratch', status: 'APPROVED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Approved' },
+                { code: 'QC-2026-106', c2: 'Mid Clamp 35 mm', c3: '1,228 Nos', c4: '1,210 Nos', c5: '18 Nos', c6: 'Profile Bent', status: 'APPROVED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Approved' }
+              ]
+            },
+            'Machine Maintenance': {
+              title: 'Machine Maintenance & Overhauls',
+              subtitle: 'Preventive maintenance schedule, breakdown logs, and tool room tasks',
+              actionText: '+ Log Maintenance',
+              searchPlaceholder: 'Search Maintenance (Job ID, Machine Name, Technician)...',
+              tabs: [
+                { id: 'All', label: 'All Jobs', count: 42, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Scheduled', label: 'Scheduled', count: 18, bg: '#dbeafe', fg: '#1e40af' },
+                { id: 'InProgress', label: 'In Progress', count: 10, bg: '#ffedd5', fg: '#ea580c' },
+                { id: 'Completed', label: 'Completed', count: 14, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['Maint. Job ID', 'Machine Line', 'Task Description', 'Scheduled Date', 'Assigned Tech', 'Downtime (Hrs)', 'Status'],
+              rows: [
+                { code: 'MNT-2026-042', c2: 'Punching Machine - 2', c3: 'Hydraulic Hose Overhaul & Seal Replace', c4: '2026-08-26', c5: 'Mechanical Team', c6: '4.5 Hrs', status: 'IN PROGRESS', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'InProgress' },
+                { code: 'MNT-2026-043', c2: 'CNC Cutting Machine', c3: 'Blade Alignment & Calibration', c4: '2026-08-30', c5: 'Tool Room Lead', c6: '1.2 Hrs', status: 'SCHEDULED', stBg: '#dbeafe', stFg: '#1e40af', stBorder: '1px solid #bfdbfe', tabGroup: 'Scheduled' },
+                { code: 'MNT-2026-041', c2: 'Roll Forming Line', c3: 'Gearbox Lubrication & Belt Tensioning', c4: '2026-08-20', c5: 'Electrical Tech', c6: '2.0 Hrs', status: 'COMPLETED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Completed' }
+              ]
+            },
+            'Inventory (Raw Material)': {
+              title: 'Raw Material Inventory Stores & Stock Balances',
+              subtitle: 'Raw aluminum coils, steel profiles, fasteners, and warehouse store balances',
+              actionText: '+ Add Stock',
+              searchPlaceholder: 'Search Inventory (Material Code, Description, Store)...',
+              tabs: [
+                { id: 'All', label: 'All Stock Items', count: 56, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Sufficient', label: 'Sufficient Stock', count: 42, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Warning', label: 'Reorder Warning', count: 10, bg: '#ffedd5', fg: '#ea580c' },
+                { id: 'Critical', label: 'Critical Shortage', count: 4, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Material Code', 'Material Description', 'Current Stock', 'Safety Threshold', 'Unit Rate (₹)', 'Store Location', 'Status'],
+              rows: [
+                { code: 'RM-ALU-150', c2: 'Raw Aluminum Coil 1.5mm 6063-T6', c3: '4.2 Tons', c4: '5.0 Tons', c5: '₹ 2,45,000 / Ton', c6: 'RM Store #1', status: 'REORDER WARNING', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'Warning' },
+                { code: 'RM-STL-300', c2: 'HDG Steel Profile Stock 3mm', c3: '12.8 Tons', c4: '6.0 Tons', c5: '₹ 78,000 / Ton', c6: 'RM Store #2', status: 'SUFFICIENT', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Sufficient' },
+                { code: 'RM-FST-035', c2: 'Alu Fastener Rod 35mm', c3: '8.5 Tons', c4: '4.0 Tons', c5: '₹ 1,85,000 / Ton', c6: 'RM Store #1', status: 'SUFFICIENT', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Sufficient' }
+              ]
+            },
+            'BOM': {
+              title: 'Bill of Materials (BOM)',
+              subtitle: 'Standard raw material consumption lists and component requirements',
+              actionText: '+ Create BOM',
+              searchPlaceholder: 'Search BOM (BOM Code, Customer Name, Product)...',
+              tabs: [
+                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production').length, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+              rows: (bomStore || []).map(b => ({
+                ...b,
+                code: b.bomCode,
+                c2: b.date,
+                c3: b.customerName,
+                c4: b.paymentType,
+                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: b.status,
+                stBg: b.status === 'Draft' ? '#fff7ed' : b.status.includes('Pending') ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : b.status.includes('Pending') ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : b.status.includes('Pending') ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : b.status.includes('Pending') ? 'Pending' : 'Sent'
+              }))
+            },
+            'Customer Management': {
+              title: 'Customer Directory & Management',
+              subtitle: 'Manage client directory, contact details, billing addresses, and order history',
+              actionText: '+ Add New Customer',
+              searchPlaceholder: 'Search Customers (Customer Name, Company, Email, Phone)...',
+              tabs: [
+                { id: 'All', label: 'All Customers', count: (customerList || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Active', label: 'Active Clients', count: (customerList || []).length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Lead', label: 'New Leads', count: 0, bg: '#dbeafe', fg: '#1e40af' }
+              ],
+              headers: ['Customer Name', 'Company Name', 'Contact Person', 'Mobile / Phone', 'Email ID', 'Action'],
+              rows: customerList || []
+            },
+            'BOM / Routing': {
+              title: 'Bill of Materials (BOM)',
+              subtitle: 'Standard raw material consumption lists and component requirements',
+              actionText: '+ Create BOM',
+              searchPlaceholder: 'Search BOM (BOM Code, Customer Name, Product)...',
+              tabs: [
+                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production').length, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+              rows: (bomStore || []).map(b => ({
+                ...b,
+                code: b.bomCode,
+                c2: b.date,
+                c3: b.customerName,
+                c4: b.paymentType,
+                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: b.status,
+                stBg: b.status === 'Draft' ? '#fff7ed' : b.status.includes('Pending') ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : b.status.includes('Pending') ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : b.status.includes('Pending') ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : b.status.includes('Pending') ? 'Pending' : 'Sent'
+              }))
+            },
+            'Production Reports': {
+              title: 'Production Reports & Shift Compilation',
+              subtitle: 'Generate and export plant output, shift logs, and operational spreadsheets',
+              actionText: 'Export Report',
+              searchPlaceholder: 'Search Reports (Report ID, Shift Date, Supervisor)...',
+              tabs: [
+                { id: 'All', label: 'All Reports', count: 62, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Shift', label: 'Shift Output', count: 40, bg: '#dcfce7', fg: '#166534' },
+                { id: 'QC', label: 'QC Audit Logs', count: 12, bg: '#dbeafe', fg: '#1e40af' },
+                { id: 'Downtime', label: 'Downtime Logs', count: 10, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Report ID', 'Shift Date', 'Shift Name', 'Total Output', 'Rejections', 'Downtime', 'Status'],
+              rows: [
+                { code: 'RPT-2026-206', c2: '2026-08-11', c3: '1st Shift', c4: '744 Nos', c5: '5 Nos', c6: '0.5 Hrs', status: 'EXCEL (.XLSX)', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Shift' },
+                { code: 'RPT-2026-205', c2: '2026-08-10', c3: '2nd Shift', c4: '690 Nos', c5: '4 Nos', c6: '1.2 Hrs', status: 'EXCEL (.XLSX)', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Shift' },
+                { code: 'RPT-2026-204', c2: '2026-08-09', c3: '1st Shift', c4: '736 Nos', c5: '6 Nos', c6: '0.8 Hrs', status: 'PDF (.PDF)', stBg: '#dbeafe', stFg: '#1e40af', stBorder: '1px solid #bfdbfe', tabGroup: 'Shift' }
+              ]
+            },
+            'Efficiency Reports': {
+              title: 'Plant Efficiency & OEE Analytics Reports',
+              subtitle: 'Overall Equipment Effectiveness (OEE), Availability, Performance, and Quality yield',
+              actionText: 'Export OEE Report',
+              searchPlaceholder: 'Search Machine Lines (Machine Name, Status Grade)...',
+              tabs: [
+                { id: 'All', label: 'All Lines', count: 8, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'GradeA', label: 'Grade A+ / A', count: 5, bg: '#dcfce7', fg: '#166534' },
+                { id: 'GradeB', label: 'Grade B+ / B', count: 2, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'UnderTarget', label: 'Under Target', count: 1, bg: '#fee2e2', fg: '#dc2626' }
+              ],
+              headers: ['Machine Line', 'Availability %', 'Performance %', 'Quality %', 'OEE Score', 'Status Grade', 'Status'],
+              rows: [
+                { code: 'CNC Cutting Machine', c2: '94.1%', c3: '91.2%', c4: '98.2%', c5: '84.3%', c6: 'GRADE A', status: 'TARGET MET', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'GradeA' },
+                { code: 'Punching Machine - 1', c2: '92.4%', c3: '88.5%', c4: '96.8%', c5: '79.2%', c6: 'GRADE A', status: 'TARGET MET', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'GradeA' },
+                { code: 'Roll Forming Line', c2: '95.6%', c3: '94.0%', c4: '97.8%', c5: '87.9%', c6: 'GRADE A+', status: 'TARGET EXCEEDED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'GradeA' }
+              ]
+            },
+            'Downtime Analytics': {
+              title: 'Downtime Analytics & Root Cause Breakdown',
+              subtitle: 'Machine breakdown tracking, stoppage reason analysis, and downtime reduction',
+              actionText: 'Log Downtime',
+              searchPlaceholder: 'Search Downtime (Incident ID, Reason, Machine)...',
+              tabs: [
+                { id: 'All', label: 'All Incidents', count: 88, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Breakdown', label: 'Machine Breakdown', count: 35, bg: '#fee2e2', fg: '#dc2626' },
+                { id: 'Material', label: 'Material Stoppage', count: 22, bg: '#ffedd5', fg: '#ea580c' },
+                { id: 'Setup', label: 'Tool Setup', count: 18, bg: '#dbeafe', fg: '#1e40af' },
+                { id: 'Resolved', label: 'Resolved Incidents', count: 75, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['Incident ID', 'Stoppage Reason', 'Machine Line', 'Start Time', 'Duration (Hrs)', 'Root Cause', 'Status'],
+              rows: [
+                { code: 'DT-2026-88', c2: 'Machine Breakdown', c3: 'Punching Machine - 2', c4: '2026-08-10 10:30', c5: '4.5 Hrs', c6: 'Hydraulic Hose Failure', status: 'RESOLVED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Resolved' },
+                { code: 'DT-2026-87', c2: 'Material Not Ready', c3: 'Mini Rail Line', c4: '2026-08-08 08:00', c5: '2.5 Hrs', c6: 'Raw Coil Crane Delay', status: 'RESOLVED', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Resolved' },
+                { code: 'DT-2026-86', c2: 'Tool Change / Setup', c3: 'CNC Cutting Machine', c4: '2026-08-07 14:00', c5: '1.5 Hrs', c6: 'Profile Die Swap', status: 'PLANNED', stBg: '#dbeafe', stFg: '#1e40af', stBorder: '1px solid #bfdbfe', tabGroup: 'Setup' }
+              ]
+            }
+          };
+
+          // Dedicated Custom Renderer for Work Orders matching User Reference Screenshot
+          if (activeTab === 'Work Orders') {
+            if (showWorkOrderForm) {
+              return (
+                <CreateWorkOrderPage
+                  onBack={() => setShowWorkOrderForm(false)}
+                  onWorkOrderCreated={() => setShowWorkOrderForm(false)}
+                />
+              );
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+                {/* 1. TOP HEADER SECTION WITH BLUE PRIMARY BUTTON */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                      Work Orders
+                    </h2>
+                    <span style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                      View and manage all work orders across the production floor.
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => setShowWorkOrderForm(true)}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      border: 'none',
+                      color: 'white',
+                      height: '40px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0 18px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                    }}
+                  >
+                    <Plus style={{ width: '16px', height: '16px' }} />
+                    Create Work Order
+                  </button>
+                </div>
+
+                {/* 2. FILTERS & SEARCH BAR ROW */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '14px 16px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#ffffff', width: '260px' }}>
+                    <Search style={{ width: '15px', height: '15px', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search WO / Product / Customer..."
+                      value={prodSearchQueryText}
+                      onChange={(e) => setProdSearchQueryText(e.target.value)}
+                      style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#1e293b' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+
+                    {/* Production Line Dropdown */}
+                    <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none', width: '130px' }}>
+                      <option value="All">All Lines</option>
+                      <option value="Structure Line 1">Structure Line 1</option>
+                      <option value="Rail Line 1">Rail Line 1</option>
+                      <option value="Rail Line 2">Rail Line 2</option>
+                      <option value="FRP Line">FRP Line</option>
+                    </select>
+
+                    {/* Priority Dropdown */}
+                    <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none', width: '120px' }}>
+                      <option value="All">All Priority</option>
+                      <option value="High">High</option>
+                      <option value="Normal">Normal</option>
+                      <option value="Low">Low</option>
+                    </select>
+
+                    {/* Date Range Picker */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', height: '38px', backgroundColor: 'white', fontSize: '12px', color: '#334155' }}>
+                      <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                      <span>13 Aug 2026 - 13 Aug 2026</span>
+                    </div>
+
+                    {/* Clear Button */}
+                    <button
+                      onClick={() => { setProdSearchQueryText(''); setProdFilterDateVal(''); setProdFilterStatusSelect('All'); }}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #cbd5e1',
+                        color: '#2563eb',
+                        cursor: 'pointer',
+                        borderRadius: '8px',
+                        height: '38px',
+                        padding: '0 16px',
+                        fontSize: '13px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. STATUS SUB-TABS ROW & EXPORT BUTTON */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0' }}>
+                  <div style={{ display: 'flex', gap: '24px' }}>
+                    {['All Work Orders', 'My Work Orders', 'Overdue', 'Due Today', 'This Week'].map(tabLabel => (
+                      <button
+                        key={tabLabel}
+                        onClick={() => setProdActiveSubTab(tabLabel)}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          padding: '12px 0',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: prodActiveSubTab === tabLabel || (prodActiveSubTab === 'All' && tabLabel === 'All Work Orders') ? '#2563eb' : '#64748b',
+                          borderBottom: prodActiveSubTab === tabLabel || (prodActiveSubTab === 'All' && tabLabel === 'All Work Orders') ? '2px solid #2563eb' : '2px solid transparent',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {tabLabel}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', backgroundColor: 'white', fontSize: '13px', fontWeight: 'bold', color: '#475569', cursor: 'pointer', marginBottom: '8px' }}>
+                    <Download style={{ width: '14px', height: '14px' }} />
+                    Export
+                  </button>
+                </div>
+
+                {/* 5. MAIN WORK ORDERS DATA TABLE MATCHING EXACT REFERENCE DESIGN */}
+                <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ overflowX: 'auto', width: '100%' }}>
+                    <table className="custom-table" style={{ width: '100%', minWidth: '1250px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
+                          <th style={{ padding: '12px 14px', width: '30px' }}><input type="checkbox" /></th>
+                          <th style={{ padding: '12px 14px' }}>WO No.</th>
+                          <th style={{ padding: '12px 14px' }}>Product</th>
+                          <th style={{ padding: '12px 14px' }}>Customer / Project</th>
+                          <th style={{ padding: '12px 14px' }}>Production Line</th>
+                          <th style={{ padding: '12px 14px' }}>Qty (Planned)</th>
+                          <th style={{ padding: '12px 14px' }}>Planned Date</th>
+                          <th style={{ padding: '12px 14px' }}>Due Date</th>
+                          <th style={{ padding: '12px 14px' }}>Status</th>
+                          <th style={{ padding: '12px 14px' }}>Priority</th>
+                          <th style={{ padding: '12px 14px' }}>Assigned To</th>
+                          <th style={{ padding: '12px 14px', width: '140px' }}>Progress</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { woNo: 'WO-2026-001', product: 'Triangle Structure', customer: 'VRM Solar Project', line: 'Structure Line 1', qty: '500', plannedDate: '13 Aug 2026', dueDate: '14 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Arun Kumar', progress: 65 },
+                          { woNo: 'WO-2026-002', product: 'Mini Rail 100mm', customer: 'ABC Solar Pvt Ltd', line: 'Rail Line 1', qty: '2,000', plannedDate: '13 Aug 2026', dueDate: '15 Aug 2026', status: 'Ready to Start', statusBg: '#eff6ff', statusFg: '#2563eb', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Kumaravel', progress: 0 },
+                          { woNo: 'WO-2026-003', product: 'Long Rail', customer: 'XYZ Solar', line: 'Rail Line 2', qty: '1,000', plannedDate: '12 Aug 2026', dueDate: '13 Aug 2026', status: 'On Hold', statusBg: '#fff7ed', statusFg: '#ea580c', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Suresh B', progress: 40 },
+                          { woNo: 'WO-2026-004', product: 'Carport Structure', customer: 'SunRay Energy', line: 'Structure Line 1', qty: '300', plannedDate: '11 Aug 2026', dueDate: '13 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Arun Kumar', progress: 80 },
+                          { woNo: 'WO-2026-005', product: 'Mini Rail 120mm', customer: 'GreenVolt Solar', line: 'Rail Line 1', qty: '1,500', plannedDate: '10 Aug 2026', dueDate: '14 Aug 2026', status: 'Pending Approval', statusBg: '#fffbebe6', statusFg: '#d97706', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Ramesh P', progress: 0 },
+                          { woNo: 'WO-2026-006', product: 'FRP Walkway', customer: 'VRM Internal', line: 'FRP Line', qty: '200', plannedDate: '09 Aug 2026', dueDate: '12 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'Low', priorityColor: '#64748b', assignedTo: 'Kumaravel', progress: 100 },
+                          { woNo: 'WO-2026-007', product: 'Handrail System', customer: 'Mega Power', line: 'FRP Line', qty: '400', plannedDate: '09 Aug 2026', dueDate: '12 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'Low', priorityColor: '#64748b', assignedTo: 'Suresh B', progress: 100 },
+                          { woNo: 'WO-2026-008', product: 'Double C Rail', customer: 'ABC Solar Pvt Ltd', line: 'Rail Line 2', qty: '800', plannedDate: '08 Aug 2026', dueDate: '11 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Arun Kumar', progress: 100 },
+                          { woNo: 'WO-2026-009', product: 'RCC Roof Structure', customer: 'BuildTech Pvt Ltd', line: 'Structure Line 2', qty: '150', plannedDate: '08 Aug 2026', dueDate: '10 Aug 2026', status: 'Overdue', statusBg: '#fef2f2', statusFg: '#dc2626', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Ramesh P', progress: 20 },
+                          { woNo: 'WO-2026-010', product: 'Custom Structure', customer: 'Sky Sun Energy', line: 'Structure Line 1', qty: '250', plannedDate: '07 Aug 2026', dueDate: '10 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Kumaravel', progress: 55 }
+                        ].filter(row => {
+                          const searchLower = prodSearchQueryText.toLowerCase();
+                          const matchesSearch = !searchLower || row.woNo.toLowerCase().includes(searchLower) || row.product.toLowerCase().includes(searchLower) || row.customer.toLowerCase().includes(searchLower);
+                          const matchesStatus = prodFilterStatusSelect === 'All' || row.status === prodFilterStatusSelect;
+                          return matchesSearch && matchesStatus;
+                        }).map((row, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '12px 14px' }}><input type="checkbox" /></td>
+                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.woNo}</td>
+                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#1E293B' }}>{row.product}</td>
+                            <td style={{ padding: '12px 14px', color: '#475569' }}>{row.customer}</td>
+                            <td style={{ padding: '12px 14px', color: '#475569' }}>{row.line}</td>
+                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A' }}>{row.qty}</td>
+                            <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.plannedDate}</td>
+                            <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.dueDate}</td>
+
+                            {/* Status Badge with bullet dot */}
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ backgroundColor: row.statusBg, color: row.statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.statusFg }}></span>
+                                {row.status}
+                              </span>
+                            </td>
+
+                            {/* Priority with Up Arrow if High */}
+                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: row.priorityColor, fontSize: '12px' }}>
+                              {row.priority === 'High' ? '↑ High' : row.priority}
+                            </td>
+
+                            {/* Assigned To Avatar & Name */}
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justify: 'center' }}>
+                                  {row.assignedTo.split(' ').map(n => n[0]).join('')}
+                                </div>
+                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{row.assignedTo}</span>
+                              </div>
+                            </td>
+
+                            {/* Progress Bar */}
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', minWidth: '30px' }}>{row.progress}%</span>
+                                <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+                                  <div style={{ width: `${row.progress}%`, height: '100%', backgroundColor: row.progress === 100 ? '#0d9488' : '#2563eb', borderRadius: '3px' }}></div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Actions Ellipsis */}
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}>
+                                <MoreVertical style={{ width: '16px', height: '16px' }} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* PAGINATION FOOTER ROW MATCHING EXACT SCREENSHOT (UNSCROLLABLE FULL WIDTH) */}
+                  <div style={{ padding: '12px 20px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' }}>
+                    <span>Showing 1 to 10 of 42 entries</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>«</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>‹</button>
+                      <button style={{ border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', fontWeight: 'bold', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>1</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>2</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>3</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>4</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>5</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>›</button>
+                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>»</button>
+
+                      <select style={{ height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '0 8px', fontSize: '12px', marginLeft: '10px' }}>
+                        <option>10 / page</option>
+                        <option>25 / page</option>
+                        <option>50 / page</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 24px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
-                  Save Preferences
-                </button>
+            );
+          }
+
+          // Render Send Confirm (Editable Mode) or View BOM Details (100% Read-Only Mode)
+          if (confirmingBomModal) {
+            const isEditMode = Boolean(
+              confirmingBomModal.isEditMode &&
+              ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation'].includes(confirmingBomModal.status)
+            );
+            const isAlreadyForwarded = !isEditMode;
+            const allItemsConfirmed = confirmingBomModal.items && confirmingBomModal.items.length > 0 && confirmingBomModal.items.every(i => i.confirmed);
+            const grandTotalCalc = (confirmingBomModal.items || []).reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
+
+            const bObj = confirmingBomModal.billingAddressObj || {
+              address: confirmingBomModal.billingAddress || '',
+              city: '',
+              state: '',
+              pincode: ''
+            };
+            const dObj = confirmingBomModal.deliveryAddressObj || {
+              address: confirmingBomModal.deliveryAddress || '',
+              city: '',
+              state: '',
+              pincode: ''
+            };
+
+            const formatAddr = (obj, fallbackStr) => {
+              if (!obj) return fallbackStr || '—';
+              const { address, city, state, pincode } = obj;
+              const parts = [];
+              if (address && address.trim() && address.trim() !== '—') parts.push(address.trim());
+              if (city && city.trim() && city.trim() !== '—') parts.push(city.trim());
+              if (state && state.trim() && state.trim() !== '—' && pincode && pincode.trim() && pincode.trim() !== '—') {
+                parts.push(`${state.trim()} - ${pincode.trim()}`);
+              } else {
+                if (state && state.trim() && state.trim() !== '—') parts.push(state.trim());
+                if (pincode && pincode.trim() && pincode.trim() !== '—') parts.push(pincode.trim());
+              }
+              return parts.length > 0 ? parts.join(', ') : (fallbackStr || '—');
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                      {isAlreadyForwarded ? `BOM Details & Order Summary — ${confirmingBomModal.bomCode}` : `BOM Verification & Order Editing — ${confirmingBomModal.bomCode}`}
+                    </h1>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      {isAlreadyForwarded
+                        ? 'Review verified bill of materials, product breakdown, and order specifications.'
+                        : 'Review & modify company details, billing/delivery addresses, payment terms, or product specifications before final dispatch.'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => setConfirmingBomModal(null)}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Back to BOM Dashboard
+                    </button>
+
+                    {!isAlreadyForwarded && (
+                      <button
+                        disabled={!allItemsConfirmed}
+                        onClick={() => {
+                          const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
+                            ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
+                            ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
+                            ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
+                            ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
+                          );
+
+                          if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
+                            alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before sending BOM.');
+                            return;
+                          }
+
+                          const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
+                          const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
+                          const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
+
+                          setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
+                            ...b,
+                            companyName: confirmingBomModal.companyName || b.companyName,
+                            paymentType: confirmingBomModal.paymentType || b.paymentType,
+                            billingAddress: bStr,
+                            billingAddressObj: bObj,
+                            deliveryAddress: dStr,
+                            deliveryAddressObj: finalDObj,
+                            deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
+                            items: confirmingBomModal.items,
+                            status: 'Sent to Production',
+                            grandTotal: grandTotalCalc
+                          } : b));
+                          setConfirmingBomModal(null);
+                          alert(`BOM (${confirmingBomModal.bomCode}) officially verified & sent to Production Head & Dispatch Head!`);
+                        }}
+                        style={{
+                          border: 'none',
+                          backgroundColor: allItemsConfirmed ? '#166534' : '#94A3B8',
+                          color: 'white',
+                          height: '40px',
+                          padding: '0 24px',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: allItemsConfirmed ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: allItemsConfirmed ? '0 2px 4px rgba(22,101,52,0.2)' : 'none'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px' }} />
+                        Send BOM
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* GENERAL BOM & ORDER DETAILS */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {isAlreadyForwarded ? 'BILL OF MATERIALS SUMMARY' : 'ORDER DETAILS & ADDRESSES'}
+                      </span>
+                      {!isAlreadyForwarded && (
+                        <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px' }}>
+                          Customer name locked • Addresses & terms editable
+                        </span>
+                      )}
+                    </div>
+                    <span style={{
+                      backgroundColor: isAlreadyForwarded ? '#DCFCE7' : '#FEF3C7',
+                      color: isAlreadyForwarded ? '#166534' : '#B45309',
+                      padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'inline-block'
+                    }}>
+                      {confirmingBomModal.status}
+                    </span>
+                  </div>
+
+                  {/* Customer (Locked), Company Name (Editable) & Payment Type (Editable) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+                        CUSTOMER NAME <span style={{ fontSize: '10px', color: '#94A3B8' }}>(🔒 Locked)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={confirmingBomModal.customerName}
+                        readOnly
+                        style={{
+                          width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px',
+                          fontSize: '13px', fontWeight: '700', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', cursor: 'not-allowed', boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        COMPANY NAME {!isAlreadyForwarded && <span style={{ color: '#2563EB', fontSize: '10px' }}>(Editable)</span>}
+                      </label>
+                      {isAlreadyForwarded ? (
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', height: '40px', display: 'flex', alignItems: 'center' }}>
+                          {confirmingBomModal.companyName || confirmingBomModal.customerName || '—'}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Company Name..."
+                          value={confirmingBomModal.companyName || ''}
+                          onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, companyName: e.target.value })}
+                          style={{
+                            width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px',
+                            fontSize: '13px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none', boxSizing: 'border-box'
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        PAYMENT TYPE {!isAlreadyForwarded && <span style={{ color: '#2563EB', fontSize: '10px' }}>(Editable)</span>}
+                      </label>
+                      {isAlreadyForwarded ? (
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#2563EB', height: '40px', display: 'flex', alignItems: 'center' }}>
+                          {confirmingBomModal.paymentType}
+                        </div>
+                      ) : (
+                        <select
+                          value={confirmingBomModal.paymentType || '100% Advance'}
+                          onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, paymentType: e.target.value })}
+                          style={{
+                            width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px',
+                            fontSize: '13px', fontWeight: '700', color: '#2563EB', backgroundColor: '#FFFFFF', outline: 'none', cursor: 'pointer', boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="100% Advance">100% Advance</option>
+                          <option value="50% Advance + 50% Dispatch">50% Advance + 50% Dispatch</option>
+                          <option value="Net 30 Days">Net 30 Days</option>
+                        </select>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* STRUCTURED ADDRESS CARDS (EDITABLE OR READ-ONLY) */}
+                  {(() => {
+                    const bStreet = bObj.address || '—';
+                    const bCity = bObj.city || '—';
+                    const bState = bObj.state || '—';
+                    const bPin = bObj.pincode || '—';
+
+                    const dStreet = dObj.address || '—';
+                    const dCity = dObj.city || '—';
+                    const dState = dObj.state || '—';
+                    const dPin = dObj.pincode || '—';
+
+                    const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
+                      ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
+                      ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
+                      ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
+                      ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
+                    );
+
+                    if (isAlreadyForwarded) {
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '4px' }}>
+                          {/* Read-Only Billing Address Card */}
+                          <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
+                              <FileText style={{ width: '13px', height: '13px', color: '#2563EB' }} /> Billing Address
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#334155', lineHeight: '1.4' }}>
+                              <div><strong>Address:</strong> {bStreet}</div>
+                              <div style={{ display: 'flex', gap: '12px', marginTop: '4px', color: '#64748B', fontSize: '11px' }}>
+                                <span>City: <strong style={{ color: '#334155' }}>{bCity}</strong></span>
+                                <span>State: <strong style={{ color: '#334155' }}>{bState}</strong></span>
+                                <span>Pincode: <strong style={{ color: '#334155' }}>{bPin}</strong></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Read-Only Delivery Address Card */}
+                          <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
+                              <Truck style={{ width: '13px', height: '13px', color: '#4F46E5' }} /> Delivery Address
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#334155', lineHeight: '1.4' }}>
+                              <div><strong>Address:</strong> {dStreet}</div>
+                              <div style={{ display: 'flex', gap: '12px', marginTop: '4px', color: '#64748B', fontSize: '11px' }}>
+                                <span>City: <strong style={{ color: '#334155' }}>{dCity}</strong></span>
+                                <span>State: <strong style={{ color: '#334155' }}>{dState}</strong></span>
+                                <span>Pincode: <strong style={{ color: '#334155' }}>{dPin}</strong></span>
+                              </div>
+                              {confirmingBomModal.deliveryAddressProofDoc ? (
+                                <div style={{ marginTop: '8px', padding: '8px 12px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#166534' }}>
+                                    <FileText style={{ width: '13px', height: '13px' }} />
+                                    Address Proof: {confirmingBomModal.deliveryAddressProofDoc.name}
+                                  </div>
+                                  <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '800' }}>Verified</span>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // EDITABLE ADDRESSES IN PENDING CONFIRMATION / DRAFT
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '4px' }}>
+                        {/* EDITABLE BILLING ADDRESS */}
+                        <div style={{
+                          backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                          padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                            <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                              <FileText style={{ width: '14px', height: '14px' }} />
+                            </div>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>Editable for order invoice billing</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>
+                              Address (Street / Building / Area)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Street Address..."
+                              value={bObj.address || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setConfirmingBomModal({
+                                  ...confirmingBomModal,
+                                  billingAddressObj: { ...bObj, address: val },
+                                  deliveryAddressObj: confirmingBomModal.sameAsBilling ? { ...dObj, address: val } : dObj
+                                });
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                              <input
+                                type="text"
+                                placeholder="City..."
+                                value={bObj.city || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    billingAddressObj: { ...bObj, city: val },
+                                    deliveryAddressObj: confirmingBomModal.sameAsBilling ? { ...dObj, city: val } : dObj
+                                  });
+                                }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                              <input
+                                type="text"
+                                placeholder="State..."
+                                value={bObj.state || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    billingAddressObj: { ...bObj, state: val },
+                                    deliveryAddressObj: confirmingBomModal.sameAsBilling ? { ...dObj, state: val } : dObj
+                                  });
+                                }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                              <input
+                                type="text"
+                                placeholder="Pincode..."
+                                value={bObj.pincode || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    billingAddressObj: { ...bObj, pincode: val },
+                                    deliveryAddressObj: confirmingBomModal.sameAsBilling ? { ...dObj, pincode: val } : dObj
+                                  });
+                                }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* EDITABLE DELIVERY ADDRESS */}
+                        <div style={{
+                          backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                          padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                                <Truck style={{ width: '14px', height: '14px' }} />
+                              </div>
+                              <div>
+                                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Delivery Address</h4>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>Destination for physical dispatch</span>
+                              </div>
+                            </div>
+
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', backgroundColor: '#EEF2FF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #C7D2FE' }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(confirmingBomModal.sameAsBilling)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  if (checked) {
+                                    setConfirmingBomModal({
+                                      ...confirmingBomModal,
+                                      sameAsBilling: true,
+                                      deliveryAddressObj: { ...bObj }
+                                    });
+                                  } else {
+                                    setConfirmingBomModal({
+                                      ...confirmingBomModal,
+                                      sameAsBilling: false
+                                    });
+                                  }
+                                }}
+                                style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                              />
+                              Same as Billing
+                            </label>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>
+                              Address (Street / Building / Area)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Plot No 42, SIDCO Industrial Estate"
+                              value={confirmingBomModal.sameAsBilling ? (bObj.address || '') : (dObj.address || '')}
+                              disabled={confirmingBomModal.sameAsBilling}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setConfirmingBomModal({
+                                  ...confirmingBomModal,
+                                  deliveryAddressObj: { ...dObj, address: val }
+                                });
+                              }}
+                              style={{
+                                width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                color: confirmingBomModal.sameAsBilling ? '#64748B' : '#0F172A',
+                                backgroundColor: confirmingBomModal.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                boxSizing: 'border-box', outline: 'none',
+                                cursor: confirmingBomModal.sameAsBilling ? 'not-allowed' : 'text'
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Chennai"
+                                value={confirmingBomModal.sameAsBilling ? (bObj.city || '') : (dObj.city || '')}
+                                disabled={confirmingBomModal.sameAsBilling}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    deliveryAddressObj: { ...dObj, city: val }
+                                  });
+                                }}
+                                style={{
+                                  width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                  color: confirmingBomModal.sameAsBilling ? '#64748B' : '#0F172A',
+                                  backgroundColor: confirmingBomModal.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                  boxSizing: 'border-box', outline: 'none',
+                                  cursor: confirmingBomModal.sameAsBilling ? 'not-allowed' : 'text'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Tamil Nadu"
+                                value={confirmingBomModal.sameAsBilling ? (bObj.state || '') : (dObj.state || '')}
+                                disabled={confirmingBomModal.sameAsBilling}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    deliveryAddressObj: { ...dObj, state: val }
+                                  });
+                                }}
+                                style={{
+                                  width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                  color: confirmingBomModal.sameAsBilling ? '#64748B' : '#0F172A',
+                                  backgroundColor: confirmingBomModal.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                  boxSizing: 'border-box', outline: 'none',
+                                  cursor: confirmingBomModal.sameAsBilling ? 'not-allowed' : 'text'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. 600058"
+                                value={confirmingBomModal.sameAsBilling ? (bObj.pincode || '') : (dObj.pincode || '')}
+                                disabled={confirmingBomModal.sameAsBilling}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setConfirmingBomModal({
+                                    ...confirmingBomModal,
+                                    deliveryAddressObj: { ...dObj, pincode: val }
+                                  });
+                                }}
+                                style={{
+                                  width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                  color: confirmingBomModal.sameAsBilling ? '#64748B' : '#0F172A',
+                                  backgroundColor: confirmingBomModal.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                  boxSizing: 'border-box', outline: 'none',
+                                  cursor: confirmingBomModal.sameAsBilling ? 'not-allowed' : 'text'
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* MANDATORY ADDRESS PROOF ATTACHMENT WHEN DELIVERY ADDRESS DIFFERS FROM BILLING */}
+                          {!isDeliveryMatching ? (
+                            <div style={{
+                              marginTop: '6px',
+                              padding: '14px 16px',
+                              backgroundColor: '#FEF2F2',
+                              border: '1px dashed #F87171',
+                              borderRadius: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <AlertCircle style={{ width: '14px', height: '14px' }} />
+                                  </div>
+                                  <div>
+                                    <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
+                                      Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                    </h5>
+                                    <span style={{ fontSize: '11px', color: '#B91C1C' }}>
+                                      Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Lease Agreement).
+                                    </span>
+                                  </div>
+                                </div>
+                                {confirmingBomModal.deliveryAddressProofDoc && (
+                                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <CheckCircle style={{ width: '12px', height: '12px' }} /> Attached
+                                  </span>
+                                )}
+                              </div>
+
+                              {confirmingBomModal.deliveryAddressProofDoc ? (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
+                                    <div>
+                                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{confirmingBomModal.deliveryAddressProofDoc.name}</div>
+                                      <div style={{ fontSize: '10px', color: '#64748B' }}>{confirmingBomModal.deliveryAddressProofDoc.size || '1.2 MB'} • Uploaded</div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmingBomModal({ ...confirmingBomModal, deliveryAddressProofDoc: null })}
+                                    style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                  <label style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                    backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626',
+                                    padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+                                    cursor: 'pointer'
+                                  }}>
+                                    <Upload style={{ width: '13px', height: '13px' }} />
+                                    Upload Address Proof Document
+                                    <input
+                                      type="file"
+                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                      style={{ display: 'none' }}
+                                      onChange={(e) => {
+                                        const file = e.target.files && e.target.files[0];
+                                        if (file) {
+                                          setConfirmingBomModal({
+                                            ...confirmingBomModal,
+                                            deliveryAddressProofDoc: {
+                                              name: file.name,
+                                              size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                              uploadedAt: new Date().toISOString()
+                                            }
+                                          });
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '11px', color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0', padding: '8px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckCircle style={{ width: '13px', height: '13px' }} /> Delivery address matches registered billing address. No additional address proof required.
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* PRODUCT ITEMS TABLE */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                        {isAlreadyForwarded ? 'Itemized Product & Material Breakdown' : 'Product Verification List'}
+                      </h3>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>
+                        {isAlreadyForwarded
+                          ? 'Itemized specifications and rate breakdown passed to Production & Dispatch teams.'
+                          : 'Check every product box after verifying item details. Modify or add products if incorrect.'}
+                      </span>
+                    </div>
+
+                    {!isAlreadyForwarded && (
+                      <button
+                        onClick={() => {
+                          const currentItems = confirmingBomModal.items || [];
+                          const updatedItems = [...currentItems, { name: '', category: '', qty: 1, rate: 0, confirmed: false }];
+                          setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                        }}
+                        style={{ border: '1px solid #E0E7FF', backgroundColor: '#EEF2FF', color: '#4F46E5', height: '36px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Plus style={{ width: '14px', height: '14px' }} /> Add New Product
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                          {!isAlreadyForwarded && <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>✓</th>}
+                          <th style={{ padding: '12px 14px', width: '60px', textAlign: 'center' }}>#</th>
+                          <th style={{ padding: '12px 14px' }}>Product / Component Name</th>
+                          <th style={{ padding: '12px 14px' }}>Category / Specs</th>
+                          <th style={{ padding: '12px 14px', width: '100px', textAlign: 'center' }}>Qty</th>
+                          <th style={{ padding: '12px 14px', width: '120px', textAlign: 'right' }}>Rate (₹)</th>
+                          <th style={{ padding: '12px 14px', width: '130px', textAlign: 'right' }}>Total (₹)</th>
+                          {!isAlreadyForwarded && <th style={{ padding: '12px 14px', width: '60px', textAlign: 'center' }}>Action</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(confirmingBomModal.items || []).map((item, idx) => {
+                          const itemQty = parseFloat(item.qty) || 0;
+                          const itemRate = parseFloat(item.rate) || 0;
+                          const itemTotal = itemQty * itemRate;
+
+                          if (isAlreadyForwarded) {
+                            return (
+                              <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                <td style={{ padding: '14px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
+                                <td style={{ padding: '14px', fontWeight: '700', color: '#0F172A' }}>{item.name || '—'}</td>
+                                <td style={{ padding: '14px', color: '#64748B' }}>{item.category || item.specs || '—'}</td>
+                                <td style={{ padding: '14px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>{itemQty} Nos</td>
+                                <td style={{ padding: '14px', textAlign: 'right', color: '#334155' }}>₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '14px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: item.confirmed ? '#F0FDF4' : 'transparent' }}>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(item.confirmed)}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, confirmed: checked } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '16px', height: '16px', accentColor: '#166534', cursor: 'pointer' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Product Name..."
+                                  value={item.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, name: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Specification / Category..."
+                                  value={item.category || item.specs || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, category: val, specs: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.qty}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, qty: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'center', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={item.rate}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'right', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
+                                ₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => {
+                                    const updatedItems = (confirmingBomModal.items || []).filter((_, i) => i !== idx);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Trash2 style={{ width: '14px', height: '14px' }} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary math block */}
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {isAlreadyForwarded ? (
+                      <>
+                        <span style={{ fontSize: '13px', color: '#64748B' }}>
+                          Showing {confirmingBomModal.items?.length || 0} itemized BOM components
+                        </span>
+                        <div style={{ fontSize: '14px', color: '#334155' }}>
+                          Total Order Value: <strong style={{ color: '#0F172A', fontSize: '16px', fontWeight: '900' }}>₹ {(parseFloat(confirmingBomModal.grandTotal) || grandTotalCalc).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
+                              ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
+                              ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
+                              ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
+                              ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
+                            );
+
+                            if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
+                              alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before saving modifications.');
+                              return;
+                            }
+
+                            const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
+                            const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
+                            const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
+
+                            setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
+                              ...b,
+                              companyName: confirmingBomModal.companyName || b.companyName,
+                              paymentType: confirmingBomModal.paymentType || b.paymentType,
+                              billingAddress: bStr,
+                              billingAddressObj: bObj,
+                              deliveryAddress: dStr,
+                              deliveryAddressObj: finalDObj,
+                              deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
+                              items: confirmingBomModal.items,
+                              status: 'Edited / Pending Confirmation',
+                              grandTotal: grandTotalCalc
+                            } : b));
+                            alert('Order modifications & addresses saved! Status updated to: Edited / Pending Confirmation');
+                          }}
+                          style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#334155', height: '38px', padding: '0 20px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Save Modifications
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
+                              ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
+                              ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
+                              ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
+                              ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
+                            );
+
+                            if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
+                              alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before confirming items.');
+                              return;
+                            }
+
+                            const currentItems = confirmingBomModal.items || [];
+                            const allCheckedItems = currentItems.map(it => ({ ...it, confirmed: true }));
+                            const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
+                            const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
+                            const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
+
+                            setConfirmingBomModal({ ...confirmingBomModal, items: allCheckedItems });
+                            setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
+                              ...b,
+                              companyName: confirmingBomModal.companyName || b.companyName,
+                              paymentType: confirmingBomModal.paymentType || b.paymentType,
+                              billingAddress: bStr,
+                              billingAddressObj: bObj,
+                              deliveryAddress: dStr,
+                              deliveryAddressObj: finalDObj,
+                              deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
+                              items: allCheckedItems,
+                              status: 'Pending Confirmation',
+                              grandTotal: grandTotalCalc
+                            } : b));
+                            alert('All product specifications confirmed! You can now click Send BOM.');
+                          }}
+                          style={{ border: 'none', backgroundColor: '#1E40AF', color: 'white', height: '38px', padding: '0 20px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <CheckSquare style={{ width: '14px', height: '14px' }} /> Confirm All Products
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
+            );
+          }
+
+          // Render Dispatch Head Packing Verification Screen (Full Size Page)
+          if (dispatchPackingModal) {
+            const rawItems = (dispatchPackingModal.items || []).map(it => ({ name: it.name || it.c2 || 'Item', bomQty: it.qty || 1, packed: false }));
+            const itemsToPack = (dispatchPackingModal.dispatchPacking && Array.isArray(dispatchPackingModal.dispatchPacking) && dispatchPackingModal.dispatchPacking.length > 0)
+              ? dispatchPackingModal.dispatchPacking
+              : rawItems;
+
+            const isPackedAndReady = Boolean(
+              dispatchPackingModal.status === 'Packed & Ready for Dispatch' ||
+              dispatchPackingModal.status === 'Partially Packed' ||
+              dispatchPackingModal.status === 'Closed' ||
+              dispatchPackingModal.status === 'CLOSED' ||
+              dispatchPackingModal.isReadOnly ||
+              (itemsToPack.length > 0 && itemsToPack.every(p => p.packed))
+            );
+
+            const packedItemsCount = itemsToPack.filter(p => p.packed).length;
+            const totalItemsCount = itemsToPack.length;
+            const allItemsPacked = totalItemsCount > 0 && packedItemsCount === totalItemsCount;
+            const progressPercent = totalItemsCount > 0 ? Math.round((packedItemsCount / totalItemsCount) * 100) : 0;
+            const isPartial = packedItemsCount > 0 && !allItemsPacked;
+
+            const savePackingData = () => {
+              if (isPackedAndReady) {
+                setDispatchPackingModal(null);
+                return;
+              }
+              setBomStore(prev => prev.map(b => b.bomCode === dispatchPackingModal.bomCode ? {
+                ...b,
+                dispatchPacking: itemsToPack,
+                status: allItemsPacked ? 'Packed & Ready for Dispatch' : 'Partially Packed',
+                reissuedByAccounts: false,
+                isAccountsDone: false
+              } : b));
+              const targetBomCode = dispatchPackingModal.bomCode;
+              const targetNum = targetBomCode ? targetBomCode.replace(/[^0-9]/g, '') : '';
+              setInvoiceList(prev => prev.map(inv => {
+                const invPoNum = inv.poNo ? inv.poNo.replace(/[^0-9]/g, '') : '';
+                const invNoNum = inv.invNo ? inv.invNo.replace(/[^0-9]/g, '') : '';
+                const isMatch = inv.poNo === targetBomCode || inv.invNo === targetBomCode || inv.code === targetBomCode || (targetNum && (invPoNum === targetNum || invNoNum === targetNum));
+                if (isMatch) {
+                  const currentItems = (inv.items && inv.items.length > 0) ? inv.items : (dispatchPackingModal.items || []);
+                  const updatedInvItems = currentItems.map((it, idx) => {
+                    const matchingPacked = itemsToPack.find(p => p.name === it.name || p.code === it.code || (it.name && p.name && p.name.toLowerCase().trim() === it.name.toLowerCase().trim())) || itemsToPack[idx];
+                    return { ...it, selected: matchingPacked ? Boolean(matchingPacked.packed) : false };
+                  });
+                  return { ...inv, items: updatedInvItems };
+                }
+                return inv;
+              }));
+              setDispatchPackingModal(null);
+              alert(allItemsPacked
+                ? `📦 Dispatch re-packing completed and submitted! BOM (${targetBomCode}) is now ready and sent to Accounts Team for payment verification.`
+                : `📦 Dispatch packing saved as Partially Packed.`
+              );
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif", minHeight: '100%' }}>
+
+                {/* ─── GRADIENT STATUS BANNER HEADER ─── */}
+                <div style={{
+                  background: allItemsPacked
+                    ? 'linear-gradient(135deg, #064E3B 0%, #065F46 100%)'
+                    : isPartial
+                      ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)'
+                      : 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
+                  borderRadius: '16px',
+                  padding: '24px 28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: allItemsPacked ? '0 8px 24px rgba(6,78,59,0.35)' : isPartial ? '0 8px 24px rgba(120,53,15,0.35)' : '0 8px 24px rgba(30,58,138,0.35)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    {/* Back button */}
+                    <button
+                      onClick={() => setDispatchPackingModal(null)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        borderRadius: '10px', padding: '9px 16px',
+                        fontSize: '13px', fontWeight: '700', color: '#FFFFFF',
+                        cursor: 'pointer', backdropFilter: 'blur(4px)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
+                    >
+                      <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back
+                    </button>
+
+                    {/* Title + meta */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.2px' }}>
+                          {isPackedAndReady ? 'Dispatch Packing Specifications (Locked)' : 'Dispatch Packing Verification'}
+                        </h1>
+                        <span style={{
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          border: '1px solid rgba(255,255,255,0.35)',
+                          color: '#FFFFFF', padding: '3px 12px',
+                          borderRadius: '20px', fontSize: '12px', fontWeight: '800'
+                        }}>
+                          {dispatchPackingModal.bomCode}
+                        </span>
+                        <span style={{
+                          backgroundColor: allItemsPacked ? '#DCFCE7' : isPartial ? '#FEF3C7' : '#DBEAFE',
+                          color: allItemsPacked ? '#166534' : isPartial ? '#92400E' : '#1E40AF',
+                          padding: '3px 12px', borderRadius: '20px',
+                          fontSize: '11px', fontWeight: '800',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: allItemsPacked ? '#166534' : isPartial ? '#D97706' : '#2563EB' }}></span>
+                          {allItemsPacked ? 'ALL ITEMS PACKED' : isPartial ? 'PARTIALLY PACKED' : 'PENDING PACKING'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <span>Customer: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.customerName}</strong></span>
+                        <span>•</span>
+                        <span>Payment: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.paymentType}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  {!isPackedAndReady && (
+                    <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => setDispatchPackingModal(null)}
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          color: '#FFFFFF', height: '42px', padding: '0 20px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '700',
+                          cursor: 'pointer', backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={savePackingData}
+                        style={{
+                          border: 'none',
+                          backgroundColor: '#FFFFFF',
+                          color: allItemsPacked ? '#065F46' : isPartial ? '#92400E' : '#1E40AF',
+                          height: '42px', padding: '0 22px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '900',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                          display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px' }} />
+                        Save Verification
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ─── 4 STATS CARDS ─── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                  {/* Progress Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px',
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(37,99,235,0.25)'
+                    }}>
+                      <Package style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Items Packed</div>
+                      <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2 }}>
+                        {packedItemsCount}<span style={{ fontSize: '14px', color: '#64748B', fontWeight: '600' }}>/{totalItemsCount}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Completion % Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px',
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: allItemsPacked ? 'linear-gradient(135deg, #166534, #16A34A)' : isPartial ? 'linear-gradient(135deg, #B45309, #D97706)' : 'linear-gradient(135deg, #64748B, #94A3B8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: allItemsPacked ? '0 4px 10px rgba(22,101,52,0.3)' : '0 4px 10px rgba(100,116,139,0.2)'
+                    }}>
+                      <CheckCircle style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Completion</div>
+                      <div style={{ fontSize: '22px', fontWeight: '900', color: allItemsPacked ? '#166534' : '#0F172A', lineHeight: 1.2 }}>{progressPercent}%</div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px',
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Delivery Address</div>
+                    <div style={{ fontSize: '12px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
+                      {dispatchPackingModal.deliveryAddress || 'Plot 14, Phase II, Nagappa Estate, Puzhal, Chennai – 600066.'}
+                    </div>
+                  </div>
+
+                  {/* Value Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px',
+                    border: '1px solid #E2E8F0', padding: '18px 20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Order Value</div>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>
+                      ₹ {parseFloat(dispatchPackingModal.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── PROGRESS BAR CARD ─── */}
+                <div style={{
+                  backgroundColor: '#FFFFFF', borderRadius: '14px',
+                  border: '1px solid #E2E8F0', padding: '18px 24px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  display: 'flex', alignItems: 'center', gap: '20px'
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', whiteSpace: 'nowrap', minWidth: '160px' }}>
+                    Packing Progress
+                  </div>
+                  <div style={{ flex: 1, height: '12px', backgroundColor: '#F1F5F9', borderRadius: '20px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                    <div style={{
+                      width: `${progressPercent}%`, height: '100%',
+                      background: allItemsPacked
+                        ? 'linear-gradient(90deg, #166534, #16A34A)'
+                        : isPartial
+                          ? 'linear-gradient(90deg, #B45309, #D97706)'
+                          : 'linear-gradient(90deg, #1E40AF, #2563EB)',
+                      borderRadius: '20px',
+                      transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }} />
+                  </div>
+                  <div style={{
+                    fontSize: '13px', fontWeight: '900', whiteSpace: 'nowrap',
+                    color: allItemsPacked ? '#166534' : isPartial ? '#B45309' : '#2563EB'
+                  }}>
+                    {packedItemsCount} of {totalItemsCount} Packed ({progressPercent}%)
+                  </div>
+                </div>
+
+                {/* ─── CHECKLIST TABLE CARD ─── */}
+                <div style={{
+                  backgroundColor: '#FFFFFF', borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  overflow: 'hidden'
+                }}>
+                  {/* Table toolbar */}
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '18px 24px', borderBottom: '2px solid #F1F5F9',
+                    background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)'
+                  }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                        Goods Packing Checklist
+                      </h3>
+                      <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0 0' }}>
+                        {isPackedAndReady ? 'All goods are verified, packed, and locked for logistics dispatch.' : 'Check each item as it is physically placed into the shipment box.'}
+                      </p>
+                    </div>
+                    {!isPackedAndReady && (
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => {
+                            const allPacked = itemsToPack.map(p => ({ ...p, packed: true }));
+                            setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: allPacked });
+                          }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            border: '1px solid #BBF7D0', backgroundColor: '#F0FDF4',
+                            color: '#166534', height: '36px', padding: '0 16px',
+                            borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer'
+                          }}
+                        >
+                          <CheckCircle style={{ width: '14px', height: '14px' }} /> Mark All Packed
+                        </button>
+                        <button
+                          onClick={() => {
+                            const nonePacked = itemsToPack.map(p => ({ ...p, packed: false }));
+                            setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: nonePacked });
+                          }}
+                          style={{
+                            border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF',
+                            color: '#475569', height: '36px', padding: '0 16px',
+                            borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                          }}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Table */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                          <th style={{ padding: '13px 20px', width: '70px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}></th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Code</th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Description</th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>BOM Qty</th>
+                          <th style={{ padding: '13px 20px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsToPack.map((pItem, idx) => (
+                          <tr
+                            key={idx}
+                            onClick={isPackedAndReady ? undefined : () => {
+                              const updatedPacking = itemsToPack.map((pi, i) => i === idx ? { ...pi, packed: !pi.packed } : pi);
+                              setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: updatedPacking });
+                            }}
+                            style={{
+                              borderBottom: '1px solid #F1F5F9',
+                              backgroundColor: pItem.packed ? '#F0FDF4' : '#FFFFFF',
+                              cursor: isPackedAndReady ? 'default' : 'pointer',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                            onMouseEnter={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                            onMouseLeave={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                          >
+                            <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                              <div style={{
+                                width: '22px', height: '22px', borderRadius: '6px', margin: '0 auto',
+                                backgroundColor: pItem.packed ? '#166534' : '#FFFFFF',
+                                border: pItem.packed ? '2px solid #166534' : '2px solid #CBD5E1',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.15s ease',
+                                boxShadow: pItem.packed ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
+                              }}>
+                                {pItem.packed && <CheckCircle style={{ width: '14px', height: '14px', color: '#FFFFFF' }} />}
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px', fontWeight: '700', color: '#2563EB', fontSize: '13px' }}>
+                              {pItem.code || `PRD-${String(idx + 1).padStart(3, '0')}`}
+                            </td>
+                            <td style={{ padding: '16px', fontWeight: pItem.packed ? '700' : '600', color: pItem.packed ? '#166534' : '#1E293B', fontSize: '13px' }}>
+                              {pItem.name}
+                            </td>
+                            <td style={{ padding: '16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '13px' }}>
+                              {pItem.bomQty} <span style={{ fontSize: '11px', color: '#94A3B8' }}>Nos</span>
+                            </td>
+                            <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                padding: '5px 14px', borderRadius: '20px',
+                                fontSize: '11px', fontWeight: '800',
+                                backgroundColor: pItem.packed ? '#DCFCE7' : '#FFF7ED',
+                                color: pItem.packed ? '#166534' : '#C2410C',
+                                border: `1px solid ${pItem.packed ? '#BBF7D0' : '#FED7AA'}`
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: pItem.packed ? '#22C55E' : '#F97316' }}></span>
+                                {pItem.packed ? 'Packed' : 'Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Table Footer */}
+                  <div style={{
+                    padding: '14px 24px', borderTop: '1px solid #F1F5F9',
+                    background: '#FAFBFC',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>
+                      {isPackedAndReady ? 'Status: Packed & Ready for Dispatch (Locked)' : 'Click any row to toggle packing status'}
+                    </span>
+                    {isPackedAndReady ? (
+                      <button
+                        onClick={() => setDispatchPackingModal(null)}
+                        style={{
+                          border: '1px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          color: '#475569', height: '40px', padding: '0 24px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Back to Dispatch Orders
+                      </button>
+                    ) : (
+                      <button
+                        onClick={savePackingData}
+                        style={{
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #1E40AF, #2563EB)',
+                          color: '#FFFFFF', height: '40px', padding: '0 24px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                          display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '15px', height: '15px' }} />
+                        Save & Close
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Render Accounts Team Payment & Document Verification Screen (Full Size Page)
+          if (accountsVerificationModal) {
+            const accVerif = (accountsVerificationModal && accountsVerificationModal.accountsVerification) || {};
+            const isAlreadyCompleted = Boolean(
+              isAccountsViewOnly ||
+              accVerif.verified ||
+              accountsVerificationModal.status === 'Accounts Verified & Passed to Invoice' ||
+              accountsVerificationModal.status === 'ACCOUNTS VERIFIED' ||
+              accountsVerificationModal.isAccountsDone
+            );
+            const currentPayStatus = accVerif.paymentStatus || (accountsVerificationModal.paymentType === 'Net 30 Days' ? 'Credit Payment' : 'Payment Received — 100%');
+            const hardCopy = isAlreadyCompleted ? true : Boolean(accVerif.hardCopyReceived);
+            const softCopy = isAlreadyCompleted ? true : Boolean(accVerif.softCopyReceived);
+            const softCopyDoc = accVerif.softCopyDoc || (isAlreadyCompleted ? { name: 'Scanned_BOM_SoftCopy.pdf', capturedVia: 'Dispatch Upload' } : null);
+            const bomCodeText = (accountsVerificationModal && (accountsVerificationModal.bomCode || accountsVerificationModal.code)) || 'BOM-2026';
+            const custNameText = (accountsVerificationModal && (accountsVerificationModal.customerName || accountsVerificationModal.c2)) || 'Customer';
+            const payTypeText = (accountsVerificationModal && (accountsVerificationModal.paymentType || accountsVerificationModal.c3)) || 'Net 30 Days';
+            const orderValue = parseFloat(accountsVerificationModal.grandTotal || 0);
+
+            const isVerified = hardCopy && softCopy && currentPayStatus;
+            const isPartialVerified = (hardCopy || softCopy) && !isVerified;
+
+            const payStatusConfig = {
+              'Payment Received — 100%': { bg: '#DCFCE7', color: '#166534', label: '100% Received', icon: <CheckCircle style={{ width: '18px', height: '18px' }} /> },
+              'Payment Received — 50%': { bg: '#FEF3C7', color: '#B45309', label: '50% Advance', icon: <Clock style={{ width: '18px', height: '18px' }} /> },
+              'Credit Payment': { bg: '#DBEAFE', color: '#1E40AF', label: 'Credit / Net 30', icon: <Receipt style={{ width: '18px', height: '18px' }} /> },
+            };
+            const currentPayConfig = payStatusConfig[currentPayStatus] || payStatusConfig['Payment Received — 100%'];
+
+            // Soft Copy Modal & Camera Handlers
+            const openSoftCopyModal = () => {
+              setSoftCopyMode('upload');
+              setSelectedSoftCopyFile(null);
+              setCapturedPhotoUrl(null);
+              setCameraErrorMsg('');
+              setShowSoftCopyModal(true);
+            };
+
+            const closeSoftCopyModal = () => {
+              if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+                mediaStreamRef.current = null;
+              }
+              setCameraActive(false);
+              setShowSoftCopyModal(false);
+            };
+
+            const startCamera = async () => {
+              setCameraErrorMsg('');
+              setCapturedPhotoUrl(null);
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                  video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                mediaStreamRef.current = stream;
+                setCameraActive(true);
+                setTimeout(() => {
+                  if (cameraVideoRef.current) {
+                    cameraVideoRef.current.srcObject = stream;
+                    cameraVideoRef.current.play().catch(() => {});
+                  }
+                }, 100);
+              } catch (err) {
+                setCameraErrorMsg('Camera access is unavailable or denied. Please upload an image/document file instead.');
+                setCameraActive(false);
+              }
+            };
+
+            const stopCamera = () => {
+              if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+                mediaStreamRef.current = null;
+              }
+              setCameraActive(false);
+            };
+
+            const capturePhoto = () => {
+              if (cameraVideoRef.current && cameraCanvasRef.current) {
+                const video = cameraVideoRef.current;
+                const canvas = cameraCanvasRef.current;
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const photoData = canvas.toDataURL('image/jpeg', 0.85);
+                setCapturedPhotoUrl(photoData);
+                stopCamera();
+              }
+            };
+
+            const handleFileUpload = (e) => {
+              const file = e.target.files && e.target.files[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (uploadEvent) => {
+                  setSelectedSoftCopyFile({
+                    name: file.name,
+                    size: `${(file.size / 1024).toFixed(1)} KB`,
+                    type: file.type,
+                    dataUrl: uploadEvent.target.result
+                  });
+                };
+                reader.readAsDataURL(file);
+              }
+            };
+
+            const confirmSoftCopyAttachment = () => {
+              const attachmentName = capturedPhotoUrl
+                ? `Live_Camera_Capture_${Date.now().toString().slice(-4)}.jpg`
+                : selectedSoftCopyFile
+                  ? selectedSoftCopyFile.name
+                  : `BOM_Scanned_Copy_${bomCodeText}.pdf`;
+
+              const attachmentData = capturedPhotoUrl || (selectedSoftCopyFile && selectedSoftCopyFile.dataUrl) || null;
+
+              setAccountsVerificationModal(prev => prev ? ({
+                ...prev,
+                accountsVerification: {
+                  ...(prev.accountsVerification || {}),
+                  softCopyReceived: true,
+                  softCopyDoc: {
+                    name: attachmentName,
+                    dataUrl: attachmentData,
+                    capturedVia: capturedPhotoUrl ? 'Camera' : 'File Upload',
+                    verifiedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                  }
+                }
+              }) : null);
+
+              closeSoftCopyModal();
+            };
+
+            const completeVerification = () => {
+              if (!softCopy) {
+                const proceedWithout = window.confirm('Soft copy is not yet attached. Would you like to take a live camera photo / upload a soft copy document now? Click OK to upload/capture, or Cancel to proceed anyway.');
+                if (proceedWithout) {
+                  openSoftCopyModal();
+                  return;
+                }
+              }
+
+              const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
+              const verifiedBOM = accountsVerificationModal;
+              setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
+                ...b,
+                accountsVerification: { paymentStatus: currentPayStatus, hardCopyReceived: hardCopy, softCopyReceived: softCopy, verified: true },
+                status: 'Accounts Verified & Passed to Invoice'
+              } : b));
+              const newInvNo = `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
+              const newInvEntry = {
+                invNo: newInvNo,
+                date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                vendor: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
+                poNo: targetCode,
+                grnNo: 'GRN-VERIFIED',
+                invAmt: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                poVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                grnVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                diff: '0.00', match: 'Matched', pay: 'Ready',
+                status: 'Ready for Payment',
+                items: verifiedBOM.items || [],
+                billingAddress: verifiedBOM.billingAddress,
+                billingAddressObj: verifiedBOM.billingAddressObj,
+                deliveryAddress: verifiedBOM.deliveryAddress,
+                deliveryAddressObj: verifiedBOM.deliveryAddressObj,
+                deliveryAddressProofDoc: verifiedBOM.deliveryAddressProofDoc || null,
+                sameAsBilling: verifiedBOM.sameAsBilling
+              };
+              setInvoiceList(prev => [newInvEntry, ...(prev || [])]);
+              setAccountsVerificationModal(null);
+              alert(`Accounts Verification Approved for ${bomCodeText}.\nInvoice (${newInvNo}) created and passed to Invoice Management.`);
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+                {/* ─── GRADIENT HEADER BANNER ─── */}
+                <div style={{
+                  background: isVerified
+                    ? 'linear-gradient(135deg, #064E3B 0%, #065F46 100%)'
+                    : isPartialVerified
+                      ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)'
+                      : 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
+                  borderRadius: '16px',
+                  padding: '24px 28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: isVerified ? '0 8px 24px rgba(6,78,59,0.35)' : isPartialVerified ? '0 8px 24px rgba(120,53,15,0.35)' : '0 8px 24px rgba(30,58,138,0.35)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <button
+                      onClick={() => setAccountsVerificationModal(null)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+                        borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: '700',
+                        color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
+                    >
+                      <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back
+                    </button>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.2px' }}>
+                          Accounts Payment & Document Verification
+                        </h1>
+                        <span style={{
+                          backgroundColor: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.35)',
+                          color: '#FFFFFF', padding: '3px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800'
+                        }}>
+                          {bomCodeText}
+                        </span>
+                        <span style={{
+                          backgroundColor: isAlreadyCompleted ? '#DCFCE7' : isVerified ? '#DCFCE7' : isPartialVerified ? '#FEF3C7' : '#DBEAFE',
+                          color: isAlreadyCompleted ? '#166534' : isVerified ? '#166534' : isPartialVerified ? '#92400E' : '#1E40AF',
+                          padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: (isAlreadyCompleted || isVerified) ? '#22C55E' : isPartialVerified ? '#F97316' : '#60A5FA' }}></span>
+                          {isAlreadyCompleted ? 'VERIFICATION COMPLETED & INVOICED' : isVerified ? 'FULLY VERIFIED' : isPartialVerified ? 'PARTIALLY VERIFIED' : 'PENDING VERIFICATION'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <span>Customer: <strong style={{ color: '#FFFFFF' }}>{custNameText}</strong></span>
+                        <span>•</span>
+                        <span>Payment Terms: <strong style={{ color: '#FFFFFF' }}>{payTypeText}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!isAlreadyCompleted && (
+                    <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => setAccountsVerificationModal(null)}
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)',
+                          color: '#FFFFFF', height: '42px', padding: '0 20px', borderRadius: '10px',
+                          fontSize: '13px', fontWeight: '700', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={completeVerification}
+                        style={{
+                          border: 'none', backgroundColor: '#FFFFFF',
+                          color: isVerified ? '#065F46' : isPartialVerified ? '#92400E' : '#1E40AF',
+                          height: '42px', padding: '0 22px', borderRadius: '10px',
+                          fontSize: '13px', fontWeight: '900', cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                          display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '16px', height: '16px' }} />
+                        Complete Verification & Create Invoice
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ─── 4 STAT CARDS ─── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                  {/* Payment Status Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
+                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(37,99,235,0.25)'
+                    }}>
+                      <Receipt style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Type</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A', lineHeight: 1.3 }}>{payTypeText}</div>
+                    </div>
+                  </div>
+
+                  {/* Order Value Card */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
+                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: 'linear-gradient(135deg, #166534, #16A34A)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(22,101,52,0.25)'
+                    }}>
+                      <IndianRupee style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Value</div>
+                      <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2 }}>
+                        ₹ {orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hard Copy Status Card */}
+                  <div style={{
+                    backgroundColor: hardCopy ? '#F0FDF4' : '#FFFFFF', borderRadius: '14px', border: `1px solid ${hardCopy ? '#BBF7D0' : '#E2E8F0'}`,
+                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: hardCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: hardCopy ? '0 4px 10px rgba(22,101,52,0.25)' : 'none'
+                    }}>
+                      <FileText style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hard Copy</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: hardCopy ? '#166534' : '#64748B', lineHeight: 1.3 }}>
+                        {hardCopy ? 'Received' : 'Pending'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Soft Copy Status Card */}
+                  <div style={{
+                    backgroundColor: softCopy ? '#F0FDF4' : '#FFFFFF', borderRadius: '14px',
+                    border: `1px solid ${softCopy ? '#BBF7D0' : '#E2E8F0'}`,
+                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
+                  }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                      background: softCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: softCopy ? '0 4px 10px rgba(22,101,52,0.25)' : 'none'
+                    }}>
+                      <Smartphone style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Soft Copy</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: softCopy ? '#166534' : '#64748B', lineHeight: 1.3 }}>
+                        {softCopy ? 'Received' : 'Pending'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── TWO COLUMN LAYOUT: PAYMENT VERIFICATION + DOCUMENT VERIFICATION ─── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+                  {/* SECTION 1: PAYMENT VERIFICATION */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden'
+                  }}>
+                    {/* Card Header */}
+                    <div style={{
+                      padding: '16px 22px', borderBottom: '2px solid #F1F5F9',
+                      background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
+                      display: 'flex', alignItems: 'center', gap: '10px'
+                    }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
+                      }}>
+                        <Receipt style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Payment Verification</h3>
+                        <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Confirm & record customer payment receipt</p>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {/* Payment status dropdown */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '8px' }}>
+                          Customer Payment Status {isAlreadyCompleted && <span style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>(Verified • Read Only)</span>}
+                        </label>
+                        <select
+                          disabled={isAlreadyCompleted}
+                          value={currentPayStatus}
+                          onChange={(e) => {
+                            if (isAlreadyCompleted) return;
+                            const val = e.target.value;
+                            setAccountsVerificationModal(prev => prev ? ({
+                              ...prev,
+                              accountsVerification: { ...(prev.accountsVerification || {}), paymentStatus: val }
+                            }) : null);
+                          }}
+                          style={{
+                            width: '100%', height: '44px', borderRadius: '10px',
+                            border: '1px solid #CBD5E1', padding: '0 14px',
+                            fontSize: '13px', fontWeight: '600', color: '#0F172A',
+                            outline: 'none', backgroundColor: isAlreadyCompleted ? '#F1F5F9' : '#FFFFFF',
+                            cursor: isAlreadyCompleted ? 'not-allowed' : 'pointer',
+                            opacity: isAlreadyCompleted ? 0.9 : 1
+                          }}
+                        >
+                          <option value="Payment Received — 100%">Payment Received — 100%</option>
+                          <option value="Payment Received — 50%">Payment Received — 50% Advance</option>
+                          <option value="Credit Payment">Credit Payment (Net 30 Days)</option>
+                        </select>
+                      </div>
+
+                      {/* Current payment status badge */}
+                      <div style={{
+                        padding: '14px 18px', borderRadius: '12px',
+                        backgroundColor: currentPayConfig.bg,
+                        border: `1px solid ${currentPayConfig.color}30`,
+                        display: 'flex', alignItems: 'center', gap: '12px'
+                      }}>
+                        <div style={{
+                          width: '36px', height: '36px', borderRadius: '10px',
+                          backgroundColor: currentPayConfig.color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#FFFFFF', flexShrink: 0
+                        }}>
+                          {currentPayConfig.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: currentPayConfig.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Current Status
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: '800', color: currentPayConfig.color }}>
+                            {currentPayConfig.label}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Proof Document (Viewable) */}
+                      <div
+                        onClick={() => setViewingProofDocModal(accountsVerificationModal)}
+                        style={{
+                          padding: '14px 18px', borderRadius: '12px',
+                          backgroundColor: '#F8FAFC', border: '1.5px solid #CBD5E1',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '12px', cursor: 'pointer', transition: 'all 0.15s ease',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#2563EB';
+                          e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#CBD5E1';
+                          e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{
+                            width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0,
+                            backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <FileText style={{ width: '18px', height: '18px', color: '#2563EB' }} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              Recorded Proof Document
+                            </div>
+                            <div style={{
+                              fontSize: '13px', fontWeight: '800', color: '#2563EB', marginTop: '2px',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                            }}>
+                              {(accountsVerificationModal.payments && accountsVerificationModal.payments.proofDoc) || 'Uploaded_Payment_Receipt.pdf'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          padding: '5px 12px', borderRadius: '8px',
+                          backgroundColor: '#2563EB', color: '#FFFFFF',
+                          fontSize: '11px', fontWeight: '800', flexShrink: 0,
+                          boxShadow: '0 2px 4px rgba(37,99,235,0.25)'
+                        }}>
+                          <Eye style={{ width: '13px', height: '13px' }} />
+                          View Proof
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: BOM DOCUMENT COPY VERIFICATION */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden'
+                  }}>
+                    {/* Card Header */}
+                    <div style={{
+                      padding: '16px 22px', borderBottom: '2px solid #F1F5F9',
+                      background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
+                      display: 'flex', alignItems: 'center', gap: '10px'
+                    }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #B45309, #D97706)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(180,83,9,0.25)'
+                      }}>
+                        <FileText style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>BOM Document Copy Verification</h3>
+                        <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Confirm physical & digital copies received from Dispatch</p>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Hard Copy Card */}
+                      <div
+                        onClick={() => {
+                          if (isAlreadyCompleted) return;
+                          setAccountsVerificationModal(prev => prev ? ({
+                            ...prev,
+                            accountsVerification: { ...(prev.accountsVerification || {}), hardCopyReceived: !hardCopy }
+                          }) : null);
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '16px',
+                          padding: '18px 20px', borderRadius: '14px',
+                          border: hardCopy ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
+                          backgroundColor: hardCopy ? '#F0FDF4' : '#FAFBFC',
+                          cursor: isAlreadyCompleted ? 'default' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {/* Custom checkbox */}
+                        <div style={{
+                          width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0,
+                          backgroundColor: hardCopy ? '#166534' : '#FFFFFF',
+                          border: hardCopy ? '2px solid #166534' : '2px solid #CBD5E1',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: hardCopy ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          {hardCopy && <CheckCircle style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />}
+                        </div>
+
+                        {/* Icon */}
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
+                          background: hardCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: hardCopy ? '0 3px 8px rgba(22,101,52,0.3)' : 'none'
+                        }}>
+                          <FileText style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '14px', fontWeight: '800', color: hardCopy ? '#166534' : '#1E293B' }}>
+                            Hard Copy Received
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                            {isAlreadyCompleted ? 'Verified physical paper copy delivered by Dispatch' : 'Physical paper BOM delivered by Dispatch Team'}
+                          </div>
+                        </div>
+
+                        <span style={{
+                          padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                          backgroundColor: hardCopy ? '#DCFCE7' : '#F1F5F9',
+                          color: hardCopy ? '#166534' : '#94A3B8',
+                          border: `1px solid ${hardCopy ? '#BBF7D0' : '#E2E8F0'}`
+                        }}>
+                          {hardCopy ? 'Verified' : 'Pending'}
+                        </span>
+                      </div>
+
+                      {/* Soft Copy Card */}
+                      <div
+                        onClick={() => {
+                          if (isAlreadyCompleted) return;
+                          openSoftCopyModal();
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '16px',
+                          padding: '18px 20px', borderRadius: '14px',
+                          border: softCopy ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
+                          backgroundColor: softCopy ? '#F0FDF4' : '#FAFBFC',
+                          cursor: isAlreadyCompleted ? 'default' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{
+                          width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0,
+                          backgroundColor: softCopy ? '#166534' : '#FFFFFF',
+                          border: softCopy ? '2px solid #166534' : '2px solid #CBD5E1',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: softCopy ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          {softCopy && <CheckCircle style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />}
+                        </div>
+
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
+                          background: softCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: softCopy ? '0 3px 8px rgba(22,101,52,0.3)' : 'none'
+                        }}>
+                          <Camera style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: softCopy ? '#166534' : '#1E293B' }}>
+                              Soft Copy Received
+                            </span>
+                            {softCopy && (
+                              <span style={{
+                                fontSize: '11px', fontWeight: '700', color: '#166534',
+                                backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '6px',
+                                border: '1px solid #BBF7D0'
+                              }}>
+                                {(softCopyDoc && softCopyDoc.name) || 'Digital Copy Attached'}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                            {isAlreadyCompleted
+                              ? `Verified soft copy attached via ${softCopyDoc?.capturedVia || 'Camera / Upload'}`
+                              : softCopy
+                                ? `Attached via ${softCopyDoc?.capturedVia || 'Camera / Upload'} · Click to replace`
+                                : 'Click to capture live photo with camera or upload soft copy document'}
+                          </div>
+                        </div>
+
+                        <span style={{
+                          padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                          backgroundColor: softCopy ? '#DCFCE7' : '#EFF6FF',
+                          color: softCopy ? '#166534' : '#2563EB',
+                          border: `1px solid ${softCopy ? '#BBF7D0' : '#BFDBFE'}`
+                        }}>
+                          {isAlreadyCompleted ? 'Verified' : softCopy ? 'Attached' : 'Upload / Snap Photo'}
+                        </span>
+                      </div>
+
+                      {/* Overall status footer */}
+                      <div style={{
+                        marginTop: '4px', padding: '12px 16px', borderRadius: '10px',
+                        backgroundColor: (hardCopy && softCopy) ? '#DCFCE7' : '#FFF7ED',
+                        border: `1px solid ${(hardCopy && softCopy) ? '#BBF7D0' : '#FED7AA'}`,
+                        fontSize: '12px', fontWeight: '700',
+                        color: (hardCopy && softCopy) ? '#166534' : '#C2410C',
+                        display: 'flex', alignItems: 'center', gap: '8px'
+                      }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: (hardCopy && softCopy) ? '#22C55E' : '#F97316', flexShrink: 0 }}></span>
+                        {hardCopy && softCopy
+                          ? 'Both document copies received and verified'
+                          : hardCopy ? 'Hard copy received · Soft copy still pending'
+                          : softCopy ? 'Soft copy received · Hard copy still pending'
+                          : 'Both document copies are pending from Dispatch Team'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── CUSTOMER ADDRESSES & MANDATORY ADDRESS PROOF INSPECTION ─── */}
+                {(() => {
+                  const bObj = accountsVerificationModal.billingAddressObj || {};
+                  const dObj = accountsVerificationModal.deliveryAddressObj || {};
+                  const bAddr = accountsVerificationModal.billingAddress || bObj.address || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
+                  const dAddr = accountsVerificationModal.deliveryAddress || dObj.address || bAddr;
+                  const proofDoc = accountsVerificationModal.deliveryAddressProofDoc;
+                  const isSame = Boolean(accountsVerificationModal.sameAsBilling || (bAddr.trim() === dAddr.trim()));
+
+                  return (
+                    <div style={{
+                      backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Truck style={{ width: '16px', height: '16px' }} />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Registered Addresses & Delivery Address Proof</h3>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>Verify customer consignee destination & mandatory proof before invoice creation</span>
+                          </div>
+                        </div>
+                        {isSame ? (
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px' }}>
+                            ✓ Delivery Matches Billing Address
+                          </span>
+                        ) : proofDoc ? (
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px' }}>
+                            ✓ Alternate Address Proof Verified
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '4px 12px', borderRadius: '12px' }}>
+                            ⚠️ Alternate Address (Proof Required)
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '16px', alignItems: 'stretch' }}>
+                        {/* Billing Address */}
+                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Billing Address</span>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#1E293B', lineHeight: '1.4' }}>{bAddr}</span>
+                        </div>
+
+                        {/* Delivery Address */}
+                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Delivery Address</span>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#1E293B', lineHeight: '1.4' }}>{dAddr}</span>
+                        </div>
+
+                        {/* Address Proof File */}
+                        <div style={{ backgroundColor: proofDoc ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${proofDoc ? '#86EFAC' : '#E2E8F0'}`, borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <FileCheck style={{ width: '22px', height: '22px', color: proofDoc ? '#166534' : '#64748B', flexShrink: 0 }} />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '11px', fontWeight: '800', color: proofDoc ? '#166534' : '#64748B', textTransform: 'uppercase' }}>Delivery Address Proof</div>
+                              <div style={{ fontSize: '12px', fontWeight: '700', color: proofDoc ? '#0F172A' : '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {proofDoc ? proofDoc.name : isSame ? 'Not Required (Same as Billing)' : 'Pending from Sales'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {proofDoc && (
+                            <button
+                              onClick={() => setPreviewAddressProofModal({
+                                name: proofDoc.name,
+                                size: proofDoc.size || '1.2 MB',
+                                customer: custNameText,
+                                billingAddress: bAddr,
+                                deliveryAddress: dAddr,
+                                bomRef: bomCodeText
+                              })}
+                              style={{ border: 'none', backgroundColor: '#166534', color: 'white', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                            >
+                              <Eye style={{ width: '12px', height: '12px' }} /> View Proof
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ─── SECTION 3: BOM HARD COPY DOCUMENT PREVIEW & BREAKDOWN TABLE ─── */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  overflow: 'hidden'
+                }}>
+                  {/* Toolbar & View Switcher */}
+                  <div style={{
+                    padding: '16px 24px',
+                    borderBottom: '2px solid #F1F5F9',
+                    background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '14px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #0F172A, #334155)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(15,23,42,0.25)'
+                      }}>
+                        <FileCheck style={{ width: '18px', height: '18px', color: '#FFFFFF' }} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                            BOM Hard Copy Document Inspection
+                          </h3>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '800',
+                            backgroundColor: hardCopy ? '#DCFCE7' : '#FEF3C7',
+                            color: hardCopy ? '#166534' : '#92400E',
+                            border: `1px solid ${hardCopy ? '#BBF7D0' : '#FDE68A'}`
+                          }}>
+                            {hardCopy ? 'Hard Copy Delivered' : 'Awaiting Physical Paper'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                          Verify items, quantities, and rates against the physical paper BOM delivered by Dispatch.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* View Switcher Buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F1F5F9', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                      <button
+                        onClick={() => setAccountsBomViewMode('paper')}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          border: 'none',
+                          backgroundColor: accountsBomViewMode === 'paper' ? '#FFFFFF' : 'transparent',
+                          color: accountsBomViewMode === 'paper' ? '#0F172A' : '#64748B',
+                          padding: '6px 14px', borderRadius: '8px',
+                          fontSize: '12px', fontWeight: accountsBomViewMode === 'paper' ? '800' : '600',
+                          cursor: 'pointer',
+                          boxShadow: accountsBomViewMode === 'paper' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <FileText style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'paper' ? '#2563EB' : '#64748B' }} />
+                        Paper BOM Sheet View
+                      </button>
+
+                      <button
+                        onClick={() => setAccountsBomViewMode('table')}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          border: 'none',
+                          backgroundColor: accountsBomViewMode === 'table' ? '#FFFFFF' : 'transparent',
+                          color: accountsBomViewMode === 'table' ? '#0F172A' : '#64748B',
+                          padding: '6px 14px', borderRadius: '8px',
+                          fontSize: '12px', fontWeight: accountsBomViewMode === 'table' ? '800' : '600',
+                          cursor: 'pointer',
+                          boxShadow: accountsBomViewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Layers style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'table' ? '#2563EB' : '#64748B' }} />
+                        Itemized Table View
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ─── VIEW 1: AUTHENTIC PAPER BOM DOCUMENT SHEET (HARD COPY VIEW) ─── */}
+                  {accountsBomViewMode === 'paper' ? (
+                    <div style={{ padding: '24px', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'center' }}>
+                      <div style={{
+                        maxWidth: '900px',
+                        width: '100%',
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        border: '1px solid #CBD5E1',
+                        padding: '36px 40px',
+                        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
+                        position: 'relative'
+                      }}>
+                        {/* Watermark/Stamp if hard copy verified */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '36px',
+                          right: '40px',
+                          border: hardCopy ? '3px dashed #166534' : '3px dashed #D97706',
+                          borderRadius: '8px',
+                          padding: '6px 14px',
+                          color: hardCopy ? '#166534' : '#D97706',
+                          fontWeight: '900',
+                          fontSize: '12px',
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          transform: 'rotate(-4deg)',
+                          backgroundColor: hardCopy ? 'rgba(240, 253, 244, 0.85)' : 'rgba(254, 243, 199, 0.85)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}>
+                          <span>{hardCopy ? 'HARD COPY RECEIVED' : 'HARD COPY PENDING'}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.5px' }}>
+                            {hardCopy ? 'ACCOUNTS DESK VERIFIED' : 'DISPATCH DESK TRANSIT'}
+                          </span>
+                        </div>
+
+                        {/* Document Header */}
+                        <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '16px', marginBottom: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>
+                              CONTROLROOM INDUSTRIAL MANUFACTURING PVT LTD
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
+                            Works: Plot 14, Phase II, Nagappa Industrial Estate, Puzhal, Chennai – 600066, Tamil Nadu, India<br />
+                            GSTIN: 33AAACC4451R1ZV • Email: dispatch@controlroom.io • Phone: +91 (044) 2854-9900
+                          </div>
+                        </div>
+
+                        {/* Document Title Banner */}
+                        <div style={{
+                          backgroundColor: '#F1F5F9',
+                          padding: '10px 16px',
+                          borderRadius: '6px',
+                          marginBottom: '20px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <span style={{ fontSize: '13px', fontWeight: '900', color: '#0F172A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                            BILL OF MATERIALS & GOODS DISPATCH MEMO (HARD COPY)
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB' }}>
+                            DOC REF: {bomCodeText}
+                          </span>
+                        </div>
+
+                        {/* Meta 2-column info */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', fontSize: '12px' }}>
+                          <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                              CUSTOMER / BILLED TO
+                            </div>
+                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>{custNameText}</div>
+                            <div style={{ color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
+                              {accountsVerificationModal.deliveryAddress || 'Plot 14, Nagappa Industrial Estate, Puzhal, Chennai – 600066.'}
+                            </div>
+                            <div style={{ marginTop: '6px', color: '#64748B' }}>
+                              Payment Terms: <strong style={{ color: '#0F172A' }}>{payTypeText}</strong>
+                            </div>
+                          </div>
+
+                          <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                              DISPATCH & VOUCHER DETAILS
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', color: '#475569' }}>
+                              <span style={{ fontWeight: '700' }}>BOM Number:</span>
+                              <span style={{ fontWeight: '800', color: '#0F172A' }}>{bomCodeText}</span>
+                              <span style={{ fontWeight: '700' }}>Date of Dispatch:</span>
+                              <span>17-Aug-2026</span>
+                              <span style={{ fontWeight: '700' }}>Dispatch Vehicle:</span>
+                              <span>TN-05-DZ-4419 (Direct Truck)</span>
+                              <span style={{ fontWeight: '700' }}>Dispatch Inspector:</span>
+                              <span>Arun (Dispatch Team Head)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Document Items Table */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF' }}>
+                              <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '11px' }}>S.No</th>
+                              <th style={{ padding: '10px 12px', width: '90px', fontSize: '11px' }}>Part Code</th>
+                              <th style={{ padding: '10px 12px', fontSize: '11px' }}>Item Description & Specification</th>
+                              <th style={{ padding: '10px 12px', width: '70px', textAlign: 'center', fontSize: '11px' }}>BOM Qty</th>
+                              <th style={{ padding: '10px 12px', width: '50px', textAlign: 'center', fontSize: '11px' }}>UoM</th>
+                              <th style={{ padding: '10px 12px', width: '90px', textAlign: 'right', fontSize: '11px' }}>Rate (₹)</th>
+                              <th style={{ padding: '10px 12px', width: '100px', textAlign: 'right', fontSize: '11px' }}>Amount (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { code: 'PRD-001', name: 'Long Rail 3000 mm', desc: '3 Meter Heavy Duty Extruded Aluminum Rail (Anodized 15 Micron)', qty: 8, uom: 'Nos', rate: 1800, amt: 14400 },
+                              { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Short Rail for Landscape Panel Mounting with EPDM Rubber', qty: 12, uom: 'Nos', rate: 450, amt: 5400 },
+                              { code: 'PRD-003', name: 'Mid Clamp 35 mm', desc: 'Anodized Aluminum Module Mid Fastener Clamp + SS304 Fastener', qty: 24, uom: 'Nos', rate: 85, amt: 2040 },
+                              { code: 'PRD-004', name: 'End Clamp 35 mm', desc: 'Anodized Aluminum Module End Fastener Clamp + SS304 Fastener', qty: 16, uom: 'Nos', rate: 95, amt: 1520 },
+                              { code: 'PRD-005', name: 'Raw Aluminum Coil 1.5mm', desc: 'Grade 6063 Aluminum Raw Coil (25kg bundle pack)', qty: 2, uom: 'Nos', rate: 10382, amt: 20764 }
+                            ].map((it, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                                <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
+                                <td style={{ padding: '10px 12px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
+                                <td style={{ padding: '10px 12px' }}>
+                                  <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
+                                </td>
+                                <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>{it.qty}</td>
+                                <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B' }}>{it.uom}</td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>{it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        {/* Calculation Summary & Signatures */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', borderTop: '2px solid #0F172A', paddingTop: '16px', fontSize: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>Declaration & Terms:</div>
+                            <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 16px 0', lineHeight: '1.4' }}>
+                              We declare that this Bill of Materials accurately represents the physical goods inspected and packed for dispatch. Verified physical hard copy is filed in Accounts & Logistics records.
+                            </p>
+
+                            {/* Signatures */}
+                            <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+                              <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Dispatch Head Sign</span>
+                                <div style={{ fontSize: '10px', color: '#166534', fontWeight: '800', marginTop: '2px' }}>Arun (Dispatch Verified)</div>
+                              </div>
+                              <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Accounts Officer Sign</span>
+                                <div style={{ fontSize: '10px', color: hardCopy ? '#166534' : '#D97706', fontWeight: '800', marginTop: '2px' }}>
+                                  {hardCopy ? 'Received & Verified' : 'Pending Signature'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Financial Totals */}
+                          <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
+                              <span>Taxable Subtotal:</span>
+                              <strong style={{ color: '#0F172A' }}>₹ 44,124.00</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
+                              <span>CGST @ 9%:</span>
+                              <span>₹ 3,968.80</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#475569' }}>
+                              <span>SGST @ 9%:</span>
+                              <span>₹ 3,968.80</span>
+                            </div>
+                            <div style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              borderTop: '2px solid #0F172A', paddingTop: '10px',
+                              fontSize: '15px', fontWeight: '900', color: '#0F172A'
+                            }}>
+                              <span>Grand Total:</span>
+                              <span style={{ color: '#166534' }}>
+                                ₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ─── VIEW 2: INTERACTIVE BOM TABLE VIEW ─── */
+                    <div style={{ overflowX: 'auto', width: '100%' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                            <th style={{ padding: '13px 16px', width: '50px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
+                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Code</th>
+                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Description</th>
+                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Required Qty</th>
+                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Unit Rate (₹)</th>
+                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Line Total (₹)</th>
+                            <th style={{ padding: '13px 20px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Physical Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { code: 'PRD-001', name: 'Long Rail 3000 mm', desc: '3 Meter Heavy Duty Extruded Aluminum Rail', qty: 8, uom: 'Nos', rate: 1800, amt: 14400, packed: true },
+                            { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Short Rail for Landscape Mount', qty: 12, uom: 'Nos', rate: 450, amt: 5400, packed: true },
+                            { code: 'PRD-003', name: 'Mid Clamp 35 mm', desc: 'Anodized Module Fastening Mid Clamp', qty: 24, uom: 'Nos', rate: 85, amt: 2040, packed: true },
+                            { code: 'PRD-004', name: 'End Clamp 35 mm', desc: 'Anodized Module Fastening End Clamp', qty: 16, uom: 'Nos', rate: 95, amt: 1520, packed: true },
+                            { code: 'PRD-005', name: 'Raw Aluminum Coil 1.5mm', desc: 'Grade 6063 Aluminum Raw Coil', qty: 2, uom: 'Nos', rate: 10382, amt: 20764, packed: true }
+                          ].map((it, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFBFC' }}>
+                              <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
+                              <td style={{ padding: '14px 16px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
+                              <td style={{ padding: '14px 16px' }}>
+                                <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
+                                <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>
+                                {it.qty} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>{it.uom}</span>
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'right', color: '#475569' }}>
+                                ₹ {it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
+                                ₹ {it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                  padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                                  backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0'
+                                }}>
+                                  <CheckCircle style={{ width: '12px', height: '12px' }} />
+                                  Packed in BOM
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Document Section Footer */}
+                  <div style={{
+                    padding: '14px 24px',
+                    borderTop: '1px solid #F1F5F9',
+                    backgroundColor: '#FAFBFC',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#64748B' }}>
+                      Showing 5 verified BOM line items
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#475569' }}>
+                      Total Verified Order Value: <strong style={{ color: '#0F172A', fontSize: '14px', fontWeight: '900' }}>₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* ─── FOOTER SAVE BAR (Only in Verification Mode) ─── */}
+                {!isAlreadyCompleted && (
+                  <div style={{
+                    backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
+                    padding: '16px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#64748B' }}>
+                      Click any document card to toggle verification status. Or reissue to dispatch for physical re-verification.
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
+                          const reissueTime = new Date().toISOString();
+                          
+                          setBomStore(prev => prev.map(b => b.bomCode === targetCode ? {
+                            ...b,
+                            status: 'Cancelled & Reissued to Dispatch',
+                            isAccountsDone: false,
+                            reissuedByAccounts: true,
+                            reissuedAt: reissueTime,
+                            reissueCount: (b.reissueCount || 0) + 1,
+                            accountsVerification: {
+                              verified: false,
+                              paymentStatus: null,
+                              hardCopyReceived: false,
+                              softCopyReceived: false,
+                              reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
+                            },
+                            dispatchPacking: (b.items || []).map(it => ({
+                              name: it.name,
+                              bomQty: it.qty || 1,
+                              packed: false
+                            }))
+                          } : b));
+
+                          setAccountsVerificationModal(null);
+                          alert(`🔄 BOM (${targetCode}) marked as Cancelled & Reissued back to Dispatch team for physical re-verification and packing!`);
+                        }}
+                        style={{
+                          border: '1px solid #FCA5A5',
+                          backgroundColor: '#FEF2F2',
+                          color: '#DC2626',
+                          height: '42px',
+                          padding: '0 20px',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <RotateCcw style={{ width: '15px', height: '15px' }} />
+                        Reissue to Dispatch
+                      </button>
+
+                      <button
+                        onClick={completeVerification}
+                        style={{
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #064E3B, #166534)',
+                          color: '#FFFFFF', height: '42px', padding: '0 28px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          cursor: 'pointer', boxShadow: '0 4px 12px rgba(6,78,59,0.3)',
+                          display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                      >
+                        <CheckCircle style={{ width: '15px', height: '15px' }} />
+                        Complete Verification & Generate Invoice
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── SOFT COPY ATTACHMENT & LIVE CAMERA MODAL ─── */}
+                {showSoftCopyModal && (
+                  <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(5px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10000,
+                    padding: '20px',
+                    fontFamily: "'DM Sans', sans-serif"
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '20px',
+                      maxWidth: '620px',
+                      width: '100%',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                      overflow: 'hidden',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      maxHeight: '90vh'
+                    }}>
+                      {/* Modal Header */}
+                      <div style={{
+                        padding: '20px 24px',
+                        borderBottom: '1px solid #F1F5F9',
+                        background: 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
+                        color: '#FFFFFF',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '38px', height: '38px', borderRadius: '10px',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <Camera style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
+                          </div>
+                          <div>
+                            <h2 style={{ fontSize: '17px', fontWeight: '900', margin: 0, color: '#FFFFFF' }}>
+                              Attach BOM Soft Copy Proof
+                            </h2>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '2px 0 0 0' }}>
+                              Upload a digital scan or capture live on-spot photo for {bomCodeText}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={closeSoftCopyModal}
+                          style={{
+                            background: 'rgba(255,255,255,0.15)', border: 'none',
+                            color: '#FFFFFF', width: '32px', height: '32px', borderRadius: '8px',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                        >
+                          <X style={{ width: '18px', height: '18px' }} />
+                        </button>
+                      </div>
+
+                      {/* Mode Switcher Tabs */}
+                      <div style={{ padding: '16px 24px 0 24px', backgroundColor: '#F8FAFC' }}>
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
+                          backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '12px'
+                        }}>
+                          <button
+                            onClick={() => {
+                              stopCamera();
+                              setSoftCopyMode('upload');
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                              padding: '10px', borderRadius: '9px', border: 'none',
+                              backgroundColor: softCopyMode === 'upload' ? '#FFFFFF' : 'transparent',
+                              color: softCopyMode === 'upload' ? '#1E40AF' : '#64748B',
+                              fontSize: '13px', fontWeight: softCopyMode === 'upload' ? '800' : '600',
+                              cursor: 'pointer',
+                              boxShadow: softCopyMode === 'upload' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <UploadCloud style={{ width: '16px', height: '16px' }} />
+                            File Upload (PDF / Image)
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSoftCopyMode('camera');
+                              startCamera();
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                              padding: '10px', borderRadius: '9px', border: 'none',
+                              backgroundColor: softCopyMode === 'camera' ? '#FFFFFF' : 'transparent',
+                              color: softCopyMode === 'camera' ? '#166534' : '#64748B',
+                              fontSize: '13px', fontWeight: softCopyMode === 'camera' ? '800' : '600',
+                              cursor: 'pointer',
+                              boxShadow: softCopyMode === 'camera' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <Camera style={{ width: '16px', height: '16px' }} />
+                            Live Camera Capture
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Modal Body */}
+                      <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
+                        {softCopyMode === 'upload' ? (
+                          /* ─── UPLOAD MODE ─── */
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <label style={{
+                              border: '2px dashed #CBD5E1', borderRadius: '14px', padding: '32px 20px',
+                              backgroundColor: '#FFFFFF', textAlign: 'center', cursor: 'pointer',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+                              transition: 'all 0.15s ease'
+                            }}>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={handleFileUpload}
+                                style={{ display: 'none' }}
+                              />
+                              <div style={{
+                                width: '52px', height: '52px', borderRadius: '14px',
+                                backgroundColor: '#EFF6FF', color: '#2563EB',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}>
+                                <UploadCloud style={{ width: '26px', height: '26px' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                                  Click to browse or drop document / photo here
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                                  Supports PDF, PNG, JPG, JPEG (Max: 10 MB)
+                                </div>
+                              </div>
+                            </label>
+
+                            {/* Selected File Card */}
+                            {selectedSoftCopyFile && (
+                              <div style={{
+                                backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '14px 18px',
+                                border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{
+                                    width: '36px', height: '36px', borderRadius: '8px',
+                                    backgroundColor: '#DCFCE7', color: '#166534',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                  }}>
+                                    <FileText style={{ width: '18px', height: '18px' }} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                                      {selectedSoftCopyFile.name}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>
+                                      Ready to attach • {selectedSoftCopyFile.size}
+                                    </div>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setSelectedSoftCopyFile(null)}
+                                  style={{
+                                    border: 'none', background: '#FEE2E2', color: '#DC2626',
+                                    width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                  }}
+                                >
+                                  <Trash2 style={{ width: '14px', height: '14px' }} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* ─── LIVE CAMERA MODE ─── */
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                            <canvas ref={cameraCanvasRef} style={{ display: 'none' }} />
+
+                            {cameraErrorMsg ? (
+                              <div style={{
+                                backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px',
+                                padding: '16px', color: '#B91C1C', fontSize: '13px', textAlign: 'center', width: '100%'
+                              }}>
+                                <div style={{ fontWeight: '800', marginBottom: '4px' }}>Camera Permission Notice</div>
+                                {cameraErrorMsg}
+                                <div style={{ marginTop: '12px' }}>
+                                  <button
+                                    onClick={() => {
+                                      setSoftCopyMode('upload');
+                                    }}
+                                    style={{
+                                      border: 'none', backgroundColor: '#B91C1C', color: '#FFFFFF',
+                                      padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                                    }}
+                                  >
+                                    Switch to File Upload
+                                  </button>
+                                </div>
+                              </div>
+                            ) : capturedPhotoUrl ? (
+                              /* Photo Captured Preview */
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', width: '100%' }}>
+                                <div style={{
+                                  position: 'relative', width: '100%', maxHeight: '300px', borderRadius: '14px',
+                                  overflow: 'hidden', border: '2px solid #22C55E', backgroundColor: '#000000'
+                                }}>
+                                  <img
+                                    src={capturedPhotoUrl}
+                                    alt="Captured Soft Copy"
+                                    style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'contain', display: 'block' }}
+                                  />
+                                  <div style={{
+                                    position: 'absolute', top: '10px', left: '10px',
+                                    backgroundColor: 'rgba(22,101,52,0.9)', color: '#FFFFFF',
+                                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800'
+                                  }}>
+                                    Photo Captured Ready
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                                  <button
+                                    onClick={startCamera}
+                                    style={{
+                                      flex: 1, height: '40px', borderRadius: '10px',
+                                      border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF',
+                                      color: '#475569', fontSize: '13px', fontWeight: '700',
+                                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                                    }}
+                                  >
+                                    <RefreshCw style={{ width: '14px', height: '14px' }} />
+                                    Retake Photo
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* Live Camera Stream View */
+                              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+                                <div style={{
+                                  position: 'relative', width: '100%', minHeight: '260px', borderRadius: '14px',
+                                  overflow: 'hidden', backgroundColor: '#0F172A', border: '2px solid #3B82F6',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                  <video
+                                    ref={cameraVideoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    style={{ width: '100%', height: '100%', maxHeight: '300px', objectFit: 'cover' }}
+                                  />
+                                  {!cameraActive && (
+                                    <div style={{ position: 'absolute', color: '#94A3B8', fontSize: '13px', fontWeight: '700' }}>
+                                      Initializing device camera...
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    position: 'absolute', top: '10px', right: '10px',
+                                    backgroundColor: 'rgba(220,38,38,0.85)', color: '#FFFFFF',
+                                    padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800',
+                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                  }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FFFFFF' }}></span>
+                                    LIVE CAMERA
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={capturePhoto}
+                                  style={{
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #166534, #16A34A)',
+                                    color: '#FFFFFF', height: '44px', width: '100%',
+                                    borderRadius: '12px', fontSize: '14px', fontWeight: '800',
+                                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(22,101,52,0.3)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                  }}
+                                >
+                                  <Camera style={{ width: '18px', height: '18px' }} />
+                                  Snap Photo On The Spot
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Modal Footer */}
+                      <div style={{
+                        padding: '16px 24px',
+                        backgroundColor: '#FFFFFF',
+                        borderTop: '1px solid #E2E8F0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <button
+                          onClick={closeSoftCopyModal}
+                          style={{
+                            border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF',
+                            color: '#475569', height: '40px', padding: '0 20px',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          onClick={confirmSoftCopyAttachment}
+                          disabled={!selectedSoftCopyFile && !capturedPhotoUrl}
+                          style={{
+                            border: 'none',
+                            background: (selectedSoftCopyFile || capturedPhotoUrl)
+                              ? 'linear-gradient(135deg, #064E3B, #166534)'
+                              : '#CBD5E1',
+                            color: '#FFFFFF',
+                            height: '40px',
+                            padding: '0 24px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            cursor: (selectedSoftCopyFile || capturedPhotoUrl) ? 'pointer' : 'not-allowed',
+                            boxShadow: (selectedSoftCopyFile || capturedPhotoUrl) ? '0 4px 12px rgba(6,78,59,0.3)' : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          Confirm & Attach Soft Copy Proof
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── RECORDED PAYMENT PROOF DOCUMENT VIEWER MODAL ─── */}
+                {viewingProofDocModal && (() => {
+                  const pDoc = viewingProofDocModal.payments?.proofDoc || 'Uploaded_Payment_Receipt.pdf';
+                  const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
+                  const pDocDataUrl = typeof pDoc === 'object' && pDoc?.dataUrl ? pDoc.dataUrl : null;
+                  const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || 'BOM-2026';
+                  const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || custNameText;
+                  const amtVal = parseFloat(viewingProofDocModal.grandTotal || orderValue || 52061.60);
+                  const pType = viewingProofDocModal.paymentType || payTypeText || '100% Advance';
+
+                  return (
+                    <div style={{
+                      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                      backdropFilter: 'blur(6px)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      zIndex: 10000,
+                      padding: '20px',
+                      fontFamily: "'DM Sans', sans-serif"
+                    }}>
+                      <div style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '20px',
+                        maxWidth: '680px',
+                        width: '100%',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+                        overflow: 'hidden',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '92vh'
+                      }}>
+                        {/* Modal Header */}
+                        <div style={{
+                          padding: '18px 24px',
+                          borderBottom: '1px solid #F1F5F9',
+                          background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
+                          color: '#FFFFFF',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '38px', height: '38px', borderRadius: '10px',
+                              background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 2px 6px rgba(37,99,235,0.3)'
+                            }}>
+                              <Receipt style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
+                            </div>
+                            <div>
+                              <h2 style={{ fontSize: '16px', fontWeight: '900', margin: 0, color: '#FFFFFF' }}>
+                                Recorded Payment Proof Document
+                              </h2>
+                              <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0 0' }}>
+                                {docName} • {bCode} • {cName}
+                              </p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              onClick={() => window.print()}
+                              title="Print Receipt"
+                              style={{
+                                background: 'rgba(255,255,255,0.12)', border: 'none',
+                                color: '#FFFFFF', width: '34px', height: '34px', borderRadius: '8px',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}
+                            >
+                              <Printer style={{ width: '16px', height: '16px' }} />
+                            </button>
+                            <button
+                              onClick={() => setViewingProofDocModal(null)}
+                              style={{
+                                background: 'rgba(255,255,255,0.12)', border: 'none',
+                                color: '#FFFFFF', width: '34px', height: '34px', borderRadius: '8px',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}
+                            >
+                              <X style={{ width: '18px', height: '18px' }} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Modal Body: Document Viewer Sheet */}
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
+                          {pDocDataUrl ? (
+                            /* User Uploaded Image Preview */
+                            <div style={{
+                              borderRadius: '14px', overflow: 'hidden', border: '1px solid #E2E8F0',
+                              backgroundColor: '#FFFFFF', padding: '12px', textAlign: 'center'
+                            }}>
+                              <img
+                                src={pDocDataUrl}
+                                alt="Payment Proof Attachment"
+                                style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px' }}
+                              />
+                            </div>
+                          ) : (
+                            /* Official E-Payment Remittance Receipt Paper Card */
+                            <div style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '16px',
+                              border: '1px solid #CBD5E1',
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+                              padding: '28px',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}>
+                              {/* Watermark */}
+                              <div style={{
+                                position: 'absolute', top: '45%', left: '50%',
+                                transform: 'translate(-50%, -50%) rotate(-25deg)',
+                                fontSize: '48px', fontWeight: '900', color: 'rgba(37,99,235,0.04)',
+                                whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none', zIndex: 0
+                              }}>
+                                PAYMENT CLEARED
+                              </div>
+
+                              {/* Bank Receipt Header */}
+                              <div style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                                borderBottom: '2px solid #0F172A', paddingBottom: '16px', position: 'relative', zIndex: 1
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#2563EB', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                                    HDFC BANK CORPORATE E-PAYMENT
+                                  </div>
+                                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
+                                    Electronic Funds Transfer Advice
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                    RBI RTGS / NEFT Inter-Bank Settlement System
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    padding: '5px 12px', borderRadius: '20px',
+                                    backgroundColor: '#DCFCE7', color: '#166534',
+                                    fontSize: '12px', fontWeight: '800', border: '1px solid #BBF7D0'
+                                  }}>
+                                    <CheckCircle style={{ width: '14px', height: '14px' }} />
+                                    TRANSACTION CLEARED
+                                  </span>
+                                  <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}>
+                                    Ref: TXN-{Date.now().toString().slice(-8)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Key Highlights Banner */}
+                              <div style={{
+                                margin: '18px 0', padding: '14px 18px', borderRadius: '12px',
+                                backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                position: 'relative', zIndex: 1
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                                    Amount Credited & Verified
+                                  </div>
+                                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#1E40AF', marginTop: '2px' }}>
+                                    ₹ {amtVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                                    Payment Terms
+                                  </div>
+                                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>
+                                    {pType}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Transaction Details Grid */}
+                              <div style={{
+                                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px',
+                                fontSize: '12px', position: 'relative', zIndex: 1,
+                                padding: '16px 0', borderBottom: '1px solid #E2E8F0'
+                              }}>
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>Remitter (Customer):</div>
+                                  <div style={{ color: '#0F172A', fontWeight: '800', fontSize: '13px', marginTop: '2px' }}>{cName}</div>
+                                  <div style={{ color: '#64748B', marginTop: '2px', fontSize: '11px' }}>A/C: ••••••••5812 (HDFC Bank)</div>
+                                </div>
+
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>Beneficiary Legal Entity:</div>
+                                  <div style={{ color: '#0F172A', fontWeight: '800', fontSize: '13px', marginTop: '2px' }}>CONTROLROOM INDUSTRIAL MANUFACTURING PVT LTD</div>
+                                  <div style={{ color: '#64748B', marginTop: '2px', fontSize: '11px' }}>A/C: ••••••••4821 • IFSC: HDFC0001092</div>
+                                </div>
+
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>UTR / Reference Number:</div>
+                                  <div style={{ color: '#0F172A', fontWeight: '800', fontFamily: 'monospace', fontSize: '13px', marginTop: '2px' }}>
+                                    HDFCR520260818{Date.now().toString().slice(-6)}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>Value Date & Time:</div>
+                                  <div style={{ color: '#0F172A', fontWeight: '700', marginTop: '2px' }}>
+                                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, 09:15:30 AM IST
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>Target Bill of Materials (BOM):</div>
+                                  <div style={{ color: '#2563EB', fontWeight: '800', marginTop: '2px' }}>{bCode}</div>
+                                </div>
+
+                                <div>
+                                  <div style={{ color: '#64748B', fontWeight: '600' }}>Recorded File Name:</div>
+                                  <div style={{ color: '#0F172A', fontWeight: '700', marginTop: '2px' }}>{docName}</div>
+                                </div>
+                              </div>
+
+                              {/* Stamp and Accounts Signatory Block */}
+                              <div style={{
+                                marginTop: '20px', display: 'flex', justifyContent: 'space-between',
+                                alignItems: 'center', position: 'relative', zIndex: 1
+                              }}>
+                                {/* Verified Stamp */}
+                                <div style={{
+                                  border: '2px solid #16A34A', borderRadius: '10px',
+                                  padding: '8px 16px', display: 'inline-flex', flexDirection: 'column',
+                                  alignItems: 'center', transform: 'rotate(-4deg)', backgroundColor: 'rgba(220, 252, 231, 0.4)'
+                                }}>
+                                  <span style={{ fontSize: '11px', fontWeight: '900', color: '#166534', letterSpacing: '1px' }}>
+                                    ACCOUNTS VERIFIED
+                                  </span>
+                                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#15803D' }}>
+                                    CONTROLROOM PVT LTD
+                                  </span>
+                                </div>
+
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Arun (Accounts Officer)</div>
+                                  <div style={{ fontSize: '11px', color: '#64748B' }}>Finance & Accounts Dept</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                          padding: '16px 24px',
+                          backgroundColor: '#FFFFFF',
+                          borderTop: '1px solid #E2E8F0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>
+                            Digitally sealed electronic transaction advice
+                          </span>
+                          <button
+                            onClick={() => setViewingProofDocModal(null)}
+                            style={{
+                              border: 'none',
+                              backgroundColor: '#0F172A',
+                              color: '#FFFFFF',
+                              height: '38px',
+                              padding: '0 22px',
+                              borderRadius: '9px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Close Viewer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          }
+
+          // Render Delete Confirmation Modal for Customer
+          if (customerToDelete) {
+            return (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Trash2 style={{ width: '20px', height: '20px' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Delete Customer</h3>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>This action cannot be undone.</span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#475569', lineHeight: '1.5', margin: '0 0 24px 0' }}>
+                    Are you sure you want to delete customer <strong>"{customerToDelete.code}"</strong> from Customer Management directory?
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setCustomerToDelete(null)}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', height: '38px', padding: '0 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCustomerList(prev => prev.filter(c => c.code !== customerToDelete.code));
+                        setCustomerToDelete(null);
+                      }}
+                      style={{ border: 'none', backgroundColor: '#DC2626', color: 'white', height: '38px', padding: '0 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Yes, Delete Customer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Render Customer Profile View (when viewingCustomer is set)
+          if (viewingCustomer) {
+            const c = viewingCustomer;
+            const bObj = c.billingAddressObj || {};
+            const dObj = c.deliveryAddressObj || {};
+            const bStreet = bObj.address || c.c6 || c.billingAddress || '—';
+            const bCity = bObj.city || '—';
+            const bState = bObj.state || '—';
+            const bPin = bObj.pincode || '—';
+
+            const dStreet = dObj.address || c.c7 || c.deliveryAddress || '—';
+            const dCity = dObj.city || '—';
+            const dState = dObj.state || '—';
+            const dPin = dObj.pincode || '—';
+
+            const isSame = (c.deliveryAddress === c.billingAddress && Boolean(c.billingAddress)) || (!c.c7 && !c.deliveryAddress);
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+                {/* TOP BAR */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '18px 24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button
+                      onClick={() => setViewingCustomer(null)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                    >
+                      <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back to Customers
+                    </button>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                        Customer Profile: {c.code}
+                      </h2>
+                      <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                        Company: <strong style={{ color: '#2563EB' }}>{c.c2 || c.code}</strong> • Status: <strong style={{ color: '#166534' }}>ACTIVE</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => {
+                        const cust = viewingCustomer;
+                        setEditingCustomer({ ...cust, originalCode: cust.code });
+                        setCustFormName(cust.code);
+                        setCustFormCompany(cust.c2 || cust.code);
+                        setCustFormMobile(cust.c4 || '');
+                        setCustFormEmail(cust.c5 || '');
+
+                        setCustFormBillingAddress(bObj.address || cust.c6 || cust.billingAddress || '');
+                        setCustFormBillingCity(bObj.city || '');
+                        setCustFormBillingState(bObj.state || '');
+                        setCustFormBillingPincode(bObj.pincode || '');
+
+                        setCustFormSameAsBilling(isSame);
+                        setCustFormDeliveryAddress(dObj.address || cust.c7 || cust.deliveryAddress || '');
+                        setCustFormDeliveryCity(dObj.city || '');
+                        setCustFormDeliveryState(dObj.state || '');
+                        setCustFormDeliveryPincode(dObj.pincode || '');
+                        setViewingCustomer(null);
+                      }}
+                      style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                    >
+                      <Edit3 style={{ width: '15px', height: '15px' }} /> Edit Customer
+                    </button>
+                  </div>
+                </div>
+
+                {/* OVERVIEW SUMMARY CARDS */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Customer Name</span>
+                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '6px' }}>{c.code}</div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Company Name</span>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#2563EB', marginTop: '6px' }}>{c.c2 || c.code}</div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Mobile / Phone</span>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginTop: '6px' }}>{c.c4 || '—'}</div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Email Address</span>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginTop: '6px' }}>{c.c5 || '—'}</div>
+                  </div>
+                </div>
+
+                {/* STRUCTURED ADDRESS CARDS */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  {/* Billing Address Card */}
+                  <div style={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                        <FileText style={{ width: '16px', height: '16px' }} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Registered Billing Address</h3>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address used for tax invoices and billing</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block' }}>STREET ADDRESS</span>
+                        <strong style={{ color: '#0F172A', fontSize: '14px' }}>{bStreet}</strong>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '4px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>CITY</span>
+                          <strong style={{ color: '#0F172A' }}>{bCity}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>STATE</span>
+                          <strong style={{ color: '#0F172A' }}>{bState}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>PINCODE</span>
+                          <strong style={{ color: '#0F172A' }}>{bPin}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Address Card */}
+                  <div style={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                          <Truck style={{ width: '16px', height: '16px' }} />
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Physical Delivery Address</h3>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>Primary location for material delivery & shipping</span>
+                        </div>
+                      </div>
+                      {isSame && (
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px' }}>
+                          Same as Billing
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block' }}>STREET ADDRESS</span>
+                        <strong style={{ color: '#0F172A', fontSize: '14px' }}>{dStreet}</strong>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '4px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>CITY</span>
+                          <strong style={{ color: '#0F172A' }}>{dCity}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>STATE</span>
+                          <strong style={{ color: '#0F172A' }}>{dState}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block' }}>PINCODE</span>
+                          <strong style={{ color: '#0F172A' }}>{dPin}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Render Create/Edit Customer Form if active or open
+          if (showCustomerForm || editingCustomer) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+                {/* TOP HEADER */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '16px 24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                      {editingCustomer ? `Edit Customer: ${editingCustomer.originalCode}` : 'Create New Customer'}
+                    </h2>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      {editingCustomer ? 'Update existing customer details' : 'Register a new customer profile in Customer Management'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      onClick={() => {
+                        setShowCustomerForm(false);
+                        setEditingCustomer(null);
+                        setCustFormName('');
+                        setCustFormCompany('');
+                        setCustFormMobile('');
+                        setCustFormEmail('');
+                      }}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const name = custFormName.trim();
+                        if (!name) {
+                          alert('Please enter Customer / Display Name');
+                          return;
+                        }
+                        const company = custFormCompany.trim() || name;
+                        const mobile = custFormMobile.trim() || '+91 98000 00000';
+                        const email = custFormEmail.trim() || 'contact@client.com';
+
+                        const formatAddr = (addr, city, state, pin) => {
+                          const parts = [];
+                          if (addr && addr.trim()) parts.push(addr.trim());
+                          if (city && city.trim()) parts.push(city.trim());
+                          if (state && state.trim() && pin && pin.trim()) {
+                            parts.push(`${state.trim()} - ${pin.trim()}`);
+                          } else {
+                            if (state && state.trim()) parts.push(state.trim());
+                            if (pin && pin.trim()) parts.push(pin.trim());
+                          }
+                          return parts.join(', ');
+                        };
+
+                        const billingStr = formatAddr(custFormBillingAddress, custFormBillingCity, custFormBillingState, custFormBillingPincode);
+                        const deliveryStr = custFormSameAsBilling
+                          ? billingStr
+                          : formatAddr(custFormDeliveryAddress, custFormDeliveryCity, custFormDeliveryState, custFormDeliveryPincode);
+
+                        const billingObj = {
+                          address: custFormBillingAddress.trim(),
+                          city: custFormBillingCity.trim(),
+                          state: custFormBillingState.trim(),
+                          pincode: custFormBillingPincode.trim()
+                        };
+
+                        const deliveryObj = custFormSameAsBilling ? { ...billingObj } : {
+                          address: custFormDeliveryAddress.trim(),
+                          city: custFormDeliveryCity.trim(),
+                          state: custFormDeliveryState.trim(),
+                          pincode: custFormDeliveryPincode.trim()
+                        };
+
+                        if (editingCustomer) {
+                          setCustomerList(prev => prev.map(c => c.code === editingCustomer.originalCode ? {
+                            ...c,
+                            code: name,
+                            c2: company,
+                            c4: mobile,
+                            c5: email,
+                            c6: billingStr,
+                            billingAddress: billingStr,
+                            billingAddressObj: billingObj,
+                            c7: deliveryStr,
+                            deliveryAddress: deliveryStr,
+                            deliveryAddressObj: deliveryObj
+                          } : c));
+                          setEditingCustomer(null);
+                        } else {
+                          const newCustObj = {
+                            code: name,
+                            c2: company,
+                            c3: 'Primary Contact',
+                            c4: mobile,
+                            c5: email,
+                            c6: billingStr,
+                            billingAddress: billingStr,
+                            billingAddressObj: billingObj,
+                            c7: deliveryStr,
+                            deliveryAddress: deliveryStr,
+                            deliveryAddressObj: deliveryObj,
+                            status: 'ACTIVE',
+                            stBg: '#dcfce7',
+                            stFg: '#166534',
+                            stBorder: '1px solid #bbf7d0',
+                            tabGroup: 'Active'
+                          };
+                          setCustomerList(prev => [newCustObj, ...prev]);
+                          setNewBomProductName(name);
+                          if (deliveryStr) {
+                            setNewBomDeliveryAddress(deliveryStr);
+                          } else if (billingStr) {
+                            setNewBomDeliveryAddress(billingStr);
+                            setSameAsBilling(true);
+                          }
+                        }
+
+                        // Reset form fields
+                        setCustFormName('');
+                        setCustFormCompany('');
+                        setCustFormMobile('');
+                        setCustFormEmail('');
+                        setCustFormBillingAddress('');
+                        setCustFormBillingCity('');
+                        setCustFormBillingState('');
+                        setCustFormBillingPincode('');
+                        setCustFormSameAsBilling(false);
+                        setCustFormDeliveryAddress('');
+                        setCustFormDeliveryCity('');
+                        setCustFormDeliveryState('');
+                        setCustFormDeliveryPincode('');
+                        setShowCustomerForm(false);
+                      }}
+                      style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', height: '40px', padding: '0 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                    >
+                      <Check style={{ width: '16px', height: '16px' }} />
+                      {editingCustomer ? 'Update Customer' : 'Save Customer'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* FORM CONTAINER */}
+                <div style={{ backgroundColor: 'white', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+                  {/* SECTION TITLE */}
+                  <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#EEF2FF', border: '1px solid #E0E7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                      <Users style={{ width: '18px', height: '18px' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>Customer Information</h3>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>Fill in customer details to register profile</span>
+                    </div>
+                  </div>
+
+                  {/* ROW 1: DISPLAY NAME & COMPANY NAME */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>
+                        Customer / Display Name <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Vikram Solar Pvt Ltd"
+                        value={custFormName}
+                        onChange={(e) => setCustFormName(e.target.value)}
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>Company Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Vikram Solar Solutions Infrastructure Ltd"
+                        value={custFormCompany}
+                        onChange={(e) => setCustFormCompany(e.target.value)}
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ROW 2: MOBILE & EMAIL */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>Mobile / Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="+91 98765 43210"
+                        value={custFormMobile}
+                        onChange={(e) => setCustFormMobile(e.target.value)}
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="contact@company.com"
+                        value={custFormEmail}
+                        onChange={(e) => setCustFormEmail(e.target.value)}
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ROW 3: BILLING & DELIVERY STRUCTURED ADDRESSES */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+
+                    {/* BILLING ADDRESS SECTION */}
+                    <div style={{
+                      backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                      padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                          <FileText style={{ width: '15px', height: '15px' }} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address for invoices & tax records</span>
+                        </div>
+                      </div>
+
+                      {/* Street / Building Address */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                          Address (Street / Building / Area)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. No 1427, GNT Road, Nagappa Industrial Estate"
+                          value={custFormBillingAddress}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustFormBillingAddress(val);
+                            if (custFormSameAsBilling) setCustFormDeliveryAddress(val);
+                          }}
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                        />
+                      </div>
+
+                      {/* City, State, Pincode */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            City
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Chennai"
+                            value={custFormBillingCity}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustFormBillingCity(val);
+                              if (custFormSameAsBilling) setCustFormDeliveryCity(val);
+                            }}
+                            style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            State
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Tamil Nadu"
+                            value={custFormBillingState}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustFormBillingState(val);
+                              if (custFormSameAsBilling) setCustFormDeliveryState(val);
+                            }}
+                            style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            Pincode
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 600028"
+                            value={custFormBillingPincode}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustFormBillingPincode(val);
+                              if (custFormSameAsBilling) setCustFormDeliveryPincode(val);
+                            }}
+                            style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DELIVERY / SHIPPING ADDRESS SECTION */}
+                    <div style={{
+                      backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                      padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                            <Truck style={{ width: '15px', height: '15px' }} />
+                          </div>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Delivery Address</h4>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>Destination for material dispatch</span>
+                          </div>
+                        </div>
+
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', backgroundColor: '#EEF2FF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #C7D2FE' }}>
+                          <input
+                            type="checkbox"
+                            checked={custFormSameAsBilling}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setCustFormSameAsBilling(checked);
+                              if (checked) {
+                                setCustFormDeliveryAddress(custFormBillingAddress);
+                                setCustFormDeliveryCity(custFormBillingCity);
+                                setCustFormDeliveryState(custFormBillingState);
+                                setCustFormDeliveryPincode(custFormBillingPincode);
+                              }
+                            }}
+                            style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                          />
+                          Same as Billing
+                        </label>
+                      </div>
+
+                      {/* Street / Building Address */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                          Address (Street / Building / Area)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Plot No 42, SIDCO Industrial Estate, Ambattur"
+                          value={custFormSameAsBilling ? custFormBillingAddress : custFormDeliveryAddress}
+                          disabled={custFormSameAsBilling}
+                          onChange={(e) => setCustFormDeliveryAddress(e.target.value)}
+                          style={{
+                            width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px',
+                            color: custFormSameAsBilling ? '#64748B' : '#0F172A',
+                            backgroundColor: custFormSameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                            boxSizing: 'border-box', outline: 'none',
+                            cursor: custFormSameAsBilling ? 'not-allowed' : 'text'
+                          }}
+                        />
+                      </div>
+
+                      {/* City, State, Pincode */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            City
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Chennai"
+                            value={custFormSameAsBilling ? custFormBillingCity : custFormDeliveryCity}
+                            disabled={custFormSameAsBilling}
+                            onChange={(e) => setCustFormDeliveryCity(e.target.value)}
+                            style={{
+                              width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px',
+                              color: custFormSameAsBilling ? '#64748B' : '#0F172A',
+                              backgroundColor: custFormSameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                              boxSizing: 'border-box', outline: 'none',
+                              cursor: custFormSameAsBilling ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            State
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Tamil Nadu"
+                            value={custFormSameAsBilling ? custFormBillingState : custFormDeliveryState}
+                            disabled={custFormSameAsBilling}
+                            onChange={(e) => setCustFormDeliveryState(e.target.value)}
+                            style={{
+                              width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px',
+                              color: custFormSameAsBilling ? '#64748B' : '#0F172A',
+                              backgroundColor: custFormSameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                              boxSizing: 'border-box', outline: 'none',
+                              cursor: custFormSameAsBilling ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                            Pincode
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 600058"
+                            value={custFormSameAsBilling ? custFormBillingPincode : custFormDeliveryPincode}
+                            disabled={custFormSameAsBilling}
+                            onChange={(e) => setCustFormDeliveryPincode(e.target.value)}
+                            style={{
+                              width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px',
+                              color: custFormSameAsBilling ? '#64748B' : '#0F172A',
+                              backgroundColor: custFormSameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                              boxSizing: 'border-box', outline: 'none',
+                              cursor: custFormSameAsBilling ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            );
+          }
+
+          // Render Create BOM Form matching exact user reference screenshot design system
+          if (showBOMForm) {
+            const calculateBOMTotals = () => {
+              const sub = bomMaterialsList.reduce((acc, item) => {
+                const q = parseFloat(item.qty) || 0;
+                const r = parseFloat(item.rate) || 0;
+                return acc + (q * r);
+              }, 0);
+              const disc = 0;
+              const gst = sub * 0.18;
+              const grand = sub - disc + gst;
+              return { sub, disc, gst, grand };
+            };
+
+            const totals = calculateBOMTotals();
+
+            const handleAddMaterialRow = () => {
+              setBomMaterialsList(prev => [...prev, { name: '', category: '', uom: 'NOS', qty: '', wastage: '0%', rate: '' }]);
+            };
+
+            const handleRemoveMaterialRow = (idx) => {
+              setBomMaterialsList(prev => prev.filter((_, i) => i !== idx));
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
+
+                {/* Top Page Title Bar with Action Buttons on Same Line */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                      Create New BOM
+                    </h1>
+                    <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                      Fill in the details below to create a new Bill of Materials order.
+                    </p>
+                    <div style={{ width: '40px', height: '3px', backgroundColor: '#4F46E5', borderRadius: '2px', marginTop: '4px' }} />
+                  </div>
+
+                  {/* TOP HEADER BUTTON BAR */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setBomConfirmModal('cancel')}
+                      style={{ border: '1px solid #CBD5E1', background: 'white', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      onClick={() => setBomConfirmModal('draft')}
+                      style={{ border: '1px solid #E0E7FF', background: '#EEF2FF', color: '#4F46E5', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <FileText style={{ width: '15px', height: '15px' }} />
+                      Save as Draft
+                    </button>
+
+                    <button
+                      onClick={() => setBomConfirmModal('create')}
+                      style={{ border: 'none', background: '#4F46E5', color: 'white', padding: '9px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(79,70,229,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      Create Order →
+                    </button>
+                  </div>
+                </div>
+
+                {/* SECTION 1: ORDER INFORMATION */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                      1
+                    </div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      ORDER INFORMATION
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Date</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="date"
+                          value={new Date().toISOString().split('T')[0]}
+                          onChange={() => { }}
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: '#FAF9F6', boxSizing: 'border-box', outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Delivery Date <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="date"
+                        placeholder="Select date"
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Number</label>
+                      <input
+                        type="text"
+                        value={newBomCode}
+                        readOnly
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#94A3B8', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: CUSTOMER INFORMATION */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                      2
+                    </div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      CUSTOMER INFORMATION
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Customer Name <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <div style={{ width: '100%' }}>
+                        <select
+                          value={newBomProductName}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewBomProductName(val);
+                            const chosen = customerList.find(c => c.code === val);
+                            if (chosen) {
+                              const dObj = chosen.deliveryAddressObj || {};
+                              const dAddr = dObj.address || chosen.c7 || chosen.deliveryAddress || '';
+
+                              // Always keep Same as Billing unselected upon selecting a customer
+                              setSameAsBilling(false);
+                              setNewBomDeliveryProofDoc(null);
+
+                              if (dAddr) {
+                                setNewBomDeliveryStreet(dObj.address || chosen.c7 || chosen.deliveryAddress || '');
+                                setNewBomDeliveryCity(dObj.city || '');
+                                setNewBomDeliveryState(dObj.state || '');
+                                setNewBomDeliveryPincode(dObj.pincode || '');
+                              } else {
+                                // Keep delivery fields empty for real manual entry until user chooses Same as Billing
+                                setNewBomDeliveryStreet('');
+                                setNewBomDeliveryCity('');
+                                setNewBomDeliveryState('');
+                                setNewBomDeliveryPincode('');
+                              }
+                            }
+                          }}
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: newBomProductName ? '#0F172A' : '#94A3B8', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
+                        >
+                          <option value="" disabled hidden>Select customer from list...</option>
+                          {customerList.map((c, idx) => (
+                            <option key={idx} value={c.code} style={{ color: '#0F172A' }}>{c.code}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowCustomerForm(true);
+                      }}
+                      style={{ border: '1px solid #E0E7FF', background: '#EEF2FF', color: '#4F46E5', height: '42px', padding: '0 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                    >
+                      <Plus style={{ width: '15px', height: '15px' }} />
+                      Add New Customer
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const selCust = customerList.find(c => c.code === newBomProductName);
+                    const companyName = selCust ? (selCust.c2 || selCust.code) : (newBomProductName || '—');
+                    const mobileNo = selCust ? (selCust.c4 || '—') : '—';
+                    const emailAddr = selCust ? (selCust.c5 || '—') : '—';
+                    
+                    const bObj = selCust?.billingAddressObj || {};
+                    const billingStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '—';
+                    const billingCity = bObj.city || '—';
+                    const billingState = bObj.state || '—';
+                    const billingPincode = bObj.pincode || '—';
+
+                    const isDeliveryMatchingBilling = Boolean(sameAsBilling) || (
+                      (newBomDeliveryStreet.trim() === (billingStreet !== '—' ? billingStreet.trim() : '')) &&
+                      (newBomDeliveryCity.trim() === (billingCity !== '—' ? billingCity.trim() : '')) &&
+                      (newBomDeliveryState.trim() === (billingState !== '—' ? billingState.trim() : '')) &&
+                      (newBomDeliveryPincode.trim() === (billingPincode !== '—' ? billingPincode.trim() : ''))
+                    );
+
+                    return (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Company Name</label>
+                            <input type="text" value={companyName} readOnly style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#64748B', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Mobile Number</label>
+                            <input type="text" value={mobileNo} readOnly style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#64748B', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Email</label>
+                            <input type="text" value={emailAddr} readOnly style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#64748B', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }} />
+                          </div>
+                        </div>
+
+                        {/* STRUCTURED BILLING & DELIVERY ADDRESSES */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+                          {/* BILLING ADDRESS CARD */}
+                          <div style={{
+                            backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                            padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                                <FileText style={{ width: '14px', height: '14px' }} />
+                              </div>
+                              <div>
+                                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address for invoices & tax records</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>
+                                Address (Street / Building / Area)
+                              </label>
+                              <input
+                                type="text"
+                                readOnly
+                                value={billingStreet}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '12px', color: '#475569', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                              />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                                <input type="text" readOnly value={billingCity} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '12px', color: '#475569', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                                <input type="text" readOnly value={billingState} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '12px', color: '#475569', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                                <input type="text" readOnly value={billingPincode} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '12px', color: '#475569', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }} />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* DELIVERY / SHIPPING ADDRESS CARD */}
+                          <div style={{
+                            backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px',
+                            padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                                  <Truck style={{ width: '14px', height: '14px' }} />
+                                </div>
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Delivery Address</h4>
+                                  <span style={{ fontSize: '11px', color: '#64748B' }}>Destination for physical dispatch</span>
+                                </div>
+                              </div>
+
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', backgroundColor: '#EEF2FF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #C7D2FE' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={sameAsBilling}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setSameAsBilling(checked);
+                                    if (checked) {
+                                      setNewBomDeliveryStreet(billingStreet !== '—' ? billingStreet : '');
+                                      setNewBomDeliveryCity(billingCity !== '—' ? billingCity : '');
+                                      setNewBomDeliveryState(billingState !== '—' ? billingState : '');
+                                      setNewBomDeliveryPincode(billingPincode !== '—' ? billingPincode : '');
+                                      setNewBomDeliveryProofDoc(null);
+                                    } else {
+                                      setNewBomDeliveryStreet('');
+                                      setNewBomDeliveryCity('');
+                                      setNewBomDeliveryState('');
+                                      setNewBomDeliveryPincode('');
+                                    }
+                                  }}
+                                  style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                                />
+                                Same as Billing
+                              </label>
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>
+                                Address (Street / Building / Area)
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Plot No 42, SIDCO Industrial Estate, Ambattur"
+                                value={sameAsBilling ? (billingStreet !== '—' ? billingStreet : '') : newBomDeliveryStreet}
+                                disabled={sameAsBilling}
+                                onChange={(e) => setNewBomDeliveryStreet(e.target.value)}
+                                style={{
+                                  width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                  color: sameAsBilling ? '#64748B' : '#0F172A',
+                                  backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                  boxSizing: 'border-box', outline: 'none',
+                                  cursor: sameAsBilling ? 'not-allowed' : 'text'
+                                }}
+                              />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Chennai"
+                                  value={sameAsBilling ? (billingCity !== '—' ? billingCity : '') : newBomDeliveryCity}
+                                  disabled={sameAsBilling}
+                                  onChange={(e) => setNewBomDeliveryCity(e.target.value)}
+                                  style={{
+                                    width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                    color: sameAsBilling ? '#64748B' : '#0F172A',
+                                    backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                    boxSizing: 'border-box', outline: 'none',
+                                    cursor: sameAsBilling ? 'not-allowed' : 'text'
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Tamil Nadu"
+                                  value={sameAsBilling ? (billingState !== '—' ? billingState : '') : newBomDeliveryState}
+                                  disabled={sameAsBilling}
+                                  onChange={(e) => setNewBomDeliveryState(e.target.value)}
+                                  style={{
+                                    width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                    color: sameAsBilling ? '#64748B' : '#0F172A',
+                                    backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                    boxSizing: 'border-box', outline: 'none',
+                                    cursor: sameAsBilling ? 'not-allowed' : 'text'
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. 600058"
+                                  value={sameAsBilling ? (billingPincode !== '—' ? billingPincode : '') : newBomDeliveryPincode}
+                                  disabled={sameAsBilling}
+                                  onChange={(e) => setNewBomDeliveryPincode(e.target.value)}
+                                  style={{
+                                    width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px',
+                                    color: sameAsBilling ? '#64748B' : '#0F172A',
+                                    backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                                    boxSizing: 'border-box', outline: 'none',
+                                    cursor: sameAsBilling ? 'not-allowed' : 'text'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* MANDATORY ADDRESS PROOF ATTACHMENT WHEN DELIVERY ADDRESS DIFFERS FROM BILLING */}
+                            {!isDeliveryMatchingBilling ? (
+                              <div style={{
+                                marginTop: '6px',
+                                padding: '14px 16px',
+                                backgroundColor: '#FEF2F2',
+                                border: '1px dashed #F87171',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <AlertCircle style={{ width: '14px', height: '14px' }} />
+                                    </div>
+                                    <div>
+                                      <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
+                                        Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                      </h5>
+                                      <span style={{ fontSize: '11px', color: '#B91C1C' }}>
+                                        Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease).
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {newBomDeliveryProofDoc && (
+                                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <CheckCircle style={{ width: '12px', height: '12px' }} /> Attached
+                                    </span>
+                                  )}
+                                </div>
+
+                                {newBomDeliveryProofDoc ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
+                                      <div>
+                                        <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{newBomDeliveryProofDoc.name}</div>
+                                        <div style={{ fontSize: '10px', color: '#64748B' }}>{newBomDeliveryProofDoc.size || '1.2 MB'} • Uploaded</div>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setNewBomDeliveryProofDoc(null)}
+                                      style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                      <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    <label style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                      backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626',
+                                      padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+                                      cursor: 'pointer'
+                                    }}>
+                                      <Upload style={{ width: '13px', height: '13px' }} />
+                                      Upload Address Proof Document
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => {
+                                          const file = e.target.files && e.target.files[0];
+                                          if (file) {
+                                            setNewBomDeliveryProofDoc({
+                                              name: file.name,
+                                              size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                              uploadedAt: new Date().toISOString()
+                                            });
+                                          }
+                                        }}
+                                      />
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '11px', color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0', padding: '8px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle style={{ width: '13px', height: '13px' }} /> Delivery address matches registered billing address. No additional address proof required.
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* SECTION 3: ORDER ITEMS */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                        3
+                      </div>
+                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        ORDER ITEMS
+                      </h3>
+                    </div>
+
+                    {/* PRESET SELECTOR & CLEAR BUTTON */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Preset:</span>
+                      <select
+                        id="preset-selector"
+                        value={selectedPreset}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedPreset(val);
+                          setSelectedBomItemIndexes([]);
+                          if (val === 'solar_1kw') {
+                            setBomMaterialsList([
+                              { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: '4', rate: '250' },
+                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '6', rate: '45' },
+                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '4', rate: '40' }
+                            ]);
+                          } else if (val === 'solar_5kw') {
+                            setBomMaterialsList([
+                              { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: '8', rate: '1800' },
+                              { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: '12', rate: '250' },
+                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '24', rate: '45' },
+                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '16', rate: '40' },
+                              { name: 'Raw Aluminum Coil 1.5mm', category: 'Raw Material Coil', qty: '2', rate: '12500' }
+                            ]);
+                          } else if (val === 'industrial_kit') {
+                            setBomMaterialsList([
+                              { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: '20', rate: '1800' },
+                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '50', rate: '45' },
+                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '30', rate: '40' }
+                            ]);
+                          }
+                        }}
+                        style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                      >
+                        <option value="" disabled style={{ color: '#94A3B8' }}>Select Preset</option>
+                        <option value="solar_1kw">1kW Solar Rooftop Mounting Kit</option>
+                        <option value="solar_5kw">5kW Solar Commercial Mounting Kit</option>
+                        <option value="industrial_kit">Industrial Heavy Structure Preset</option>
+                      </select>
+
+                      <button
+                        onClick={() => {
+                          if (selectedBomItemIndexes.length > 0) {
+                            // Clear only selected items directly
+                            setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
+                            setSelectedBomItemIndexes([]);
+                          } else {
+                            // Open full clear confirmation popup modal
+                            if (bomMaterialsList.length > 0) {
+                              setShowClearConfirmModal(true);
+                            }
+                          }
+                        }}
+                        title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : "Clear all order items"}
+                        style={{
+                          border: selectedBomItemIndexes.length > 0 ? '1px solid #EF4444' : '1px solid #FCA5A5',
+                          backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FEF2F2',
+                          color: selectedBomItemIndexes.length > 0 ? 'white' : '#EF4444',
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          margin: 0,
+                          boxSizing: 'border-box',
+                          flexShrink: 0
+                        }}
+                      >
+                        <X style={{ width: '18px', height: '18px' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CLEAR CONFIRMATION POPUP MODAL */}
+                  {showClearConfirmModal && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
+                      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <AlertTriangle style={{ width: '20px', height: '20px' }} />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Clear All Order Items?</h3>
+                            <span style={{ fontSize: '12px', color: '#64748B' }}>Are you sure you want to delete all items from this BOM list?</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                          <button
+                            onClick={() => setShowClearConfirmModal(false)}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBomMaterialsList([]);
+                              setSelectedPreset('');
+                              setSelectedBomItemIndexes([]);
+                              setShowClearConfirmModal(false);
+                            }}
+                            style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 4px rgba(220,38,38,0.2)' }}
+                          >
+                            Clear All Items
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                          <th style={{ padding: '12px 14px', width: '30px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={bomMaterialsList.length > 0 && selectedBomItemIndexes.length === bomMaterialsList.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedBomItemIndexes(bomMaterialsList.map((_, idx) => idx));
+                                } else {
+                                  setSelectedBomItemIndexes([]);
+                                }
+                              }}
+                              style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                            />
+                          </th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '28%' }}>
+                            Product / Item <span style={{ color: '#EF4444' }}>*</span>
+                          </th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '24%' }}>Description</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%' }}>
+                            Qty <span style={{ color: '#EF4444' }}>*</span>
+                          </th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '14%' }}>Price (₹)</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '13%', textAlign: 'right' }}>Total (₹)</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '5%', textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bomMaterialsList.map((item, i) => {
+                          const q = parseFloat(item.qty) || 0;
+                          const r = parseFloat(item.rate) || 0;
+                          const rowTot = q * r;
+                          const isChecked = selectedBomItemIndexes.includes(i);
+                          return (
+                            <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#EEF2FF' : 'transparent' }}>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedBomItemIndexes(prev => [...prev, i]);
+                                    } else {
+                                      setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
+                                    }
+                                  }}
+                                  style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="text"
+                                  list={`product-list-${i}`}
+                                  placeholder="Type or select product..."
+                                  value={item.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, name: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                                <datalist id={`product-list-${i}`}>
+                                  <option value="Mini Rail 100 mm" />
+                                  <option value="Long Rail 3000 mm" />
+                                  <option value="Mid Clamp 35 mm" />
+                                  <option value="End Clamp 35 mm" />
+                                  <option value="Raw Aluminum Coil 1.5mm" />
+                                </datalist>
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Enter description"
+                                  value={item.category || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="number"
+                                  value={item.qty}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <input
+                                  type="number"
+                                  value={item.rate}
+                                  placeholder="0.00"
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
+                                ₹{rowTot.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => handleRemoveMaterialRow(i)}
+                                  style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Trash2 style={{ width: '15px', height: '15px' }} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div>
+                    <button
+                      onClick={handleAddMaterialRow}
+                      style={{ border: '1px solid #E0E7FF', background: '#EEF2FF', color: '#4F46E5', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Plus style={{ width: '15px', height: '15px' }} />
+                      Add Product / Item
+                    </button>
+                  </div>
+                </div>
+
+                {/* SECTION 4: ADDITIONAL INFORMATION & TOTALS */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                      4
+                    </div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      ADDITIONAL INFORMATION
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Payment Terms</label>
+                        <select
+                          value={newBomPaymentType}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewBomPaymentType(val);
+                            if (val === 'Credit Payment') {
+                              setNewBomPaymentProofDoc(null);
+                            }
+                          }}
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                        >
+                          <option value="100% Paid">100% Paid</option>
+                          <option value="Partial Payment">Partial Payment</option>
+                          <option value="Credit Payment">Credit Payment</option>
+                        </select>
+                      </div>
+
+                      {newBomPaymentType === 'Credit Payment' && (
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                              Credit Timeline (Days)
+                            </label>
+                            <span style={{ fontSize: '11px', color: '#4F46E5', fontWeight: '700' }}>
+                              Default: 7 Days
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={newBomCreditDays}
+                            onChange={(e) => setNewBomCreditDays(Math.max(1, parseInt(e.target.value) || 1))}
+                            placeholder="7"
+                            style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #C7D2FE', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: '#F5F3FF', boxSizing: 'border-box', outline: 'none', fontWeight: '700' }}
+                          />
+                          <span style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                            Sales follow-up notifications will trigger across the {newBomCreditDays}-day credit cycle.
+                          </span>
+                        </div>
+                      )}
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Remarks / Notes</label>
+                        <textarea
+                          rows={3}
+                          value={newBomRemarks}
+                          onChange={(e) => setNewBomRemarks(e.target.value)}
+                          placeholder="Enter remarks or notes (optional)..."
+                          style={{ width: '100%', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '12px 14px', fontSize: '13px', color: '#0F172A', outline: 'none', resize: 'vertical' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      {newBomPaymentType === 'Credit Payment' ? (
+                        <div style={{ border: '1px solid #C7D2FE', borderRadius: '14px', padding: '20px', backgroundColor: '#F5F3FF', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', boxSizing: 'border-box', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Clock style={{ width: '18px', height: '18px' }} />
+                            </div>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#5B21B6' }}>Credit Payment Terms Active</h4>
+                              <span style={{ fontSize: '11px', color: '#6D28D9' }}>{newBomCreditDays} Days Credit Window</span>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#4C1D95', margin: 0, lineHeight: '1.5' }}>
+                            Payment slip is not required upfront. Salesperson will receive continuous notification reminders. Once payment is received, attach payment details via <strong>3-dot menu → Update Payment</strong> (one-time lock).
+                          </p>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#6D28D9', backgroundColor: '#DDD6FE', padding: '6px 12px', borderRadius: '8px', width: 'fit-content' }}>
+                            <Bell style={{ width: '12px', height: '12px' }} /> Automated Sales Payment Tracking Enabled
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                              Payment Attachment / Slip <span style={{ color: '#EF4444' }}>*</span>
+                            </label>
+                            {newBomPaymentProofDoc && (
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <CheckCircle style={{ width: '12px', height: '12px' }} /> Attached
+                              </span>
+                            )}
+                          </div>
+
+                          {newBomPaymentProofDoc ? (
+                            <div style={{ border: '1px solid #86EFAC', borderRadius: '12px', padding: '16px', backgroundColor: '#F0FDF4', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <FileCheck style={{ width: '18px', height: '18px' }} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{newBomPaymentProofDoc.name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748B' }}>{newBomPaymentProofDoc.size || '1.2 MB'} • Payment Document Attached</div>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setNewBomPaymentProofDoc(null)}
+                                  style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                                if (file) {
+                                  setNewBomPaymentProofDoc({
+                                    name: file.name,
+                                    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                    uploadedAt: new Date().toISOString()
+                                  });
+                                }
+                              }}
+                              style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
+                            >
+                              <UploadCloud style={{ width: '34px', height: '34px', color: '#6366F1' }} />
+                              <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                                Drag & drop payment slip / bank advice here or
+                              </span>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <label style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                  backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5',
+                                  padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}>
+                                  <Upload style={{ width: '13px', height: '13px' }} />
+                                  Browse Files
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        setNewBomPaymentProofDoc({
+                                          name: file.name,
+                                          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                          uploadedAt: new Date().toISOString()
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+
+                              <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                                Supported formats: PDF, JPG, PNG (Max 5MB)
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subtotals & Math */}
+                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#64748B' }}>
+                      <span>Subtotal</span>
+                      <strong style={{ color: '#0F172A' }}>₹{totals.sub.toFixed(2)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#64748B' }}>
+                      <span>GST (18%)</span>
+                      <strong style={{ color: '#0F172A' }}>₹{totals.gst.toFixed(2)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#4F46E5', fontSize: '16px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '6px' }}>
+                      <span>Grand Total</span>
+                      <span>₹{totals.grand.toFixed(2)}</span>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* CONFIRMATION POPUP OVERLAY MODAL */}
+                {bomConfirmModal && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 99999,
+                    fontFamily: "'DM Sans', sans-serif"
+                  }}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      width: '90%',
+                      maxWidth: '440px',
+                      padding: '24px',
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '12px',
+                          backgroundColor: bomConfirmModal === 'cancel' ? '#FEE2E2' : bomConfirmModal === 'draft' ? '#EEF2FF' : '#DCFCE7',
+                          color: bomConfirmModal === 'cancel' ? '#DC2626' : bomConfirmModal === 'draft' ? '#4F46E5' : '#166534',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          flexShrink: 0
+                        }}>
+                          {bomConfirmModal === 'cancel' ? '⚠️' : bomConfirmModal === 'draft' ? '📝' : '✅'}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
+                            {bomConfirmModal === 'cancel' && 'Discard BOM Order?'}
+                            {bomConfirmModal === 'draft' && 'Save BOM as Draft?'}
+                            {bomConfirmModal === 'create' && 'Confirm BOM Order Creation?'}
+                          </h3>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
+                            {bomConfirmModal === 'cancel' && 'Are you sure you want to cancel? Any unsaved changes entered in this BOM form will be lost.'}
+                            {bomConfirmModal === 'draft' && 'Save this Bill of Materials as a draft order so you can review and update it later?'}
+                            {bomConfirmModal === 'create' && `Are you sure you want to finalize and create BOM Order (${newBomCode})?`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                        <button
+                          onClick={() => setBomConfirmModal(null)}
+                          style={{
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: 'white',
+                            color: '#475569',
+                            padding: '9px 18px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Go Back
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (bomConfirmModal === 'cancel') {
+                              setShowBOMForm(false);
+                              setBomConfirmModal(null);
+                            } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
+                              const isDraft = bomConfirmModal === 'draft';
+                              const selCust = customerList.find(c => c.code === newBomProductName);
+                              const bObj = selCust?.billingAddressObj || {};
+                              const bStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '';
+                              const bCity = bObj.city || '';
+                              const bState = bObj.state || '';
+                              const bPin = bObj.pincode || '';
+
+                              const formatAddr = (addr, city, state, pin) => {
+                                const parts = [];
+                                if (addr && addr.trim() && addr.trim() !== '—') parts.push(addr.trim());
+                                if (city && city.trim() && city.trim() !== '—') parts.push(city.trim());
+                                if (state && state.trim() && state.trim() !== '—' && pin && pin.trim() && pin.trim() !== '—') {
+                                  parts.push(`${state.trim()} - ${pin.trim()}`);
+                                } else {
+                                  if (state && state.trim() && state.trim() !== '—') parts.push(state.trim());
+                                  if (pin && pin.trim() && pin.trim() !== '—') parts.push(pin.trim());
+                                }
+                                return parts.join(', ');
+                              };
+
+                              const billingFull = formatAddr(bStreet, bCity, bState, bPin) || selCust?.c6 || selCust?.billingAddress || '-';
+                              const deliveryFull = sameAsBilling
+                                ? billingFull
+                                : (formatAddr(newBomDeliveryStreet, newBomDeliveryCity, newBomDeliveryState, newBomDeliveryPincode) || newBomDeliveryAddress || '-');
+
+                              const deliveryObj = sameAsBilling
+                                ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
+                                : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
+
+                              const hasPaymentProof = Boolean(newBomPaymentProofDoc);
+                              const newBomRecord = {
+                                bomCode: newBomCode || `BOM-${Math.floor(100 + Math.random() * 900)}`,
+                                date: new Date().toISOString().split('T')[0],
+                                customerName: newBomProductName || 'Customer Order',
+                                companyName: selCust?.c2 || newBomProductName || '-',
+                                mobile: selCust?.c4 || '-',
+                                email: selCust?.c5 || '-',
+                                billingAddress: billingFull,
+                                billingAddressObj: bObj,
+                                deliveryAddress: deliveryFull,
+                                deliveryAddressObj: deliveryObj,
+                                deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
+                                paymentType: newBomPaymentType || '100% Paid',
+                                creditDays: newBomPaymentType === 'Credit Payment' ? (parseInt(newBomCreditDays) || 7) : null,
+                                creditDueDate: newBomPaymentType === 'Credit Payment' ? new Date(Date.now() + (parseInt(newBomCreditDays) || 7) * 86400000).toISOString().split('T')[0] : null,
+                                paymentProofDoc: (newBomPaymentType === '100% Paid' || newBomPaymentType === 'Partial Payment') ? newBomPaymentProofDoc : null,
+                                paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
+                                remarks: newBomRemarks || '',
+                                status: isDraft ? 'Draft' : 'Pending Confirmation',
+                                items: bomMaterialsList.map(item => ({
+                                  name: item.name,
+                                  category: item.category || '',
+                                  qty: parseFloat(item.qty) || 0,
+                                  rate: parseFloat(item.rate) || 0,
+                                  confirmed: false
+                                })),
+                                payments: {
+                                  advance50Uploaded: false,
+                                  dispatch50Uploaded: false,
+                                  advance100Uploaded: newBomPaymentType === '100% Paid' && hasPaymentProof,
+                                  net30Uploaded: false,
+                                  proofDoc: newBomPaymentProofDoc ? newBomPaymentProofDoc.name : null,
+                                  proofDocObj: newBomPaymentProofDoc || null,
+                                  paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc)
+                                },
+                                dispatchPacking: bomMaterialsList.map(item => ({
+                                  name: item.name,
+                                  bomQty: parseFloat(item.qty) || 0,
+                                  packed: false
+                                })),
+                                accountsVerification: {
+                                  paymentStatus: null,
+                                  hardCopyReceived: false,
+                                  softCopyReceived: false
+                                },
+                                invoiceConfirmed: false,
+                                invoiceDeducted: false,
+                                grandTotal: totals.grand
+                              };
+
+                              setBomStore(prev => [newBomRecord, ...prev]);
+                              setNewBomPaymentProofDoc(null);
+                              setNewBomDeliveryProofDoc(null);
+                              setNewBomRemarks('');
+                              setNewBomCreditDays(7);
+                              setNewBomPaymentType('100% Paid');
+                              setShowBOMForm(false);
+                              setBomConfirmModal(null);
+                              alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created with status 'Pending Confirmation'!`);
+                            }
+                          }}
+                          style={{
+                            border: 'none',
+                            backgroundColor: bomConfirmModal === 'cancel' ? '#DC2626' : bomConfirmModal === 'draft' ? '#4F46E5' : '#166534',
+                            color: 'white',
+                            padding: '9px 20px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          {bomConfirmModal === 'cancel' && 'Yes, Discard'}
+                          {bomConfirmModal === 'draft' && 'Yes, Save Draft'}
+                          {bomConfirmModal === 'create' && 'Yes, Confirm & Create'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            );
+          }
+
+          // Generic Renderer for other Production views
+          const defaultConfig = {
+            title: activeTab,
+            subtitle: `Management and control for ${activeTab}`,
+            actionText: `Active ${activeTab}`,
+            searchPlaceholder: `Search ${activeTab}...`,
+            tabs: [
+              { id: 'All', label: 'All Entries', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' }
+            ],
+            headers: ['Reference Code', 'Customer / Item', 'Details', 'Date', 'Value', 'Status', 'Action'],
+            rows: (bomStore || []).map(b => ({
+              ...b,
+              code: b.bomCode || 'REF-001',
+              c2: b.customerName || 'Customer',
+              c3: b.paymentType || '-',
+              c4: b.date || '2026-08-17',
+              c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+              status: b.status || 'ACTIVE',
+              stBg: '#eff6ff',
+              stFg: '#2563eb',
+              stBorder: '1px solid #bfdbfe',
+              tabGroup: 'All'
+            }))
+          };
+
+          const pageConfig = configs[activeTab] || defaultConfig;
+
+          const filteredRows = (pageConfig.rows || []).filter(r => {
+            const matchesSearch = !prodSearchQueryText ||
+              r.code.toLowerCase().includes(prodSearchQueryText.toLowerCase()) ||
+              (r.c2 && r.c2.toLowerCase().includes(prodSearchQueryText.toLowerCase())) ||
+              (r.c3 && r.c3.toLowerCase().includes(prodSearchQueryText.toLowerCase()));
+            const matchesTab = prodActiveSubTab === 'All' || r.tabGroup === prodActiveSubTab || prodActiveSubTab === 'All Orders';
+            return matchesSearch && matchesTab;
+          });
+
+          const handleAddMaterialRow = () => {
+            setBomMaterialsList(prev => [...prev, { name: '', category: '', uom: 'NOS', qty: '1', wastage: '0%', rate: '0' }]);
+          };
+
+          const handleRemoveMaterialRow = (idx) => {
+            setBomMaterialsList(prev => prev.filter((_, i) => i !== idx));
+          };
+
+          const handleAddRoutingStep = () => {
+            setBomRoutingSteps(prev => [...prev, { stepNo: prev.length + 1, opName: 'New Routing Operation', machine: 'Workstation Line', cycleTime: '3.0 sec', setupTime: '5 mins', skill: 'General Operator' }]);
+          };
+
+          const handleRemoveRoutingStep = (idx) => {
+            setBomRoutingSteps(prev => prev.filter((_, i) => i !== idx).map((s, i) => ({ ...s, stepNo: i + 1 })));
+          };
+
+          // Render Create Work Order Form if active or open
+          if (showWorkOrderForm) {
+            return (
+              <CreateWorkOrderPage
+                onBack={() => setShowWorkOrderForm(false)}
+                onWorkOrderCreated={(newWO) => {
+                  setShowWorkOrderForm(false);
+                  if (newWO && configs['Work Orders']?.rows) {
+                    configs['Work Orders'].rows.unshift({
+                      code: newWO.id,
+                      c2: newWO.productName,
+                      c3: newWO.bomCode,
+                      c4: `${newWO.plannedQty} Nos`,
+                      c5: '0 Nos',
+                      c6: newWO.warehouseStore,
+                      status: 'PENDING / DRAFT',
+                      stBg: '#fff7ed',
+                      stFg: '#c2410c',
+                      stBorder: '1px solid #fed7aa',
+                      tabGroup: 'Pending'
+                    });
+                  }
+                }}
+              />
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+              {/* 1. TOP HEADER SECTION WITH BLUE PRIMARY BUTTON */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                    {pageConfig.title}
+                  </h2>
+                  <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                    {pageConfig.subtitle}
+                  </span>
+                </div>
+                {pageConfig.actionText ? (
+                  <button
+                    onClick={() => {
+                      if (activeTab === 'BOM / Routing' || activeTab === 'BOM' || pageConfig.title.includes('BOM')) {
+                        setNewBomProductName('');
+                        setNewBomSku('');
+                        setNewBomRevision('');
+                        setNewBomTargetQty('');
+                        setBomMaterialsList([]);
+                        setNewBomPaymentProofDoc(null);
+                        setNewBomDeliveryProofDoc(null);
+                        setNewBomRemarks('');
+                        setSameAsBilling(false);
+                        setNewBomDeliveryStreet('');
+                        setNewBomDeliveryCity('');
+                        setNewBomDeliveryState('');
+                        setNewBomDeliveryPincode('');
+                        setNewBomPaymentType('100% Advance');
+                        setNewBomCode(`BOM-${Math.floor(100 + Math.random() * 900)}`);
+                        setShowBOMForm(true);
+                      } else if (activeTab === 'Work Orders' || pageConfig.actionText.includes('Create Work Order')) {
+                        setShowWorkOrderForm(true);
+                      } else if (activeTab === 'Customer Management' || pageConfig.title.includes('Customer')) {
+                        setShowCustomerForm(true);
+                      } else {
+                        alert(`Action: ${pageConfig.actionText}`);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      border: 'none',
+                      color: 'white',
+                      height: '38px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
+                    }}
+                  >
+                    <Plus style={{ width: '14px', height: '14px' }} />
+                    {pageConfig.actionText.replace(/^\+\s*/, '')}
+                  </button>
+                ) : null}
+              </div>
+
+              {/* 2. FILTERS & SEARCH ROW CARD (EXACT MATCH FOR PURCHASE ORDERS SCREENSHOT) */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '340px' }}>
+                  <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
+                  <input
+                    type="text"
+                    placeholder={pageConfig.searchPlaceholder}
+                    value={prodSearchQueryText}
+                    onChange={(e) => setProdSearchQueryText(e.target.value)}
+                    style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
+                    <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
+                    <input
+                      type="date"
+                      value={prodFilterDateVal}
+                      onChange={(e) => setProdFilterDateVal(e.target.value)}
+                      style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'transparent' }}
+                    />
+                  </div>
+
+                  <select
+                    value={prodFilterStatusSelect}
+                    onChange={(e) => setProdFilterStatusSelect(e.target.value)}
+                    style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}
+                  >
+                    <option value="All">Status: All</option>
+                    <option value="OPEN">OPEN</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+
+                  <button
+                    onClick={() => { setProdSearchQueryText(''); setProdFilterDateVal(''); setProdFilterStatusSelect('All'); }}
+                    title="Clear Filters"
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      height: '38px',
+                      width: '38px'
+                    }}
+                  >
+                    <RotateCcw style={{ width: '15px', height: '15px' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. STATUS SUB-TABS ROW (EXACT MATCH FOR PURCHASE ORDERS SCREENSHOT) */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap' }}>
+                {pageConfig.tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setProdActiveSubTab(tab.id)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      padding: '10px 4px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      color: prodActiveSubTab === tab.id ? '#2563eb' : '#64748b',
+                      borderBottom: prodActiveSubTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    {tab.label}
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '2px 7px',
+                      borderRadius: '12px',
+                      backgroundColor: tab.bg,
+                      color: tab.fg,
+                      fontWeight: 'bold'
+                    }}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 4. MAIN DATA TABLE (EXACT MATCH FOR PURCHASE ORDERS SCREENSHOT) */}
+              <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+                        <th style={{ padding: '12px 14px', width: '30px' }}><input type="checkbox" /></th>
+                        {pageConfig.headers.map((h, i) => (
+                          <th key={i} style={{
+                            padding: '12px 14px',
+                            fontWeight: 'bold',
+                            textAlign: (h === 'Status' || h === 'Fulfillment Status' || h === 'Action' || h === 'Dispatch Packing Status') ? 'center' : (h.includes('Total') || h.includes('Value')) ? 'right' : 'left'
+                          }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRows.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px 14px' }}><input type="checkbox" /></td>
+                          <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.code}</td>
+                          <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c2 || row.name}</td>
+                          <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
+                          <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
+                          {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5.toString().includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
+                          {row.c6 !== undefined && activeTab !== 'Customer Management' && (
+                            <td style={{ padding: '12px 14px', color: '#475569' }}>
+                              {activeTab === 'Invoice Management' ? (
+                                <span style={{
+                                  backgroundColor: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#DCFCE7' : '#FEF3C7',
+                                  color: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#166534' : '#B45309',
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  {row.c6}
+                                </span>
+                              ) : (
+                                row.c6
+                              )}
+                            </td>
+                          )}
+                          {pageConfig.headers.includes('Fulfillment Status') ? (
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <span style={{
+                                backgroundColor: row.stBg,
+                                color: row.stFg,
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                border: row.stBorder
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
+                                {row.status}
+                              </span>
+                            </td>
+                          ) : pageConfig.headers.includes('Status') && (
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <span style={{ backgroundColor: row.stBg, color: row.stFg, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', border: row.stBorder }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
+                                {row.status}
+                              </span>
+                            </td>
+                          )}
+                          {pageConfig.headers.includes('Action') && (
+                            <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
+                              {activeTab === 'Invoice Management' ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                  {!['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) && (
+                                    <button
+                                      onClick={() => {
+                                        setViewingInvoiceModal(row);
+                                        setInvoiceModalActiveTab('Invoice Items');
+                                      }}
+                                      style={{
+                                        backgroundColor: '#EFF6FF',
+                                        color: '#2563EB',
+                                        border: '1px solid #BFDBFE',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                    >
+                                      <Receipt style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Invoice
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => {
+                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                      setCustomerActionMenuIdx(null);
+                                    }}
+                                    title="More Actions"
+                                    style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                  >
+                                    <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                  </button>
+                                </div>
+                              ) : activeTab === 'Dispatch Orders' ? (
+                                <button
+                                  onClick={() => setDispatchPackingModal(row)}
+                                  style={{
+                                    backgroundColor: '#EEF2FF',
+                                    color: '#4F46E5',
+                                    border: '1px solid #C7D2FE',
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
+                                >
+                                  <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
+                                </button>
+                              ) : activeTab === 'Accounts Verification' ? (
+                                (() => {
+                                  const acc = row.accountsVerification || {};
+                                  const isAccountsDone = Boolean(
+                                    row.isAccountsDone ||
+                                    acc.verified ||
+                                    row.status === 'Accounts Verified & Passed to Invoice' ||
+                                    row.status === 'ACCOUNTS VERIFIED' ||
+                                    (acc.hardCopyReceived && acc.softCopyReceived && (acc.paymentStatus || row.paymentType === 'Net 30 Days'))
+                                  );
+
+                                  return isAccountsDone ? (
+                                    <button
+                                      onClick={() => {
+                                        setAccountsVerificationModal(row);
+                                        setIsAccountsViewOnly(true);
+                                      }}
+                                      style={{
+                                        backgroundColor: '#EFF6FF',
+                                        color: '#2563EB',
+                                        border: '1px solid #BFDBFE',
+                                        padding: '6px 16px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#DBEAFE';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                      }}
+                                    >
+                                      <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setAccountsVerificationModal(row);
+                                        setIsAccountsViewOnly(false);
+                                      }}
+                                      style={{
+                                        backgroundColor: '#FEF3C7',
+                                        color: '#B45309',
+                                        border: '1px solid #FDE68A',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#FDE68A';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#FEF3C7';
+                                      }}
+                                    >
+                                      <Receipt style={{ width: '14px', height: '14px', color: '#B45309' }} /> Verify Payment
+                                    </button>
+                                  );
+                                })()
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (activeTab === 'Customer Management') {
+                                      setCustomerActionMenuIdx(customerActionMenuIdx === idx ? null : idx);
+                                      setBomActionMenuIdx(null);
+                                    } else {
+                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                      setCustomerActionMenuIdx(null);
+                                    }
+                                  }}
+                                  title="Actions"
+                                  style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                </button>
+                              )}
+
+                              {(activeTab === 'BOM' || activeTab === 'BOM / Routing') && bomActionMenuIdx === idx && (() => {
+                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation'].includes(row.status);
+                                const isAccountsDoneOrVerified = Boolean(
+                                  row.accountsVerification?.verified ||
+                                  row.status === 'Accounts Verified & Passed to Invoice' ||
+                                  row.status === 'ACCOUNTS VERIFIED' ||
+                                  row.status === 'Invoice Confirmed' ||
+                                  row.status === 'Completed' ||
+                                  row.status === 'Confirmed' ||
+                                  row.status === 'Payment Uploaded'
+                                );
+                                const isPaymentPending = !isAccountsDoneOrVerified && !isDraftOrPending && (
+                                  (row.paymentType === '100% Advance' && !row.payments?.advance100Uploaded && !row.payments?.proofDoc) ||
+                                  (row.paymentType === '50% Advance + 50% Dispatch' && (!row.payments?.advance50Uploaded || !row.payments?.dispatch50Uploaded)) ||
+                                  (row.paymentType === 'Net 30 Days' && !row.payments?.net30Uploaded)
+                                );
+
+                                return (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      right: '14px',
+                                      top: '44px',
+                                      backgroundColor: 'white',
+                                      border: '1px solid #E2E8F0',
+                                      borderRadius: '10px',
+                                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                      zIndex: 100,
+                                      minWidth: '200px',
+                                      overflow: 'hidden',
+                                      padding: '4px'
+                                    }}
+                                  >
+                                    {/* 1. Send Confirm (Only if pending customer confirmation - Opens Editable Verification Flow) */}
+                                    {isDraftOrPending && (
+                                      <button
+                                        onClick={() => {
+                                          setConfirmingBomModal({ ...row, isEditMode: true });
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <CheckCircle style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Send Confirm
+                                      </button>
+                                    )}
+
+                                    {/* 2. Re-upload Address Proof (Triggered when Invoice Desk requests it) */}
+                                    {row.addressProofReuploadRequested && (
+                                      <button
+                                        onClick={() => {
+                                          setReuploadAddressProofModal(row);
+                                          setReuploadProofFile(null);
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: '#FEF2F2', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                      >
+                                        <RotateCcw style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Re-upload Address Proof
+                                      </button>
+                                    )}
+
+                                    {/* 3. Update Payment (Only for Partial Payment and Credit Payment, and ONLY if not yet updated) */}
+                                    {(row.paymentType === 'Partial Payment' || row.paymentType === 'Credit Payment') && !row.paymentUpdated && (
+                                      <button
+                                        onClick={() => {
+                                          setUpdatePaymentModal(row);
+                                          setUpdatePaymentFile(null);
+                                          setUpdatePaymentNotes('');
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <CreditCard style={{ width: '14px', height: '14px', color: '#059669' }} /> Update Payment
+                                      </button>
+                                    )}
+
+                                    {/* 4. Upload Payment Details (For advance payments pending upload) */}
+                                    {isPaymentPending && !row.paymentUpdated && row.paymentType !== 'Partial Payment' && row.paymentType !== 'Credit Payment' && (
+                                      <button
+                                        onClick={() => {
+                                          setUploadPaymentModal(row);
+                                          setPaymentStageType(row.paymentType || '100% Paid');
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <Upload style={{ width: '14px', height: '14px', color: '#059669' }} /> Upload Payment Details
+                                      </button>
+                                    )}
+
+                                    {/* 5. View Payment Proof (If proof document is attached) */}
+                                    {(row.payments?.proofDoc || row.paymentProofDoc) && (
+                                      <button
+                                        onClick={() => {
+                                          setViewingProofDocModal(row);
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#0284C7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0F9FF'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <FileText style={{ width: '14px', height: '14px', color: '#0284C7' }} /> View Payment Proof
+                                      </button>
+                                    )}
+
+                                    {/* 6. View BOM Details (100% Read-Only Pure Viewer) */}
+                                    <button
+                                      onClick={() => {
+                                        setConfirmingBomModal({ ...row, isEditMode: false });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      <Eye style={{ width: '14px', height: '14px', color: '#64748B' }} /> View BOM Details
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                              {activeTab === 'Invoice Management' && bomActionMenuIdx === idx && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    right: '14px',
+                                    top: '44px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                    zIndex: 100,
+                                    minWidth: '170px',
+                                    overflow: 'hidden',
+                                    padding: '4px'
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setViewingInvoiceModal(row);
+                                      setInvoiceModalActiveTab('Invoice Items');
+                                      setBomActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View Details
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      alert(`Downloading Invoice ${row.invNo || row.code} PDF...`);
+                                      setBomActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Download style={{ width: '14px', height: '14px', color: '#059669' }} /> Download PDF
+                                  </button>
+
+                                  {(() => {
+                                    const isInvoiceCompleted = ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status);
+
+                                    // Look up matching BOM to check if there are unpacked items
+                                    const matchingBom = bomStore.find(b =>
+                                      b.bomCode === row.poNo ||
+                                      b.bomCode === row.code ||
+                                      b.bomCode === row.c3 ||
+                                      (b.salesOrderNo && (b.salesOrderNo === row.poNo || b.salesOrderNo === row.c3))
+                                    );
+
+                                    let hasUnpackedItems = (row.items || []).some(it => it.selected === false);
+                                    if (!hasUnpackedItems && matchingBom && matchingBom.dispatchPacking && Array.isArray(matchingBom.dispatchPacking)) {
+                                      hasUnpackedItems = matchingBom.dispatchPacking.some(dp => dp.packed === false);
+                                    }
+
+                                    // If invoice is fully completed with NO unpacked items, hide these actions
+                                    if (isInvoiceCompleted && !hasUnpackedItems) return null;
+
+                                    return (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setPendingDcModal(row);
+                                            setBomActionMenuIdx(null);
+                                          }}
+                                          style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          <Truck style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Create DC for Pending
+                                        </button>
+
+                                        <button
+                                          onClick={() => {
+                                            setCloseInvoiceReasonModal(row);
+                                            setCloseReasonText('');
+                                            setBomActionMenuIdx(null);
+                                          }}
+                                          style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          <XCircle style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Close Invoice
+                                        </button>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+
+                              {activeTab === 'Accounts Verification' && bomActionMenuIdx === idx && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    right: '14px',
+                                    top: '44px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                    zIndex: 100,
+                                    minWidth: '180px',
+                                    overflow: 'hidden',
+                                    padding: '4px'
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setAccountsVerificationModal(row);
+                                      setBomActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#B45309', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF3C7'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Receipt style={{ width: '14px', height: '14px', color: '#B45309' }} /> Verify Payment & Copies
+                                  </button>
+                                </div>
+                              )}
+
+                              {activeTab === 'Dispatch Orders' && bomActionMenuIdx === idx && (() => {
+                                const isLocked = row.status === 'Packed & Ready for Dispatch' ||
+                                  row.status === 'Partially Packed' ||
+                                  row.status === 'Closed' ||
+                                  row.status === 'CLOSED' ||
+                                  (row.dispatchPacking && Array.isArray(row.dispatchPacking) && row.dispatchPacking.length > 0 && row.dispatchPacking.every(p => p.packed));
+
+                                return (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      right: '14px',
+                                      top: '44px',
+                                      backgroundColor: 'white',
+                                      border: '1px solid #E2E8F0',
+                                      borderRadius: '10px',
+                                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                      zIndex: 100,
+                                      minWidth: '170px',
+                                      overflow: 'hidden',
+                                      padding: '4px'
+                                    }}
+                                  >
+                                    <button
+                                      onClick={() => {
+                                        setDispatchPackingModal({ ...row, isReadOnly: isLocked });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: isLocked ? '#166534' : '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isLocked ? '#F0FDF4' : '#EEF2FF'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      {isLocked ? (
+                                        <>
+                                          <Eye style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing Details
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack Items
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+
+                              {!['BOM', 'BOM / Routing', 'Accounts Verification', 'Dispatch Orders', 'Invoice Management', 'Customer Management'].includes(activeTab) && bomActionMenuIdx === idx && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    right: '14px',
+                                    top: '44px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                    zIndex: 100,
+                                    minWidth: '140px',
+                                    overflow: 'hidden',
+                                    padding: '4px'
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      alert(`Viewing details for ${row.code}`);
+                                      setBomActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View Details
+                                  </button>
+                                </div>
+                              )}
+
+                              {activeTab === 'Customer Management' && customerActionMenuIdx === idx && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    right: '14px',
+                                    top: '44px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+                                    zIndex: 100,
+                                    minWidth: '130px',
+                                    overflow: 'hidden',
+                                    padding: '4px'
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setViewingCustomer(row);
+                                      setCustomerActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setEditingCustomer({ ...row, originalCode: row.code });
+                                      setCustFormName(row.code);
+                                      setCustFormCompany(row.c2 || row.code);
+                                      setCustFormMobile(row.c4 || '');
+                                      setCustFormEmail(row.c5 || '');
+
+                                      const bObj = row.billingAddressObj || {};
+                                      const dObj = row.deliveryAddressObj || {};
+                                      setCustFormBillingAddress(bObj.address || row.c6 || row.billingAddress || '');
+                                      setCustFormBillingCity(bObj.city || '');
+                                      setCustFormBillingState(bObj.state || '');
+                                      setCustFormBillingPincode(bObj.pincode || '');
+
+                                      const isSame = (row.deliveryAddress === row.billingAddress && Boolean(row.billingAddress)) || (!row.c7 && !row.deliveryAddress);
+                                      setCustFormSameAsBilling(isSame);
+                                      setCustFormDeliveryAddress(dObj.address || row.c7 || row.deliveryAddress || '');
+                                      setCustFormDeliveryCity(dObj.city || '');
+                                      setCustFormDeliveryState(dObj.state || '');
+                                      setCustFormDeliveryPincode(dObj.pincode || '');
+                                      setCustomerActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Edit3 style={{ width: '14px', height: '14px', color: '#D97706' }} /> Edit
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setCustomerToDelete(row);
+                                      setCustomerActionMenuIdx(null);
+                                    }}
+                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Trash2 style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {uploadPaymentModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Upload style={{ width: '18px', height: '18px' }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Upload Payment Details</h3>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>{uploadPaymentModal.bomCode} — {uploadPaymentModal.paymentType}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setUploadPaymentModal(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}><X style={{ width: '18px', height: '18px' }} /></button>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Select Payment Stage</label>
+                      <select
+                        value={paymentStageType}
+                        onChange={(e) => setPaymentStageType(e.target.value)}
+                        style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+                      >
+                        {uploadPaymentModal.paymentType === '50% Advance + 50% Dispatch' ? (
+                          <>
+                            <option value="50% Advance">Stage 1: 50% Advance Payment</option>
+                            <option value="50% Dispatch">Stage 2: 50% Dispatch Payment</option>
+                          </>
+                        ) : uploadPaymentModal.paymentType === 'Net 30 Days' ? (
+                          <option value="Net 30 Days">Net 30 Days Credit Payment</option>
+                        ) : (
+                          <option value="100% Advance">100% Full Advance Payment</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Payment Proof / Reference Document</label>
+                      <input
+                        type="file"
+                        onChange={(e) => setPaymentProofFile(e.target.files[0] ? e.target.files[0].name : null)}
+                        style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
+                      />
+                      {paymentProofFile && <span style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'block' }}>Selected: {paymentProofFile}</span>}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                      <button
+                        onClick={() => setUploadPaymentModal(null)}
+                        style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!paymentProofFile) {
+                            alert('Please attach or select payment proof file!');
+                            return;
+                          }
+                          setBomStore(prev => prev.map(b => b.bomCode === uploadPaymentModal.bomCode ? {
+                            ...b,
+                            status: 'Payment Uploaded & Verified',
+                            payments: {
+                              ...b.payments,
+                              proofDoc: paymentProofFile,
+                              advance100Uploaded: paymentStageType === '100% Advance',
+                              advance50Uploaded: paymentStageType === '50% Advance' || b.payments?.advance50Uploaded,
+                              dispatch50Uploaded: paymentStageType === '50% Dispatch' || b.payments?.dispatch50Uploaded,
+                              net30Uploaded: paymentStageType === 'Net 30 Days'
+                            }
+                          } : b));
+                          setUploadPaymentModal(null);
+                          alert(`✅ Payment details for (${paymentStageType}) uploaded and recorded successfully!`);
+                        }}
+                        style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.2)' }}
+                      >
+                        Record & Submit Payment Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── UPDATE PAYMENT MODAL (Only for Partial Payment & Credit Payment - One-Time Lock) ─── */}
+              {updatePaymentModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '92%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CreditCard style={{ width: '20px', height: '20px' }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Update Payment Details</h3>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>{updatePaymentModal.bomCode} — {updatePaymentModal.paymentType}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setUpdatePaymentModal(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}><X style={{ width: '18px', height: '18px' }} /></button>
+                    </div>
+
+                    <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
+                      <div><strong>Customer:</strong> {updatePaymentModal.customerName}</div>
+                      <div><strong>Order Total:</strong> ₹{parseFloat(updatePaymentModal.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                      {updatePaymentModal.creditDays && (
+                        <div style={{ marginTop: '4px', color: '#6D28D9' }}>
+                          <strong>Credit Term:</strong> {updatePaymentModal.creditDays} Days (Due: {updatePaymentModal.creditDueDate || 'Within 7 Days'})
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Upload Payment Slip / Bank Receipt <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={(e) => {
+                          const f = e.target.files && e.target.files[0];
+                          if (f) setUpdatePaymentFile(f);
+                        }}
+                        style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
+                      />
+                      {updatePaymentFile && (
+                        <span style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
+                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {updatePaymentFile.name} ({(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB)
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Payment Reference / Notes</label>
+                      <textarea
+                        rows={2}
+                        value={updatePaymentNotes}
+                        onChange={(e) => setUpdatePaymentNotes(e.target.value)}
+                        placeholder="Enter transaction UTR / receipt reference (optional)..."
+                        style={{ width: '100%', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                      />
+                    </div>
+
+                    <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertCircle style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                      <span><strong>Permanent Lock:</strong> Once updated, payment details cannot be re-updated. The menu option will be locked permanently.</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                      <button
+                        onClick={() => setUpdatePaymentModal(null)}
+                        style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!updatePaymentFile) {
+                            alert('Please select or upload payment slip file!');
+                            return;
+                          }
+                          const updatedDoc = {
+                            name: updatePaymentFile.name,
+                            size: `${(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            uploadedAt: new Date().toISOString(),
+                            notes: updatePaymentNotes
+                          };
+                          setBomStore(prev => prev.map(b => b.bomCode === updatePaymentModal.bomCode ? {
+                            ...b,
+                            status: 'Payment Uploaded & Settled',
+                            paymentUpdated: true,
+                            paymentUpdatedDate: new Date().toISOString(),
+                            paymentProofDoc: updatedDoc,
+                            payments: {
+                              ...b.payments,
+                              proofDoc: updatePaymentFile.name,
+                              proofDocObj: updatedDoc,
+                              paymentUpdated: true
+                            }
+                          } : b));
+                          setUpdatePaymentModal(null);
+                          alert(`✅ Payment details for (${updatePaymentModal.bomCode}) successfully recorded and locked!`);
+                        }}
+                        style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.2)' }}
+                      >
+                        Record & Lock Payment Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── RE-UPLOAD ADDRESS PROOF MODAL ─── */}
+              {reuploadAddressProofModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '92%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <RotateCcw style={{ width: '20px', height: '20px' }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Re-upload Address Proof</h3>
+                          <span style={{ fontSize: '12px', color: '#DC2626', fontWeight: '700' }}>Invoice Desk Action Required</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setReuploadAddressProofModal(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}><X style={{ width: '18px', height: '18px' }} /></button>
+                    </div>
+
+                    <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#991B1B', lineHeight: '1.5' }}>
+                      <div><strong>BOM Reference:</strong> {reuploadAddressProofModal.bomCode}</div>
+                      <div><strong>Customer:</strong> {reuploadAddressProofModal.customerName}</div>
+                      <div><strong>Delivery Destination:</strong> {reuploadAddressProofModal.deliveryAddress}</div>
+                      {reuploadAddressProofModal.reuploadRequestedAt && (
+                        <div style={{ marginTop: '6px', fontSize: '11px', color: '#DC2626', fontWeight: '800' }}>
+                          Requested on: {new Date(reuploadAddressProofModal.reuploadRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Select Verified Address Proof File (PDF / Image) <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={(e) => {
+                          const f = e.target.files && e.target.files[0];
+                          if (f) setReuploadProofFile(f);
+                        }}
+                        style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
+                      />
+                      {reuploadProofFile && (
+                        <span style={{ fontSize: '11px', color: '#166534', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
+                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {reuploadProofFile.name} ({(reuploadProofFile.size / (1024 * 1024)).toFixed(2)} MB)
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                      <button
+                        onClick={() => setReuploadAddressProofModal(null)}
+                        style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!reuploadProofFile) {
+                            alert('Please select or upload the verified address proof file!');
+                            return;
+                          }
+                          const targetCode = reuploadAddressProofModal.bomCode;
+                          const reuploadedTime = new Date().toISOString();
+                          const newDoc = {
+                            name: reuploadProofFile.name,
+                            size: `${(reuploadProofFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            uploadedAt: reuploadedTime
+                          };
+
+                          setBomStore(prev => prev.map(b => b.bomCode === targetCode ? {
+                            ...b,
+                            deliveryAddressProofDoc: newDoc,
+                            addressProofReuploadRequested: false,
+                            addressProofReuploadedAt: reuploadedTime
+                          } : b));
+
+                          setInvoiceList(prev => prev.map(i => (i.poNo === targetCode || i.invNo === targetCode || i.code === targetCode) ? {
+                            ...i,
+                            deliveryAddressProofDoc: newDoc,
+                            addressProofReuploadRequested: false,
+                            addressProofReuploadedAt: reuploadedTime
+                          } : i));
+
+                          setReuploadAddressProofModal(null);
+                          alert(`✅ Verified address proof attached for BOM (${targetCode}) and synced with Invoice Desk!`);
+                        }}
+                        style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                      >
+                        Submit Verified Address Proof
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <strong style={{ fontSize: '14px' }}>PO Authorization Hierarchy Workflows</strong>
-              <div style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
-                <div>
-                  <strong style={{ display: 'block', color: '#0f172a' }}>Rule 1: Lower Threshold POs</strong>
-                  <span style={{ color: '#64748b' }}>Values &lt; ₹50,000.00: Auto-approved, notification dispatched to Purchaser.</span>
-                </div>
-                <div>
-                  <strong style={{ display: 'block', color: '#0f172a' }}>Rule 2: Executive CEO Review</strong>
-                  <span style={{ color: '#64748b' }}>Values &ge; ₹50,000.00: Assigned to **Velmurugan Rathinam (CEO)** for mandatory digital approval.</span>
-                </div>
-              </div>
+          );
+        } catch (err) {
+          console.error('Render error in section 14:', err);
+          return (
+            <div style={{ padding: '24px', backgroundColor: '#FEF2F2', borderRadius: '12px', border: '1px solid #FCA5A5', color: '#991B1B' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>Error rendering view: {activeTab}</h3>
+              <p style={{ margin: '6px 0 0 0', fontSize: '13px' }}>{err?.message || 'An unexpected rendering error occurred.'}</p>
             </div>
-          )}
-        </div>
-      )}
+          );
+        }
+      })()}
 
 
 
@@ -10022,11 +17015,502 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-              <button 
-                onClick={() => setGrnValidationModal(null)} 
+              <button
+                onClick={() => setGrnValidationModal(null)}
                 style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
               >
                 OK, I'll fill it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MANDATORY CLOSE INVOICE REASON MODAL */}
+      {closeInvoiceReasonModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '520px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626', flexShrink: 0 }}>
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Close Invoice Without Full Delivery</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                  Invoice: <strong style={{ color: '#0F172A' }}>{closeInvoiceReasonModal.invNo || closeInvoiceReasonModal.code}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#B45309' }}>
+              ⚠️ You are closing this invoice without delivering the pending/missing products. A mandatory justification reason is required to close this invoice.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                Why are you closing this invoice without sending the product? <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <textarea
+                value={closeReasonText}
+                onChange={(e) => setCloseReasonText(e.target.value)}
+                placeholder="Specify reason (e.g., Customer cancelled missing items / Short supply agreed / Refund issued)..."
+                rows={4}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCloseInvoiceReasonModal(null);
+                  setCloseReasonText('');
+                }}
+                style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!closeReasonText.trim()}
+                onClick={() => {
+                  if (!closeReasonText.trim()) return;
+                  setInvoiceList(prev => prev.map(invItem => (invItem.invNo === closeInvoiceReasonModal.invNo || invItem.code === closeInvoiceReasonModal.code) ? {
+                    ...invItem,
+                    status: 'CLOSED',
+                    closeReason: closeReasonText,
+                    pay: 'Closed (No Pending)'
+                  } : invItem));
+                  alert(`✅ Invoice ${closeInvoiceReasonModal.invNo || closeInvoiceReasonModal.code} successfully CLOSED with reason recorded.`);
+                  setCloseInvoiceReasonModal(null);
+                  setCloseReasonText('');
+                }}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: closeReasonText.trim() ? '#DC2626' : '#94A3B8',
+                  color: 'white',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: closeReasonText.trim() ? 'pointer' : 'not-allowed',
+                  boxShadow: closeReasonText.trim() ? '0 2px 4px rgba(220,38,38,0.25)' : 'none'
+                }}
+              >
+                Confirm Close Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULL SCREEN CREATE DC FOR PENDING VIEW */}
+      {pendingDcModal && (() => {
+        const inv = pendingDcModal;
+        const invNoText = inv.invNo || inv.code || 'INV-2026-102';
+        const bomRefText = inv.poNo || inv.c3 || 'BOM-102';
+        const customerText = inv.vendor || inv.c2 || 'Customer';
+
+        // Look up matching BOM
+        const matchingBom = bomStore.find(b =>
+          b.bomCode === inv.poNo ||
+          b.bomCode === inv.code ||
+          b.bomCode === inv.c3 ||
+          (b.salesOrderNo && (b.salesOrderNo === inv.poNo || b.salesOrderNo === inv.c3))
+        );
+
+        // Derive unpacked items from invoice items or matchingBom
+        const rawItems = (inv.items && inv.items.length > 0)
+          ? inv.items
+          : (matchingBom && matchingBom.items && matchingBom.items.length > 0)
+            ? matchingBom.items
+            : [
+              { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Aluminum Mounting Rail', uom: 'Nos', qty: 12, rate: 250, selected: false }
+            ];
+
+        // Filter unpacked items (selected === false or packed === false)
+        const unpackedItemsList = rawItems.filter((it, idx) => {
+          if (it.selected === false) return true;
+          if (matchingBom && matchingBom.dispatchPacking && matchingBom.dispatchPacking[idx]) {
+            return matchingBom.dispatchPacking[idx].packed === false;
+          }
+          return false;
+        });
+
+        const itemsListToRender = unpackedItemsList.length > 0 ? unpackedItemsList : rawItems;
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: '#F8FAFC', zIndex: 99999, overflowY: 'auto', padding: '24px', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Top Bar Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <button
+                  onClick={() => setPendingDcModal(null)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                >
+                  <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back to Invoices
+                </button>
+                <div>
+                  <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                    Create Delivery Challan (DC) for Pending Items
+                  </h1>
+                  <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                    Invoice Ref: <strong style={{ color: '#2563EB' }}>{invNoText}</strong> | BOM Ref: <strong style={{ color: '#4F46E5' }}>{bomRefText}</strong> | Customer: <strong>{customerText}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setPendingDcModal(null)}
+                  style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Update invoice items state to marked as included in DC & close invoice
+                    setInvoiceList(prev => prev.map(invItem => (invItem.invNo === inv.invNo || invItem.code === inv.code) ? {
+                      ...invItem,
+                      status: 'CLOSED',
+                      pay: 'Fully Dispatched & Closed',
+                      items: (invItem.items || []).map(it => ({ ...it, selected: true }))
+                    } : invItem));
+
+                    // Update corresponding BOM status to 'Closed' in bomStore and mark dispatchPacking items packed
+                    const targetPoNo = inv.poNo || inv.invNo || inv.code;
+                    const targetPoNum = targetPoNo ? targetPoNo.replace(/[^0-9]/g, '') : '';
+
+                    setBomStore(prev => prev.map(b => {
+                      const bNum = b.bomCode ? b.bomCode.replace(/[^0-9]/g, '') : '';
+                      const isMatch = b.bomCode === targetPoNo ||
+                        b.bomCode === inv.invNo ||
+                        b.bomCode === inv.poNo ||
+                        b.bomCode === inv.code ||
+                        (b.salesOrderNo && (b.salesOrderNo === inv.poNo || b.salesOrderNo === inv.c3)) ||
+                        (targetPoNum && bNum && bNum === targetPoNum);
+
+                      if (isMatch) {
+                        const updatedDispatch = (b.dispatchPacking && b.dispatchPacking.length > 0)
+                          ? b.dispatchPacking.map(p => ({ ...p, packed: true }))
+                          : (b.items || []).map(it => ({ name: it.name || it.c2 || 'Item', bomQty: it.qty || 1, packed: true }));
+
+                        return {
+                          ...b,
+                          status: 'Closed',
+                          dispatchPacking: updatedDispatch
+                        };
+                      }
+                      return b;
+                    }));
+
+                    alert(`🚚 Delivery Challan (DC) Generated successfully! Pending items dispatched for ${invNoText}. Dispatch status updated to CLOSED.`);
+                    setPendingDcModal(null);
+                  }}
+                  style={{ border: 'none', backgroundColor: '#4F46E5', color: '#FFFFFF', height: '40px', padding: '0 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(79,70,229,0.25)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Truck style={{ width: '16px', height: '16px' }} />
+                  Generate DC & Complete Dispatch
+                </button>
+              </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Pending Items Count</span>
+                <div style={{ fontSize: '18px', color: '#DC2626', marginTop: '6px', fontWeight: '800' }}>{itemsListToRender.length} Items Pending</div>
+              </div>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Delivery Location</span>
+                <div style={{ fontSize: '13px', color: '#0F172A', marginTop: '6px', fontWeight: '600' }}>{inv.deliveryAddress || 'Factory Site - Plot 14, Phase II'}</div>
+              </div>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>DC Dispatch Status</span>
+                <div style={{ fontSize: '13px', color: '#4F46E5', marginTop: '6px', fontWeight: '800' }}>Subsequent Partial Delivery DC</div>
+              </div>
+            </div>
+
+            {/* Professional Delivery Challan (DC) Document Template & Form */}
+            <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Document Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #4F46E5', paddingBottom: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: '900', color: '#4F46E5', letterSpacing: '-0.5px' }}>DELIVERY CHALLAN</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', fontWeight: '600', marginTop: '2px' }}>Subsequent Partial Goods Dispatch Document</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Issued under Rule 55 of CGST Rules, 2017</div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>DC No: <span style={{ color: '#4F46E5' }}>DC-{invNoText.replace('INV-', '')}</span></div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Date: <strong>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>Invoice Ref: <strong>{invNoText}</strong> | Sales BOM: <strong>{bomRefText}</strong></div>
+                </div>
+              </div>
+
+              {/* Consignor & Consignee Info Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', backgroundColor: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                {/* Consignor (From) */}
+                <div>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CONSIGNOR (DISPATCH FROM)</span>
+                  <h4 style={{ margin: '4px 0 2px 0', fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>ControlRoom Industrial Corp Ltd</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+                    Plot 14, Phase II, Industrial Complex<br />
+                    Nagappa Estate, Puzhal, Chennai - 600066<br />
+                    <strong>GSTIN:</strong> 33AAAAA0000A1Z5 | <strong>State Code:</strong> 33
+                  </p>
+                </div>
+
+                {/* Consignee (Ship To) */}
+                <div>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CONSIGNEE (DELIVER TO)</span>
+                  <h4 style={{ margin: '4px 0 2px 0', fontSize: '14px', fontWeight: '800', color: '#2563EB' }}>{customerText}</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+                    {inv.deliveryAddress || 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai'}<br />
+                    <strong>GSTIN:</strong> {inv.gstin || '33BBBBB1111B1Z2'} | <strong>State Code:</strong> 33
+                  </p>
+                </div>
+              </div>
+
+              {/* Transporter & Shipping Info Input Form */}
+              <div style={{ backgroundColor: '#EEF2FF', padding: '18px 20px', borderRadius: '12px', border: '1px solid #C7D2FE' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', display: 'block', marginBottom: '12px' }}>
+                  🚚 Transport & Movement Information (DC Shipping Details)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Transporter Name</label>
+                    <input
+                      type="text"
+                      defaultValue="VRL Logistics Ltd."
+                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: 'white' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Vehicle Number</label>
+                    <input
+                      type="text"
+                      defaultValue="TN-09-CB-4890"
+                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: 'white', fontWeight: '700', textTransform: 'uppercase' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Lorry Receipt (LR) No.</label>
+                    <input
+                      type="text"
+                      defaultValue="LR-2026-9812"
+                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: 'white' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Mode of Transport</label>
+                    <select style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: 'white' }}>
+                      <option>Road Transport</option>
+                      <option>Rail Freight</option>
+                      <option>Air Express</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pending Items Table Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Challan Goods Description (Pending Items to Dispatch)</h3>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>Select items included in this Delivery Challan shipment.</span>
+                  </div>
+
+                  <button
+                    onClick={() => window.print()}
+                    style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Printer style={{ width: '14px', height: '14px', color: '#475569' }} /> Print DC Template
+                  </button>
+                </div>
+
+                <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F8FAFC', color: '#475569', borderBottom: '1px solid #E2E8F0' }}>
+                        <th style={{ padding: '12px', textAlign: 'center', width: '100px' }}>Include</th>
+                        <th style={{ padding: '12px' }}>Product Code</th>
+                        <th style={{ padding: '12px' }}>Goods Description</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>HSN Code</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>UOM</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Challan Qty</th>
+                        <th style={{ padding: '12px', textAlign: 'right' }}>Rate (₹)</th>
+                        <th style={{ padding: '12px', textAlign: 'right' }}>Taxable Value (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemsListToRender.map((it, idx) => {
+                        const qty = it.qty || it.bomQty || 12;
+                        const rate = it.rate || 250;
+                        const val = qty * rate;
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                defaultChecked={true}
+                                style={{ accentColor: '#4F46E5', width: '16px', height: '16px', cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td style={{ padding: '12px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 2}`}</td>
+                            <td style={{ padding: '12px', fontWeight: '700', color: '#0F172A' }}>{it.name}</td>
+                            <td style={{ padding: '12px', textAlign: 'center', color: '#64748B' }}>76109090</td>
+                            <td style={{ padding: '12px', textAlign: 'center', color: '#64748B' }}>{it.uom || 'Nos'}</td>
+                            <td style={{ padding: '12px', textAlign: 'center', fontWeight: '800', color: '#4F46E5' }}>{qty} Nos</td>
+                            <td style={{ padding: '12px', textAlign: 'right', color: '#475569' }}>₹ {parseFloat(rate).toFixed(2)}</td>
+                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
+                              ₹ {val.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr style={{ backgroundColor: '#F8FAFC', fontWeight: '800' }}>
+                        <td colSpan={7} style={{ padding: '12px', textAlign: 'right', color: '#0F172A' }}>Total Goods Value for DC</td>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#4F46E5', fontSize: '14px' }}>
+                          ₹ {itemsListToRender.reduce((acc, it) => acc + ((it.qty || it.bomQty || 12) * (it.rate || 250)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Declaration & Signatures */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', borderTop: '1px solid #E2E8F0', paddingTop: '16px', fontSize: '11px', color: '#64748B' }}>
+                <div>
+                  <strong>Declaration:</strong>
+                  <p style={{ margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                    We declare that this Delivery Challan is issued for subsequent transportation of goods not by way of supply. The goods described above are being transported under Rule 55 of CGST Rules, 2017.
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '60px' }}>
+                  <strong>For ControlRoom Industrial Corp Ltd</strong>
+                  <span style={{ fontWeight: '700', color: '#0F172A' }}>Authorised Signatory</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* CONFIRM INVOICE SUCCESS MODAL */}
+      {confirmInvoiceSuccessModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '440px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534', flexShrink: 0 }}>
+                <CheckCircle size={26} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Invoice Confirmed Successfully!</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                  Invoice Ref: <strong style={{ color: '#2563EB' }}>{confirmInvoiceSuccessModal}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
+              Invoice <strong>{confirmInvoiceSuccessModal}</strong> has been finalized and marked as <strong>Invoice Confirmed</strong>. Re-confirming and modification controls are now locked.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmInvoiceSuccessModal(null)}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.25)' }}
+              >
+                Great, Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELIVERY ADDRESS PROOF DOCUMENT VIEWER MODAL */}
+      {previewAddressProofModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '640px', maxWidth: '95%', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column' }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileCheck size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Delivery Address Proof Document</h3>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>Verified Address Document for Invoicing & Dispatch</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAddressProofModal(null)}
+                style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Metadata strip */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#FAFBFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Customer Name</span>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{previewAddressProofModal.customer || 'Customer'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Order / BOM Reference</span>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB', marginTop: '2px' }}>{previewAddressProofModal.bomRef || 'BOM-00001'}</div>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Registered Billing Address</span>
+                  <div style={{ fontSize: '12px', color: '#334155', marginTop: '2px' }}>{previewAddressProofModal.billingAddress || 'Registered Primary Office Address'}</div>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase' }}>Physical Delivery Destination</span>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>{previewAddressProofModal.deliveryAddress || 'Site Delivery Destination'}</div>
+                </div>
+              </div>
+
+              {/* Document Preview Frame */}
+              <div style={{ border: '2px dashed #86EFAC', borderRadius: '14px', backgroundColor: '#F0FDF4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
+                <div style={{ width: '54px', height: '54px', borderRadius: '14px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(22,101,52,0.15)' }}>
+                  <FileText size={28} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof_Document.pdf'}</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                    {previewAddressProofModal.size || '1.2 MB'} • Verified & Attached to Sales Order / Invoice
+                  </div>
+                </div>
+
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
+                  <CheckCircle size={14} /> Official Address Proof Verified
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '16px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+              <button
+                type="button"
+                onClick={() => alert(`Downloading ${previewAddressProofModal.name}...`)}
+                style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#334155', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download Document
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewAddressProofModal(null)}
+                style={{ padding: '9px 20px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.25)' }}
+              >
+                Close Viewer
               </button>
             </div>
           </div>

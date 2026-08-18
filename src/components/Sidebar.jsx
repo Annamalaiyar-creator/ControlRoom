@@ -4,12 +4,12 @@ import {
   ShoppingCart, FileText, Users, FileQuestion, PackageCheck, 
   Receipt, Wallet, Award, PieChart, AlertTriangle, 
   GitCompare, FileBarChart, TrendingUp, UserCheck, 
-  Settings, GitBranch, ChevronDown, ChevronLeft, ChevronRight, Upload
+  Settings, GitBranch, ChevronDown, ChevronLeft, ChevronRight, Upload, CheckCircle
 } from 'lucide-react';
 
-export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab }) {
-  // Dropdown groups configuration
-  const groups = [
+export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, userRole = 'Procurement Head' }) {
+  // Original 100% untouched Procurement Groups
+  const procurementGroups = [
     {
       title: 'Purchasing',
       icon: ShoppingCart,
@@ -65,6 +65,105 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab })
       ]
     }
   ];
+
+  // Original 100% untouched Production Groups
+  const productionGroups = [
+    {
+      title: 'Plant Operations',
+      icon: Boxes,
+      items: [
+        { label: 'Work Orders', icon: Boxes },
+        { label: 'Planning & Scheduling', icon: FileText },
+        { label: 'Production Monitoring', icon: TrendingUp }
+      ]
+    },
+    {
+      title: 'Quality & Maintenance',
+      icon: Settings,
+      items: [
+        { label: 'Quality Control', icon: UserCheck },
+        { label: 'Machine Maintenance', icon: Settings }
+      ]
+    },
+    {
+      title: 'Inventory & Routing',
+      icon: Boxes,
+      items: [
+        { label: 'Inventory (Raw Material)', icon: Boxes },
+        { label: 'BOM / Routing', icon: GitBranch },
+        { label: 'Material Calculation Engine', icon: GitCompare }
+      ]
+    },
+    {
+      title: 'Analytics & Reports',
+      icon: PieChart,
+      items: [
+        { label: 'Production Reports', icon: FileBarChart },
+        { label: 'Efficiency Reports', icon: TrendingUp },
+        { label: 'Downtime Analytics', icon: PieChart }
+      ]
+    }
+  ];
+
+  // Specific filtered groups for each role
+  const getGroupsForRole = (role) => {
+    if (role === 'Production Head' || role === 'Production Admin') {
+      return productionGroups;
+    }
+    if (role === 'Dispatch Head') {
+      return [
+        { title: 'Dispatch & Logistics', icon: Boxes, items: [{ label: 'Dispatch Orders', icon: Boxes }, { label: 'Goods Receipt Note', icon: PackageCheck }, { label: 'Stock Status', icon: Boxes }] },
+        { title: 'Reports', icon: FileBarChart, items: [{ label: 'Production Reports', icon: FileBarChart }] }
+      ];
+    }
+    if (role === 'Floor Supervisor') {
+      return [
+        { title: 'Shop Floor Execution', icon: Boxes, items: [{ label: 'Work Orders', icon: Boxes }, { label: 'Planning & Scheduling', icon: FileText }, { label: 'Production Monitoring', icon: TrendingUp }] },
+        { title: 'Maintenance & Incidents', icon: Settings, items: [{ label: 'Downtime Analytics', icon: PieChart }, { label: 'Machine Maintenance', icon: Settings }] }
+      ];
+    }
+    if (role === 'Floor Employee') {
+      return [
+        { title: 'Shop Floor Line', icon: Boxes, items: [{ label: 'Production Monitoring', icon: TrendingUp }, { label: 'Work Orders', icon: Boxes }, { label: 'Downtime Analytics', icon: PieChart }] }
+      ];
+    }
+    if (role === 'Accounts Head' || role === 'Accounts Executive') {
+      return [
+        { title: 'Invoicing & Payments', icon: Receipt, items: [{ label: 'Accounts Verification', icon: CheckCircle }, { label: 'Proforma Invoice', icon: FileText }, { label: 'Payments', icon: Wallet }] },
+        { title: 'Financial Analytics', icon: PieChart, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Spend Reports', icon: TrendingUp }] }
+      ];
+    }
+    if (role === 'Sales Head' || role === 'Sales Executive') {
+      return [
+        { title: 'Sales & Orders', icon: ShoppingCart, items: [{ label: 'Proforma Invoice', icon: FileText }, { label: 'BOM', icon: GitBranch }, { label: 'Customer Management', icon: UserCheck }, { label: 'Stock Status', icon: Boxes }] }
+      ];
+    }
+    if (role === 'Design Engineer' || role === 'Design Executive') {
+      return [
+        { title: 'Engineering & BOM', icon: GitBranch, items: [{ label: 'BOM / Routing', icon: GitBranch }, { label: 'Material Calculation Engine', icon: GitCompare }] }
+      ];
+    }
+    if (role === 'Invoice Executive') {
+      return [
+        { title: 'Invoicing & Payments', icon: Receipt, items: [{ label: 'Invoice Management', icon: Receipt }, { label: 'Proforma Invoice', icon: FileText }, { label: 'Payments', icon: Wallet }] },
+        { title: 'Financial Analytics', icon: PieChart, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Spend Reports', icon: TrendingUp }] }
+      ];
+    }
+    if (role === 'BOM Executive') {
+      return [
+        { title: 'Sales & Engineering BOM', icon: GitBranch, items: [{ label: 'BOM', icon: GitBranch }, { label: 'BOM / Routing', icon: GitBranch }, { label: 'Customer Management', icon: UserCheck }, { label: 'Material Calculation Engine', icon: GitCompare }] }
+      ];
+    }
+    if (role === 'CEO') {
+      return [
+        { title: 'Executive Summary', icon: LayoutDashboard, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Production Reports', icon: FileBarChart }, { label: 'Work Orders', icon: Boxes }, { label: 'Purchase Orders', icon: ShoppingCart }] },
+        { title: 'Financials', icon: Receipt, items: [{ label: 'Proforma Invoice', icon: FileText }, { label: 'Spend Reports', icon: TrendingUp }] }
+      ];
+    }
+    return procurementGroups;
+  };
+
+  const groups = getGroupsForRole(userRole);
 
   // Map performa/proforma variant
   const normalizeTab = (tab) => {

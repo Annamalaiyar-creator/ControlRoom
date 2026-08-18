@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { Package, Sun, Zap, Settings } from 'lucide-react';
 
 export default function POStatusOverview() {
   const canvasRef = useRef(null);
@@ -11,8 +10,7 @@ export default function POStatusOverview() {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     
-    // Set display size
-    const size = 150;
+    const size = 160;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = `${size}px`;
@@ -23,17 +21,23 @@ export default function POStatusOverview() {
 
     const x = size / 2;
     const y = size / 2;
-    const radius = 64;
-    const thickness = 16;
-    const innerRadius = radius - thickness;
+    const radius = 66;
+    const thickness = 18;
 
-    // Segments matching reference chart values: Draft (4), Approved (24), Partially Received (22), Fully Received (36), Cancelled (0) -> Total 86
+    // Background grey track
+    ctx.beginPath();
+    ctx.arc(x, y, radius - (thickness / 2), 0, 2 * Math.PI);
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = thickness;
+    ctx.stroke();
+
+    // Segments: Draft (4), Approved (24), Partially Received (22), Fully Received (36), Cancelled (0) -> Total 86
     const segments = [
-      { color: '#2563eb', value: 36 / 86 }, // Fully Received (41.9%)
-      { color: '#16a34a', value: 24 / 86 }, // Approved (27.9%)
-      { color: '#ea580c', value: 22 / 86 }, // Partially Received (25.6%)
-      { color: '#0284c7', value: 4 / 86 },  // Draft (4.7%)
-      { color: '#dc2626', value: 0 }        // Cancelled (0.0%)
+      { color: '#0284c7', value: 4 / 86 },   // Draft
+      { color: '#16a34a', value: 24 / 86 },  // Approved
+      { color: '#ea580c', value: 22 / 86 },  // Partially Received
+      { color: '#2563eb', value: 36 / 86 },  // Fully Received
+      { color: '#dc2626', value: 0 }         // Cancelled
     ];
 
     let startAngle = -Math.PI / 2;
@@ -53,14 +57,16 @@ export default function POStatusOverview() {
 
   useEffect(() => {
     drawChart();
+    window.addEventListener('resize', drawChart);
+    return () => window.removeEventListener('resize', drawChart);
   }, []);
 
   const statusItems = [
-    { name: 'Draft', percentage: '4.7%', count: '4 POs', color: '#0284c7' },
-    { name: 'Approved', percentage: '27.9%', count: '24 POs', color: '#16a34a' },
-    { name: 'Partially Received', percentage: '25.6%', count: '22 POs', color: '#ea580c' },
-    { name: 'Fully Received', percentage: '41.9%', count: '36 POs', color: '#2563eb' },
-    { name: 'Cancelled', percentage: '0.0%', count: '0 POs', color: '#dc2626' }
+    { name: 'Draft', count: '4 POs', color: '#0284c7' },
+    { name: 'Approved', count: '24 POs', color: '#16a34a' },
+    { name: 'Part. Rec.', count: '22 POs', color: '#ea580c' },
+    { name: 'Fully Rec.', count: '36 POs', color: '#2563eb' },
+    { name: 'Cancelled', count: '0 POs', color: '#dc2626' }
   ];
 
   return (
@@ -69,31 +75,26 @@ export default function POStatusOverview() {
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        padding: 0, 
-        overflow: 'hidden' 
+        padding: '16px 20px', 
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: '12px',
+        justify: 'space-between',
+        height: '100%',
+        boxSizing: 'border-box'
       }}
     >
-      {/* Top Section: Title */}
-      <div style={{ padding: 'var(--spacing-16) var(--spacing-24) 0 var(--spacing-24)' }}>
-        <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-          PO Status Overview
+      {/* Top Title matching Screenshot */}
+      <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+        <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+          PURCHASE STATUS BREAKDOWN
         </span>
       </div>
 
-      {/* Donut Chart Container */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          padding: 'var(--spacing-16) var(--spacing-24)',
-          position: 'relative'
-        }}
-      >
-        {/* Donut Canvas */}
-        <div style={{ position: 'relative', width: '150px', height: '150px' }}>
+      {/* Centered Donut Canvas with Text matching Screenshot */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 0', position: 'relative' }}>
+        <div style={{ position: 'relative', width: '160px', height: '160px' }}>
           <canvas ref={canvasRef}></canvas>
-          {/* Centered label */}
           <div 
             style={{
               position: 'absolute',
@@ -108,62 +109,39 @@ export default function POStatusOverview() {
               pointerEvents: 'none'
             }}
           >
-            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b', fontFamily: 'Inter, system-ui' }}>
+            <span style={{ fontSize: '28px', fontWeight: '800', color: '#0F172A', lineHeight: '1.1' }}>
               86
             </span>
-            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>
-              Total POs
+            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '800', letterSpacing: '0.5px', marginTop: '2px', textTransform: 'uppercase' }}>
+              TOTAL POS
             </span>
           </div>
         </div>
       </div>
 
-      {/* Divided Bottom section: PO Status Breakdown */}
-      <div 
-        style={{ 
-          borderTop: '1px solid var(--color-border)', 
-          padding: '16px var(--spacing-24)', 
-          backgroundColor: '#fafbfc' 
-        }}
-      >
-        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', display: 'block', marginBottom: '12px' }}>
-          PO Status Breakdown
-        </span>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {statusItems.map((item, idx) => {
-            return (
-              <div 
-                key={idx} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  fontSize: '13px',
-                  color: '#334155'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span 
-                    style={{ 
-                      display: 'inline-block', 
-                      width: '10px', 
-                      height: '10px', 
-                      backgroundColor: item.color, 
-                      borderRadius: '50%',
-                      flexShrink: 0
-                    }}
-                  ></span>
-                  <span style={{ fontWeight: '500' }}>{item.name}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <span style={{ color: '#64748b' }}>{item.count}</span>
-                  <strong style={{ color: '#1e293b', minWidth: '40px', textAlign: 'right' }}>{item.percentage}</strong>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Bottom Horizontal Pills Row matching Screenshot */}
+      <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', width: '100%' }}>
+        {statusItems.map((item, idx) => (
+          <div 
+            key={idx} 
+            style={{ 
+              backgroundColor: '#F8FAFC', 
+              border: '1px solid #E2E8F0', 
+              borderRadius: '8px', 
+              padding: '10px 8px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '4px',
+              minWidth: 0
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }}></span>
+              <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+            </div>
+            <strong style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>{item.count}</strong>
+          </div>
+        ))}
       </div>
     </div>
   );
