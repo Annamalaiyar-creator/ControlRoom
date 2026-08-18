@@ -43,6 +43,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [prodFilterDateVal, setProdFilterDateVal] = useState('');
   const [prodFilterStatusSelect, setProdFilterStatusSelect] = useState('All');
 
+  useEffect(() => {
+    setProdActiveSubTab('All');
+    setProdSearchQueryText('');
+    setProdFilterStatusSelect('All');
+  }, [activeTab]);
+
   const [showBOMForm, setShowBOMForm] = useState(false);
   const [showWorkOrderForm, setShowWorkOrderForm] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -11787,12 +11793,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               : rawItems;
 
             const isPackedAndReady = Boolean(
-              dispatchPackingModal.status === 'Packed & Ready for Dispatch' ||
-              dispatchPackingModal.status === 'Partially Packed' ||
-              dispatchPackingModal.status === 'Closed' ||
-              dispatchPackingModal.status === 'CLOSED' ||
               dispatchPackingModal.isReadOnly ||
-              (itemsToPack.length > 0 && itemsToPack.every(p => p.packed))
+              dispatchPackingModal.status === 'Closed' ||
+              dispatchPackingModal.status === 'CLOSED'
             );
 
             const packedItemsCount = itemsToPack.filter(p => p.packed).length;
@@ -11802,16 +11805,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             const isPartial = packedItemsCount > 0 && !allItemsPacked;
 
             const savePackingData = () => {
-              if (isPackedAndReady) {
-                setDispatchPackingModal(null);
-                return;
-              }
               setBomStore(prev => prev.map(b => b.bomCode === dispatchPackingModal.bomCode ? {
                 ...b,
                 dispatchPacking: itemsToPack,
                 status: allItemsPacked ? 'Packed & Ready for Dispatch' : 'Partially Packed',
                 reissuedByAccounts: false,
-                isAccountsDone: false
+                isAccountsDone: false,
+                accountsVerification: allItemsPacked ? { paymentStatus: null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {})
               } : b));
               const targetBomCode = dispatchPackingModal.bomCode;
               const targetNum = targetBomCode ? targetBomCode.replace(/[^0-9]/g, '') : '';
@@ -11831,8 +11831,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               }));
               setDispatchPackingModal(null);
               alert(allItemsPacked
-                ? `📦 Dispatch re-packing completed and submitted! BOM (${targetBomCode}) is now ready and sent to Accounts Team for payment verification.`
-                : `📦 Dispatch packing saved as Partially Packed.`
+                ? `📦 Dispatch packing verified & completed for BOM (${targetBomCode})!\nOrder is now forwarded to Accounts for payment & document verification.`
+                : `📦 Dispatch packing progress saved as Partially Packed.`
               );
             };
 
@@ -12171,38 +12171,56 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                   }}>
                     <span style={{ fontSize: '12px', color: '#64748B' }}>
-                      {isPackedAndReady ? 'Status: Packed & Ready for Dispatch (Locked)' : 'Click any row to toggle packing status'}
+                      {isPackedAndReady ? 'Status: Closed / Dispatched' : 'Click any row to toggle packing status'}
                     </span>
-                    {isPackedAndReady ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {!isPackedAndReady && (
+                        <button
+                          onClick={() => {
+                            const packAll = itemsToPack.map(pi => ({ ...pi, packed: true }));
+                            setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: packAll });
+                          }}
+                          style={{
+                            border: '1px solid #CBD5E1',
+                            background: '#FFFFFF',
+                            color: '#1E293B', height: '40px', padding: '0 16px',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: '700',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                          }}
+                        >
+                          <CheckSquare style={{ width: '14px', height: '14px' }} /> Pack All Items
+                        </button>
+                      )}
                       <button
                         onClick={() => setDispatchPackingModal(null)}
                         style={{
                           border: '1px solid #CBD5E1',
                           background: '#FFFFFF',
-                          color: '#475569', height: '40px', padding: '0 24px',
-                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          color: '#475569', height: '40px', padding: '0 20px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '700',
                           cursor: 'pointer'
                         }}
                       >
-                        Back to Dispatch Orders
+                        Cancel
                       </button>
-                    ) : (
-                      <button
-                        onClick={savePackingData}
-                        style={{
-                          border: 'none',
-                          background: 'linear-gradient(135deg, #1E40AF, #2563EB)',
-                          color: '#FFFFFF', height: '40px', padding: '0 24px',
-                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                          display: 'flex', alignItems: 'center', gap: '8px'
-                        }}
-                      >
-                        <CheckCircle style={{ width: '15px', height: '15px' }} />
-                        Save & Close
-                      </button>
-                    )}
+                      {!isPackedAndReady && (
+                        <button
+                          onClick={savePackingData}
+                          style={{
+                            border: 'none',
+                            background: allItemsPacked ? 'linear-gradient(135deg, #059669, #10B981)' : 'linear-gradient(135deg, #1E40AF, #2563EB)',
+                            color: '#FFFFFF', height: '40px', padding: '0 24px',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer',
+                            boxShadow: allItemsPacked ? '0 4px 12px rgba(16,185,129,0.35)' : '0 4px 12px rgba(37,99,235,0.3)',
+                            display: 'flex', alignItems: 'center', gap: '8px'
+                          }}
+                        >
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          {allItemsPacked ? 'Save & Confirm Packing (Send to Accounts)' : 'Save Packing Progress'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
