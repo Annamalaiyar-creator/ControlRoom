@@ -10885,8 +10885,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           // Render Send Confirm (Editable Mode) or View BOM Details (100% Read-Only Mode)
           if (confirmingBomModal) {
             const isEditMode = Boolean(
-              confirmingBomModal.isEditMode &&
-              ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation'].includes(confirmingBomModal.status)
+              confirmingBomModal.isEditMode !== false &&
+              ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(confirmingBomModal.status)
             );
             const isAlreadyForwarded = !isEditMode;
             const allItemsConfirmed = confirmingBomModal.items && confirmingBomModal.items.length > 0 && confirmingBomModal.items.every(i => i.confirmed);
@@ -15977,9 +15977,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <tbody>
                       {filteredRows.map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '12px 14px' }}><input type="checkbox" /></td>
-                          <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.code}</td>
-                          <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c2 || row.name}</td>
+                          <td
+                            onClick={() => {
+                              if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
+                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
+                                setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
+                              }
+                            }}
+                            style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: (activeTab === 'BOM' || activeTab === 'BOM / Routing') ? 'pointer' : 'default' }}
+                          >
+                            {row.code}
+                          </td>
+                          <td
+                            onClick={() => {
+                              if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
+                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
+                                setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
+                              }
+                            }}
+                            style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B', cursor: (activeTab === 'BOM' || activeTab === 'BOM / Routing') ? 'pointer' : 'default' }}
+                          >
+                            {row.c2 || row.name}
+                          </td>
                           <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
                           <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
                           {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5.toString().includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
@@ -16165,6 +16184,71 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     </button>
                                   );
                                 })()
+                              ) : (activeTab === 'BOM' || activeTab === 'BOM / Routing') ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                  {['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status) ? (
+                                    <button
+                                      onClick={() => {
+                                        setConfirmingBomModal({ ...row, isEditMode: true });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{
+                                        backgroundColor: '#EFF6FF',
+                                        color: '#2563EB',
+                                        border: '1px solid #BFDBFE',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                    >
+                                      <CheckCircle style={{ width: '13px', height: '13px', color: '#2563EB' }} /> Confirm BOM
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setConfirmingBomModal({ ...row, isEditMode: false });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{
+                                        backgroundColor: '#F8FAFC',
+                                        color: '#475569',
+                                        border: '1px solid #CBD5E1',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                                    >
+                                      <Eye style={{ width: '13px', height: '13px', color: '#64748B' }} /> View BOM
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => {
+                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                      setCustomerActionMenuIdx(null);
+                                    }}
+                                    title="More Actions"
+                                    style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                  >
+                                    <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                  </button>
+                                </div>
                               ) : (
                                 <button
                                   onClick={() => {
@@ -16184,7 +16268,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               )}
 
                               {(activeTab === 'BOM' || activeTab === 'BOM / Routing') && bomActionMenuIdx === idx && (() => {
-                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation'].includes(row.status);
+                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
                                 const isAccountsDoneOrVerified = Boolean(
                                   row.accountsVerification?.verified ||
                                   row.status === 'Accounts Verified & Passed to Invoice' ||
@@ -16216,7 +16300,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       padding: '4px'
                                     }}
                                   >
-                                    {/* 1. Send Confirm (Only if pending customer confirmation - Opens Editable Verification Flow) */}
+                                    {/* 1. Send Confirm / Reconfirm */}
                                     {isDraftOrPending && (
                                       <button
                                         onClick={() => {
@@ -16227,7 +16311,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                       >
-                                        <CheckCircle style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Send Confirm
+                                        <CheckCircle style={{ width: '14px', height: '14px', color: '#2563EB' }} /> {row.status === 'Cancelled & Reissued to Dispatch' ? 'Reconfirm BOM' : 'Send Confirm'}
                                       </button>
                                     )}
 
