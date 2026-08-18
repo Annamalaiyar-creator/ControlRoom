@@ -9969,8 +9969,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 2. Unpacked / Pending Items ({unpackedItems.length}) — Pending Dispatch
                               </h4>
                             </div>
-                            <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
-                              ⚠️ Hold / Create Subsequent Delivery DC
+                            <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <AlertCircle style={{ width: '12px', height: '12px' }} /> Hold / Create Subsequent Delivery DC
                             </span>
                           </div>
 
@@ -13025,16 +13025,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           </div>
                         </div>
                         {isSame ? (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px' }}>
-                            ✓ Delivery Matches Billing Address
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <CheckCircle style={{ width: '12px', height: '12px' }} /> Delivery Matches Billing Address
                           </span>
                         ) : proofDoc ? (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px' }}>
-                            ✓ Alternate Address Proof Verified
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <CheckCircle style={{ width: '12px', height: '12px' }} /> Alternate Address Proof Verified
                           </span>
                         ) : (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '4px 12px', borderRadius: '12px' }}>
-                            ⚠️ Alternate Address (Proof Required)
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <AlertCircle style={{ width: '12px', height: '12px' }} /> Alternate Address (Proof Required)
                           </span>
                         )}
                       </div>
@@ -15803,7 +15803,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           fontWeight: 'bold',
                           flexShrink: 0
                         }}>
-                          {bomConfirmModal === 'cancel' ? '⚠️' : bomConfirmModal === 'draft' ? '📝' : '✅'}
+                          {bomConfirmModal === 'cancel' ? (
+                            <AlertCircle size={22} />
+                          ) : bomConfirmModal === 'draft' ? (
+                            <FileText size={22} />
+                          ) : (
+                            <CheckCircle size={22} />
+                          )}
                         </div>
                         <div>
                           <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
@@ -17323,11 +17329,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               borderRadius: '8px',
               backgroundColor: '#FFFBEB',
               border: '1px solid #FDE68A',
-              fontSize: '11px',
+              fontSize: '12px',
               color: '#B45309',
-              lineHeight: '1.4'
+              lineHeight: '1.4',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              ⚠️ This action cannot be undone. Cumulative received quantities on the associated Purchase Order will be restored.
+              <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+              <span>This action cannot be undone. Cumulative received quantities on the associated Purchase Order will be restored.</span>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
@@ -17426,8 +17436,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#B45309' }}>
-              ⚠️ You are closing this invoice without delivering the pending/missing products. A mandatory justification reason is required to close this invoice.
+            <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#B45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+              <span>You are closing this invoice without delivering the pending/missing products. A mandatory justification reason is required to close this invoice.</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -17659,8 +17670,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
               {/* Transporter & Shipping Info Input Form */}
               <div style={{ backgroundColor: '#EEF2FF', padding: '18px 20px', borderRadius: '12px', border: '1px solid #C7D2FE' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', display: 'block', marginBottom: '12px' }}>
-                  🚚 Transport & Movement Information (DC Shipping Details)
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                  <Truck style={{ width: '14px', height: '14px' }} /> Transport & Movement Information (DC Shipping Details)
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
                   <div>

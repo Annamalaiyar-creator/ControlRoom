@@ -482,8 +482,9 @@ export default function MaterialCalculationEngine({ onBack }) {
                 ))}
               </div>
             ) : (
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', color: '#64748B' }}>
-                ℹ️ No reusable offcut remnants detected (Remaining offcuts are smaller than minimum threshold).
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Info style={{ width: '15px', height: '15px', color: '#64748B', flexShrink: 0 }} />
+                <span>No reusable offcut remnants detected (Remaining offcuts are smaller than minimum threshold).</span>
               </div>
             )}
 
@@ -496,8 +497,8 @@ export default function MaterialCalculationEngine({ onBack }) {
                 <Scale style={{ width: '16px', height: '16px', color: '#2563EB' }} />
                 3. Material Reconciliation & Financial Loss Breakdown
               </h3>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', backgroundColor: '#F0FDF4', color: '#15803D', padding: '4px 10px', borderRadius: '6px', border: '1px solid #BBF7D0' }}>
-                ✓ 100% Mass Balanced
+              <span style={{ fontSize: '11px', fontWeight: 'bold', backgroundColor: '#F0FDF4', color: '#15803D', padding: '4px 10px', borderRadius: '6px', border: '1px solid #BBF7D0', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <CheckCircle2 style={{ width: '12px', height: '12px' }} /> 100% Mass Balanced
               </span>
             </div>
 

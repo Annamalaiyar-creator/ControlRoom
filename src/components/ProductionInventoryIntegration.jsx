@@ -60,13 +60,14 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
   /* ─── Standard Status Badge Renderer ─── */
   const renderStatusBadge = (status) => {
     let colors = { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
-    if (status.includes('Issued') || status.includes('Completed') || status === '✓ SUFFICIENT' || status === '✓ Stock Issued') {
+    const cleanStatus = status.replace(/^[✓⚠️]\s*/, '');
+    if (status.includes('Issued') || status.includes('Completed') || cleanStatus.includes('SUFFICIENT') || cleanStatus.includes('Stock Issued')) {
       colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
     } else if (status.includes('Closed')) {
       colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
     } else if (status.includes('Pending')) {
       colors = { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
-    } else if (status.includes('SHORTAGE') || status.includes('Warning')) {
+    } else if (cleanStatus.includes('SHORTAGE') || status.includes('Warning')) {
       colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
     }
 
@@ -74,7 +75,7 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
       <span style={{ 
         display: 'inline-flex', 
         alignItems: 'center', 
-        gap: '5px', 
+        gap: '6px', 
         padding: '4px 10px', 
         borderRadius: '6px', 
         fontSize: '11px', 
@@ -85,7 +86,7 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
         whiteSpace: 'nowrap'
       }}>
         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-        {status}
+        {cleanStatus}
       </span>
     );
   };
@@ -255,7 +256,7 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
                         </td>
                         <td style={{ padding: '14px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{remaining} {m.uom}</td>
                         <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          {renderStatusBadge(shortage > 0 ? '⚠️ SHORTAGE' : '✓ SUFFICIENT')}
+                          {renderStatusBadge(shortage > 0 ? 'SHORTAGE' : 'SUFFICIENT')}
                         </td>
                       </tr>
                     );
