@@ -38,7 +38,7 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('controlroom_active_tab');
     if (savedTab) return savedTab;
-    return userRole === 'Production Admin' ? 'Production Dashboard' : 'Dashboard';
+    return 'Dashboard';
   });
 
   const [targetPoNo, setTargetPoNo] = useState(null);
@@ -53,20 +53,7 @@ function App() {
     localStorage.setItem('controlroom_user_role', newRole);
     localStorage.setItem('controlroom_is_authenticated', 'true');
     setIsAuthenticated(true);
-    let defaultTab = 'Dashboard';
-    if (newRole === 'Dispatch Head') {
-      defaultTab = 'Dispatch Orders';
-    } else if (newRole === 'Production Head' || newRole === 'Production Admin' || newRole === 'Production Manager') {
-      defaultTab = 'Work Orders';
-    } else if (newRole === 'Accounts Head' || newRole === 'Accounts Executive') {
-      defaultTab = 'Accounts Verification';
-    } else if (newRole === 'Invoice Executive') {
-      defaultTab = 'Invoice Management';
-    } else if (newRole === 'Sales Head' || newRole === 'Sales Executive' || newRole === 'BOM Executive') {
-      defaultTab = 'BOM';
-    } else if (newRole === 'Floor Supervisor' || newRole === 'Floor Employee') {
-      defaultTab = 'Work Orders';
-    }
+    const defaultTab = 'Dashboard';
     setActiveTab(defaultTab);
     localStorage.setItem('controlroom_active_tab', defaultTab);
   };
