@@ -6,7 +6,8 @@ import {
   TrendingDown, DollarSign, Calendar, Edit3, SlidersHorizontal, Filter,
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
-  ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw
+  ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw,
+  CreditCard, Bell
 } from 'lucide-react';
 import CreateWorkOrderPage from './CreateWorkOrderPage';
 
