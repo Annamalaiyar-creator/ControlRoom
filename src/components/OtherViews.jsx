@@ -16070,6 +16070,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     <tbody>
                       {filteredRows.map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px 14px', width: '30px' }}>
+                            <input type="checkbox" />
+                          </td>
                           <td
                             onClick={() => {
                               if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
