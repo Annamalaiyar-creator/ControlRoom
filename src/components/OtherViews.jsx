@@ -55,6 +55,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [custFormName, setCustFormName] = useState('');
   const [custFormCompany, setCustFormCompany] = useState('');
+  const [custFormGstNo, setCustFormGstNo] = useState('');
   const [custFormMobile, setCustFormMobile] = useState('');
   const [custFormEmail, setCustFormEmail] = useState('');
   
@@ -82,9 +83,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       console.error(e);
     }
     return [
-      { code: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', c3: 'Rajesh Kumar', c4: '+91 98765 43210', c5: 'rajesh@vikramsolar.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
-      { code: 'Tata Power Renewable', c2: 'Tata Power Ltd', c3: 'Anish Sharma', c4: '+91 98123 45678', c5: 'anish.s@tatapower.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
-      { code: 'Apex Infra Systems', c2: 'Apex Infra Ltd', c3: 'Priya Sundaram', c4: '+91 99400 11223', c5: 'priya@apexinfra.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' }
+      { code: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNo: '33AABCU9603R1ZM', c3: 'Rajesh Kumar', c4: '+91 98765 43210', c5: 'rajesh@vikramsolar.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
+      { code: 'Tata Power Renewable', c2: 'Tata Power Ltd', gstNo: '29AAACT2727Q1ZW', c3: 'Anish Sharma', c4: '+91 98123 45678', c5: 'anish.s@tatapower.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
+      { code: 'Apex Infra Systems', c2: 'Apex Infra Ltd', gstNo: '33AABCA1234F1Z5', c3: 'Priya Sundaram', c4: '+91 99400 11223', c5: 'priya@apexinfra.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' }
     ];
   });
 
@@ -1834,7 +1835,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Required Date *</label>
-                      <input type="date" value={prRequiredDate} onChange={(e) => setPrRequiredDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white' }} />
+                      <input type="date" min={new Date().toISOString().split('T')[0]} value={prRequiredDate} onChange={(e) => setPrRequiredDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Priority *</label>
@@ -9683,9 +9684,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>Invoice Number</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
-                          <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
-                            INVOICE PENDING
-                          </span>
+                          {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
+                            <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                              ✓ INVOICE COMPLETED & LOCKED
+                            </span>
+                          ) : (
+                            <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                              INVOICE PENDING
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -10160,7 +10167,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Payment Information</h4>
                       </div>
                       <button
-                        onClick={() => alert(`Viewing Payment Details for ${invNoText}`)}
+                        onClick={() => {
+                          const proofDoc = matchingBom?.payments?.proofDoc || inv?.payments?.proofDoc || matchingBom?.paymentProofDoc || 'Payment_Proof_Receipt.pdf';
+                          const proofDocData = matchingBom?.payments?.proofDocData || matchingBom?.payments?.proofDoc?.dataUrl || inv?.payments?.proofDocData || matchingBom?.paymentProofDoc?.dataUrl || null;
+
+                          setViewingProofDocModal({
+                            ...matchingBom,
+                            ...inv,
+                            bomCode: bomRefText,
+                            customerName: customerText,
+                            paymentType: paymentTypeText,
+                            grandTotal: totalAmtRaw,
+                            payments: {
+                              proofDoc: proofDoc,
+                              proofDocData: proofDocData
+                            }
+                          });
+                        }}
                         style={{
                           border: '1px solid #BFDBFE',
                           backgroundColor: '#EFF6FF',
@@ -10184,14 +10207,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         <span style={{ color: '#64748B', fontSize: '11px' }}>Payment Status</span>
                         <div>
                           <span style={{
-                            backgroundColor: balanceAmt === 0 ? '#DCFCE7' : '#FEF3C7',
-                            color: balanceAmt === 0 ? '#166534' : '#B45309',
+                            backgroundColor: (balanceAmt === 0 || ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status)) ? '#DCFCE7' : '#FEF3C7',
+                            color: (balanceAmt === 0 || ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status)) ? '#166534' : '#B45309',
                             padding: '2px 8px',
                             borderRadius: '10px',
                             fontSize: '10px',
                             fontWeight: '800'
                           }}>
-                            {paymentStatusText}
+                            {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? 'Verified & Paid (100%)' : paymentStatusText}
                           </span>
                         </div>
                       </div>
@@ -10568,8 +10591,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 { id: 'Active', label: 'Active Clients', count: (customerList || []).length, bg: '#dcfce7', fg: '#166534' },
                 { id: 'Lead', label: 'New Leads', count: 0, bg: '#dbeafe', fg: '#1e40af' }
               ],
-              headers: ['Customer Name', 'Company Name', 'Contact Person', 'Mobile / Phone', 'Email ID', 'Action'],
-              rows: customerList || []
+              headers: ['Customer Name', 'Company Name', 'GSTIN / Tax No.', 'Mobile / Phone', 'Email ID', 'Action'],
+              rows: (customerList || []).map(c => ({
+                ...c,
+                code: c.code,
+                c2: c.c2 || c.code,
+                c3: c.gstNo || '33AABCU9603R1ZM',
+                c4: c.c4 || c.mobile || '—',
+                c5: c.c5 || c.email || '—'
+              }))
             },
             'BOM / Routing': {
               title: 'Bill of Materials (BOM)',
@@ -11815,6 +11845,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
             const isPackedAndReady = Boolean(
               dispatchPackingModal.isReadOnly ||
+              dispatchPackingModal.status === 'Packed & Ready for Dispatch' ||
+              dispatchPackingModal.status === 'PACKED & READY FOR DISPATCH' ||
+              dispatchPackingModal.status === 'Packed & Awaiting Dispatch Payment' ||
+              dispatchPackingModal.status === 'Accounts Verified & Passed to Invoice' ||
+              dispatchPackingModal.status === 'ACCOUNTS VERIFIED' ||
+              dispatchPackingModal.status === 'Invoice Confirmed' ||
               dispatchPackingModal.status === 'Closed' ||
               dispatchPackingModal.status === 'CLOSED'
             );
@@ -11826,13 +11862,20 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             const isPartial = packedItemsCount > 0 && !allItemsPacked;
 
             const savePackingData = () => {
+              const isWhileDispatch = (dispatchPackingModal.paymentType === 'Payment While Dispatch' || (dispatchPackingModal.paymentType || '').includes('While Dispatch'));
+              const nextStatus = allItemsPacked
+                ? (isWhileDispatch ? 'Packed & Awaiting Dispatch Payment' : 'Packed & Ready for Dispatch')
+                : 'Partially Packed';
+              const needsSalesPaymentNotification = allItemsPacked && isWhileDispatch;
+
               setBomStore(prev => prev.map(b => b.bomCode === dispatchPackingModal.bomCode ? {
                 ...b,
                 dispatchPacking: itemsToPack,
-                status: allItemsPacked ? 'Packed & Ready for Dispatch' : 'Partially Packed',
+                status: nextStatus,
+                pendingSalesDispatchPayment: needsSalesPaymentNotification,
                 reissuedByAccounts: false,
                 isAccountsDone: false,
-                accountsVerification: allItemsPacked ? { paymentStatus: null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {})
+                accountsVerification: allItemsPacked ? { paymentStatus: isWhileDispatch ? 'Awaiting Sales Payment Slip' : null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {})
               } : b));
               const targetBomCode = dispatchPackingModal.bomCode;
               const targetNum = targetBomCode ? targetBomCode.replace(/[^0-9]/g, '') : '';
@@ -11851,10 +11894,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 return inv;
               }));
               setDispatchPackingModal(null);
-              alert(allItemsPacked
-                ? `📦 Dispatch packing verified & completed for BOM (${targetBomCode})!\nOrder is now forwarded to Accounts for payment & document verification.`
-                : `📦 Dispatch packing progress saved as Partially Packed.`
-              );
+              if (allItemsPacked) {
+                if (isWhileDispatch) {
+                  alert(`📦 Dispatch packing completed for BOM (${targetBomCode})!\n🔔 Notification sent to Salesperson to attach Dispatch Payment Receipt before Accounts verification.`);
+                } else {
+                  alert(`📦 Dispatch packing verified & completed for BOM (${targetBomCode})!\nOrder is now forwarded to Accounts for payment & document verification.`);
+                }
+              } else {
+                alert(`📦 Dispatch packing progress saved as Partially Packed.`);
+              }
             };
 
             return (
@@ -14142,6 +14190,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         setEditingCustomer({ ...cust, originalCode: cust.code });
                         setCustFormName(cust.code);
                         setCustFormCompany(cust.c2 || cust.code);
+                        setCustFormGstNo(cust.gstNo || '33AABCU9603R1ZM');
                         setCustFormMobile(cust.c4 || '');
                         setCustFormEmail(cust.c5 || '');
 
@@ -14165,7 +14214,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 </div>
 
                 {/* OVERVIEW SUMMARY CARDS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                   <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                     <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Customer Name</span>
                     <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '6px' }}>{c.code}</div>
@@ -14173,6 +14222,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                     <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Company Name</span>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#2563EB', marginTop: '6px' }}>{c.c2 || c.code}</div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>GSTIN / Tax No.</span>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#059669', marginTop: '6px', letterSpacing: '0.5px' }}>{c.gstNo || '33AABCU9603R1ZM'}</div>
                   </div>
                   <div style={{ backgroundColor: 'white', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                     <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Mobile / Phone</span>
@@ -14288,6 +14341,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         setEditingCustomer(null);
                         setCustFormName('');
                         setCustFormCompany('');
+                        setCustFormGstNo('');
                         setCustFormMobile('');
                         setCustFormEmail('');
                       }}
@@ -14303,6 +14357,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           return;
                         }
                         const company = custFormCompany.trim() || name;
+                        const gstNo = custFormGstNo.trim() || '33AABCU9603R1ZM';
                         const mobile = custFormMobile.trim() || '+91 98000 00000';
                         const email = custFormEmail.trim() || 'contact@client.com';
 
@@ -14343,6 +14398,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             ...c,
                             code: name,
                             c2: company,
+                            gstNo: gstNo,
                             c4: mobile,
                             c5: email,
                             c6: billingStr,
@@ -14357,6 +14413,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           const newCustObj = {
                             code: name,
                             c2: company,
+                            gstNo: gstNo,
                             c3: 'Primary Contact',
                             c4: mobile,
                             c5: email,
@@ -14385,6 +14442,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         // Reset form fields
                         setCustFormName('');
                         setCustFormCompany('');
+                        setCustFormGstNo('');
                         setCustFormMobile('');
                         setCustFormEmail('');
                         setCustFormBillingAddress('');
@@ -14447,8 +14505,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
 
-                  {/* ROW 2: MOBILE & EMAIL */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  {/* ROW 2: GST NUMBER, MOBILE & EMAIL */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>GST Number (GSTIN)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 33AABCU9603R1ZM"
+                        value={custFormGstNo}
+                        onChange={(e) => setCustFormGstNo(e.target.value.toUpperCase())}
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none', fontWeight: '700', letterSpacing: '0.5px' }}
+                      />
+                    </div>
+
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>Mobile / Phone Number</label>
                       <input
@@ -14787,6 +14856,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </label>
                       <input
                         type="date"
+                        min={new Date().toISOString().split('T')[0]}
                         placeholder="Select date"
                         style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
                       />
@@ -15134,11 +15204,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                         onChange={(e) => {
                                           const file = e.target.files && e.target.files[0];
                                           if (file) {
-                                            setNewBomDeliveryProofDoc({
-                                              name: file.name,
-                                              size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                              uploadedAt: new Date().toISOString()
-                                            });
+                                            const reader = new FileReader();
+                                            reader.onload = (loadEvt) => {
+                                              setNewBomDeliveryProofDoc({
+                                                name: file.name,
+                                                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                                dataUrl: loadEvt.target.result,
+                                                uploadedAt: new Date().toISOString()
+                                              });
+                                            };
+                                            reader.readAsDataURL(file);
                                           }
                                         }}
                                       />
@@ -15441,7 +15516,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           onChange={(e) => {
                             const val = e.target.value;
                             setNewBomPaymentType(val);
-                            if (val === 'Credit Payment') {
+                            if (val === 'Credit Payment' || val === 'Payment While Dispatch') {
                               setNewBomPaymentProofDoc(null);
                             }
                           }}
@@ -15449,6 +15524,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         >
                           <option value="100% Paid">100% Paid</option>
                           <option value="Partial Payment">Partial Payment</option>
+                          <option value="Payment While Dispatch">Payment While Dispatch</option>
                           <option value="Credit Payment">Credit Payment</option>
                         </select>
                       </div>
@@ -15509,6 +15585,24 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <Bell style={{ width: '12px', height: '12px' }} /> Automated Sales Payment Tracking Enabled
                           </div>
                         </div>
+                      ) : newBomPaymentType === 'Payment While Dispatch' ? (
+                        <div style={{ border: '1px solid #C7D2FE', borderRadius: '14px', padding: '20px', backgroundColor: '#EEF2FF', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', boxSizing: 'border-box', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Truck style={{ width: '18px', height: '18px' }} />
+                            </div>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#1E3A8A' }}>Payment While Dispatch Active</h4>
+                              <span style={{ fontSize: '11px', color: '#2563EB' }}>Payment slip due when goods are packed</span>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#1E3A8A', margin: 0, lineHeight: '1.5' }}>
+                            BOM will proceed with production immediately. When Dispatch finishes packing and forwards to Accounts, an automated alert will notify the Salesperson to attach the payment receipt. Accounts will confirm and release for Invoicing only after proof is attached.
+                          </p>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '6px 12px', borderRadius: '8px', width: 'fit-content' }}>
+                            <Bell style={{ width: '12px', height: '12px' }} /> Notification to Sales Triggered on Dispatch Packing
+                          </div>
+                        </div>
                       ) : (
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -15550,11 +15644,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 e.preventDefault();
                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                                 if (file) {
-                                  setNewBomPaymentProofDoc({
-                                    name: file.name,
-                                    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                    uploadedAt: new Date().toISOString()
-                                  });
+                                  const reader = new FileReader();
+                                  reader.onload = (loadEvt) => {
+                                    setNewBomPaymentProofDoc({
+                                      name: file.name,
+                                      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                      dataUrl: loadEvt.target.result,
+                                      uploadedAt: new Date().toISOString()
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
                                 }
                               }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
@@ -15580,11 +15679,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     onChange={(e) => {
                                       const file = e.target.files && e.target.files[0];
                                       if (file) {
-                                        setNewBomPaymentProofDoc({
-                                          name: file.name,
-                                          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                          uploadedAt: new Date().toISOString()
-                                        });
+                                        const reader = new FileReader();
+                                        reader.onload = (loadEvt) => {
+                                          setNewBomPaymentProofDoc({
+                                            name: file.name,
+                                            size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                            dataUrl: loadEvt.target.result,
+                                            uploadedAt: new Date().toISOString()
+                                          });
+                                        };
+                                        reader.readAsDataURL(file);
                                       }
                                     }}
                                   />
@@ -16149,7 +16253,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
                               {activeTab === 'Invoice Management' ? (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {!['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) && (
+                                  {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) ? (
+                                    <button
+                                      onClick={() => {
+                                        setViewingInvoiceModal(row);
+                                        setInvoiceModalActiveTab('Invoice Items');
+                                      }}
+                                      style={{
+                                        backgroundColor: '#F0FDF4',
+                                        color: '#166534',
+                                        border: '1px solid #BBF7D0',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                                    >
+                                      <Receipt style={{ width: '14px', height: '14px', color: '#166534' }} /> View Invoice
+                                    </button>
+                                  ) : (
                                     <button
                                       onClick={() => {
                                         setViewingInvoiceModal(row);
@@ -16172,7 +16301,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
                                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
                                     >
-                                      <Receipt style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Invoice
+                                      <Receipt style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Generate Invoice
                                     </button>
                                   )}
 
@@ -16188,27 +16317,63 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   </button>
                                 </div>
                               ) : activeTab === 'Dispatch Orders' ? (
-                                <button
-                                  onClick={() => setDispatchPackingModal(row)}
-                                  style={{
-                                    backgroundColor: '#EEF2FF',
-                                    color: '#4F46E5',
-                                    border: '1px solid #C7D2FE',
-                                    padding: '6px 14px',
-                                    borderRadius: '8px',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
-                                >
-                                  <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
-                                </button>
+                                (() => {
+                                  const isPacked = Boolean(
+                                    row.status === 'Packed & Ready for Dispatch' ||
+                                    row.status === 'PACKED & READY FOR DISPATCH' ||
+                                    row.status === 'Packed & Awaiting Dispatch Payment' ||
+                                    row.status === 'Accounts Verified & Passed to Invoice' ||
+                                    row.status === 'ACCOUNTS VERIFIED' ||
+                                    row.status === 'Invoice Confirmed' ||
+                                    row.status === 'Closed' ||
+                                    row.status === 'CLOSED'
+                                  );
+                                  return isPacked ? (
+                                    <button
+                                      onClick={() => setDispatchPackingModal({ ...row, isReadOnly: true })}
+                                      style={{
+                                        backgroundColor: '#F0FDF4',
+                                        color: '#166534',
+                                        border: '1px solid #BBF7D0',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
+                                    >
+                                      <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => setDispatchPackingModal(row)}
+                                      style={{
+                                        backgroundColor: '#EEF2FF',
+                                        color: '#4F46E5',
+                                        border: '1px solid #C7D2FE',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
+                                    >
+                                      <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
+                                    </button>
+                                  );
+                                })()
                               ) : activeTab === 'Accounts Verification' ? (
                                 (() => {
                                   const acc = row.accountsVerification || {};
@@ -17659,21 +17824,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               </div>
 
               {/* Document Preview Frame */}
-              <div style={{ border: '2px dashed #86EFAC', borderRadius: '14px', backgroundColor: '#F0FDF4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
-                <div style={{ width: '54px', height: '54px', borderRadius: '14px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(22,101,52,0.15)' }}>
-                  <FileText size={28} />
+              {previewAddressProofModal.dataUrl ? (
+                <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <img
+                    src={previewAddressProofModal.dataUrl}
+                    alt="Delivery Address Proof"
+                    style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                  />
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof.png'}</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof_Document.pdf'}</div>
-                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-                    {previewAddressProofModal.size || '1.2 MB'} • Verified & Attached to Sales Order / Invoice
+              ) : (
+                <div style={{ border: '2px dashed #86EFAC', borderRadius: '14px', backgroundColor: '#F0FDF4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
+                  <div style={{ width: '54px', height: '54px', borderRadius: '14px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(22,101,52,0.15)' }}>
+                    <FileText size={28} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof_Document.pdf'}</div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                      {previewAddressProofModal.size || '1.2 MB'} • Verified & Attached to Sales Order / Invoice
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
+                    <CheckCircle size={14} /> Official Address Proof Verified
                   </div>
                 </div>
-
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
-                  <CheckCircle size={14} /> Official Address Proof Verified
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -17696,6 +17872,259 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           </div>
         </div>
       )}
+
+      {/* ─── RECORDED PAYMENT PROOF DOCUMENT VIEWER MODAL (ROOT LEVEL) ─── */}
+      {viewingProofDocModal && (() => {
+        const pDoc = viewingProofDocModal.payments?.proofDoc || viewingProofDocModal.proofDoc || viewingProofDocModal.paymentProofDoc || 'Payment_Proof_Receipt.pdf';
+        const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
+        const pDocDataUrl = (typeof pDoc === 'object' && pDoc?.dataUrl) ? pDoc.dataUrl : (viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.paymentProofDoc?.dataUrl || null);
+        const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo || 'BOM-2026';
+        const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || viewingProofDocModal.vendor || 'Customer';
+        const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 52061.60);
+        const pType = viewingProofDocModal.paymentType || '100% Advance';
+
+        return (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100000,
+            padding: '20px',
+            fontFamily: "'DM Sans', sans-serif"
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '680px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+              overflow: 'hidden',
+              border: '1px solid #E2E8F0',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '92vh'
+            }}>
+              {/* Modal Header */}
+              <div style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid #F1F5F9',
+                background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(37,99,235,0.3)'
+                  }}>
+                    <Receipt style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: '900', margin: 0, color: '#FFFFFF' }}>
+                      Recorded Payment Proof Document
+                    </h2>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0 0' }}>
+                      {docName} • {bCode} • {cName}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => window.print()}
+                    title="Print Receipt"
+                    style={{
+                      background: 'rgba(255,255,255,0.12)', border: 'none',
+                      color: '#FFFFFF', width: '34px', height: '34px', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                  >
+                    <Printer style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button
+                    onClick={() => setViewingProofDocModal(null)}
+                    style={{
+                      background: 'rgba(255,255,255,0.12)', border: 'none',
+                      color: '#FFFFFF', width: '34px', height: '34px', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                  >
+                    <X style={{ width: '18px', height: '18px' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
+                {pDocDataUrl ? (
+                  <div style={{
+                    borderRadius: '14px', overflow: 'hidden', border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF', padding: '16px', textAlign: 'center',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+                  }}>
+                    <img
+                      src={pDocDataUrl}
+                      alt="Payment Proof Attachment"
+                      style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{docName}</span>
+                  </div>
+                ) : (
+                  /* Official E-Payment Remittance Receipt Paper Card */
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #CBD5E1',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+                    padding: '28px',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      position: 'absolute', top: '45%', left: '50%',
+                      transform: 'translate(-50%, -50%) rotate(-25deg)',
+                      fontSize: '48px', fontWeight: '900', color: 'rgba(37,99,235,0.04)',
+                      whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none', zIndex: 0
+                    }}>
+                      PAYMENT CLEARED
+                    </div>
+
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                      borderBottom: '2px solid #0F172A', paddingBottom: '16px', position: 'relative', zIndex: 1
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#2563EB', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                          HDFC BANK CORPORATE E-PAYMENT
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
+                          Electronic Funds Transfer Advice
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                          RBI RTGS / NEFT Inter-Bank Settlement System
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          padding: '5px 12px', borderRadius: '20px',
+                          backgroundColor: '#DCFCE7', color: '#166534',
+                          fontSize: '12px', fontWeight: '800', border: '1px solid #BBF7D0'
+                        }}>
+                          <CheckCircle style={{ width: '14px', height: '14px' }} />
+                          TRANSACTION CLEARED
+                        </span>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}>
+                          Ref: TXN-{Date.now().toString().slice(-8)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      margin: '18px 0', padding: '14px 18px', borderRadius: '12px',
+                      backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      position: 'relative', zIndex: 1
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                          Amount Credited & Verified
+                        </div>
+                        <div style={{ fontSize: '22px', fontWeight: '900', color: '#1E40AF', marginTop: '2px' }}>
+                          ₹ {amtVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                          Payment Terms
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>
+                          {pType}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '14px', position: 'relative', zIndex: 1 }}>
+                      <div>
+                        <div style={{ color: '#64748B', fontWeight: '600' }}>Remitter / Customer:</div>
+                        <div style={{ color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{cName}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontWeight: '600' }}>Beneficiary Entity:</div>
+                        <div style={{ color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>CONTROLROOM TECH PVT LTD</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontWeight: '600' }}>Target Bill of Materials (BOM):</div>
+                        <div style={{ color: '#2563EB', fontWeight: '800', marginTop: '2px' }}>{bCode}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontWeight: '600' }}>Recorded File Name:</div>
+                        <div style={{ color: '#0F172A', fontWeight: '700', marginTop: '2px' }}>{docName}</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      marginTop: '20px', display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'center', position: 'relative', zIndex: 1
+                    }}>
+                      <div style={{
+                        border: '2px solid #16A34A', borderRadius: '10px',
+                        padding: '8px 16px', display: 'inline-flex', flexDirection: 'column',
+                        alignItems: 'center', transform: 'rotate(-4deg)', backgroundColor: 'rgba(220, 252, 231, 0.4)'
+                      }}>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#166534', letterSpacing: '1px' }}>
+                          ACCOUNTS VERIFIED
+                        </span>
+                        <span style={{ fontSize: '9px', fontWeight: '700', color: '#15803D' }}>
+                          CONTROLROOM PVT LTD
+                        </span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Arun (Accounts Officer)</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>Finance & Accounts Dept</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{
+                padding: '16px 24px',
+                backgroundColor: '#FFFFFF',
+                borderTop: '1px solid #E2E8F0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Digitally verified payment transaction proof
+                </span>
+                <button
+                  onClick={() => setViewingProofDocModal(null)}
+                  style={{
+                    border: 'none',
+                    backgroundColor: '#0F172A',
+                    color: '#FFFFFF',
+                    height: '38px',
+                    padding: '0 22px',
+                    borderRadius: '9px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close Viewer
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

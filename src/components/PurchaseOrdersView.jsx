@@ -1859,7 +1859,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       Expected Delivery Date <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
+                    <input type="date" min={new Date().toISOString().split('T')[0]} value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                   </div>
                 </div>
 
