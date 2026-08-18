@@ -268,6 +268,35 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [isUploading, setIsUploading] = useState(false);
   const uploadTimerRef = useRef(null);
   const [validationErrorModal, setValidationErrorModal] = useState(null);
+  const [customAlert, setCustomAlert] = useState(null);
+
+  const showCustomAlert = (msg, title = null, type = null) => {
+    let detectedType = type;
+    let detectedTitle = title;
+    const strMsg = String(msg || '');
+
+    if (!detectedType) {
+      if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('reason')) {
+        detectedType = 'warning';
+        if (!detectedTitle) detectedTitle = 'Attention Required';
+      } else if (strMsg.includes('✅') || strMsg.toLowerCase().includes('success') || strMsg.toLowerCase().includes('approved')) {
+        detectedType = 'success';
+        if (!detectedTitle) detectedTitle = 'Action Successful';
+      } else {
+        detectedType = 'info';
+        if (!detectedTitle) detectedTitle = 'Purchase Order Notice';
+      }
+    }
+
+    const cleanMsg = strMsg.replace(/^[✅⚠️]\s*/, '');
+    setCustomAlert({
+      title: detectedTitle || 'Notification',
+      message: cleanMsg,
+      type: detectedType || 'info'
+    });
+  };
+
+  const alert = (msg, title, type) => showCustomAlert(msg, title, type);
 
   const startMockUpload = (file) => {
     setIsUploading(true);
@@ -2391,6 +2420,144 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               >
                 OK, I'll fill it
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── CUSTOM ALERT POPUP MODAL ─── */}
+      {customAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '20px',
+          fontFamily: "'DM Sans', sans-serif"
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            {/* Top Accent Bar */}
+            <div style={{
+              height: '5px',
+              width: '100%',
+              background: customAlert.type === 'success'
+                ? 'linear-gradient(90deg, #10B981, #059669)'
+                : customAlert.type === 'warning'
+                  ? 'linear-gradient(90deg, #F59E0B, #D97706)'
+                  : 'linear-gradient(90deg, #3B82F6, #2563EB)'
+            }} />
+
+            {/* Close X */}
+            <button
+              onClick={() => setCustomAlert(null)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: '#F1F5F9',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ padding: '32px 28px 24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Icon & Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '16px',
+                  backgroundColor: customAlert.type === 'success' ? '#DCFCE7' : customAlert.type === 'warning' ? '#FEF3C7' : '#EFF6FF',
+                  color: customAlert.type === 'success' ? '#166534' : customAlert.type === 'warning' ? '#B45309' : '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {customAlert.type === 'success' ? (
+                    <CheckCircle size={28} />
+                  ) : customAlert.type === 'warning' ? (
+                    <AlertCircle size={28} />
+                  ) : (
+                    <Info size={28} />
+                  )}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.2px' }}>
+                    {customAlert.title || 'Notification'}
+                  </h3>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Purchase Order Notice
+                  </span>
+                </div>
+              </div>
+
+              {/* Message Box */}
+              <div style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '14px',
+                padding: '16px 18px',
+                fontSize: '13.5px',
+                lineHeight: '1.6',
+                color: '#334155'
+              }}>
+                {customAlert.message}
+              </div>
+
+              {/* Action Button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCustomAlert(null)}
+                  style={{
+                    backgroundColor: customAlert.type === 'success'
+                      ? '#059669'
+                      : customAlert.type === 'warning'
+                        ? '#D97706'
+                        : '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '11px 26px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(15,23,42,0.15)'
+                  }}
+                >
+                  Got It
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -253,6 +253,45 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [updatePaymentModal, setUpdatePaymentModal] = useState(null); // BOM object for updating payment (Partial/Credit)
   const [updatePaymentFile, setUpdatePaymentFile] = useState(null);
   const [updatePaymentNotes, setUpdatePaymentNotes] = useState('');
+  const [customAlert, setCustomAlert] = useState(null);
+
+  const showCustomAlert = (msg, title = null, type = null) => {
+    let detectedType = type;
+    let detectedTitle = title;
+    const strMsg = String(msg || '');
+
+    if (!detectedType) {
+      if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || strMsg.toLowerCase().includes('please')) {
+        detectedType = 'warning';
+        if (!detectedTitle) detectedTitle = 'Attention Required';
+      } else if (strMsg.includes('✅') || strMsg.toLowerCase().includes('success') || strMsg.toLowerCase().includes('approved') || strMsg.toLowerCase().includes('verified') || strMsg.toLowerCase().includes('completed')) {
+        detectedType = 'success';
+        if (!detectedTitle) detectedTitle = 'Action Successful';
+      } else if (strMsg.includes('📦') || strMsg.toLowerCase().includes('packing') || strMsg.toLowerCase().includes('dispatch')) {
+        detectedType = 'package';
+        if (!detectedTitle) detectedTitle = 'Dispatch & Packing Notice';
+      } else if (strMsg.includes('🚚')) {
+        detectedType = 'truck';
+        if (!detectedTitle) detectedTitle = 'Delivery Challan Generated';
+      } else if (strMsg.includes('🔄')) {
+        detectedType = 'info';
+        if (!detectedTitle) detectedTitle = 'Status Update';
+      } else {
+        detectedType = 'info';
+        if (!detectedTitle) detectedTitle = 'ControlRoom Notification';
+      }
+    }
+
+    const cleanMsg = strMsg.replace(/^[✅⚠️📦🚚🔄📝📩]\s*/, '');
+    setCustomAlert({
+      title: detectedTitle || 'Notification',
+      message: cleanMsg,
+      type: detectedType || 'info'
+    });
+  };
+
+  // Shadow window.alert within OtherViews to always render the custom branded popup
+  const alert = (msg, title, type) => showCustomAlert(msg, title, type);
 
   const [bomMaterialsList, setBomMaterialsList] = useState([]);
 
@@ -18125,6 +18164,162 @@ export default function OtherViews({ activeTab, onChangeTab }) {
           </div>
         );
       })()}
+
+      {/* ─── CUSTOM IN-APP NOTIFICATION & ALERT POPUP (REPLACES BROWSER ALERT) ─── */}
+      {customAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '20px',
+          fontFamily: "'DM Sans', sans-serif"
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '480px',
+            width: '100%',
+            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            {/* Top Accent Bar */}
+            <div style={{
+              height: '5px',
+              width: '100%',
+              background: customAlert.type === 'success'
+                ? 'linear-gradient(90deg, #10B981, #059669)'
+                : customAlert.type === 'warning'
+                  ? 'linear-gradient(90deg, #F59E0B, #D97706)'
+                  : customAlert.type === 'package'
+                    ? 'linear-gradient(90deg, #6366F1, #4F46E5)'
+                    : customAlert.type === 'truck'
+                      ? 'linear-gradient(90deg, #0EA5E9, #0284C7)'
+                      : 'linear-gradient(90deg, #3B82F6, #2563EB)'
+            }} />
+
+            {/* Close X */}
+            <button
+              onClick={() => setCustomAlert(null)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: '#F1F5F9',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ padding: '32px 28px 24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Icon & Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  backgroundColor: customAlert.type === 'success' ? '#DCFCE7' : customAlert.type === 'warning' ? '#FEF3C7' : customAlert.type === 'package' ? '#EEF2FF' : customAlert.type === 'truck' ? '#E0F2FE' : '#EFF6FF',
+                  color: customAlert.type === 'success' ? '#166534' : customAlert.type === 'warning' ? '#B45309' : customAlert.type === 'package' ? '#4F46E5' : customAlert.type === 'truck' ? '#0284C7' : '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: customAlert.type === 'success' ? '0 4px 12px rgba(16,185,129,0.2)' : customAlert.type === 'warning' ? '0 4px 12px rgba(245,158,11,0.2)' : '0 4px 12px rgba(37,99,235,0.2)'
+                }}>
+                  {customAlert.type === 'success' ? (
+                    <CheckCircle size={28} />
+                  ) : customAlert.type === 'warning' ? (
+                    <AlertCircle size={28} />
+                  ) : customAlert.type === 'package' ? (
+                    <Package size={28} />
+                  ) : customAlert.type === 'truck' ? (
+                    <Truck size={28} />
+                  ) : (
+                    <Info size={28} />
+                  )}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.2px' }}>
+                    {customAlert.title || 'ControlRoom Notification'}
+                  </h3>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    System Notice
+                  </span>
+                </div>
+              </div>
+
+              {/* Message Box */}
+              <div style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '14px',
+                padding: '16px 18px',
+                fontSize: '13.5px',
+                lineHeight: '1.6',
+                color: '#334155',
+                maxHeight: '280px',
+                overflowY: 'auto'
+              }}>
+                {customAlert.message.split('\n').map((line, lIdx) => (
+                  <p key={lIdx} style={{ margin: lIdx === 0 ? 0 : '8px 0 0 0' }}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+
+              {/* Action Button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCustomAlert(null)}
+                  style={{
+                    backgroundColor: customAlert.type === 'success'
+                      ? '#059669'
+                      : customAlert.type === 'warning'
+                        ? '#D97706'
+                        : '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 28px',
+                    fontSize: '13.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15,23,42,0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.15)'; }}
+                >
+                  Got It
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
