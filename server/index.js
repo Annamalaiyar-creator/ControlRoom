@@ -370,6 +370,39 @@ const loadLocalGRNs = () => {
   return [];
 };
 
+// Generic Data Store endpoints with Supabase + Disk backup
+app.get('/api/store/:key', async (req, res) => {
+  const { key } = req.params;
+  try {
+    const filePath = getStoreFilePath(`${key}.json`);
+    let localData = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        localData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (e) {}
+    }
+    const data = await syncStoreWithSupabase(key, localData);
+    res.json({ success: true, data: data || localData });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/store/:key', async (req, res) => {
+  const { key } = req.params;
+  const storeData = req.body;
+  try {
+    const filePath = getStoreFilePath(`${key}.json`);
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(storeData, null, 2), 'utf8');
+    } catch (e) {}
+    await pushStoreToSupabase(key, storeData);
+    res.json({ success: true, count: Array.isArray(storeData) ? storeData.length : 1 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 let pendingTokenPromise = null;
 
 const getZohoAccessToken = () => {

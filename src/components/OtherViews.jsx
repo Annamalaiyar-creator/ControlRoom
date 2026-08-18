@@ -10,6 +10,7 @@ import {
   CreditCard, Bell
 } from 'lucide-react';
 import CreateWorkOrderPage from './CreateWorkOrderPage';
+import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 
 export default function OtherViews({ activeTab, onChangeTab }) {
   // Common states
@@ -87,12 +88,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     ];
   });
 
+  // Sync customerList with Supabase cloud database
   useEffect(() => {
-    try {
-      localStorage.setItem('controlroom_customer_list', JSON.stringify(customerList));
-    } catch (e) {
-      console.error(e);
-    }
+    saveCloudStore('customer_store', customerList);
   }, [customerList]);
 
   const [customerActionMenuIdx, setCustomerActionMenuIdx] = useState(null);
@@ -181,13 +179,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     ];
   });
 
+  // Sync bomStore with Supabase cloud database
   useEffect(() => {
-    try {
-      localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
-    } catch (e) {
-      console.error(e);
-    }
+    saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
+
+  // Initial cloud fetch and real-time synchronization with Supabase
+  useEffect(() => {
+    fetchCloudStore('bom_store', bomStore).then(data => {
+      if (data && Array.isArray(data) && data.length > 0) setBomStore(data);
+    });
+    fetchCloudStore('customer_store', customerList).then(data => {
+      if (data && Array.isArray(data) && data.length > 0) setCustomerList(data);
+    });
+
+    const subBom = subscribeToCloudStore('bom_store', (latest) => {
+      if (latest && Array.isArray(latest)) setBomStore(latest);
+    });
+    const subCust = subscribeToCloudStore('customer_store', (latest) => {
+      if (latest && Array.isArray(latest)) setCustomerList(latest);
+    });
+
+    return () => {
+      if (subBom && typeof subBom.unsubscribe === 'function') subBom.unsubscribe();
+      if (subCust && typeof subCust.unsubscribe === 'function') subCust.unsubscribe();
+    };
+  }, []);
 
   const [bomActionMenuIdx, setBomActionMenuIdx] = useState(null);
   const [confirmingBomModal, setConfirmingBomModal] = useState(null); // Full BOM object being confirmed by Salesperson
@@ -1416,7 +1433,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
   const [invoiceList, setInvoiceList] = useState(() => {
     try {
-      const saved = localStorage.getItem('controlroom_invoice_list_store');
+      const saved = localStorage.getItem('controlroom_invoice_store');
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error('Error parsing stored invoice list', e);
@@ -1424,13 +1441,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     return INITIAL_INVOICES;
   });
 
+  // Sync invoiceList with Supabase cloud database
   useEffect(() => {
-    try {
-      localStorage.setItem('controlroom_invoice_list_store', JSON.stringify(invoiceList));
-    } catch (e) {
-      console.error('Error saving invoice list to localStorage', e);
-    }
+    saveCloudStore('invoice_store', invoiceList);
   }, [invoiceList]);
+
+  // Initial cloud fetch for invoices
+  useEffect(() => {
+    fetchCloudStore('invoice_store', invoiceList).then(data => {
+      if (data && Array.isArray(data) && data.length > 0) setInvoiceList(data);
+    });
+    const sub = subscribeToCloudStore('invoice_store', (latest) => {
+      if (latest && Array.isArray(latest)) setInvoiceList(latest);
+    });
+    return () => {
+      if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe();
+    };
+  }, []);
 
   // Payments State
   const INITIAL_PAYMENTS = [
@@ -1440,20 +1467,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
   const [paymentList, setPaymentList] = useState(() => {
     try {
-      const saved = localStorage.getItem('controlroom_payment_list_store');
+      const saved = localStorage.getItem('controlroom_payment_store');
       if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error('Error loading paymentList', e);
-    }
+    } catch (e) {}
     return INITIAL_PAYMENTS;
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem('controlroom_payment_list_store', JSON.stringify(paymentList));
-    } catch (e) {
-      console.error('Error saving paymentList', e);
-    }
+    saveCloudStore('payment_store', paymentList);
   }, [paymentList]);
 
   // Vendor Performance scorecard
