@@ -10785,6 +10785,50 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       </thead>
                       <tbody>
                         {[
+                          ...(bomStore || []).map(b => {
+                            const totalQty = (b.items || []).reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0) || 100;
+                            const productName = (b.items && b.items.length > 0 && b.items[0].name) ? b.items[0].name : (b.productName || 'Solar Structure Assembly');
+                            
+                            let stLabel = 'Ready to Start';
+                            let stBg = '#eff6ff';
+                            let stFg = '#2563eb';
+                            let progress = 20;
+
+                            if (b.status === 'Packed & Ready for Dispatch' || b.status === 'Closed' || b.status === 'CLOSED') {
+                              stLabel = 'Completed';
+                              stBg = '#f0fdf4';
+                              stFg = '#0d9488';
+                              progress = 100;
+                            } else if (b.status === 'In Production' || b.status === 'Partially Packed') {
+                              stLabel = 'In Progress';
+                              stBg = '#f0fdf4';
+                              stFg = '#16a34a';
+                              progress = 60;
+                            } else if (b.status === 'Draft' || b.status === 'Pending Confirmation') {
+                              stLabel = 'Pending Approval';
+                              stBg = '#fffbebe6';
+                              stFg = '#d97706';
+                              progress = 0;
+                            }
+
+                            return {
+                              woNo: `WO-${b.bomCode}`,
+                              product: productName,
+                              customer: b.customerName || 'Customer Order',
+                              line: 'Structure Line 1',
+                              qty: totalQty.toLocaleString(),
+                              plannedDate: b.date || b.createdDate || '18 Aug 2026',
+                              dueDate: b.creditDueDate || '24 Aug 2026',
+                              status: stLabel,
+                              statusBg: stBg,
+                              statusFg: stFg,
+                              priority: 'High',
+                              priorityColor: '#dc2626',
+                              assignedTo: 'Arun Kumar',
+                              progress: progress,
+                              bomRef: b.bomCode
+                            };
+                          }),
                           { woNo: 'WO-2026-001', product: 'Triangle Structure', customer: 'VRM Solar Project', line: 'Structure Line 1', qty: '500', plannedDate: '13 Aug 2026', dueDate: '14 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Arun Kumar', progress: 65 },
                           { woNo: 'WO-2026-002', product: 'Mini Rail 100mm', customer: 'ABC Solar Pvt Ltd', line: 'Rail Line 1', qty: '2,000', plannedDate: '13 Aug 2026', dueDate: '15 Aug 2026', status: 'Ready to Start', statusBg: '#eff6ff', statusFg: '#2563eb', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Kumaravel', progress: 0 },
                           { woNo: 'WO-2026-003', product: 'Long Rail', customer: 'XYZ Solar', line: 'Rail Line 2', qty: '1,000', plannedDate: '12 Aug 2026', dueDate: '13 Aug 2026', status: 'On Hold', statusBg: '#fff7ed', statusFg: '#ea580c', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Suresh B', progress: 40 },
@@ -10945,7 +10989,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                     {!isAlreadyForwarded && (
                       <button
-                        disabled={!allItemsConfirmed}
                         onClick={() => {
                           const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
                             ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
@@ -10963,6 +11006,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
                           const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
 
+                          const finalizedItems = (confirmingBomModal.items || []).map(i => ({ ...i, confirmed: true }));
+                          const packingItems = (confirmingBomModal.dispatchPacking && confirmingBomModal.dispatchPacking.length > 0)
+                            ? confirmingBomModal.dispatchPacking
+                            : finalizedItems.map(it => ({
+                                name: it.name || it.c2 || 'Item',
+                                bomQty: it.qty || 1,
+                                packed: false
+                              }));
+
                           setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
                             ...b,
                             companyName: confirmingBomModal.companyName || b.companyName,
@@ -10972,31 +11024,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             deliveryAddress: dStr,
                             deliveryAddressObj: finalDObj,
                             deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
-                            items: confirmingBomModal.items,
+                            items: finalizedItems,
+                            dispatchPacking: packingItems,
                             status: 'Sent to Production',
                             grandTotal: grandTotalCalc
                           } : b));
                           setConfirmingBomModal(null);
-                          alert(`BOM (${confirmingBomModal.bomCode}) officially verified & sent to Production Head & Dispatch Head!`);
+                          alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified and sent to Production (Work Orders) & Dispatch Orders!`);
                         }}
                         style={{
                           border: 'none',
-                          backgroundColor: allItemsConfirmed ? '#166534' : '#94A3B8',
+                          backgroundColor: '#166534',
                           color: 'white',
                           height: '40px',
                           padding: '0 24px',
                           borderRadius: '10px',
                           fontSize: '13px',
                           fontWeight: '800',
-                          cursor: allItemsConfirmed ? 'pointer' : 'not-allowed',
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
-                          boxShadow: allItemsConfirmed ? '0 2px 4px rgba(22,101,52,0.2)' : 'none'
+                          boxShadow: '0 2px 4px rgba(22,101,52,0.2)'
                         }}
                       >
                         <CheckCircle style={{ width: '16px', height: '16px' }} />
-                        Send BOM
+                        Send BOM to Production & Dispatch
                       </button>
                     )}
                   </div>
