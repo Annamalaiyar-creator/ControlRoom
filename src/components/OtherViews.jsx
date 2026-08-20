@@ -9807,9 +9807,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     ) : (
                       <button
                         onClick={() => {
-                          // 1. Identify packed items only
-                          const packedItemsToDeduct = (itemsList || []).filter(item => Boolean(item.selected));
-                          const unpackedItems = (itemsList || []).filter(item => !Boolean(item.selected));
+                          // 1. Identify items to deduct (if any selected, use selected, otherwise deduct ALL invoice items)
+                          const hasExplicitSelection = (itemsList || []).some(item => item.selected === true);
+                          const packedItemsToDeduct = hasExplicitSelection
+                            ? (itemsList || []).filter(item => Boolean(item.selected))
+                            : (itemsList || []);
 
                           // 2. Reduce stock in stockRegistry and RawMaterialInventoryView materials state
                           setStockRegistry(prevRegistry => {
