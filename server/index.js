@@ -65,7 +65,8 @@ const pushStoreToSupabase = async (key, storeData) => {
       syncStoreWithSupabase('po_store', []),
       syncStoreWithSupabase('vendor_store', []),
       syncStoreWithSupabase('item_store', []),
-      syncStoreWithSupabase('grn_store', [])
+      syncStoreWithSupabase('grn_store', []),
+      syncStoreWithSupabase('bom_store', [])
     ]);
     console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');
   } catch (err) {
