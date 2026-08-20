@@ -186,19 +186,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     ];
   });
 
-  // Save bomStore to localStorage on change and sync cloud store safely
-  const isInitialBomMount = useRef(true);
+  // Save bomStore to localStorage on every change
   useEffect(() => {
     try {
       localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
     } catch (e) {
       console.error("Error setting controlroom_bom_store", e);
     }
-    if (isInitialBomMount.current) {
-      isInitialBomMount.current = false;
-      return;
-    }
-    saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
 
   useEffect(() => {
