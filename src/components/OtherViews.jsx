@@ -206,8 +206,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       if (data && Array.isArray(data) && data.length > 0) {
         setBomStore(prev => {
           const map = new Map();
-          [...data, ...prev].forEach(item => {
-            if (item && item.bomCode) map.set(item.bomCode, item);
+          // Insert older cloud data first, then overlay local prev state so fresh local BOMs always win
+          [...data, ...(Array.isArray(prev) ? prev : [])].forEach(item => {
+            if (item) {
+              const k = item.bomCode || item.code;
+              if (k) map.set(k, item);
+            }
           });
           const merged = Array.from(map.values());
           try { localStorage.setItem('controlroom_bom_store', JSON.stringify(merged)); } catch (e) {}
