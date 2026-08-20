@@ -12882,19 +12882,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                       onChange={(e) => {
                                         const file = e.target.files && e.target.files[0];
                                         if (file) {
-                                          const reader = new FileReader();
-                                          reader.onload = (loadEvt) => {
-                                            setConfirmingBomModal(prev => ({
-                                              ...prev,
-                                              deliveryAddressProofDoc: {
-                                                name: file.name,
-                                                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                                dataUrl: loadEvt.target.result,
-                                                uploadedAt: new Date().toISOString()
-                                              }
-                                            }));
-                                          };
-                                          reader.readAsDataURL(file);
+                                          setConfirmingBomModal(prev => ({
+    ...prev,
+    deliveryAddressProofDoc: {
+      name: file.name,
+      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      type: file.type || "application/pdf",
+      uploadedAt: new Date().toISOString()
+    }
+  }));
                                         }
                                       }}
                                     />
@@ -16607,16 +16603,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                         onChange={(e) => {
                                           const file = e.target.files && e.target.files[0];
                                           if (file) {
-                                            const reader = new FileReader();
-                                            reader.onload = (loadEvt) => {
-                                              setNewBomDeliveryProofDoc({
-                                                name: file.name,
-                                                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                                dataUrl: loadEvt.target.result,
-                                                uploadedAt: new Date().toISOString()
-                                              });
-                                            };
-                                            reader.readAsDataURL(file);
+                                            setNewBomDeliveryProofDoc({
+    name: file.name,
+    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+    type: file.type || "application/pdf",
+    uploadedAt: new Date().toISOString()
+  });
                                           }
                                         }}
                                       />
