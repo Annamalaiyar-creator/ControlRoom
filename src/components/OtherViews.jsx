@@ -186,22 +186,42 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     ];
   });
 
-  // Save bomStore to localStorage on every change
+  // Save bomStore to localStorage on every change and sync cloud store
+  const isInitialBomMount = useRef(true);
   useEffect(() => {
     try {
       localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
     } catch (e) {
       console.error("Error setting controlroom_bom_store", e);
     }
+    if (isInitialBomMount.current) {
+      isInitialBomMount.current = false;
+      return;
+    }
+    saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
 
   useEffect(() => {
+    fetchCloudStore('bom_store', bomStore).then(data => {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setBomStore(prev => {
+          const map = new Map();
+          [...data, ...prev].forEach(item => {
+            if (item && item.bomCode) map.set(item.bomCode, item);
+          });
+          const merged = Array.from(map.values());
+          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(merged)); } catch (e) {}
+          return merged;
+        });
+      }
+    });
+
     const syncFromStorage = () => {
       try {
         const saved = localStorage.getItem('controlroom_bom_store');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setBomStore(parsed);
           }
         }
