@@ -187,16 +187,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   });
 
   // Save bomStore to localStorage on every change and sync cloud store
-  const isInitialBomMount = useRef(true);
   useEffect(() => {
     try {
       localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
     } catch (e) {
       console.error("Error setting controlroom_bom_store", e);
-    }
-    if (isInitialBomMount.current) {
-      isInitialBomMount.current = false;
-      return;
     }
     saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
@@ -206,8 +201,18 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       if (data && Array.isArray(data) && data.length > 0) {
         setBomStore(prev => {
           const map = new Map();
-          // Insert older cloud data first, then overlay local prev state so fresh local BOMs always win
-          [...data, ...(Array.isArray(prev) ? prev : [])].forEach(item => {
+          // Read local storage to ensure fresh local BOM items are overlaid on top of cloud data
+          let localCurrent = prev;
+          try {
+            const savedStr = localStorage.getItem('controlroom_bom_store');
+            if (savedStr) {
+              const parsed = JSON.parse(savedStr);
+              if (Array.isArray(parsed) && parsed.length > 0) localCurrent = parsed;
+            }
+          } catch (e) {}
+
+          // Insert cloud data first, then overlay local state so fresh local BOMs always win
+          [...data, ...(Array.isArray(localCurrent) ? localCurrent : [])].forEach(item => {
             if (item) {
               const k = item.bomCode || item.code;
               if (k) map.set(k, item);
