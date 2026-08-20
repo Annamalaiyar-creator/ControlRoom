@@ -9859,49 +9859,76 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                           // Update raw materials stock table
                           try {
+                            const initialMaterials = [
+                              { code: 'RM-001', name: 'Aluminium Sheet', cat: 'Aluminium', unit: 'KG', stock: 1250, minLevel: 500, status: 'In Stock', store: 'Main Store', hsn: '7606', lastUpdated: '20 Aug 2026 10:30 AM', reserved: 200, openingStock: 1000, goodsReceived: 500, issuedProd: 180, matReturn: 30, stockAdj: 10 },
+                              { code: 'RM-002', name: 'GI Sheet', cat: 'Steel', unit: 'KG', stock: 320, minLevel: 400, status: 'Low Stock', store: 'Main Store', hsn: '7210', lastUpdated: '20 Aug 2026 09:15 AM', reserved: 50, openingStock: 400, goodsReceived: 100, issuedProd: 200, matReturn: 10, stockAdj: 10 },
+                              { code: 'RM-003', name: 'MS Angle', cat: 'Steel', unit: 'Nos', stock: 0, minLevel: 100, status: 'Out of Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 0, openingStock: 150, goodsReceived: 0, issuedProd: 150, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-004', name: 'MS Channel', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 200, status: 'Low Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 20, openingStock: 200, goodsReceived: 50, issuedProd: 110, matReturn: 0, stockAdj: 10 },
+                              { code: 'RM-005', name: 'Aluminium Rail', cat: 'Aluminium', unit: 'Nos', stock: 2450, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: '18 Aug 2026 02:20 PM', reserved: 350, openingStock: 2000, goodsReceived: 800, issuedProd: 350, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-006', name: 'SS Bolt M8', cat: 'Fasteners', unit: 'Nos', stock: 8600, minLevel: 2000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '18 Aug 2026 11:00 AM', reserved: 1200, openingStock: 6000, goodsReceived: 4000, issuedProd: 1400, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-007', name: 'Nut M8', cat: 'Fasteners', unit: 'Nos', stock: 1200, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '17 Aug 2026 05:10 PM', reserved: 400, openingStock: 1000, goodsReceived: 1000, issuedProd: 800, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-008', name: 'Washer M8', cat: 'Fasteners', unit: 'Nos', stock: 500, minLevel: 1000, status: 'Low Stock', store: 'Store B', hsn: '7318', lastUpdated: '17 Aug 2026 03:30 PM', reserved: 100, openingStock: 800, goodsReceived: 200, issuedProd: 500, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-009', name: 'Zinc Coating', cat: 'Coating', unit: 'Ltr', stock: 80, minLevel: 100, status: 'Low Stock', store: 'Main Store', hsn: '3208', lastUpdated: '16 Aug 2026 01:15 PM', reserved: 15, openingStock: 120, goodsReceived: 40, issuedProd: 80, matReturn: 0, stockAdj: 0 },
+                              { code: 'RM-010', name: 'Packing Material', cat: 'Packing', unit: 'Nos', stock: 3200, minLevel: 2000, status: 'In Stock', store: 'Store B', hsn: '3923', lastUpdated: '16 Aug 2026 10:00 AM', reserved: 500, openingStock: 2500, goodsReceived: 1500, issuedProd: 800, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-001', name: 'Column 110x55x30x2.5 (Length 3.2m)', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 100, goodsReceived: 80, issuedProd: 30, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 1500, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 1000, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-009', name: 'Heavy Rafter 120x50x20x2.5 (Length 4.5m)', cat: 'Steel', unit: 'Nos', stock: 95, minLevel: 25, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 10, openingStock: 70, goodsReceived: 45, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-010', name: 'Purlin 80x40x15x2.0 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 280, minLevel: 80, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 30, openingStock: 200, goodsReceived: 130, issuedProd: 50, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-011', name: 'Cross Bracing Pipe 42.4x2.6mm', cat: 'Steel', unit: 'Nos', stock: 160, minLevel: 40, status: 'In Stock', store: 'Store B', hsn: '7306', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 80, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-012', name: 'Base Plate 250x250x10mm with M16 Anchors', cat: 'Steel', unit: 'Set', stock: 140, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 100, goodsReceived: 65, issuedProd: 25, matReturn: 0, stockAdj: 0 }
+                            ];
                             const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
                             let currentMats = [];
                             if (savedMatStr) {
                               try { currentMats = JSON.parse(savedMatStr); } catch (e) {}
                             }
-                            if (currentMats && Array.isArray(currentMats) && currentMats.length > 0) {
-                              const updatedMats = currentMats.map(m => {
-                                const mName = (m.name || '').toLowerCase().trim();
-                                const mCode = (m.code || '').toLowerCase().trim();
-
-                                const matchP = packedItemsToDeduct.find(pItem => {
-                                  const pName = (pItem.name || '').toLowerCase().trim();
-                                  const pCode = (pItem.code || '').toLowerCase().trim();
-
-                                  if (pCode && mCode && pCode === mCode) return true;
-                                  if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
-
-                                  // Key structural category keyword matching for BOM presets
-                                  const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate'];
-                                  for (const kw of keywords) {
-                                    if (pName.includes(kw) && mName.includes(kw)) return true;
-                                  }
-                                  return false;
-                                });
-
-                                if (matchP) {
-                                  const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
-                                  const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
-                                  const newSt = Math.max(0, currSt - qtyToDeduct);
-                                  const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
-                                  return {
-                                    ...m,
-                                    stock: newSt,
-                                    issuedProd: (m.issuedProd || 0) + qtyToDeduct,
-                                    status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
-                                    lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                  };
-                                }
-                                return m;
-                              });
-                              localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
-                              window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+                            if (!currentMats || !Array.isArray(currentMats) || currentMats.length === 0) {
+                              currentMats = initialMaterials;
                             }
+
+                            const updatedMats = currentMats.map(m => {
+                              const mName = (m.name || '').toLowerCase().trim();
+                              const mCode = (m.code || '').toLowerCase().trim();
+
+                              const matchP = packedItemsToDeduct.find(pItem => {
+                                const pName = (pItem.name || '').toLowerCase().trim();
+                                const pCode = (pItem.code || '').toLowerCase().trim();
+
+                                if (pCode && mCode && pCode === mCode) return true;
+                                if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
+
+                                // Key structural category keyword matching for BOM presets & custom items
+                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer'];
+                                for (const kw of keywords) {
+                                  if (pName.includes(kw) && mName.includes(kw)) return true;
+                                }
+                                return false;
+                              });
+
+                              if (matchP) {
+                                const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
+                                const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
+                                const newSt = Math.max(0, currSt - qtyToDeduct);
+                                const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
+                                return {
+                                  ...m,
+                                  stock: newSt,
+                                  issuedProd: (m.issuedProd || 0) + qtyToDeduct,
+                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
+                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                };
+                              }
+                              return m;
+                            });
+                            localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
+                            saveCloudStore('raw_materials_store', updatedMats);
+                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
                           } catch (err) {}
 
                           // 3. Update Invoice status
