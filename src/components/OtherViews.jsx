@@ -17430,7 +17430,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 window.dispatchEvent(new Event('controlroom_storage_update'));
                               } catch (e) {}
 
-                              setBomStore(prev => [newBomRecord, ...prev]);
+                              setBomStore(prev => {
+                                const map = new Map();
+                                [newBomRecord, ...(Array.isArray(prev) ? prev : [])].forEach(item => {
+                                  if (item && item.bomCode) map.set(item.bomCode, item);
+                                });
+                                return Array.from(map.values());
+                              });
                               setNewBomPaymentProofDoc(null);
                               setNewBomDeliveryProofDoc(null);
                               setNewBomRemarks('');
