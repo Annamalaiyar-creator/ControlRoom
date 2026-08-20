@@ -1,10 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers } from 'lucide-react';
 
-export default function PerformaInvoiceView() {
+export default function PerformaInvoiceView({ onConvertToBom }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit'
   const [selectedPi, setSelectedPi] = useState(null); // For viewing details popup overlay
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleConvertToBom = (pi) => {
+    if (!pi) return;
+    const cleanAmount = parseFloat(String(pi.amount || '').replace(/[^0-9.]/g, '')) || 0;
+    const qty = parseFloat(pi.quantity) || 1;
+    const rate = pi.unitValue || (cleanAmount > 0 ? cleanAmount / qty : 1000);
+
+    const conversionData = {
+      sourcePiNo: pi.piNo,
+      customerName: pi.vendor || '',
+      gstNo: pi.gstNo || '',
+      productName: pi.productName || 'Solar Mounting Rails & Accessories',
+      items: [
+        {
+          name: pi.productName || 'Structural Steel Beams',
+          category: 'PI Converted Materials',
+          uom: 'NOS',
+          qty: String(qty),
+          rate: String(rate),
+          gstRate: '18%'
+        }
+      ],
+      remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
+    };
+
+    try {
+      localStorage.setItem('controlroom_pending_pi_to_bom', JSON.stringify(conversionData));
+    } catch (e) {}
+
+    if (typeof onConvertToBom === 'function') {
+      onConvertToBom(conversionData);
+    } else {
+      window.dispatchEvent(new CustomEvent('controlroom_convert_pi_bom', { detail: conversionData }));
+    }
+  };
   
   // Confirmation and edit states
   const [deleteIdx, setDeleteIdx] = useState(null); // Row index to delete
@@ -657,6 +692,31 @@ export default function PerformaInvoiceView() {
                                 >
                                   <Eye style={{ width: '12px', height: '12px', color: '#3b82f6' }} />
                                   View
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveDropdownIdx(null);
+                                    handleConvertToBom(pi);
+                                  }}
+                                  style={{
+                                    border: 'none',
+                                    background: 'transparent',
+                                    textAlign: 'left',
+                                    padding: '8px 12px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#4F46E5',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    borderTop: '1px solid #f1f5f9'
+                                  }}
+                                  className="dropdown-item-hover"
+                                >
+                                  <Layers style={{ width: '12px', height: '12px', color: '#4F46E5' }} />
+                                  Convert to BOM
                                 </button>
                                 {pi.statusType !== 'approved' && (
                                   <button 
@@ -1409,23 +1469,50 @@ export default function PerformaInvoiceView() {
 
             </div>
 
-            <button 
-              onClick={() => setSelectedPi(null)}
-              style={{
-                height: '38px',
-                backgroundColor: '#f1f5f9',
-                border: 'none',
-                color: '#475569',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                fontSize: '12px',
-                cursor: 'pointer',
-                marginTop: '8px',
-                width: '100%'
-              }}
-            >
-              Close Details
-            </button>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', width: '100%' }}>
+              <button 
+                onClick={() => setSelectedPi(null)}
+                style={{
+                  height: '40px',
+                  backgroundColor: '#f1f5f9',
+                  border: 'none',
+                  color: '#475569',
+                  borderRadius: '10px',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                Close Details
+              </button>
+              <button 
+                onClick={() => {
+                  const pi = selectedPi;
+                  setSelectedPi(null);
+                  handleConvertToBom(pi);
+                }}
+                style={{
+                  height: '40px',
+                  backgroundColor: '#4F46E5',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '10px',
+                  fontWeight: '800',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  flex: 1.3,
+                  boxShadow: '0 4px 10px rgba(79,70,229,0.25)'
+                }}
+              >
+                <Layers style={{ width: '15px', height: '15px' }} />
+                Convert to BOM →
+              </button>
+            </div>
           </div>
         </div>
       )}

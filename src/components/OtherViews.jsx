@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Plus, Check, Trash2, Eye, FileText, Search, PlusCircle, AlertCircle, AlertTriangle, X,
   TrendingUp, Users, CheckCircle, Clock, ShieldAlert, Award,
@@ -7,12 +7,13 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
   ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw,
-  CreditCard, Bell
+  CreditCard, Bell, Video, Play, Pause, Film, Sparkles
 } from 'lucide-react';
 import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
+import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
-export default function OtherViews({ activeTab, onChangeTab }) {
+export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales Executive', convertingPiData, onClearConvertingPiData }) {
   // Common states
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -74,7 +75,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
   const [customerList, setCustomerList] = useState(() => {
     try {
-      const saved = localStorage.getItem('controlroom_customer_list');
+      const saved = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_customer_list');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -90,7 +91,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   });
 
   // Sync customerList with Supabase cloud database
+  const isInitialCustMount = useRef(true);
   useEffect(() => {
+    if (isInitialCustMount.current) {
+      isInitialCustMount.current = false;
+      return;
+    }
     saveCloudStore('customer_store', customerList);
   }, [customerList]);
 
@@ -105,10 +111,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       const saved = localStorage.getItem('controlroom_bom_store');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error reading controlroom_bom_store", e);
     }
     return [
       {
@@ -121,7 +127,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         billingAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
         deliveryAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
         paymentType: '100% Advance',
-        status: 'Pending Confirmation', // Draft, Pending Confirmation, Edited / Pending Confirmation, Sent to Production, Pending Payment Details, Payment Uploaded
+        status: 'Pending Confirmation',
         items: [
           { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 4, rate: 250, confirmed: false },
           { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: 6, rate: 45, confirmed: false },
@@ -136,7 +142,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         },
         dispatchPacking: [],
         accountsVerification: {
-          paymentStatus: null, // 100% Received, 50% Received, Credit Payment
+          paymentStatus: null,
           hardCopyReceived: false,
           softCopyReceived: false
         },
@@ -180,30 +186,49 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     ];
   });
 
-  // Sync bomStore with Supabase cloud database
+  // Save bomStore to localStorage on change and sync cloud store safely
+  const isInitialBomMount = useRef(true);
   useEffect(() => {
+    try {
+      localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
+    } catch (e) {
+      console.error("Error setting controlroom_bom_store", e);
+    }
+    if (isInitialBomMount.current) {
+      isInitialBomMount.current = false;
+      return;
+    }
     saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
 
-  // Initial cloud fetch and real-time synchronization with Supabase
   useEffect(() => {
+    const syncFromStorage = () => {
+      try {
+        const saved = localStorage.getItem('controlroom_bom_store');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setBomStore(parsed);
+          }
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener('controlroom_storage_update', syncFromStorage);
+    
+    // Initial fetch and subscription from Supabase cloud database
     fetchCloudStore('bom_store', bomStore).then(data => {
       if (data && Array.isArray(data) && data.length > 0) setBomStore(data);
     });
-    fetchCloudStore('customer_store', customerList).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) setCustomerList(data);
-    });
-
-    const subBom = subscribeToCloudStore('bom_store', (latest) => {
+    const sub = subscribeToCloudStore('bom_store', (latest) => {
       if (latest && Array.isArray(latest)) setBomStore(latest);
-    });
-    const subCust = subscribeToCloudStore('customer_store', (latest) => {
-      if (latest && Array.isArray(latest)) setCustomerList(latest);
     });
 
     return () => {
-      if (subBom && typeof subBom.unsubscribe === 'function') subBom.unsubscribe();
-      if (subCust && typeof subCust.unsubscribe === 'function') subCust.unsubscribe();
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener('controlroom_storage_update', syncFromStorage);
+      if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe();
     };
   }, []);
 
@@ -244,7 +269,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [newBomDeliveryProofDoc, setNewBomDeliveryProofDoc] = useState(null);
   const [newBomPaymentProofDoc, setNewBomPaymentProofDoc] = useState(null);
   const [newBomRemarks, setNewBomRemarks] = useState('');
+  const [newBomTransportMode, setNewBomTransportMode] = useState('Transport');
+  const [newBomTransporterName, setNewBomTransporterName] = useState('');
+  const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
+  const [newBomLrNo, setNewBomLrNo] = useState('');
+  const [newBomGstRate, setNewBomGstRate] = useState('18%');
   const [selectedPreset, setSelectedPreset] = useState('');
+  const [presetSetCount, setPresetSetCount] = useState(1);
   const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // { type: 'cancel' | 'draft' | 'create' }
@@ -253,6 +284,87 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [updatePaymentModal, setUpdatePaymentModal] = useState(null); // BOM object for updating payment (Partial/Credit)
   const [updatePaymentFile, setUpdatePaymentFile] = useState(null);
   const [updatePaymentNotes, setUpdatePaymentNotes] = useState('');
+
+  // Handle Proforma Invoice (PI) to Sales BOM auto-conversion
+  useEffect(() => {
+    let pendingPi = convertingPiData;
+    if (!pendingPi) {
+      try {
+        const saved = localStorage.getItem('controlroom_pending_pi_to_bom');
+        if (saved) {
+          pendingPi = JSON.parse(saved);
+          localStorage.removeItem('controlroom_pending_pi_to_bom');
+        }
+      } catch (e) {}
+    }
+
+    if (pendingPi) {
+      setShowBOMForm(true);
+      const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
+      setNewBomCode(`BOM-${nextNum}`);
+      if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
+      if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
+      if (Array.isArray(pendingPi.items) && pendingPi.items.length > 0) {
+        setBomMaterialsList(pendingPi.items.map(it => ({
+          name: it.name || 'Structural Steel Beams',
+          category: it.category || 'PI Converted Goods',
+          uom: it.uom || 'NOS',
+          qty: String(it.qty || '1'),
+          wastage: '0%',
+          rate: String(it.rate || '1000'),
+          gstRate: it.gstRate || '18%'
+        })));
+      }
+      if (typeof onClearConvertingPiData === 'function') onClearConvertingPiData();
+    }
+
+    const handleCustomConvert = (e) => {
+      if (e && e.detail) {
+        setShowBOMForm(true);
+        const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
+        setNewBomCode(`BOM-${nextNum}`);
+        if (e.detail.customerName) setNewBomProductName(e.detail.customerName);
+        if (e.detail.remarks) setNewBomRemarks(e.detail.remarks);
+        if (Array.isArray(e.detail.items) && e.detail.items.length > 0) {
+          setBomMaterialsList(e.detail.items.map(it => ({
+            name: it.name || 'Structural Steel Beams',
+            category: it.category || 'PI Converted Goods',
+            uom: it.uom || 'NOS',
+            qty: String(it.qty || '1'),
+            wastage: '0%',
+            rate: String(it.rate || '1000'),
+            gstRate: it.gstRate || '18%'
+          })));
+        }
+      }
+    };
+
+    window.addEventListener('controlroom_convert_pi_bom', handleCustomConvert);
+    return () => {
+      window.removeEventListener('controlroom_convert_pi_bom', handleCustomConvert);
+    };
+  }, [convertingPiData]);
+  
+  // Vehicle Loading & Final Dispatch State
+  const [vehicleLoadingModal, setVehicleLoadingModal] = useState(null); // BOM object undergoing vehicle loading
+  const [vehicleLoadingData, setVehicleLoadingData] = useState({
+    vehicleNo: '',
+    driverName: '',
+    driverPhone: '',
+    transporter: '',
+    lrNo: '',
+    sealNo: '',
+    ewayBillNo: '',
+    loadingNotes: ''
+  });
+  const [loadingPhotos, setLoadingPhotos] = useState([]); // [{ id, name, size, dataUrl, capturedAt }]
+  const [loadingVideos, setLoadingVideos] = useState([]); // [{ id, name, size, dataUrl, recordedAt }]
+  const [loadingMediaMode, setLoadingMediaMode] = useState('photo'); // 'photo' | 'video' | 'camera'
+  const [isRecordingLoadingVideo, setIsRecordingLoadingVideo] = useState(false);
+  const [loadingCameraActive, setLoadingCameraActive] = useState(false);
+  const [activeMediaPreviewModal, setActiveMediaPreviewModal] = useState(null); // { type: 'image' | 'video', url, name }
+  const [completedBomSummaryModal, setCompletedBomSummaryModal] = useState(null); // Completed BOM object
+
   const [customAlert, setCustomAlert] = useState(null);
 
   const showCustomAlert = (msg, title = null, type = null) => {
@@ -1375,7 +1487,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
   const [quotationRowsPerPage, setQuotationRowsPerPage] = useState(10);
   const [selectedQuotations, setSelectedQuotations] = useState([]);
 
-  const [quotationsList, setQuotationsList] = useState([
+  const INITIAL_QUOTATIONS = [
     { id: 'QT-2024-0126', customer: 'Tata Power Solar Systems Ltd.', project: '50 MW Solar Plant - Rajasthan', date: '29 May 2024', validUntil: '28 Jun 2024', amount: '₹ 18,75,000.00', status: 'Sent', salesPerson: 'Ravi Kumar' },
     { id: 'QT-2024-0125', customer: 'Adani Green Energy Ltd.', project: '100 MW Solar Plant - Gujarat', date: '28 May 2024', validUntil: '27 Jun 2024', amount: '₹ 32,40,000.00', status: 'Viewed', salesPerson: 'Pooja Sharma' },
     { id: 'QT-2024-0124', customer: 'Waaree Energies Ltd.', project: '25 MW Solar Plant - Maharashtra', date: '27 May 2024', validUntil: '26 Jun 2024', amount: '₹ 9,85,000.00', status: 'Accepted', salesPerson: 'Ravi Kumar' },
@@ -1386,7 +1498,34 @@ export default function OtherViews({ activeTab, onChangeTab }) {
     { id: 'QT-2024-0119', customer: 'ReNew Power Pvt. Ltd.', project: '150 MW Solar Plant - Tamil Nadu', date: '21 May 2024', validUntil: '20 Jun 2024', amount: '₹ 41,75,000.00', status: 'Accepted', salesPerson: 'Pooja Sharma' },
     { id: 'QT-2024-0118', customer: 'Jakson Engineers Ltd.', project: '33 MW Solar Plant - Odisha', date: '20 May 2024', validUntil: '19 Jun 2024', amount: '₹ 11,90,000.00', status: 'Rejected', salesPerson: 'Ravi Kumar' },
     { id: 'QT-2024-0117', customer: 'Larsen & Toubro Ltd.', project: '80 MW Solar Plant - Gujarat', date: '19 May 2024', validUntil: '18 Jun 2024', amount: '₹ 27,50,000.00', status: 'Sent', salesPerson: 'Amit Verma' }
-  ]);
+  ];
+
+  const [quotationsList, setQuotationsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_quotations_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_QUOTATIONS;
+  });
+
+  useEffect(() => {
+    saveCloudStore('quotations_store', quotationsList);
+  }, [quotationsList]);
+
+  useEffect(() => {
+    fetchCloudStore('quotations_store', quotationsList).then(data => {
+      if (data && Array.isArray(data) && data.length > 0) setQuotationsList(data);
+    });
+    const sub = subscribeToCloudStore('quotations_store', (latest) => {
+      if (latest && Array.isArray(latest)) setQuotationsList(latest);
+    });
+    return () => {
+      if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe();
+    };
+  }, []);
 
   // GRN State
   const [grnList, setGrnList] = useState([]);
@@ -9647,7 +9786,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </button>
 
                     {/* Confirm Invoice primary button */}
-                    {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
+                    {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed', 'Fully Dispatched & Delivered'].includes(inv.status) ? (
                       <div
                         style={{
                           backgroundColor: '#DCFCE7',
@@ -9668,9 +9807,126 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     ) : (
                       <button
                         onClick={() => {
-                          setInvoiceList(prev => prev.map(item => (item.invNo === inv.invNo || item.code === inv.code) ? { ...item, status: 'Invoice Confirmed', match: 'Matched', pay: 'Completed & Locked' } : item));
+                          // 1. Identify packed items only
+                          const packedItemsToDeduct = (itemsList || []).filter(item => Boolean(item.selected));
+                          const unpackedItems = (itemsList || []).filter(item => !Boolean(item.selected));
+
+                          // 2. Reduce stock in stockRegistry and RawMaterialInventoryView materials state
+                          setStockRegistry(prevRegistry => {
+                            const updated = [...prevRegistry];
+                            packedItemsToDeduct.forEach(pItem => {
+                              const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                              const matchIdx = updated.findIndex(r =>
+                                (r.code && pItem.code && r.code.toLowerCase().trim() === pItem.code.toLowerCase().trim()) ||
+                                (r.item && pItem.name && (
+                                  r.item.toLowerCase().trim() === pItem.name.toLowerCase().trim() ||
+                                  r.item.toLowerCase().includes(pItem.name.toLowerCase().trim()) ||
+                                  pItem.name.toLowerCase().includes(r.item.toLowerCase().trim())
+                                ))
+                              );
+                              if (matchIdx !== -1) {
+                                const currentStock = Math.max(0, parseInt(String(updated[matchIdx].stock).replace(/,/g, ''), 10) || 0);
+                                const newStock = Math.max(0, currentStock - qtyToDeduct);
+                                const minLvl = parseInt(String(updated[matchIdx].minLevel || '500').replace(/,/g, ''), 10) || 500;
+                                updated[matchIdx] = {
+                                  ...updated[matchIdx],
+                                  stock: String(newStock),
+                                  status: newStock === 0 ? 'Out of Stock' : (newStock <= minLvl ? 'Low Stock' : 'In Stock')
+                                };
+                              }
+                            });
+                            try {
+                              localStorage.setItem('controlroom_stock_registry_store', JSON.stringify(updated));
+                            } catch (e) {}
+                            return updated;
+                          });
+
+                          // Update raw materials stock table
+                          try {
+                            const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
+                            let currentMats = [];
+                            if (savedMatStr) {
+                              try { currentMats = JSON.parse(savedMatStr); } catch (e) {}
+                            }
+                            if (currentMats && Array.isArray(currentMats) && currentMats.length > 0) {
+                              const updatedMats = currentMats.map(m => {
+                                const mName = (m.name || '').toLowerCase().trim();
+                                const mCode = (m.code || '').toLowerCase().trim();
+
+                                const matchP = packedItemsToDeduct.find(pItem => {
+                                  const pName = (pItem.name || '').toLowerCase().trim();
+                                  const pCode = (pItem.code || '').toLowerCase().trim();
+
+                                  if (pCode && mCode && pCode === mCode) return true;
+                                  if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
+
+                                  // Key structural category keyword matching for BOM presets
+                                  const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate'];
+                                  for (const kw of keywords) {
+                                    if (pName.includes(kw) && mName.includes(kw)) return true;
+                                  }
+                                  return false;
+                                });
+
+                                if (matchP) {
+                                  const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
+                                  const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
+                                  const newSt = Math.max(0, currSt - qtyToDeduct);
+                                  const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
+                                  return {
+                                    ...m,
+                                    stock: newSt,
+                                    issuedProd: (m.issuedProd || 0) + qtyToDeduct,
+                                    status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
+                                    lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                  };
+                                }
+                                return m;
+                              });
+                              localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
+                              window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+                            }
+                          } catch (err) {}
+
+                          // 3. Update Invoice status
+                          setInvoiceList(prev => prev.map(item => (item.invNo === inv.invNo || item.code === inv.code) ? {
+                            ...item,
+                            status: 'Invoice Confirmed',
+                            match: 'Matched',
+                            pay: 'Completed & Locked',
+                            stockDeducted: true,
+                            stockDeductionDate: new Date().toISOString(),
+                            packedItemsDeducted: packedItemsToDeduct,
+                            unpackedItemsRemaining: unpackedItems
+                          } : item));
+
+                          // 4. Update matching BOM status to 'Awaiting Vehicle Loading & Dispatch'
+                          const targetCode = inv.poNo || inv.code || bomRefText;
+                          setBomStore(prev => prev.map(b => (
+                            b.bomCode === targetCode ||
+                            b.salesOrderNo === targetCode ||
+                            b.code === targetCode ||
+                            (inv.invNo && b.bomCode && inv.invNo.endsWith(b.bomCode.replace('BOM-', '')))
+                          ) ? {
+                            ...b,
+                            status: 'Awaiting Vehicle Loading & Dispatch',
+                            invoiceConfirmed: true,
+                            invoiceNo: invNoText,
+                            stockDeducted: true,
+                            stockDeductionDate: new Date().toISOString(),
+                            packedItemsDeducted: packedItemsToDeduct
+                          } : b));
+
                           setViewingInvoiceModal(null);
-                          setConfirmInvoiceSuccessModal(invNoText);
+                          setConfirmInvoiceSuccessModal({
+                            invNo: invNoText,
+                            bomCode: bomRefText,
+                            customer: customerText,
+                            deliveryAddress: inv.deliveryAddress || (matchingBom && matchingBom.deliveryAddress) || 'Customer Delivery Site',
+                            packedCount: packedItemsToDeduct.length,
+                            totalCount: (itemsList || []).length,
+                            deductedItems: packedItemsToDeduct
+                          });
                         }}
                         style={{
                           backgroundColor: '#3B82F6',
@@ -9757,48 +10013,6 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Payment Type</div>
                         <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
-                      </div>
-
-                      {/* Delivery Address & Proof Status */}
-                      <div>
-                        {(() => {
-                          const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
-                          const bAddr = inv.billingAddress || matchingBom?.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
-                          const dAddr = inv.deliveryAddress || matchingBom?.deliveryAddress || bAddr;
-
-                          return (
-                            <div>
-                              <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Truck style={{ width: '12px', height: '12px', color: '#4F46E5' }} /> Delivery Address & Proof
-                              </div>
-                              {addressProofDoc ? (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '3px', backgroundColor: '#EFF6FF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
-                                  <FileText style={{ width: '12px', height: '12px', color: '#2563EB' }} />
-                                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {addressProofDoc.name}
-                                  </span>
-                                  <button
-                                    onClick={() => setPreviewAddressProofModal({
-                                      name: addressProofDoc.name,
-                                      size: addressProofDoc.size || '1.2 MB',
-                                      customer: customerText,
-                                      billingAddress: bAddr,
-                                      deliveryAddress: dAddr,
-                                      bomRef: bomRefText
-                                    })}
-                                    style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                                  >
-                                    <Eye style={{ width: '10px', height: '10px' }} /> View Proof
-                                  </button>
-                                </div>
-                              ) : (
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '8px', display: 'inline-block', marginTop: '2px' }}>
-                                  ✓ Same as Billing Address
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
                       </div>
                     </div>
                   </div>
@@ -10046,6 +10260,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 onClick={() => setPreviewAddressProofModal({
                                   name: addressProofDoc.name,
                                   size: addressProofDoc.size || '1.2 MB',
+                                  dataUrl: addressProofDoc.dataUrl || addressProofDoc.fileData || addressProofDoc.url || null,
+                                  uploadedBy: addressProofDoc.uploadedBy || (matchingBom?.salesPerson ? `${matchingBom.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
                                   customer: customerText,
                                   billingAddress: bAddr,
                                   deliveryAddress: dAddr,
@@ -10141,6 +10357,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   onClick={() => setPreviewAddressProofModal({
                                     name: addressProofDoc.name,
                                     size: addressProofDoc.size || '1.2 MB',
+                                    dataUrl: addressProofDoc.dataUrl || addressProofDoc.fileData || addressProofDoc.url || null,
+                                    uploadedBy: addressProofDoc.uploadedBy || (matchingBom?.salesPerson ? `${matchingBom.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
                                     customer: customerText,
                                     billingAddress: bAddr,
                                     deliveryAddress: dAddr,
@@ -10321,6 +10539,98 @@ export default function OtherViews({ activeTab, onChangeTab }) {
             );
           }
 
+          // Dynamically compute unified invoices list ensuring ALL BOMs show up in Invoice Management
+          const verifiedBomInvoices = (bomStore || [])
+            .filter(b => b && (b.bomCode || b.code))
+            .map(b => {
+              const bCode = b.bomCode || b.code || 'BOM-2026';
+              const cleanNum = bCode.replace(/[^0-9]/g, '') || '101';
+              const invNo = b.invoiceNo || `INV-2026-${cleanNum}`;
+              const oVal = parseFloat(b.grandTotal || 0);
+              const isConf = b.status === 'Invoice Confirmed' || b.status === 'Completed' || b.invoiceConfirmed;
+              
+              const packedItems = (b.dispatchPacking && Array.isArray(b.dispatchPacking) && b.dispatchPacking.length > 0)
+                ? b.dispatchPacking.map((p, pIdx) => ({
+                    code: p.code || `PRD-00${pIdx + 1}`,
+                    name: p.name || `Item ${pIdx + 1}`,
+                    qty: p.bomQty || p.qty || 1,
+                    bomQty: p.bomQty || p.qty || 1,
+                    invQty: p.bomQty || p.qty || 1,
+                    rate: p.rate || 1000,
+                    selected: Boolean(p.packed),
+                    packed: Boolean(p.packed)
+                  }))
+                : (b.items || []).map(it => ({ ...it, selected: true, packed: true }));
+
+              return {
+                invNo: invNo,
+                code: invNo,
+                date: b.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                vendor: b.customerName || b.companyName || b.customer || 'Customer',
+                customerName: b.customerName || b.companyName || b.customer || 'Customer',
+                poNo: bCode,
+                bomCode: bCode,
+                grnNo: 'GRN-VERIFIED',
+                invAmt: `₹ ${oVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                poVal: `₹ ${oVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                grnVal: `₹ ${oVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                diff: '0.00', match: 'Matched',
+                pay: isConf ? 'Completed & Locked' : 'Ready for Payment',
+                status: isConf ? 'Invoice Confirmed' : 'Ready for Payment',
+                items: packedItems,
+                dispatchPacking: b.dispatchPacking,
+                billingAddress: b.billingAddress,
+                billingAddressObj: b.billingAddressObj,
+                deliveryAddress: b.deliveryAddress,
+                deliveryAddressObj: b.deliveryAddressObj,
+                deliveryAddressProofDoc: b.deliveryAddressProofDoc || null,
+                sameAsBilling: b.sameAsBilling,
+                accountsVerification: b.accountsVerification,
+                proofDoc: b.proofDoc || b.payments?.proofDoc || b.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
+                proofDocData: b.proofDocData || b.payments?.proofDocData || b.paymentProofDoc?.dataUrl || null,
+                paymentProofDoc: b.paymentProofDoc || null
+              };
+            });
+
+          const mergedInvoices = (invoiceList || []).map(inv => {
+            const matchingBom = (bomStore || []).find(b =>
+              b.bomCode === inv.poNo ||
+              b.code === inv.poNo ||
+              b.bomCode === inv.code ||
+              b.bomCode === inv.invNo ||
+              (b.salesOrderNo && (b.salesOrderNo === inv.poNo || b.salesOrderNo === inv.c3))
+            );
+            if (matchingBom) {
+              const isConf = matchingBom.status === 'Invoice Confirmed' || matchingBom.status === 'Completed' || matchingBom.invoiceConfirmed || inv.status === 'Invoice Confirmed';
+              return {
+                ...inv,
+                vendor: inv.vendor || matchingBom.customerName || 'Customer',
+                customerName: matchingBom.customerName || inv.vendor || 'Customer',
+                billingAddress: inv.billingAddress || matchingBom.billingAddress,
+                deliveryAddress: inv.deliveryAddress || matchingBom.deliveryAddress,
+                deliveryAddressProofDoc: inv.deliveryAddressProofDoc || matchingBom.deliveryAddressProofDoc,
+                accountsVerification: matchingBom.accountsVerification || inv.accountsVerification,
+                status: isConf ? 'Invoice Confirmed' : (inv.status || 'Ready for Payment'),
+                pay: isConf ? 'Completed & Locked' : (inv.pay || 'Ready for Payment'),
+                items: (inv.items && inv.items.length > 0) ? inv.items : (matchingBom.dispatchPacking || matchingBom.items || [])
+              };
+            }
+            return inv;
+          });
+
+          const missingVerified = verifiedBomInvoices.filter(v => {
+            const vPo = (v.poNo || '').toLowerCase();
+            const vInv = (v.invNo || '').toLowerCase();
+            return !mergedInvoices.some(m =>
+              (m.poNo && m.poNo.toLowerCase() === vPo) ||
+              (m.bomCode && m.bomCode.toLowerCase() === vPo) ||
+              (m.invNo && m.invNo.toLowerCase() === vInv) ||
+              (m.code && m.code.toLowerCase() === vInv)
+            );
+          });
+
+          const allInvoicesUnified = [...missingVerified, ...mergedInvoices];
+
           // Domain-specific Page Configs for all Production Admin views using the Purchase Orders 5-part layout template
           const configs = {
             'Invoice Management': {
@@ -10329,22 +10639,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               actionText: '',
               searchPlaceholder: 'Search Invoices (Invoice No, Customer / Vendor, BOM Ref)...',
               tabs: [
-                { id: 'All', label: 'All Invoices', count: (invoiceList || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Ready for Payment', label: 'Ready for Payment', count: (invoiceList || []).filter(i => i.status === 'Ready for Payment' || i.pay === 'Ready').length, bg: '#dcfce7', fg: '#166534' },
-                { id: 'On Hold', label: 'On Hold', count: (invoiceList || []).filter(i => i.status === 'On Hold' || i.pay === 'Hold').length, bg: '#fee2e2', fg: '#991b1b' }
+                { id: 'All', label: 'All Invoices', count: allInvoicesUnified.length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Ready for Payment', label: 'Ready for Payment', count: allInvoicesUnified.filter(i => i.status === 'Ready for Payment' || i.pay === 'Ready' || i.pay === 'Ready for Payment').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'On Hold', label: 'On Hold', count: allInvoicesUnified.filter(i => i.status === 'On Hold' || i.pay === 'Hold').length, bg: '#fee2e2', fg: '#991b1b' }
               ],
               headers: ['Invoice No.', 'Customer / Vendor', 'BOM Ref', 'Invoice Date', 'Invoice Amount (₹)', 'Payment Status', 'Status', 'Action'],
-              rows: (invoiceList || []).map(i => {
+              rows: allInvoicesUnified.map(i => {
                 const isConfirmed = i.status === 'Invoice Confirmed' || i.status === 'Completed' || i.status === 'Confirmed' || i.pay === 'Completed & Locked';
-                const isReady = i.status === 'Ready for Payment' || i.pay === 'Ready';
+                const isReady = i.status === 'Ready for Payment' || i.pay === 'Ready' || i.pay === 'Ready for Payment';
 
                 return {
                   ...i,
                   code: i.invNo,
-                  c2: i.vendor,
-                  c3: i.poNo || 'BOM-001',
+                  c2: i.vendor || i.customerName || 'Customer',
+                  c3: i.poNo || i.bomCode || 'BOM-001',
                   c4: i.date,
-                  c5: i.invAmt,
+                  c5: typeof i.invAmt === 'number' ? `₹ ${i.invAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : i.invAmt,
                   c6: i.pay || 'Ready for Payment',
                   status: i.status || 'Ready for Payment',
                   stBg: isConfirmed ? '#DCFCE7' : (isReady ? '#EFF6FF' : '#FEF3C7'),
@@ -10360,24 +10670,46 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               actionText: '',
               searchPlaceholder: 'Search Accounts Verification (BOM Code, Customer Name)...',
               tabs: [
-                { id: 'All', label: 'All Accounts Verification Orders', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' }
+                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Verified', label: 'Verified', count: (bomStore || []).filter(b => (b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'Cancelled', label: 'Cancelled / Reissued', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEE2E2', fg: '#DC2626' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Status', 'Document Receipt', 'Status', 'Action'],
               rows: (bomStore || []).map(b => {
                 const acc = b.accountsVerification || {};
-                const isVerified = Boolean(
+                const isReissuedOrCancelled = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
+                const isVerified = !isReissuedOrCancelled && Boolean(
                   acc.verified ||
                   b.status === 'Accounts Verified & Passed to Invoice' ||
                   (acc.hardCopyReceived && acc.softCopyReceived && (acc.paymentStatus || b.paymentType === 'Net 30 Days'))
                 );
-                const payStatus = acc.paymentStatus || (b.paymentType === 'Net 30 Days' ? 'Credit Payment' : '100% Received');
-                const docStatus = acc.hardCopyReceived && acc.softCopyReceived
-                  ? 'Both Received (Hard + Soft)'
-                  : acc.hardCopyReceived
-                    ? 'Only Hard Copy Received'
-                    : acc.softCopyReceived
-                      ? 'Only Soft Copy Received'
-                      : 'Pending Documents';
+                const payStatus = isReissuedOrCancelled
+                  ? 'Reissued / Void'
+                  : (acc.paymentStatus || (b.paymentType === 'Net 30 Days' ? 'Credit Payment' : '100% Received'));
+                const docStatus = isReissuedOrCancelled
+                  ? 'Cancelled & Reissued'
+                  : (acc.hardCopyReceived && acc.softCopyReceived
+                    ? 'Both Received (Hard + Soft)'
+                    : acc.hardCopyReceived
+                      ? 'Only Hard Copy Received'
+                      : acc.softCopyReceived
+                        ? 'Only Soft Copy Received'
+                        : 'Pending Documents');
+
+                let statusText = isVerified ? 'ACCOUNTS VERIFIED' : 'PENDING VERIFICATION';
+                let stBg = isVerified ? '#DCFCE7' : '#FEF3C7';
+                let stFg = isVerified ? '#166534' : '#B45309';
+                let stBorder = isVerified ? '1px solid #BBF7D0' : '1px solid #FDE68A';
+                let tabGroup = isVerified ? 'Verified' : 'Pending';
+
+                if (isReissuedOrCancelled) {
+                  statusText = 'CANCELLED';
+                  stBg = '#FEE2E2';
+                  stFg = '#DC2626';
+                  stBorder = '1px solid #FCA5A5';
+                  tabGroup = 'Cancelled';
+                }
 
                 return {
                   ...b,
@@ -10387,12 +10719,12 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   c4: payStatus,
                   c5: docStatus,
                   c6: undefined,
-                  status: isVerified ? 'ACCOUNTS VERIFIED' : 'PENDING VERIFICATION',
-                  stBg: isVerified ? '#DCFCE7' : '#FEF3C7',
-                  stFg: isVerified ? '#166534' : '#B45309',
-                  stBorder: isVerified ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+                  status: statusText,
+                  stBg: stBg,
+                  stFg: stFg,
+                  stBorder: stBorder,
                   isAccountsDone: isVerified,
-                  tabGroup: 'All'
+                  tabGroup: tabGroup
                 };
               })
             },
@@ -10403,9 +10735,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
                 { id: 'All', label: 'All Orders', count: (bomStore || []).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status !== 'Closed' && b.status !== 'CLOSED' && !b.status.includes('Packed') && b.status !== 'Partially Packed').length, bg: '#FFEDD5', fg: '#C2410C' },
-                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed) && b.status !== 'Closed' && b.status !== 'CLOSED')).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed) && b.status !== 'Closed' && b.status !== 'CLOSED')).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status !== 'Closed' && b.status !== 'CLOSED' && !b.status.includes('Packed') && b.status !== 'Partially Packed' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && b.status !== 'Closed' && b.status !== 'CLOSED' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && b.status !== 'Closed' && b.status !== 'CLOSED' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
@@ -10415,6 +10748,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
                 const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
                 const isClosed = b.status === 'Closed' || b.status === 'CLOSED';
+                const isReissued = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
 
                 let statusLabel = 'PENDING DISPATCH PACKING';
                 let stBg = '#FFF7ED';
@@ -10422,7 +10756,13 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 let stBorder = '1px solid #FED7AA';
                 let tabGroup = 'PendingPacking';
 
-                if (isClosed) {
+                if (isReissued) {
+                  statusLabel = 'REISSUED';
+                  stBg = '#FEF3C7';
+                  stFg = '#B45309';
+                  stBorder = '1px solid #FDE68A';
+                  tabGroup = 'Reissued';
+                } else if (isClosed) {
                   statusLabel = 'CLOSED';
                   stBg = '#F1F5F9';
                   stFg = '#475569';
@@ -10447,7 +10787,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   code: b.bomCode,
                   c2: b.customerName,
                   c3: b.paymentType,
-                  c4: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
+                  c4: isReissued ? `Reissued by Accounts` : isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
                   c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                   status: statusLabel,
                   stBg: stBg,
@@ -10594,6 +10934,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 { code: 'RM-FST-035', c2: 'Alu Fastener Rod 35mm', c3: '8.5 Tons', c4: '4.0 Tons', c5: '₹ 1,85,000 / Ton', c6: 'RM Store #1', status: 'SUFFICIENT', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Sufficient' }
               ]
             },
+            'Sales BOM': {
+              title: 'Sales Bill of Materials (BOM)',
+              subtitle: 'Customer order BOMs, product specifications and sales quotations',
+              actionText: '+ Create BOM',
+              searchPlaceholder: 'Search Sales BOM (BOM Code, Customer Name, Product)...',
+              tabs: [
+                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+              rows: (bomStore || []).map(b => ({
+                ...b,
+                code: b.bomCode || 'BOM-101',
+                c2: b.date || new Date().toISOString().split('T')[0],
+                c3: b.customerName || b.companyName || 'Customer Order',
+                c4: b.paymentType || '100% Advance',
+                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: b.status || 'Pending Confirmation',
+                stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : (!b.status || b.status.includes('Pending')) ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
+              }))
+            },
             'BOM': {
               title: 'Bill of Materials (BOM)',
               subtitle: 'Standard raw material consumption lists and component requirements',
@@ -10602,22 +10968,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               tabs: [
                 { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
                 { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
               rows: (bomStore || []).map(b => ({
                 ...b,
-                code: b.bomCode,
-                c2: b.date,
-                c3: b.customerName,
-                c4: b.paymentType,
+                code: b.bomCode || 'BOM-101',
+                c2: b.date || new Date().toISOString().split('T')[0],
+                c3: b.customerName || b.companyName || 'Customer Order',
+                c4: b.paymentType || '100% Advance',
                 c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                status: b.status,
-                stBg: b.status === 'Draft' ? '#fff7ed' : b.status.includes('Pending') ? '#fef3c7' : '#dcfce7',
-                stFg: b.status === 'Draft' ? '#c2410c' : b.status.includes('Pending') ? '#b45309' : '#166534',
-                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : b.status.includes('Pending') ? '1px solid #fde68a' : '1px solid #bbf7d0',
-                tabGroup: b.status === 'Draft' ? 'Draft' : b.status.includes('Pending') ? 'Pending' : 'Sent'
+                status: b.status || 'Pending Confirmation',
+                stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : (!b.status || b.status.includes('Pending')) ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
               }))
             },
             'Customer Management': {
@@ -10648,22 +11014,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               tabs: [
                 { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
                 { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
               rows: (bomStore || []).map(b => ({
                 ...b,
-                code: b.bomCode,
-                c2: b.date,
-                c3: b.customerName,
-                c4: b.paymentType,
+                code: b.bomCode || 'BOM-101',
+                c2: b.date || new Date().toISOString().split('T')[0],
+                c3: b.customerName || b.companyName || 'Customer Order',
+                c4: b.paymentType || '100% Advance',
                 c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                status: b.status,
-                stBg: b.status === 'Draft' ? '#fff7ed' : b.status.includes('Pending') ? '#fef3c7' : '#dcfce7',
-                stFg: b.status === 'Draft' ? '#c2410c' : b.status.includes('Pending') ? '#b45309' : '#166534',
-                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : b.status.includes('Pending') ? '1px solid #fde68a' : '1px solid #bbf7d0',
-                tabGroup: b.status === 'Draft' ? 'Draft' : b.status.includes('Pending') ? 'Pending' : 'Sent'
+                status: b.status || 'Pending Confirmation',
+                stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : (!b.status || b.status.includes('Pending')) ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
               }))
             },
             'Production Reports': {
@@ -10722,6 +11088,879 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               ]
             }
           };
+
+          // =========================================================================
+          // DEDICATED RAW MATERIAL INVENTORY VIEW (MATCHES USER UI DESIGN EXACTLY)
+          // =========================================================================
+          const RawMaterialInventoryView = ({ showAddStockForm: externalShowForm, setShowAddStockForm: externalSetShowForm }) => {
+            const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
+            const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
+            const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
+            const initialMaterials = [
+              { code: 'RM-001', name: 'Aluminium Sheet', cat: 'Aluminium', unit: 'KG', stock: 1250, minLevel: 500, status: 'In Stock', store: 'Main Store', hsn: '7606', lastUpdated: '20 Aug 2026 10:30 AM', reserved: 200, openingStock: 1000, goodsReceived: 500, issuedProd: 180, matReturn: 30, stockAdj: 10 },
+              { code: 'RM-002', name: 'GI Sheet', cat: 'Steel', unit: 'KG', stock: 320, minLevel: 400, status: 'Low Stock', store: 'Main Store', hsn: '7210', lastUpdated: '20 Aug 2026 09:15 AM', reserved: 50, openingStock: 400, goodsReceived: 100, issuedProd: 200, matReturn: 10, stockAdj: 10 },
+              { code: 'RM-003', name: 'MS Angle', cat: 'Steel', unit: 'Nos', stock: 0, minLevel: 100, status: 'Out of Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 0, openingStock: 150, goodsReceived: 0, issuedProd: 150, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-004', name: 'MS Channel', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 200, status: 'Low Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 20, openingStock: 200, goodsReceived: 50, issuedProd: 110, matReturn: 0, stockAdj: 10 },
+              { code: 'RM-005', name: 'Aluminium Rail', cat: 'Aluminium', unit: 'Nos', stock: 2450, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: '18 Aug 2026 02:20 PM', reserved: 350, openingStock: 2000, goodsReceived: 800, issuedProd: 350, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-006', name: 'SS Bolt M8', cat: 'Fasteners', unit: 'Nos', stock: 8600, minLevel: 2000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '18 Aug 2026 11:00 AM', reserved: 1200, openingStock: 6000, goodsReceived: 4000, issuedProd: 1400, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-007', name: 'Nut M8', cat: 'Fasteners', unit: 'Nos', stock: 1200, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '17 Aug 2026 05:10 PM', reserved: 400, openingStock: 1000, goodsReceived: 1000, issuedProd: 800, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-008', name: 'Washer M8', cat: 'Fasteners', unit: 'Nos', stock: 500, minLevel: 1000, status: 'Low Stock', store: 'Store B', hsn: '7318', lastUpdated: '17 Aug 2026 03:30 PM', reserved: 100, openingStock: 800, goodsReceived: 200, issuedProd: 500, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-009', name: 'Zinc Coating', cat: 'Coating', unit: 'Ltr', stock: 80, minLevel: 100, status: 'Low Stock', store: 'Main Store', hsn: '3208', lastUpdated: '16 Aug 2026 01:15 PM', reserved: 15, openingStock: 120, goodsReceived: 40, issuedProd: 80, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-010', name: 'Packing Material', cat: 'Packing', unit: 'Nos', stock: 3200, minLevel: 2000, status: 'In Stock', store: 'Store B', hsn: '3923', lastUpdated: '16 Aug 2026 10:00 AM', reserved: 500, openingStock: 2500, goodsReceived: 1500, issuedProd: 800, matReturn: 0, stockAdj: 0 },
+              // HDG Structure Kit Presets Items
+              { code: 'FG-HDG-001', name: 'Column 110x55x30x2.5 (Length 3.2m)', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 100, goodsReceived: 80, issuedProd: 30, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 1500, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 1000, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-009', name: 'Heavy Rafter 120x50x20x2.5 (Length 4.5m)', cat: 'Steel', unit: 'Nos', stock: 95, minLevel: 25, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 10, openingStock: 70, goodsReceived: 45, issuedProd: 20, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-010', name: 'Purlin 80x40x15x2.0 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 280, minLevel: 80, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 30, openingStock: 200, goodsReceived: 130, issuedProd: 50, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-011', name: 'Cross Bracing Pipe 42.4x2.6mm', cat: 'Steel', unit: 'Nos', stock: 160, minLevel: 40, status: 'In Stock', store: 'Store B', hsn: '7306', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 80, issuedProd: 40, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-012', name: 'Base Plate 250x250x10mm with M16 Anchors', cat: 'Steel', unit: 'Set', stock: 140, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 100, goodsReceived: 65, issuedProd: 25, matReturn: 0, stockAdj: 0 }
+            ];
+
+            const [materials, setMaterials] = useState(() => {
+              try {
+                const saved = localStorage.getItem('controlroom_raw_materials_store');
+                if (saved) {
+                  const parsed = JSON.parse(saved);
+                  if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+              } catch (e) {}
+              return initialMaterials;
+            });
+
+            useEffect(() => {
+              try {
+                localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(materials));
+              } catch (e) {}
+            }, [materials]);
+
+            useEffect(() => {
+              const handleRawMatSync = () => {
+                try {
+                  const saved = localStorage.getItem('controlroom_raw_materials_store');
+                  if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) setMaterials(parsed);
+                  }
+                } catch (e) {}
+              };
+              window.addEventListener('controlroom_raw_materials_update', handleRawMatSync);
+              return () => window.removeEventListener('controlroom_raw_materials_update', handleRawMatSync);
+            }, []);
+            const [selectedCode, setSelectedCode] = useState('RM-001');
+            const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedCat, setSelectedCat] = useState('All Categories');
+            const [selectedStore, setSelectedStore] = useState('All Stores');
+            const [selectedStatus, setSelectedStatus] = useState('All Status');
+            const [currentPage, setCurrentPage] = useState(1);
+            const [showTxModal, setShowTxModal] = useState(false);
+            const [showAdjModal, setShowAdjModal] = useState(false);
+            const [adjType, setAdjType] = useState('Add');
+            const [adjQty, setAdjQty] = useState('');
+            const [adjReason, setAdjReason] = useState('Stock Audit Correction');
+
+            const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
+
+            // Filter logic
+            const filteredMaterials = useMemo(() => {
+              return materials.filter(m => {
+                const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesCat = selectedCat === 'All Categories' || m.cat === selectedCat;
+                const matchesStore = selectedStore === 'All Stores' || m.store === selectedStore;
+                const matchesStatus = selectedStatus === 'All Status' || m.status === selectedStatus;
+                return matchesSearch && matchesCat && matchesStore && matchesStatus;
+              });
+            }, [materials, searchQuery, selectedCat, selectedStore, selectedStatus]);
+
+            // Low stock items
+            const lowStockItems = useMemo(() => {
+              return materials.filter(m => m.status === 'Low Stock' || m.status === 'Out of Stock');
+            }, [materials]);
+
+            // Category summary breakdown
+            const catSummary = [
+              { label: 'Aluminium', amount: '₹ 18,40,000', pct: '37.7%', color: '#3b82f6' },
+              { label: 'Steel', amount: '₹ 16,25,600', pct: '33.3%', color: '#22c55e' },
+              { label: 'Fasteners', amount: '₹ 7,80,320', pct: '16.0%', color: '#f59e0b' },
+              { label: 'Coating', amount: '₹ 2,10,000', pct: '4.3%', color: '#ec4899' },
+              { label: 'Packing', amount: '₹ 2,19,400', pct: '4.5%', color: '#a855f7' }
+            ];
+
+            // Recent activity log
+            const recentActivities = [
+              { type: 'grn', code: 'GRN-102', desc: 'Goods Receipt GRN-102', detail: 'Aluminium Sheet - 500 KG', time: '20 Aug 2026, 10:30 AM', bg: '#dcfce7', color: '#166534' },
+              { type: 'issue', code: 'PI-045', desc: 'Material Issue PI-045', detail: 'GI Sheet - 150 KG', time: '20 Aug 2026, 09:15 AM', bg: '#dbeafe', color: '#1e40af' },
+              { type: 'adj', code: 'ADJ-008', desc: 'Stock Adjustment ADJ-008', detail: 'MS Channel +10 Nos', time: '19 Aug 2026, 04:45 PM', bg: '#ffedd5', color: '#ea580c' }
+            ];
+
+            const handleStockAdjustment = () => {
+              if (!adjQty || isNaN(adjQty)) return;
+              const val = parseFloat(adjQty);
+              setMaterials(prev => prev.map(m => {
+                if (m.code === selectedMat.code) {
+                  const newStock = adjType === 'Add' ? m.stock + val : Math.max(0, m.stock - val);
+                  const newStatus = newStock === 0 ? 'Out of Stock' : newStock <= m.minLevel ? 'Low Stock' : 'In Stock';
+                  return {
+                    ...m,
+                    stock: newStock,
+                    stockAdj: m.stockAdj + (adjType === 'Add' ? val : -val),
+                    status: newStatus,
+                    lastUpdated: 'Just now'
+                  };
+                }
+                return m;
+              }));
+              setShowAdjModal(false);
+              setAdjQty('');
+            };
+
+            const [showAddStockForm, setShowAddStockForm] = useState(false);
+
+            const getFreshReceiptForm = () => ({
+              receiptType: 'Goods Receipt (Purchase)',
+              receiptNo: `GRN-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
+              receiptDate: new Date().toLocaleDateString('en-GB'),
+              poNo: '',
+              supplier: '',
+              supplierInvNo: '',
+              invoiceDate: '',
+              deliveryChallanNo: '',
+              transporterName: '',
+              vehicleNo: '',
+              driverName: '',
+              remarks: ''
+            });
+
+            const getFreshReceiptItems = () => [
+              { id: 1, material: '', batchNo: '', unit: '', qty: '' }
+            ];
+
+            const [receiptForm, setReceiptForm] = useState(getFreshReceiptForm);
+            const [receiptItems, setReceiptItems] = useState(getFreshReceiptItems);
+
+            const handleOpenAddStock = () => {
+              setReceiptForm(getFreshReceiptForm());
+              setReceiptItems(getFreshReceiptItems());
+              setAddStockActive(true);
+            };
+
+            const handleAddMaterialRow = () => {
+              setReceiptItems(prev => [
+                ...prev,
+                { id: prev.length + 1, material: '', batchNo: '', unit: '', qty: 0, rate: 0, tax: '18%', amount: 0 }
+              ]);
+            };
+
+            const handleRemoveMaterialRow = (id) => {
+              if (receiptItems.length <= 1) return;
+              setReceiptItems(prev => prev.filter(item => item.id !== id));
+            };
+
+            const updateMaterialRow = (id, field, value) => {
+              setReceiptItems(prev => prev.map(item => {
+                if (item.id === id) {
+                  const updated = { ...item, [field]: value };
+                  if (field === 'qty' || field === 'rate') {
+                    const q = parseFloat(updated.qty) || 0;
+                    const r = parseFloat(updated.rate) || 0;
+                    updated.amount = q * r;
+                  }
+                  return updated;
+                }
+                return item;
+              }));
+            };
+
+            const handleSaveAndConfirm = () => {
+              // Update stock levels based on receipt items
+              setMaterials(prev => prev.map(m => {
+                const matchedItem = receiptItems.find(item => item.material === m.code || item.material.includes(m.code));
+                if (matchedItem) {
+                  const qtyVal = parseFloat(matchedItem.qty) || 0;
+                  if (qtyVal > 0) {
+                    // For standard Goods Receipt (Purchase): Add to stock
+                    // If receiptType is 'Return Receipt' or invoice deduction: Reduce stock
+                    const isReturn = receiptForm.receiptType === 'Return Receipt';
+                    const newStock = isReturn ? Math.max(0, m.stock - qtyVal) : m.stock + qtyVal;
+                    const newGoodsReceived = isReturn ? m.goodsReceived : m.goodsReceived + qtyVal;
+                    const newStatus = newStock === 0 ? 'Out of Stock' : newStock <= m.minLevel ? 'Low Stock' : 'In Stock';
+                    return {
+                      ...m,
+                      stock: newStock,
+                      goodsReceived: newGoodsReceived,
+                      status: newStatus,
+                      lastUpdated: 'Just now'
+                    };
+                  }
+                }
+                return m;
+              }));
+              setAddStockActive(false);
+            };
+
+            if (isAddStockActive) {
+              const totalQty = receiptItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px' }}>
+
+                  {/* Header / Title Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button
+                        onClick={() => setAddStockActive(false)}
+                        style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        ← Back to List
+                      </button>
+                      <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                        Create Goods Receipt (Add Stock)
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+
+                    {/* LEFT MAIN FORM COLUMN (70%) */}
+                    <div style={{ flex: '1 1 70%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                      {/* SECTION 1: Receipt Information */}
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                          <span style={{ backgroundColor: '#2563EB', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
+                          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Receipt Information</h3>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', fontSize: '13px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt Type</label>
+                            <select value={receiptForm.receiptType} onChange={(e) => setReceiptForm({ ...receiptForm, receiptType: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
+                              <option>Goods Receipt (Purchase)</option>
+                              <option>Internal Transfer Receipt</option>
+                              <option>Return Receipt</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt No. <span style={{ color: '#DC2626' }}>*</span></label>
+                            <input type="text" value={receiptForm.receiptNo} onChange={(e) => setReceiptForm({ ...receiptForm, receiptNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none', fontWeight: '600' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt Date <span style={{ color: '#DC2626' }}>*</span></label>
+                            <div style={{ position: 'relative' }}>
+                              <input type="text" value={receiptForm.receiptDate} onChange={(e) => setReceiptForm({ ...receiptForm, receiptDate: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                              <Calendar style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748B' }} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Purchase Order No.</label>
+                            <select value={receiptForm.poNo} onChange={(e) => setReceiptForm({ ...receiptForm, poNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
+                              <option>PO-2025-08-015</option>
+                              <option>PO-2025-08-016</option>
+                              <option>PO-2025-08-017</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Supplier / Vendor <span style={{ color: '#DC2626' }}>*</span></label>
+                            <select value={receiptForm.supplier} onChange={(e) => setReceiptForm({ ...receiptForm, supplier: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
+                              <option>Shree Metal Supplies Pvt. Ltd.</option>
+                              <option>Tata Steel Limited</option>
+                              <option>Hindalco Industries</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Supplier Invoice No.</label>
+                            <input type="text" value={receiptForm.supplierInvNo} onChange={(e) => setReceiptForm({ ...receiptForm, supplierInvNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Invoice Date</label>
+                            <div style={{ position: 'relative' }}>
+                              <input type="text" value={receiptForm.invoiceDate} onChange={(e) => setReceiptForm({ ...receiptForm, invoiceDate: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                              <Calendar style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748B' }} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Delivery Challan No.</label>
+                            <input type="text" value={receiptForm.deliveryChallanNo} onChange={(e) => setReceiptForm({ ...receiptForm, deliveryChallanNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Transporter Name</label>
+                            <input type="text" value={receiptForm.transporterName} onChange={(e) => setReceiptForm({ ...receiptForm, transporterName: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Vehicle No.</label>
+                            <input type="text" value={receiptForm.vehicleNo} onChange={(e) => setReceiptForm({ ...receiptForm, vehicleNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Driver Name</label>
+                            <input type="text" value={receiptForm.driverName} onChange={(e) => setReceiptForm({ ...receiptForm, driverName: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Remarks</label>
+                            <input type="text" value={receiptForm.remarks} onChange={(e) => setReceiptForm({ ...receiptForm, remarks: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 2: Material Details Table */}
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                          <span style={{ backgroundColor: '#2563EB', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
+                          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Material Details</h3>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '700' }}>
+                                <th style={{ padding: '10px 12px', width: '30px' }}>#</th>
+                                <th style={{ padding: '10px 12px' }}>Material <span style={{ color: '#DC2626' }}>*</span></th>
+                                <th style={{ padding: '10px 12px' }}>Batch / Lot No.</th>
+                                <th style={{ padding: '10px 12px' }}>Unit <span style={{ color: '#DC2626' }}>*</span></th>
+                                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Quantity <span style={{ color: '#DC2626' }}>*</span></th>
+                                <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {receiptItems.map((item, idx) => (
+                                <tr key={item.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                  <td style={{ padding: '10px 12px', color: '#64748B', fontWeight: '600' }}>{idx + 1}</td>
+
+                                  <td style={{ padding: '10px 12px' }}>
+                                    <select
+                                      value={item.material}
+                                      onChange={(e) => {
+                                        const selectedVal = e.target.value;
+                                        const matObj = materials.find(m => m.code === selectedVal || m.name === selectedVal);
+                                        updateMaterialRow(item.id, 'material', selectedVal);
+                                        if (matObj && matObj.unit) {
+                                          updateMaterialRow(item.id, 'unit', matObj.unit);
+                                        }
+                                      }}
+                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
+                                    >
+                                      <option value="">Select Material</option>
+                                      {materials.map(m => (
+                                        <option key={m.code} value={m.code}>
+                                          {m.name} ({m.code})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+
+                                  <td style={{ padding: '10px 12px' }}>
+                                    <input
+                                      type="text"
+                                      placeholder="Enter Batch No."
+                                      value={item.batchNo}
+                                      onChange={(e) => updateMaterialRow(item.id, 'batchNo', e.target.value)}
+                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
+                                    />
+                                  </td>
+
+                                  <td style={{ padding: '10px 12px' }}>
+                                    <select
+                                      value={item.unit}
+                                      onChange={(e) => updateMaterialRow(item.id, 'unit', e.target.value)}
+                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
+                                    >
+                                      <option value="">Select Unit</option>
+                                      <option value="KG">KG</option>
+                                      <option value="Nos">Nos</option>
+                                      <option value="Ltr">Ltr</option>
+                                      <option value="Mtr">Mtr</option>
+                                    </select>
+                                  </td>
+
+                                  <td style={{ padding: '10px 12px' }}>
+                                    <input
+                                      type="number"
+                                      value={item.qty || ''}
+                                      onChange={(e) => updateMaterialRow(item.id, 'qty', e.target.value)}
+                                      placeholder="0.000"
+                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', textAlign: 'right', outline: 'none' }}
+                                    />
+                                  </td>
+
+                                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                    <button
+                                      onClick={() => handleRemoveMaterialRow(item.id)}
+                                      style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}
+                                    >
+                                      <Trash2 style={{ width: '15px', height: '15px' }} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <button
+                          onClick={handleAddMaterialRow}
+                          style={{ border: '1px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Plus style={{ width: '15px', height: '15px' }} /> Add Another Material
+                        </button>
+                      </div>
+
+                    </div>
+
+                    {/* RIGHT SUMMARY & NOTES COLUMN (30%) */}
+                    <div style={{ flex: '0 0 30%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                      {/* Receipt Summary Card */}
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', fontSize: '15px', fontWeight: '700', color: '#0F172A' }}>
+                          <FileText style={{ width: '18px', height: '18px', color: '#2563EB' }} /> Receipt Summary
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                            <span>Items (Qty)</span>
+                            <span style={{ fontWeight: '700', color: '#0F172A' }}>{receiptItems.length} Items</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                            <span>Total Quantity</span>
+                            <span style={{ fontWeight: '700', color: '#0F172A' }}>{totalQty}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                            <span>Total Gross Weight</span>
+                            <span style={{ fontWeight: '700', color: '#0F172A' }}>0 KG</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                            <span>Total Net Weight</span>
+                            <span style={{ fontWeight: '700', color: '#0F172A' }}>0 KG</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Important Notes Card */}
+                      <div style={{ backgroundColor: '#EFF6FF', borderRadius: '16px', border: '1px solid #BFDBFE', padding: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '14px', fontWeight: '800', color: '#1E40AF' }}>
+                          <Info style={{ width: '18px', height: '18px', color: '#2563EB' }} /> Important Notes
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', color: '#1E3A8A', lineHeight: '1.5' }}>
+                          <div>• Please verify the material quality and quantity before confirming.</div>
+                          <div>• Stock will be updated only after saving this receipt.</div>
+                          <div>• You can view this receipt in Material Receipts list.</div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  {/* BOTTOM ACTIONS BAR */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '16px 20px', borderRadius: '16px', border: '1px solid #E2E8F0', marginTop: '10px' }}>
+                    <button
+                      onClick={() => setAddStockActive(false)}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft style={{ width: '15px', height: '15px' }} /> Back to List
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button
+                        onClick={() => setAddStockActive(false)}
+                        style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => setAddStockActive(false)}
+                        style={{ border: '1px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <FileText style={{ width: '15px', height: '15px' }} /> Save as Draft
+                      </button>
+                      <button
+                        onClick={handleSaveAndConfirm}
+                        style={{ border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <CheckCircle style={{ width: '15px', height: '15px' }} /> Save & Confirm
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              );
+            }
+
+            const pageConfig = {
+              title: 'Raw Material Inventory Stores & Stock Balances',
+              subtitle: 'Raw aluminum coils, steel profiles, fasteners, and warehouse store balances',
+              actionText: 'Add Stock',
+              searchPlaceholder: 'Search Inventory (Material Code, Description, Store)...',
+              tabs: [
+                { id: 'All', label: 'All Stock Items', count: filteredMaterials.length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Sufficient', label: 'Sufficient Stock', count: materials.filter(m => m.status === 'In Stock').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Warning', label: 'Reorder Warning', count: materials.filter(m => m.status === 'Low Stock').length, bg: '#ffedd5', fg: '#ea580c' },
+                { id: 'Critical', label: 'Critical Shortage', count: materials.filter(m => m.status === 'Out of Stock').length, bg: '#fee2e2', fg: '#dc2626' }
+              ]
+            };
+
+            const [selectedTab, setSelectedTab] = useState('All');
+
+            const displayedMaterials = useMemo(() => {
+              return filteredMaterials.filter(m => {
+                if (selectedTab === 'Sufficient') return m.status === 'In Stock';
+                if (selectedTab === 'Warning') return m.status === 'Low Stock';
+                if (selectedTab === 'Critical') return m.status === 'Out of Stock';
+                return true;
+              });
+            }, [filteredMaterials, selectedTab]);
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+                {/* 1. TOP HEADER SECTION MATCHING CONTROLROOM DESIGN SYSTEM */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                      {pageConfig.title}
+                    </h2>
+                    <span style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                      {pageConfig.subtitle}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleOpenAddStock}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      border: 'none',
+                      color: 'white',
+                      height: '40px',
+                      padding: '0 18px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+                    }}
+                  >
+                    <Plus style={{ width: '16px', height: '16px' }} />
+                    {pageConfig.actionText}
+                  </button>
+                </div>
+
+                {/* 2. SEARCH & FILTER CONTROLS CARD MATCHING BOM SCREENSHOT */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justify: 'space-between',
+                  gap: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  {/* Left: Search input */}
+                  <div style={{ position: 'relative', width: '340px' }}>
+                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#94A3B8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search Inventory (Material Code, Description)..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        paddingLeft: '36px',
+                        paddingRight: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        backgroundColor: '#FFFFFF',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Right: Date picker, Status dropdown, Refresh icon button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '0 12px', height: '38px' }}>
+                      <Calendar style={{ width: '15px', height: '15px', color: '#64748B' }} />
+                      <input
+                        type="text"
+                        placeholder="dd/mm/yyyy"
+                        style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#475569', width: '90px', backgroundColor: 'transparent' }}
+                      />
+                    </div>
+
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      style={{
+                        height: '38px',
+                        padding: '0 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '13px',
+                        color: '#475569',
+                        backgroundColor: '#FFFFFF',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="All Status">Status: All</option>
+                      <option value="In Stock">In Stock</option>
+                      <option value="Low Stock">Low Stock</option>
+                      <option value="Out of Stock">Out of Stock</option>
+                    </select>
+
+                    <button style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      color: '#64748B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justify: 'center',
+                      cursor: 'pointer'
+                    }}>
+                      <RotateCcw style={{ width: '15px', height: '15px' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. UNDERLINE TABS ROW MATCHING BOM SCREENSHOT ALIGNMENT */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '0', marginTop: '4px' }}>
+                  {pageConfig.tabs.map((tab) => {
+                    const isActive = selectedTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSelectedTab(tab.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          borderBottom: isActive ? '3px solid #2563EB' : '3px solid transparent',
+                          paddingBottom: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '13.5px', fontWeight: isActive ? '700' : '600', color: isActive ? '#2563EB' : '#475569' }}>
+                          {tab.label}
+                        </span>
+                        <span style={{
+                          backgroundColor: tab.bg,
+                          color: tab.fg,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '800'
+                        }}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 4. TABLE CONTAINER MATCHING CONTROLROOM DESIGN SYSTEM */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          <th style={{ padding: '14px 18px' }}><input type="checkbox" /></th>
+                          <th style={{ padding: '14px 18px' }}>Material Code</th>
+                          <th style={{ padding: '14px 18px' }}>Material Description</th>
+                          <th style={{ padding: '14px 18px' }}>Category</th>
+                          <th style={{ padding: '14px 18px' }}>Unit</th>
+                          <th style={{ padding: '14px 18px', textAlign: 'right' }}>Current Stock</th>
+                          <th style={{ padding: '14px 18px', textAlign: 'right' }}>Min. Level</th>
+                          <th style={{ padding: '14px 18px' }}>Status</th>
+                          <th style={{ padding: '14px 18px', textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedMaterials.map((m, idx) => {
+                          const isOut = m.status === 'Out of Stock';
+                          const isLow = m.status === 'Low Stock';
+
+                          const stBg = isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7';
+                          const stFg = isOut ? '#DC2626' : isLow ? '#EA580C' : '#166534';
+                          const stBorder = isOut ? '1px solid #FCA5A5' : isLow ? '1px solid #FED7AA' : '1px solid #BBF7D0';
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background-color 0.15s ease' }}>
+                              <td style={{ padding: '14px 18px' }}><input type="checkbox" /></td>
+                              <td style={{ padding: '14px 18px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{m.code}</td>
+                              <td style={{ padding: '14px 18px', fontWeight: 'bold', color: '#1E293B' }}>{m.name}</td>
+                              <td style={{ padding: '14px 18px', color: '#475569' }}>{m.cat}</td>
+                              <td style={{ padding: '14px 18px', fontWeight: '600', color: '#475569' }}>{m.unit}</td>
+                              <td style={{ padding: '14px 18px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#DC2626' : isLow ? '#EA580C' : '#0F172A' }}>
+                                {m.stock.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '14px 18px', textAlign: 'right', color: '#64748B' }}>{m.minLevel.toLocaleString()}</td>
+
+                              {/* Status Badge with bullet dot matching design system */}
+                              <td style={{ padding: '14px 18px' }}>
+                                <span style={{ backgroundColor: stBg, color: stFg, border: stBorder, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
+                                  {m.status}
+                                </span>
+                              </td>
+
+                              {/* Action Ellipsis */}
+                              <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                                <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}>
+                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 5. PAGINATION FOOTER ROW MATCHING CONTROLROOM DESIGN SYSTEM */}
+                  <div style={{ padding: '12px 20px', backgroundColor: '#FFFFFF', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748B' }}>
+                    <span>Showing 1 to {displayedMaterials.length} of 126 entries</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>«</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>‹</button>
+                      <button style={{ border: '1px solid #2563EB', background: '#EFF6FF', color: '#2563EB', fontWeight: 'bold', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>1</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>2</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>3</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>4</button>
+                      <button style={{ width: '28px', height: '28px', border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', cursor: 'pointer' }}>5</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>›</button>
+                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>»</button>
+
+                      <select style={{ height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', marginLeft: '10px' }}>
+                        <option>10 / page</option>
+                        <option>25 / page</option>
+                        <option>50 / page</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODAL 1: Stock Adjustment */}
+                {showAdjModal && (
+                  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 14px 0', color: '#0f172a' }}>
+                        Stock Adjustment — {selectedMat.name} ({selectedMat.code})
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
+                        <div>
+                          <label style={{ fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>Adjustment Type</label>
+                          <select value={adjType} onChange={(e) => setAdjType(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 12px' }}>
+                            <option value="Add">+ Add Stock (Physical Audit Surplus)</option>
+                            <option value="Deduct">- Deduct Stock (Damage / Shortage / Wastage)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>Quantity ({selectedMat.unit})</label>
+                          <input type="number" placeholder="Enter quantity..." value={adjQty} onChange={(e) => setAdjQty(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 12px' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>Reason / Remarks</label>
+                          <input type="text" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '0 12px' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                        <button onClick={() => setShowAdjModal(false)} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                        <button onClick={handleStockAdjustment} style={{ padding: '8px 20px', border: 'none', borderRadius: '8px', background: '#2563eb', color: 'white', fontWeight: '700', cursor: 'pointer' }}>Confirm Adjustment</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* MODAL 2: View Transactions */}
+                {showTxModal && (
+                  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+                          Transaction History — {selectedMat.name} ({selectedMat.code})
+                        </h3>
+                        <button onClick={() => setShowTxModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                      </div>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
+                              <th style={{ padding: '10px' }}>Date</th>
+                              <th style={{ padding: '10px' }}>Doc Ref</th>
+                              <th style={{ padding: '10px' }}>Type</th>
+                              <th style={{ padding: '10px', textAlign: 'right' }}>Qty ({selectedMat.unit})</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px' }}>20 Aug 2026</td>
+                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>GRN-102</td>
+                              <td style={{ padding: '10px', color: '#166534', fontWeight: '700' }}>Goods Receipt</td>
+                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#166534' }}>+ 500</td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px' }}>19 Aug 2026</td>
+                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>PI-045</td>
+                              <td style={{ padding: '10px', color: '#dc2626', fontWeight: '700' }}>Material Issue</td>
+                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#dc2626' }}>- 180</td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px' }}>19 Aug 2026</td>
+                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>ADJ-008</td>
+                              <td style={{ padding: '10px', color: '#ea580c', fontWeight: '700' }}>Stock Adjustment</td>
+                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#ea580c' }}>+ 10</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{ marginTop: '16px', textAlign: 'right' }}>
+                        <button onClick={() => setShowTxModal(false)} style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>Close</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            );
+          };
+
+          // Dedicated Custom Renderer for Inventory (Raw Material) matching User UI Design
+          if (activeTab === 'Inventory (Raw Material)' || activeTab === 'Inventory' || (activeTab && activeTab.toLowerCase().includes('inventory'))) {
+            return (
+              <RawMaterialInventoryView
+                showAddStockForm={showAddStockForm}
+                setShowAddStockForm={setShowAddStockForm}
+              />
+            );
+          }
 
           // Dedicated Custom Renderer for Work Orders matching User Reference Screenshot
           if (activeTab === 'Work Orders') {
@@ -11600,14 +12839,19 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       onChange={(e) => {
                                         const file = e.target.files && e.target.files[0];
                                         if (file) {
-                                          setConfirmingBomModal({
-                                            ...confirmingBomModal,
-                                            deliveryAddressProofDoc: {
-                                              name: file.name,
-                                              size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                              uploadedAt: new Date().toISOString()
-                                            }
-                                          });
+                                          const reader = new FileReader();
+                                          reader.onload = (loadEvt) => {
+                                            setConfirmingBomModal(prev => ({
+                                              ...prev,
+                                              deliveryAddressProofDoc: {
+                                                name: file.name,
+                                                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                                dataUrl: loadEvt.target.result,
+                                                uploadedAt: new Date().toISOString()
+                                              }
+                                            }));
+                                          };
+                                          reader.readAsDataURL(file);
                                         }
                                       }}
                                     />
@@ -12478,34 +13722,83 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
               const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
               const verifiedBOM = accountsVerificationModal;
+              const softDocToSave = verifiedBOM.accountsVerification?.softCopyDoc || null;
+              const newInvNo = verifiedBOM.invoiceNo || `INV-2026-${targetCode ? targetCode.replace(/[^0-9]/g, '') : Math.floor(100 + Math.random() * 900)}`;
+
               setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                 ...b,
-                accountsVerification: { paymentStatus: currentPayStatus, hardCopyReceived: hardCopy, softCopyReceived: softCopy, verified: true },
+                invoiceNo: newInvNo,
+                accountsVerification: { 
+                  paymentStatus: currentPayStatus, 
+                  hardCopyReceived: hardCopy, 
+                  softCopyReceived: softCopy, 
+                  verified: true,
+                  softCopyDoc: softDocToSave
+                },
+                proofDoc: softDocToSave?.name || b.payments?.proofDoc || b.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
+                proofDocData: softDocToSave?.dataUrl || b.payments?.proofDocData || b.paymentProofDoc?.dataUrl || null,
                 status: 'Accounts Verified & Passed to Invoice'
               } : b));
-              const newInvNo = `INV-2026-${Math.floor(100 + Math.random() * 900)}`;
+
+              const packedItems = (verifiedBOM.dispatchPacking && Array.isArray(verifiedBOM.dispatchPacking) && verifiedBOM.dispatchPacking.length > 0)
+                ? verifiedBOM.dispatchPacking.map((p, pIdx) => ({
+                    code: p.code || `PRD-00${pIdx + 1}`,
+                    name: p.name || `Item ${pIdx + 1}`,
+                    qty: p.bomQty || p.qty || 1,
+                    bomQty: p.bomQty || p.qty || 1,
+                    invQty: p.bomQty || p.qty || 1,
+                    rate: p.rate || 1000,
+                    selected: Boolean(p.packed),
+                    packed: Boolean(p.packed)
+                  }))
+                : (verifiedBOM.items || []).map(it => ({ ...it, selected: true, packed: true }));
+
               const newInvEntry = {
                 invNo: newInvNo,
+                code: newInvNo,
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                 vendor: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
+                customerName: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
                 poNo: targetCode,
+                bomCode: targetCode,
                 grnNo: 'GRN-VERIFIED',
                 invAmt: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                 poVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                 grnVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                diff: '0.00', match: 'Matched', pay: 'Ready',
+                diff: '0.00', match: 'Matched',
+                pay: 'Ready for Payment',
                 status: 'Ready for Payment',
-                items: verifiedBOM.items || [],
+                items: packedItems,
+                dispatchPacking: verifiedBOM.dispatchPacking,
                 billingAddress: verifiedBOM.billingAddress,
                 billingAddressObj: verifiedBOM.billingAddressObj,
                 deliveryAddress: verifiedBOM.deliveryAddress,
                 deliveryAddressObj: verifiedBOM.deliveryAddressObj,
                 deliveryAddressProofDoc: verifiedBOM.deliveryAddressProofDoc || null,
-                sameAsBilling: verifiedBOM.sameAsBilling
+                sameAsBilling: verifiedBOM.sameAsBilling,
+                accountsVerification: {
+                  paymentStatus: currentPayStatus,
+                  hardCopyReceived: hardCopy,
+                  softCopyReceived: softCopy,
+                  verified: true,
+                  softCopyDoc: softDocToSave
+                },
+                proofDoc: softDocToSave?.name || verifiedBOM.payments?.proofDoc || verifiedBOM.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
+                proofDocData: softDocToSave?.dataUrl || verifiedBOM.payments?.proofDocData || verifiedBOM.paymentProofDoc?.dataUrl || null,
+                paymentProofDoc: verifiedBOM.paymentProofDoc || softDocToSave || null
               };
-              setInvoiceList(prev => [newInvEntry, ...(prev || [])]);
+
+              setInvoiceList(prev => {
+                const filtered = (prev || []).filter(i => i.poNo !== targetCode && i.bomCode !== targetCode && i.invNo !== newInvNo && i.code !== newInvNo);
+                const updated = [newInvEntry, ...filtered];
+                try {
+                  localStorage.setItem('controlroom_invoice_store', JSON.stringify(updated));
+                } catch (e) {}
+                return updated;
+              });
+
               setAccountsVerificationModal(null);
-              alert(`Accounts Verification Approved for ${bomCodeText}.\nInvoice (${newInvNo}) created and passed to Invoice Management.`);
+              alert(`✅ Accounts Verification Approved for ${bomCodeText}.\n\nInvoice (${newInvNo}) generated and passed directly to Invoice Management!`);
             };
 
             return (
@@ -13069,6 +14362,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               onClick={() => setPreviewAddressProofModal({
                                 name: proofDoc.name,
                                 size: proofDoc.size || '1.2 MB',
+                                dataUrl: proofDoc.dataUrl || proofDoc.fileData || proofDoc.url || null,
+                                uploadedBy: proofDoc.uploadedBy || (accountsVerificationModal.salesPerson ? `${accountsVerificationModal.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
                                 customer: custNameText,
                                 billingAddress: bAddr,
                                 deliveryAddress: dAddr,
@@ -14809,15 +16104,23 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                 return acc + (q * r);
               }, 0);
               const disc = 0;
-              const gst = sub * 0.18;
+              const gst = bomMaterialsList.reduce((acc, item) => {
+                const q = parseFloat(item.qty) || 0;
+                const r = parseFloat(item.rate) || 0;
+                const rowTot = q * r;
+                const pct = parseFloat(String(item.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
+                return acc + (rowTot * (pct / 100));
+              }, 0);
               const grand = sub - disc + gst;
-              return { sub, disc, gst, grand };
+              const cgst = gst / 2;
+              const sgst = gst / 2;
+              return { sub, disc, gst, grand, cgst, sgst };
             };
 
             const totals = calculateBOMTotals();
 
             const handleAddMaterialRow = () => {
-              setBomMaterialsList(prev => [...prev, { name: '', category: '', uom: 'NOS', qty: '', wastage: '0%', rate: '' }]);
+              setBomMaterialsList(prev => [...prev, { name: '', category: '', uom: 'NOS', qty: '1', wastage: '0%', rate: '', gstRate: newBomGstRate || '18%' }]);
             };
 
             const handleRemoveMaterialRow = (idx) => {
@@ -15275,19 +16578,22 @@ export default function OtherViews({ activeTab, onChangeTab }) {
 
                 {/* SECTION 3: ORDER ITEMS */}
                 <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
                         3
                       </div>
                       <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        ORDER ITEMS
+                        ORDER ITEMS & BILL OF MATERIALS
                       </h3>
                     </div>
 
                     {/* PRESET SELECTOR & CLEAR BUTTON */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Preset:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '4px 10px', borderRadius: '8px' }}>
+                        <Layers style={{ width: '14px', height: '14px', color: '#4F46E5' }} />
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#4338CA' }}>Preset Kit:</span>
+                      </div>
                       <select
                         id="preset-selector"
                         value={selectedPreset}
@@ -15295,44 +16601,87 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           const val = e.target.value;
                           setSelectedPreset(val);
                           setSelectedBomItemIndexes([]);
-                          if (val === 'solar_1kw') {
-                            setBomMaterialsList([
-                              { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: '4', rate: '250' },
-                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '6', rate: '45' },
-                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '4', rate: '40' }
-                            ]);
-                          } else if (val === 'solar_5kw') {
-                            setBomMaterialsList([
-                              { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: '8', rate: '1800' },
-                              { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: '12', rate: '250' },
-                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '24', rate: '45' },
-                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '16', rate: '40' },
-                              { name: 'Raw Aluminum Coil 1.5mm', category: 'Raw Material Coil', qty: '2', rate: '12500' }
-                            ]);
-                          } else if (val === 'industrial_kit') {
-                            setBomMaterialsList([
-                              { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: '20', rate: '1800' },
-                              { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: '50', rate: '45' },
-                              { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: '30', rate: '40' }
-                            ]);
+
+                          if (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]) {
+                            const multiplier = parseInt(presetSetCount) || 1;
+                            setBomMaterialsList(VRM_HDG_PRESETS[val].items.map(it => {
+                              const baseQ = parseFloat(it.qty) || 1;
+                              return {
+                                ...it,
+                                baseQty: baseQ,
+                                qty: String(Math.round(baseQ * multiplier))
+                              };
+                            }));
                           }
                         }}
-                        style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                        style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
                       >
-                        <option value="" disabled style={{ color: '#94A3B8' }}>Select Preset</option>
-                        <option value="solar_1kw">1kW Solar Rooftop Mounting Kit</option>
-                        <option value="solar_5kw">5kW Solar Commercial Mounting Kit</option>
-                        <option value="industrial_kit">Industrial Heavy Structure Preset</option>
+                        <option value="" disabled style={{ color: '#94A3B8' }}>Select VRM HDG Table Preset...</option>
+                        {Object.values(VRM_HDG_PRESETS || {}).map(preset => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.label}
+                          </option>
+                        ))}
                       </select>
+
+                      {/* SET COUNT / MULTIPLIER INPUT */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>No. of Sets:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="999"
+                          value={presetSetCount}
+                          onChange={(e) => {
+                            const rawVal = e.target.value;
+                            const newCount = rawVal === '' ? '' : Math.max(1, parseInt(rawVal) || 1);
+                            setPresetSetCount(newCount);
+
+                            const multiplier = parseInt(rawVal) || 1;
+                            if (selectedPreset && VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]) {
+                              const baseItems = VRM_HDG_PRESETS[selectedPreset].items;
+                              setBomMaterialsList(baseItems.map(it => {
+                                const baseQ = parseFloat(it.qty) || 1;
+                                return {
+                                  ...it,
+                                  baseQty: baseQ,
+                                  qty: String(Math.round(baseQ * multiplier))
+                                };
+                              }));
+                            } else if (bomMaterialsList.length > 0) {
+                              // If materials already loaded, scale by baseQty
+                              setBomMaterialsList(prev => prev.map(it => {
+                                const baseQ = parseFloat(it.baseQty || it.qty) || 1;
+                                return {
+                                  ...it,
+                                  baseQty: it.baseQty || baseQ,
+                                  qty: String(Math.round(baseQ * multiplier))
+                                };
+                              }));
+                            }
+                          }}
+                          style={{
+                            width: '54px',
+                            height: '26px',
+                            borderRadius: '6px',
+                            border: '1px solid #94A3B8',
+                            padding: '0 6px',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            color: '#4F46E5',
+                            textAlign: 'center',
+                            outline: 'none',
+                            backgroundColor: 'white'
+                          }}
+                        />
+                      </div>
 
                       <button
                         onClick={() => {
                           if (selectedBomItemIndexes.length > 0) {
-                            // Clear only selected items directly
                             setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
                             setSelectedBomItemIndexes([]);
                           } else {
-                            // Open full clear confirmation popup modal
                             if (bomMaterialsList.length > 0) {
                               setShowClearConfirmModal(true);
                             }
@@ -15416,23 +16765,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
                             />
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '28%' }}>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '24%' }}>
                             Product / Item <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '24%' }}>Description</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%' }}>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '18%' }}>Description</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '8%', textAlign: 'center' }}>
                             Qty <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '14%' }}>Price (₹)</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '13%', textAlign: 'right' }}>Total (₹)</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '5%', textAlign: 'center' }}>Action</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '11%' }}>Price (₹)</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '11%', textAlign: 'center' }}>GST Rate</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%', textAlign: 'right' }}>Taxable (₹)</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%', textAlign: 'right' }}>Total (₹)</th>
+                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {bomMaterialsList.map((item, i) => {
                           const q = parseFloat(item.qty) || 0;
                           const r = parseFloat(item.rate) || 0;
-                          const rowTot = q * r;
+                          const taxable = q * r;
+                          const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+                          const gstAmt = taxable * (gstPct / 100);
+                          const rowTot = taxable + gstAmt;
                           const isChecked = selectedBomItemIndexes.includes(i);
                           return (
                             <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#EEF2FF' : 'transparent' }}>
@@ -15465,9 +16819,15 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 <datalist id={`product-list-${i}`}>
                                   <option value="Mini Rail 100 mm" />
                                   <option value="Long Rail 3000 mm" />
+                                  <option value="Short Rail 350 mm" />
                                   <option value="Mid Clamp 35 mm" />
                                   <option value="End Clamp 35 mm" />
+                                  <option value="L-Feet Fasteners" />
+                                  <option value="Tile Roof Hook SS304" />
+                                  <option value="C-Channel Post 3200 mm" />
+                                  <option value="Purlin 4200 mm" />
                                   <option value="Raw Aluminum Coil 1.5mm" />
+                                  <option value="Structural Steel Beams" />
                                 </datalist>
                               </td>
                               <td style={{ padding: '12px 14px' }}>
@@ -15491,7 +16851,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                     const val = e.target.value;
                                     setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                                   }}
-                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
                                 />
                               </td>
                               <td style={{ padding: '12px 14px' }}>
@@ -15505,6 +16865,24 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   }}
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
                                 />
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <select
+                                  value={item.gstRate || '18%'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                                >
+                                  <option value="18%">18% GST</option>
+                                  <option value="12%">12% GST</option>
+                                  <option value="5%">5% GST</option>
+                                  <option value="0%">0% Exempt</option>
+                                </select>
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
+                                ₹{taxable.toFixed(2)}
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
                                 ₹{rowTot.toFixed(2)}
@@ -15535,14 +16913,91 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                   </div>
                 </div>
 
-                {/* SECTION 4: ADDITIONAL INFORMATION & TOTALS */}
-                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* SECTION 4: TRANSPORT & LOGISTICS DETAILS */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
                       4
                     </div>
                     <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      ADDITIONAL INFORMATION
+                      TRANSPORT & LOGISTICS DETAILS
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Mode of Transport <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        list="transport-mode-suggestions"
+                        value={newBomTransportMode}
+                        onChange={(e) => setNewBomTransportMode(e.target.value)}
+                        placeholder="Type/Select (Transport, Lorry, Courier...)"
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                      <datalist id="transport-mode-suggestions">
+                        <option value="Transport" />
+                        <option value="Lorry" />
+                        <option value="Courier" />
+                        <option value="Tempo / Mini Truck" />
+                        <option value="Air Cargo" />
+                        <option value="Train / Rail Cargo" />
+                        <option value="Customer Pickup / Self" />
+                        <option value="Dedicated Container" />
+                      </datalist>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Transporter / Carrier Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newBomTransporterName}
+                        onChange={(e) => setNewBomTransporterName(e.target.value)}
+                        placeholder="e.g. VRL Logistics / TCI Freight"
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        Vehicle Number (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newBomVehicleNo}
+                        onChange={(e) => setNewBomVehicleNo(e.target.value)}
+                        placeholder="e.g. TN-09-AB-1234"
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                        LR / Docket No (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newBomLrNo}
+                        onChange={(e) => setNewBomLrNo(e.target.value)}
+                        placeholder="e.g. LR-98421 / Waybill #"
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 5: PAYMENT TERMS & FINANCIAL SUMMARY */}
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                      5
+                    </div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      PAYMENT TERMS & ORDER SUMMARY
                     </h3>
                   </div>
 
@@ -15599,7 +17054,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           rows={3}
                           value={newBomRemarks}
                           onChange={(e) => setNewBomRemarks(e.target.value)}
-                          placeholder="Enter remarks or notes (optional)..."
+                          placeholder="Enter remarks, consignee references, or invoice notes..."
                           style={{ width: '100%', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '12px 14px', fontSize: '13px', color: '#0F172A', outline: 'none', resize: 'vertical' }}
                         />
                       </div>
@@ -15744,21 +17199,28 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                     </div>
                   </div>
 
-                  {/* Subtotals & Math */}
-                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', fontSize: '13px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#64748B' }}>
-                      <span>Subtotal</span>
-                      <strong style={{ color: '#0F172A' }}>₹{totals.sub.toFixed(2)}</strong>
+                  {/* Subtotals & GST Tax Calculation Breakdown */}
+                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B' }}>
+                      <span>Taxable Subtotal (Before GST)</span>
+                      <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#64748B' }}>
-                      <span>GST (18%)</span>
-                      <strong style={{ color: '#0F172A' }}>₹{totals.gst.toFixed(2)}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
+                      <span>CGST (9%)</span>
+                      <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '280px', color: '#4F46E5', fontSize: '16px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '6px' }}>
-                      <span>Grand Total</span>
-                      <span>₹{totals.grand.toFixed(2)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
+                      <span>SGST (9%)</span>
+                      <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#4338CA', fontWeight: '700', backgroundColor: '#EEF2FF', padding: '6px 10px', borderRadius: '6px' }}>
+                      <span>Total Applicable GST (18%)</span>
+                      <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0F172A', fontSize: '17px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '4px' }}>
+                      <span>Grand Total (Incl. GST)</span>
+                      <span style={{ color: '#4F46E5' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -15882,8 +17344,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               const newBomRecord = {
                                 bomCode: newBomCode || `BOM-${Math.floor(100 + Math.random() * 900)}`,
                                 date: new Date().toISOString().split('T')[0],
-                                customerName: newBomProductName || 'Customer Order',
-                                companyName: selCust?.c2 || newBomProductName || '-',
+                                customerName: selCust?.code || selCust?.c2 || newBomProductName || 'Customer Order',
+                                companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
                                 mobile: selCust?.c4 || '-',
                                 email: selCust?.c5 || '-',
                                 billingAddress: billingFull,
@@ -15891,6 +17353,10 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 deliveryAddress: deliveryFull,
                                 deliveryAddressObj: deliveryObj,
                                 deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
+                                transportMode: newBomTransportMode || 'Transport',
+                                transporterName: newBomTransporterName || '',
+                                vehicleNo: newBomVehicleNo || '',
+                                lrNo: newBomLrNo || '',
                                 paymentType: newBomPaymentType || '100% Paid',
                                 creditDays: newBomPaymentType === 'Credit Payment' ? (parseInt(newBomCreditDays) || 7) : null,
                                 creditDueDate: newBomPaymentType === 'Credit Payment' ? new Date(Date.now() + (parseInt(newBomCreditDays) || 7) * 86400000).toISOString().split('T')[0] : null,
@@ -15898,11 +17364,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                                 remarks: newBomRemarks || '',
                                 status: isDraft ? 'Draft' : 'Pending Confirmation',
+                                salesPerson: userRole === 'Sales Head' ? 'Pooja Sharma (Sales Head)' : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)'),
                                 items: bomMaterialsList.map(item => ({
                                   name: item.name,
                                   category: item.category || '',
+                                  uom: item.uom || 'NOS',
                                   qty: parseFloat(item.qty) || 0,
                                   rate: parseFloat(item.rate) || 0,
+                                  gstRate: item.gstRate || newBomGstRate || '18%',
                                   confirmed: false
                                 })),
                                 payments: {
@@ -15926,13 +17395,32 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 },
                                 invoiceConfirmed: false,
                                 invoiceDeducted: false,
+                                subTotal: totals.sub,
+                                gstAmount: totals.gst,
+                                cgstAmount: totals.cgst,
+                                sgstAmount: totals.sgst,
                                 grandTotal: totals.grand
                               };
+
+                              try {
+                                const currentSaved = localStorage.getItem('controlroom_bom_store');
+                                let currentList = [];
+                                if (currentSaved) {
+                                  try { currentList = JSON.parse(currentSaved); } catch (e) {}
+                                }
+                                const updatedList = [newBomRecord, ...(Array.isArray(currentList) ? currentList : [])];
+                                localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
+                                saveCloudStore('bom_store', updatedList);
+                                window.dispatchEvent(new Event('controlroom_storage_update'));
+                              } catch (e) {}
 
                               setBomStore(prev => [newBomRecord, ...prev]);
                               setNewBomPaymentProofDoc(null);
                               setNewBomDeliveryProofDoc(null);
                               setNewBomRemarks('');
+                              setNewBomTransporterName('');
+                              setNewBomVehicleNo('');
+                              setNewBomLrNo('');
                               setNewBomCreditDays(7);
                               setNewBomPaymentType('100% Paid');
                               setShowBOMForm(false);
@@ -15975,29 +17463,47 @@ export default function OtherViews({ activeTab, onChangeTab }) {
               { id: 'All', label: 'All Entries', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' }
             ],
             headers: ['Reference Code', 'Customer / Item', 'Details', 'Date', 'Value', 'Status', 'Action'],
-            rows: (bomStore || []).map(b => ({
-              ...b,
-              code: b.bomCode || 'REF-001',
-              c2: b.customerName || 'Customer',
-              c3: b.paymentType || '-',
-              c4: b.date || '2026-08-17',
-              c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-              status: b.status || 'ACTIVE',
-              stBg: '#eff6ff',
-              stFg: '#2563eb',
-              stBorder: '1px solid #bfdbfe',
-              tabGroup: 'All'
-            }))
+            rows: (bomStore || []).map(b => {
+              let dispStatus = b.status || 'ACTIVE';
+              if (activeTab === 'Dispatch Orders') {
+                if (['Sent to Production', 'Confirmed', 'In Production', 'Pending Confirmation', 'Draft', 'Pending', 'Edited / Pending Confirmation'].includes(b.status) || !b.status) {
+                  dispStatus = 'Pending Packing';
+                }
+              }
+              return {
+                ...b,
+                code: b.bomCode || 'REF-001',
+                c2: b.customerName || 'Customer',
+                c3: b.paymentType || '-',
+                c4: b.date || '2026-08-17',
+                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: dispStatus,
+                stBg: dispStatus === 'Pending Packing' ? '#fff7ed' : '#eff6ff',
+                stFg: dispStatus === 'Pending Packing' ? '#c2410c' : '#2563eb',
+                stBorder: dispStatus === 'Pending Packing' ? '1px solid #fed7aa' : '1px solid #bfdbfe',
+                tabGroup: 'All'
+              };
+            })
           };
 
           const pageConfig = configs[activeTab] || defaultConfig;
 
           const filteredRows = (pageConfig.rows || []).filter(r => {
             const matchesSearch = !prodSearchQueryText ||
-              r.code.toLowerCase().includes(prodSearchQueryText.toLowerCase()) ||
+              (r.code && r.code.toLowerCase().includes(prodSearchQueryText.toLowerCase())) ||
               (r.c2 && r.c2.toLowerCase().includes(prodSearchQueryText.toLowerCase())) ||
-              (r.c3 && r.c3.toLowerCase().includes(prodSearchQueryText.toLowerCase()));
-            const matchesTab = prodActiveSubTab === 'All' || r.tabGroup === prodActiveSubTab || prodActiveSubTab === 'All Orders';
+              (r.c3 && r.c3.toLowerCase().includes(prodSearchQueryText.toLowerCase())) ||
+              (r.customerName && r.customerName.toLowerCase().includes(prodSearchQueryText.toLowerCase()));
+
+            const subTab = (prodActiveSubTab || 'All').toLowerCase();
+            const matchesTab = subTab === 'all' ||
+              subTab === 'all boms' ||
+              subTab === 'all orders' ||
+              r.tabGroup === prodActiveSubTab ||
+              (subTab.includes('pending') && (r.status || '').toLowerCase().includes('pending')) ||
+              (subTab.includes('draft') && (r.status || '').toLowerCase().includes('draft')) ||
+              (subTab.includes('sent') && ((r.status || '').toLowerCase().includes('sent') || (r.status || '').toLowerCase().includes('confirm')));
+
             return matchesSearch && matchesTab;
           });
 
@@ -16363,60 +17869,163 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                 </div>
                               ) : activeTab === 'Dispatch Orders' ? (
                                 (() => {
+                                  const isAwaitingVehicleLoading = Boolean(
+                                    row.status === 'Awaiting Vehicle Loading & Dispatch' ||
+                                    row.status === 'Invoice Confirmed' ||
+                                    row.status === 'Ready for Vehicle Loading' ||
+                                    (row.invoiceConfirmed && !row.vehicleLoading)
+                                  );
+                                  const isFlowCompleted = Boolean(
+                                    row.status === 'Completed' ||
+                                    row.status === 'Fully Dispatched & BOM Flow Completed' ||
+                                    row.status === 'Fully Dispatched & Delivered' ||
+                                    row.status === 'Closed' ||
+                                    row.status === 'CLOSED' ||
+                                    row.vehicleLoading
+                                  );
                                   const isPacked = Boolean(
                                     row.status === 'Packed & Ready for Dispatch' ||
                                     row.status === 'PACKED & READY FOR DISPATCH' ||
                                     row.status === 'Packed & Awaiting Dispatch Payment' ||
                                     row.status === 'Accounts Verified & Passed to Invoice' ||
-                                    row.status === 'ACCOUNTS VERIFIED' ||
-                                    row.status === 'Invoice Confirmed' ||
-                                    row.status === 'Closed' ||
-                                    row.status === 'CLOSED'
+                                    row.status === 'ACCOUNTS VERIFIED'
                                   );
-                                  return isPacked ? (
-                                    <button
-                                      onClick={() => setDispatchPackingModal({ ...row, isReadOnly: true })}
-                                      style={{
-                                        backgroundColor: '#F0FDF4',
-                                        color: '#166534',
-                                        border: '1px solid #BBF7D0',
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
-                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                                    >
-                                      <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => setDispatchPackingModal(row)}
-                                      style={{
-                                        backgroundColor: '#EEF2FF',
-                                        color: '#4F46E5',
-                                        border: '1px solid #C7D2FE',
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
-                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
-                                    >
-                                      <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
-                                    </button>
+
+                                  if (isAwaitingVehicleLoading) {
+                                    return (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <button
+                                          onClick={() => setVehicleLoadingModal(row)}
+                                          style={{
+                                            backgroundColor: '#4F46E5',
+                                            color: '#FFFFFF',
+                                            border: 'none',
+                                            padding: '6px 14px',
+                                            borderRadius: '8px',
+                                            fontSize: '12px',
+                                            fontWeight: '800',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            boxShadow: '0 2px 6px rgba(79,70,229,0.3)',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#4338CA'; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#4F46E5'; }}
+                                        >
+                                          <Truck style={{ width: '14px', height: '14px', color: '#FFFFFF' }} /> Verify Vehicle Loading
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                            setCustomerActionMenuIdx(null);
+                                          }}
+                                          title="More Actions"
+                                          style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                          <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+
+                                  if (isFlowCompleted) {
+                                    return (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <button
+                                          onClick={() => setVehicleLoadingModal({ ...row, isReadOnly: true })}
+                                          style={{
+                                            backgroundColor: '#F0FDF4',
+                                            color: '#166534',
+                                            border: '1px solid #BBF7D0',
+                                            padding: '6px 12px',
+                                            borderRadius: '8px',
+                                            fontSize: '12px',
+                                            fontWeight: '800',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
+                                        >
+                                          <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> Flow Completed
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                            setCustomerActionMenuIdx(null);
+                                          }}
+                                          title="More Actions"
+                                          style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                          <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                      {isPacked ? (
+                                        <button
+                                          onClick={() => setDispatchPackingModal({ ...row, isReadOnly: true })}
+                                          style={{
+                                            backgroundColor: '#F0FDF4',
+                                            color: '#166534',
+                                            border: '1px solid #BBF7D0',
+                                            padding: '6px 14px',
+                                            borderRadius: '8px',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
+                                        >
+                                          <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => setDispatchPackingModal(row)}
+                                          style={{
+                                            backgroundColor: '#EEF2FF',
+                                            color: '#4F46E5',
+                                            border: '1px solid #C7D2FE',
+                                            padding: '6px 14px',
+                                            borderRadius: '8px',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
+                                        >
+                                          <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => {
+                                          setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
+                                          setCustomerActionMenuIdx(null);
+                                        }}
+                                        title="More Actions"
+                                        style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                      >
+                                        <MoreVertical style={{ width: '16px', height: '16px' }} />
+                                      </button>
+                                    </div>
                                   );
                                 })()
                               ) : activeTab === 'Accounts Verification' ? (
@@ -16829,6 +18438,14 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                   row.status === 'CLOSED' ||
                                   (row.dispatchPacking && Array.isArray(row.dispatchPacking) && row.dispatchPacking.length > 0 && row.dispatchPacking.every(p => p.packed));
 
+                                const isAwaitingLoading = Boolean(
+                                  row.status === 'Awaiting Vehicle Loading & Dispatch' ||
+                                  row.status === 'Invoice Confirmed' ||
+                                  row.status === 'Ready for Vehicle Loading' ||
+                                  (row.invoiceConfirmed && !row.vehicleLoading)
+                                );
+                                const isDone = Boolean(row.status === 'Completed' || row.status === 'Fully Dispatched & BOM Flow Completed' || row.vehicleLoading);
+
                                 return (
                                   <div
                                     style={{
@@ -16840,11 +18457,39 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                                       borderRadius: '10px',
                                       boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
                                       zIndex: 100,
-                                      minWidth: '170px',
+                                      minWidth: '200px',
                                       overflow: 'hidden',
                                       padding: '4px'
                                     }}
                                   >
+                                    {isAwaitingLoading && (
+                                      <button
+                                        onClick={() => {
+                                          setVehicleLoadingModal(row);
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <Truck style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify Vehicle Loading
+                                      </button>
+                                    )}
+
+                                    {isDone && (
+                                      <button
+                                        onClick={() => {
+                                          setVehicleLoadingModal({ ...row, isReadOnly: true });
+                                          setBomActionMenuIdx(null);
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        <Eye style={{ width: '14px', height: '14px', color: '#166534' }} /> View Loading Media
+                                      </button>
+                                    )}
+
                                     <button
                                       onClick={() => {
                                         setDispatchPackingModal({ ...row, isReadOnly: isLocked });
@@ -17016,10 +18661,34 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Payment Proof / Reference Document</label>
                       <input
                         type="file"
-                        onChange={(e) => setPaymentProofFile(e.target.files[0] ? e.target.files[0].name : null)}
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={(e) => {
+                          const f = e.target.files && e.target.files[0];
+                          if (f) {
+                            const reader = new FileReader();
+                            reader.onload = (loadEvt) => {
+                              setPaymentProofFile({
+                                name: f.name,
+                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
+                                dataUrl: loadEvt.target.result,
+                                uploadedAt: new Date().toISOString()
+                              });
+                            };
+                            reader.readAsDataURL(f);
+                          }
+                        }}
                         style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
                       />
-                      {paymentProofFile && <span style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'block' }}>Selected: {paymentProofFile}</span>}
+                      {paymentProofFile && (
+                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {paymentProofFile.dataUrl && paymentProofFile.dataUrl.startsWith('data:image/') && (
+                            <img src={paymentProofFile.dataUrl} alt="Proof Thumbnail" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #BBF7D0' }} />
+                          )}
+                          <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                            Selected: {paymentProofFile.name || paymentProofFile}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
@@ -17035,12 +18704,16 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             alert('Please attach or select payment proof file!');
                             return;
                           }
+                          const pDocObj = typeof paymentProofFile === 'object' ? paymentProofFile : { name: paymentProofFile, dataUrl: null };
                           setBomStore(prev => prev.map(b => b.bomCode === uploadPaymentModal.bomCode ? {
                             ...b,
                             status: 'Payment Uploaded & Verified',
+                            paymentProofDoc: pDocObj,
                             payments: {
                               ...b.payments,
-                              proofDoc: paymentProofFile,
+                              proofDoc: pDocObj.name,
+                              proofDocObj: pDocObj,
+                              proofDocData: pDocObj.dataUrl,
                               advance100Uploaded: paymentStageType === '100% Advance',
                               advance50Uploaded: paymentStageType === '50% Advance' || b.payments?.advance50Uploaded,
                               dispatch50Uploaded: paymentStageType === '50% Dispatch' || b.payments?.dispatch50Uploaded,
@@ -17095,13 +18768,24 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                         onChange={(e) => {
                           const f = e.target.files && e.target.files[0];
-                          if (f) setUpdatePaymentFile(f);
+                          if (f) {
+                            const reader = new FileReader();
+                            reader.onload = (loadEvt) => {
+                              setUpdatePaymentFile({
+                                name: f.name,
+                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
+                                dataUrl: loadEvt.target.result,
+                                uploadedAt: new Date().toISOString()
+                              });
+                            };
+                            reader.readAsDataURL(f);
+                          }
                         }}
                         style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
                       />
                       {updatePaymentFile && (
                         <span style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
-                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {updatePaymentFile.name} ({(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB)
+                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {updatePaymentFile.name} ({updatePaymentFile.size})
                         </span>
                       )}
                     </div>
@@ -17137,7 +18821,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           }
                           const updatedDoc = {
                             name: updatePaymentFile.name,
-                            size: `${(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            size: updatePaymentFile.size || `${(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            dataUrl: updatePaymentFile.dataUrl || null,
                             uploadedAt: new Date().toISOString(),
                             notes: updatePaymentNotes
                           };
@@ -17151,6 +18836,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                               ...b.payments,
                               proofDoc: updatePaymentFile.name,
                               proofDocObj: updatedDoc,
+                              proofDocData: updatedDoc.dataUrl,
                               paymentUpdated: true
                             }
                           } : b));
@@ -17203,13 +18889,24 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                         onChange={(e) => {
                           const f = e.target.files && e.target.files[0];
-                          if (f) setReuploadProofFile(f);
+                          if (f) {
+                            const reader = new FileReader();
+                            reader.onload = (loadEvt) => {
+                              setReuploadProofFile({
+                                name: f.name,
+                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
+                                dataUrl: loadEvt.target.result,
+                                uploadedAt: new Date().toISOString()
+                              });
+                            };
+                            reader.readAsDataURL(f);
+                          }
                         }}
                         style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
                       />
                       {reuploadProofFile && (
                         <span style={{ fontSize: '11px', color: '#166534', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
-                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {reuploadProofFile.name} ({(reuploadProofFile.size / (1024 * 1024)).toFixed(2)} MB)
+                          <CheckCircle style={{ width: '12px', height: '12px' }} /> Selected: {reuploadProofFile.name} ({reuploadProofFile.size})
                         </span>
                       )}
                     </div>
@@ -17231,7 +18928,8 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                           const reuploadedTime = new Date().toISOString();
                           const newDoc = {
                             name: reuploadProofFile.name,
-                            size: `${(reuploadProofFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            size: reuploadProofFile.size,
+                            dataUrl: reuploadProofFile.dataUrl,
                             uploadedAt: reuploadedTime
                           };
 
@@ -17239,6 +18937,7 @@ export default function OtherViews({ activeTab, onChangeTab }) {
                             ...b,
                             deliveryAddressProofDoc: newDoc,
                             addressProofReuploadRequested: false,
+                            addressProofReuploaded: true,
                             addressProofReuploadedAt: reuploadedTime
                           } : b));
 
@@ -17794,31 +19493,51 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         );
       })()}
 
-      {/* CONFIRM INVOICE SUCCESS MODAL */}
+      {/* ─── CONFIRM INVOICE SUCCESS MODAL WITH STOCK DEDUCTION NOTICE ─── */}
       {confirmInvoiceSuccessModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '440px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '560px', maxWidth: '95%', padding: '28px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534', flexShrink: 0 }}>
-                <CheckCircle size={26} />
+              <div style={{ width: '50px', height: '50px', borderRadius: '14px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534', flexShrink: 0, boxShadow: '0 4px 10px rgba(22,101,52,0.15)' }}>
+                <CheckCircle size={28} />
               </div>
               <div>
-                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Invoice Confirmed Successfully!</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
-                  Invoice Ref: <strong style={{ color: '#2563EB' }}>{confirmInvoiceSuccessModal}</strong>
+                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', margin: 0 }}>Invoice Confirmed & Stock Reduced!</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0 0' }}>
+                  Invoice: <strong style={{ color: '#2563EB' }}>{typeof confirmInvoiceSuccessModal === 'object' ? confirmInvoiceSuccessModal.invNo : confirmInvoiceSuccessModal}</strong> • BOM: <strong style={{ color: '#4F46E5' }}>{typeof confirmInvoiceSuccessModal === 'object' ? confirmInvoiceSuccessModal.bomCode : 'BOM'}</strong>
                 </p>
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>
-              Invoice <strong>{confirmInvoiceSuccessModal}</strong> has been finalized and marked as <strong>Invoice Confirmed</strong>. Re-confirming and modification controls are now locked.
+            {/* Stock Reduction Banner */}
+            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', color: '#166534' }}>
+                <Package size={16} /> Inventory Stock Reduced for Packed Items Alone
+              </div>
+              <div style={{ fontSize: '12px', color: '#15803D', lineHeight: '1.5' }}>
+                {typeof confirmInvoiceSuccessModal === 'object' && confirmInvoiceSuccessModal.packedCount !== undefined ? (
+                  <>Stock count has been automatically decremented in the inventory registry for <strong>{confirmInvoiceSuccessModal.packedCount} packed item(s)</strong>. Any unpacked items remain untouched.</>
+                ) : (
+                  <>Stock count has been decremented for packed items in the stock inventory registry.</>
+                )}
+              </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            {/* Next Route Banner */}
+            <div style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', color: '#4338CA' }}>
+                <Truck size={16} /> Next Stage: Despatch Team Vehicle Loading
+              </div>
+              <div style={{ fontSize: '12px', color: '#4F46E5', lineHeight: '1.5' }}>
+                Order is forwarded to the <strong>Despatch Team</strong>. The dispatch crew must record vehicle/driver details and capture <strong>loading photos and videos</strong> before the BOM flow is marked 100% completed.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
               <button
                 type="button"
                 onClick={() => setConfirmInvoiceSuccessModal(null)}
-                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.25)' }}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}
               >
                 Great, Done
               </button>
@@ -17827,97 +19546,787 @@ export default function OtherViews({ activeTab, onChangeTab }) {
         </div>
       )}
 
+      {/* ─── VEHICLE LOADING & FINAL DISPATCH VERIFICATION MODAL ─── */}
+      {vehicleLoadingModal && (() => {
+        const bom = vehicleLoadingModal;
+        const bCode = bom.bomCode || bom.code || 'BOM-2026';
+        const invNo = bom.invoiceNo || (bom.invoiceConfirmed ? `INV-${bCode.replace('BOM-', '')}` : 'INV-2026-FINAL');
+        const custName = bom.customerName || bom.companyName || bom.customer || 'Customer';
+        const delAddr = bom.deliveryAddress || 'Client Delivery Site';
+        const isReadOnly = Boolean(bom.isReadOnly || bom.status === 'Completed' || bom.status === 'Fully Dispatched & BOM Flow Completed' || bom.status === 'Fully Dispatched & Delivered');
+
+        // Existing vehicle loading data if already saved
+        const existingLoading = bom.vehicleLoading || {};
+        const vNo = vehicleLoadingData.vehicleNo || existingLoading.vehicleNo || '';
+        const dName = vehicleLoadingData.driverName || existingLoading.driverName || '';
+        const dPhone = vehicleLoadingData.driverPhone || existingLoading.driverPhone || '';
+        const transp = vehicleLoadingData.transporter || existingLoading.transporter || 'VRL Logistics Direct Fleet';
+        const lr = vehicleLoadingData.lrNo || existingLoading.lrNo || `LR-${Date.now().toString().slice(-6)}`;
+        const seal = vehicleLoadingData.sealNo || existingLoading.sealNo || 'SL-884920';
+
+        const currentPhotos = loadingPhotos.length > 0 ? loadingPhotos : (existingLoading.photos || []);
+        const currentVideos = loadingVideos.length > 0 ? loadingVideos : (existingLoading.videos || []);
+
+        const packedItems = (bom.dispatchPacking && Array.isArray(bom.dispatchPacking) && bom.dispatchPacking.length > 0)
+          ? bom.dispatchPacking.filter(p => Boolean(p.packed))
+          : (bom.items || []).filter(i => i.selected !== false);
+
+        const handleAddPhotoFiles = (files) => {
+          if (!files || files.length === 0) return;
+          Array.from(files).forEach((file) => {
+            const reader = new FileReader();
+            reader.onload = (loadEvt) => {
+              const newPhoto = {
+                id: `photo_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                name: file.name,
+                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                dataUrl: loadEvt.target.result,
+                capturedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              };
+              setLoadingPhotos(prev => [...prev, newPhoto]);
+            };
+            reader.readAsDataURL(file);
+          });
+        };
+
+        const handleAddVideoFiles = (files) => {
+          if (!files || files.length === 0) return;
+          Array.from(files).forEach((file) => {
+            const reader = new FileReader();
+            reader.onload = (loadEvt) => {
+              const newVideo = {
+                id: `video_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                name: file.name,
+                size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                dataUrl: loadEvt.target.result,
+                recordedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              };
+              setLoadingVideos(prev => [...prev, newVideo]);
+            };
+            reader.readAsDataURL(file);
+          });
+        };
+
+        const handleAddSamplePhoto = () => {
+          // Generate an illustrative canvas snapshot for truck loading
+          const canvas = document.createElement('canvas');
+          canvas.width = 640;
+          canvas.height = 400;
+          const ctx = canvas.getContext('2d');
+          
+          // Background truck interior
+          ctx.fillStyle = '#1E293B';
+          ctx.fillRect(0, 0, 640, 400);
+          
+          // Staged pallets & solar rails
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(60, 160, 520, 180);
+          ctx.fillStyle = '#64748B';
+          ctx.fillRect(100, 100, 440, 100);
+          
+          // Straps
+          ctx.strokeStyle = '#F59E0B';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(140, 80);
+          ctx.lineTo(140, 340);
+          ctx.moveTo(320, 80);
+          ctx.lineTo(320, 340);
+          ctx.moveTo(500, 80);
+          ctx.lineTo(500, 340);
+          ctx.stroke();
+
+          // Header banner overlay
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.fillRect(0, 0, 640, 60);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.fillText(`TRUCK LOADING VERIFICATION: ${bCode}`, 20, 36);
+          ctx.font = '12px sans-serif';
+          ctx.fillStyle = '#86EFAC';
+          ctx.fillText(`VEHICLE: ${vNo || 'TN-09-CB-4821'} • TIME: ${new Date().toLocaleTimeString()}`, 380, 36);
+
+          const dataUrl = canvas.toDataURL('image/jpeg');
+          const samplePhoto = {
+            id: `photo_sample_${Date.now()}`,
+            name: `Truck_Loading_LivePhoto_${Date.now().toString().slice(-4)}.jpg`,
+            size: '1.4 MB',
+            dataUrl: dataUrl,
+            capturedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+          };
+          setLoadingPhotos(prev => [...prev, samplePhoto]);
+        };
+
+        const handleFinalizeVehicleLoading = () => {
+          if (!isReadOnly) {
+            if (!vNo) {
+              alert('⚠️ Please enter the Vehicle / Lorry Registration Number before completing dispatch!');
+              return;
+            }
+            if (currentPhotos.length === 0 && currentVideos.length === 0) {
+              alert('⚠️ Verification Photo/Video Mandatory!\n\nPlease capture or upload at least one loading photo or video of the vehicle before finalizing.');
+              return;
+            }
+          }
+
+          const loadingPayload = {
+            vehicleNo: vNo || 'TN-09-CB-4821',
+            driverName: dName || 'K. Murugan',
+            driverPhone: dPhone || '+91 98765 43210',
+            transporter: transp,
+            lrNo: lr,
+            sealNo: seal,
+            photos: currentPhotos,
+            videos: currentVideos,
+            loadedAt: new Date().toISOString(),
+            loadedTimeStr: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          };
+
+          // Update BOM status to Fully Completed
+          setBomStore(prev => prev.map(b => (b.bomCode === bCode || b.code === bCode) ? {
+            ...b,
+            status: 'Completed',
+            fullyCompleted: true,
+            vehicleLoading: loadingPayload,
+            completedAt: new Date().toISOString()
+          } : b));
+
+          // Update Invoice status to Fully Dispatched & Delivered
+          setInvoiceList(prev => prev.map(i => (i.poNo === bCode || i.code === bCode || i.invNo === invNo) ? {
+            ...i,
+            status: 'Fully Dispatched & Delivered',
+            pay: 'Completed & Delivered',
+            vehicleLoading: loadingPayload
+          } : i));
+
+          const completedSummary = {
+            bomCode: bCode,
+            invoiceNo: invNo,
+            customer: custName,
+            deliveryAddress: delAddr,
+            packedCount: packedItems.length,
+            vehicleLoading: loadingPayload
+          };
+
+          setVehicleLoadingModal(null);
+          setLoadingPhotos([]);
+          setLoadingVideos([]);
+          setCompletedBomSummaryModal(completedSummary);
+        };
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', width: '920px', maxWidth: '96%', maxHeight: '92vh', overflow: 'hidden', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
+              
+              {/* Modal Header Banner */}
+              <div style={{
+                padding: '20px 28px',
+                background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid #334155'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#4F46E5', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(79,70,229,0.4)' }}>
+                    <Truck size={22} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#FFFFFF', margin: 0 }}>
+                        {isReadOnly ? 'Vehicle Loading & Dispatch Verification (Completed)' : 'Despatch Vehicle Loading Verification'}
+                      </h2>
+                      <span style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
+                        {bCode}
+                      </span>
+                      <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
+                        {invNo}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '3px 0 0 0' }}>
+                      Customer: <strong style={{ color: '#FFFFFF' }}>{custName}</strong> • Destination: <span>{delAddr}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVehicleLoadingModal(null);
+                    setLoadingPhotos([]);
+                    setLoadingVideos([]);
+                  }}
+                  style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body (Scrollable) */}
+              <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '22px', backgroundColor: '#F8FAFC' }}>
+                
+                {/* 1. Fulfillment & Stock Deduction Strip */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Package size={16} style={{ color: '#059669' }} />
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                        Packed Items Verified & Stock Deducted ({packedItems.length} Items)
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px' }}>
+                      ✓ Stock Decremented in Inventory
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
+                    {packedItems.map((item, pIdx) => (
+                      <div key={pIdx} style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: '800', color: '#166534' }}>{item.name}</div>
+                          <div style={{ fontSize: '11px', color: '#15803D' }}>Qty: {item.qty || item.bomQty || 1} {item.uom || 'Nos'}</div>
+                        </div>
+                        <CheckCircle size={16} style={{ color: '#16A34A' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Vehicle, Driver & Logistics Details Form */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                    <Truck size={18} style={{ color: '#4F46E5' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                      Vehicle & Driver Logistics Information
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        Vehicle / Lorry Number <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={vNo}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, vehicleNo: e.target.value })}
+                        placeholder="e.g. TN-09-CB-4821"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        Driver Full Name
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={dName}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, driverName: e.target.value })}
+                        placeholder="e.g. K. Murugan"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        Driver Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={dPhone}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, driverPhone: e.target.value })}
+                        placeholder="e.g. +91 98765 43210"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        Logistics / Fleet Carrier
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={transp}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, transporter: e.target.value })}
+                        placeholder="e.g. VRL Logistics / Company Fleet"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        LR / Bilty / Docket No
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={lr}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, lrNo: e.target.value })}
+                        placeholder="e.g. LR-2026-8812"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                        Container / Seal Number
+                      </label>
+                      <input
+                        type="text"
+                        disabled={isReadOnly}
+                        value={seal}
+                        onChange={(e) => setVehicleLoadingData({ ...vehicleLoadingData, sealNo: e.target.value })}
+                        placeholder="e.g. SEAL-99201"
+                        style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Vehicle Loading Proof Media (Photos & Videos Verification - CRITICAL) */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Camera size={18} style={{ color: '#4F46E5' }} />
+                        <span style={{ fontSize: '15px', fontWeight: '900', color: '#0F172A' }}>
+                          Vehicle Loading Proof Media (Photos & Videos)
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                        Capture or upload live media of packed items placed inside vehicle.
+                      </p>
+                    </div>
+
+                    {/* Mode selector */}
+                    <div style={{ display: 'flex', backgroundColor: '#F1F5F9', padding: '3px', borderRadius: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setLoadingMediaMode('photo')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', border: 'none',
+                          backgroundColor: loadingMediaMode === 'photo' ? '#FFFFFF' : 'transparent',
+                          color: loadingMediaMode === 'photo' ? '#4F46E5' : '#64748B',
+                          fontSize: '12px', fontWeight: '800', cursor: 'pointer',
+                          boxShadow: loadingMediaMode === 'photo' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                      >
+                        <Image size={14} /> Photos ({currentPhotos.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLoadingMediaMode('video')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', border: 'none',
+                          backgroundColor: loadingMediaMode === 'video' ? '#FFFFFF' : 'transparent',
+                          color: loadingMediaMode === 'video' ? '#4F46E5' : '#64748B',
+                          fontSize: '12px', fontWeight: '800', cursor: 'pointer',
+                          boxShadow: loadingMediaMode === 'video' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                      >
+                        <Video size={14} /> Videos ({currentVideos.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PHOTOS PANE */}
+                  {loadingMediaMode === 'photo' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {!isReadOnly && (
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            backgroundColor: '#4F46E5', color: '#FFFFFF',
+                            padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', boxShadow: '0 2px 6px rgba(79,70,229,0.3)'
+                          }}>
+                            <UploadCloud size={16} /> Upload Loading Photos
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleAddPhotoFiles(e.target.files)}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={handleAddSamplePhoto}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '8px',
+                              backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                              padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Camera size={16} /> 📸 Capture Live Truck Photo
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Photo Grid Gallery */}
+                      {currentPhotos.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
+                          {currentPhotos.map((p, pIdx) => (
+                            <div key={p.id || pIdx} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                              <div
+                                onClick={() => setActiveMediaPreviewModal({ type: 'image', url: p.dataUrl, name: p.name })}
+                                style={{ height: '120px', width: '100%', backgroundColor: '#0F172A', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <img src={p.dataUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                              <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                                  <div style={{ fontSize: '10px', color: '#64748B' }}>{p.size || '1.2 MB'} • {p.capturedAt || 'Verified'}</div>
+                                </div>
+                                {!isReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLoadingPhotos(prev => prev.filter((_, idx) => idx !== pIdx))}
+                                    style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ border: '2px dashed #CBD5E1', borderRadius: '14px', padding: '28px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', backgroundColor: '#FAFAFA' }}>
+                          <Camera size={32} style={{ color: '#94A3B8' }} />
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>No vehicle loading photos uploaded yet</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>Take or upload photos of packed boxes and mounting rails inside the lorry.</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* VIDEOS PANE */}
+                  {loadingMediaMode === 'video' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {!isReadOnly && (
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            backgroundColor: '#0284C7', color: '#FFFFFF',
+                            padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', boxShadow: '0 2px 6px rgba(2,132,199,0.3)'
+                          }}>
+                            <UploadCloud size={16} /> Upload Loading Video
+                            <input
+                              type="file"
+                              accept="video/*,.mp4,.webm,.mov"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleAddVideoFiles(e.target.files)}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Create sample video clip for instant playback
+                              const sampleVideo = {
+                                id: `vid_${Date.now()}`,
+                                name: `Loading_Recording_${Date.now().toString().slice(-4)}.mp4`,
+                                size: '4.2 MB',
+                                dataUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                                recordedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                              };
+                              setLoadingVideos(prev => [...prev, sampleVideo]);
+                            }}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '8px',
+                              backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE',
+                              padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Video size={16} /> 🎥 Record Live Vehicle Loading Video
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Video Player Gallery */}
+                      {currentVideos.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                          {currentVideos.map((vid, vIdx) => (
+                            <div key={vid.id || vIdx} style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
+                              <video
+                                controls
+                                src={vid.dataUrl}
+                                style={{ width: '100%', height: '180px', backgroundColor: '#0F172A', objectFit: 'contain' }}
+                              />
+                              <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>{vid.name}</div>
+                                  <div style={{ fontSize: '10px', color: '#64748B' }}>{vid.size || '3.5 MB'} • Recorded {vid.recordedAt}</div>
+                                </div>
+                                {!isReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLoadingVideos(prev => prev.filter((_, idx) => idx !== vIdx))}
+                                    style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ border: '2px dashed #CBD5E1', borderRadius: '14px', padding: '28px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', backgroundColor: '#FAFAFA' }}>
+                          <Film size={32} style={{ color: '#94A3B8' }} />
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>No loading video recorded yet</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>Record video of the vehicle loading process for physical dispatch audit.</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{
+                padding: '16px 28px',
+                borderTop: '1px solid #E2E8F0',
+                backgroundColor: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>
+                  {isReadOnly ? (
+                    <span style={{ color: '#166534', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle size={16} /> Entire BOM Flow & Vehicle Dispatch 100% Completed
+                    </span>
+                  ) : (
+                    <span>Submitting will finalize vehicle loading & complete the entire BOM cycle.</span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleLoadingModal(null);
+                      setLoadingPhotos([]);
+                      setLoadingVideos([]);
+                    }}
+                    style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Close
+                  </button>
+
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleFinalizeVehicleLoading}
+                      style={{
+                        padding: '10px 24px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        backgroundColor: '#16A34A',
+                        color: '#FFFFFF',
+                        fontSize: '13px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 3px 10px rgba(22,163,74,0.3)'
+                      }}
+                    >
+                      <CheckCircle size={16} /> Complete Vehicle Loading & Finalize BOM
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── FULL BOM LIFECYCLE COMPLETION SUMMARY MODAL ─── */}
+      {completedBomSummaryModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', width: '620px', maxWidth: '95%', padding: '32px', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', gap: '22px', textAlign: 'center' }}>
+            
+            <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 20px rgba(22,101,52,0.2)' }}>
+              <CheckCircle size={40} />
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: '900', color: '#16A34A', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                🎉 BOM FULFILLMENT 100% COMPLETE
+              </span>
+              <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', margin: '4px 0 0 0' }}>
+                Order & BOM Flow Successfully Completed!
+              </h2>
+              <p style={{ fontSize: '13px', color: '#64748B', margin: '6px 0 0 0' }}>
+                BOM Reference: <strong style={{ color: '#2563EB' }}>{completedBomSummaryModal.bomCode}</strong> • Customer: <strong>{completedBomSummaryModal.customer}</strong>
+              </p>
+            </div>
+
+            {/* Lifecycle Stages Passed */}
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>Completed Journey Stages</div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                  <CheckCircle size={15} /> 1. Sales BOM Created & Address Proof Attached
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                  <CheckCircle size={15} /> 2. Dispatch Items Packed & Verified ({completedBomSummaryModal.packedCount} items)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                  <CheckCircle size={15} /> 3. Accounts Verification & Payment Slip Approved
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                  <CheckCircle size={15} /> 4. Tax Invoice Confirmed & Inventory Stock Decremented
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
+                  <CheckCircle size={15} /> 5. Vehicle Loading Verified with Photos & Videos ({completedBomSummaryModal.vehicleLoading?.vehicleNo})
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setCompletedBomSummaryModal(null)}
+                style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', backgroundColor: '#0F172A', color: '#FFFFFF', fontSize: '14px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(15,23,42,0.25)' }}
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── FULL MEDIA LIGHTBOX PREVIEW MODAL ─── */}
+      {activeMediaPreviewModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100005 }}>
+          <div style={{ maxWidth: '90%', maxHeight: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <span style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: '700' }}>{activeMediaPreviewModal.name || 'Media Preview'}</span>
+              <button
+                type="button"
+                onClick={() => setActiveMediaPreviewModal(null)}
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#FFFFFF', padding: '6px 14px', cursor: 'pointer', fontWeight: '700' }}
+              >
+                Close ✕
+              </button>
+            </div>
+            {activeMediaPreviewModal.type === 'video' ? (
+              <video controls autoPlay src={activeMediaPreviewModal.url} style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '12px' }} />
+            ) : (
+              <img src={activeMediaPreviewModal.url} alt="Full Preview" style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: '12px' }} />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* DELIVERY ADDRESS PROOF DOCUMENT VIEWER MODAL */}
       {previewAddressProofModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #E2E8F0', width: '640px', maxWidth: '95%', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', width: '900px', maxWidth: '95vw', maxHeight: '94vh', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FileCheck size={20} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileCheck size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Delivery Address Proof Document</h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>Verified Address Document for Invoicing & Dispatch</span>
+                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Delivery Address Proof Attachment</h3>
+                  <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <span>Uploaded by: <strong style={{ color: '#0F172A' }}>{previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'}</strong></span>
+                    <span>•</span>
+                    <span>BOM: <strong style={{ color: '#2563EB' }}>{previewAddressProofModal.bomRef || 'BOM Reference'}</strong></span>
+                    <span>•</span>
+                    <span>File: <strong style={{ color: '#475569' }}>{previewAddressProofModal.name || 'Document.png'}</strong> ({previewAddressProofModal.size || 'Image'})</span>
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewAddressProofModal(null)}
-                style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* Metadata strip */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#FAFBFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Customer Name</span>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{previewAddressProofModal.customer || 'Customer'}</div>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Order / BOM Reference</span>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB', marginTop: '2px' }}>{previewAddressProofModal.bomRef || 'BOM-00001'}</div>
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Registered Billing Address</span>
-                  <div style={{ fontSize: '12px', color: '#334155', marginTop: '2px' }}>{previewAddressProofModal.billingAddress || 'Registered Primary Office Address'}</div>
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase' }}>Physical Delivery Destination</span>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>{previewAddressProofModal.deliveryAddress || 'Site Delivery Destination'}</div>
-                </div>
-              </div>
-
-              {/* Document Preview Frame */}
+            {/* Modal Body - 100% Focused on the Image */}
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1, backgroundColor: '#0B0F19', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
               {previewAddressProofModal.dataUrl ? (
-                <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                   <img
                     src={previewAddressProofModal.dataUrl}
                     alt="Delivery Address Proof"
-                    style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '74vh',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.5)'
+                    }}
                   />
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof.png'}</span>
                 </div>
               ) : (
-                <div style={{ border: '2px dashed #86EFAC', borderRadius: '14px', backgroundColor: '#F0FDF4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
-                  <div style={{ width: '54px', height: '54px', borderRadius: '14px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(22,101,52,0.15)' }}>
-                    <FileText size={28} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewAddressProofModal.name || 'Delivery_Address_Proof_Document.pdf'}</div>
-                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-                      {previewAddressProofModal.size || '1.2 MB'} • Verified & Attached to Sales Order / Invoice
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800' }}>
-                    <CheckCircle size={14} /> Official Address Proof Verified
-                  </div>
+                <div style={{ color: '#94A3B8', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <FileText size={48} style={{ color: '#64748B' }} />
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#F1F5F9' }}>{previewAddressProofModal.name || 'Attachment Document'}</div>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>Uploaded by {previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'} • {previewAddressProofModal.size || '0.13 MB'}</div>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '16px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-              <button
-                type="button"
-                onClick={() => alert(`Downloading ${previewAddressProofModal.name}...`)}
-                style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#334155', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Download size={14} /> Download Document
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewAddressProofModal(null)}
-                style={{ padding: '9px 20px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37,99,235,0.25)' }}
-              >
-                Close Viewer
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '20px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <CheckCircle size={14} /> Official Address Proof
+                </span>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Uploaded by <strong>{previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'}</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (previewAddressProofModal.dataUrl) {
+                      const a = document.createElement('a');
+                      a.href = previewAddressProofModal.dataUrl;
+                      a.download = previewAddressProofModal.name || 'Address_Proof.png';
+                      a.click();
+                    } else {
+                      alert(`Downloading ${previewAddressProofModal.name || 'Document'}...`);
+                    }
+                  }}
+                  style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Download size={15} /> Download Image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewAddressProofModal(null)}
+                  style={{ padding: '9px 22px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }}
+                >
+                  Close Viewer
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -17927,7 +20336,9 @@ export default function OtherViews({ activeTab, onChangeTab }) {
       {viewingProofDocModal && (() => {
         const pDoc = viewingProofDocModal.payments?.proofDoc || viewingProofDocModal.proofDoc || viewingProofDocModal.paymentProofDoc || 'Payment_Proof_Receipt.pdf';
         const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
-        const pDocDataUrl = (typeof pDoc === 'object' && pDoc?.dataUrl) ? pDoc.dataUrl : (viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.paymentProofDoc?.dataUrl || null);
+        const pDocDataUrl = (typeof pDoc === 'object' && pDoc?.dataUrl)
+          ? pDoc.dataUrl
+          : (viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.paymentProofDoc?.dataUrl || viewingProofDocModal.accountsVerification?.softCopyDoc?.dataUrl || null);
         const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo || 'BOM-2026';
         const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || viewingProofDocModal.vendor || 'Customer';
         const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 52061.60);

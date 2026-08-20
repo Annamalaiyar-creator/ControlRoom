@@ -42,6 +42,7 @@ function App() {
   });
 
   const [targetPoNo, setTargetPoNo] = useState(null);
+  const [convertingPiData, setConvertingPiData] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [itemsList, setItemsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,7 +139,12 @@ function App() {
           ) : activeTab === 'Dashboard' || activeTab === 'Executive Dashboard' || activeTab === 'Procurement Dashboard' || activeTab === 'Finance & Accounts' || activeTab === 'Sales & CRM' || activeTab === 'Design & BOM Center' ? (
             <DashboardFullReference userRole={userRole} />
           ) : (activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
-            <PerformaInvoiceView />
+            <PerformaInvoiceView 
+              onConvertToBom={(piData) => {
+                setConvertingPiData(piData);
+                handleTabChange('Sales BOM');
+              }} 
+            />
           ) : activeTab === 'Purchase Orders' ? (
             <PurchaseOrdersView targetPoNo={targetPoNo} clearTargetPo={() => setTargetPoNo(null)} />
           ) : activeTab === 'Zoho Integration' ? (
@@ -148,7 +154,13 @@ function App() {
           ) : (activeTab === 'Inventory Stock Conversion' || activeTab === 'Enter Coil Purchase (in Ton)' || activeTab === 'Inventory - (Auto Conversion)') ? (
             <InventoryAutoConversion />
           ) : (
-            <OtherViews activeTab={activeTab} onChangeTab={handleTabChange} userRole={userRole} />
+            <OtherViews 
+              activeTab={activeTab} 
+              onChangeTab={handleTabChange} 
+              userRole={userRole} 
+              convertingPiData={convertingPiData}
+              onClearConvertingPiData={() => setConvertingPiData(null)}
+            />
           )}
         </div>
       </main>
