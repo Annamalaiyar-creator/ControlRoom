@@ -219,10 +219,24 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     
     // Initial fetch and subscription from Supabase cloud database
     fetchCloudStore('bom_store', bomStore).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) setBomStore(data);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setBomStore(prev => {
+          const map = new Map();
+          data.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, item); });
+          prev.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, { ...(map.get(item.bomCode) || {}), ...item }); });
+          return Array.from(map.values());
+        });
+      }
     });
     const sub = subscribeToCloudStore('bom_store', (latest) => {
-      if (latest && Array.isArray(latest)) setBomStore(latest);
+      if (latest && Array.isArray(latest) && latest.length > 0) {
+        setBomStore(prev => {
+          const map = new Map();
+          latest.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, item); });
+          prev.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, { ...(map.get(item.bomCode) || {}), ...item }); });
+          return Array.from(map.values());
+        });
+      }
     });
 
     return () => {
