@@ -18246,6 +18246,53 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                       padding: '4px'
                                     }}
                                   >
+                                    <button
+                                      onClick={() => {
+                                        setConfirmingBomModal({ ...row, isEditMode: false });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View BOM
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        setConfirmingBomModal({ ...row, isEditMode: true });
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      <Edit3 style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Edit / Confirm
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Are you sure you want to delete BOM (${row.code})?`)) {
+                                          setBomStore(prev => {
+                                            const updated = prev.filter(b => (b.bomCode || b.code) !== (row.bomCode || row.code));
+                                            try {
+                                              localStorage.setItem('controlroom_bom_store', JSON.stringify(updated));
+                                              saveCloudStore('bom_store', updated);
+                                            } catch (err) {}
+                                            return updated;
+                                          });
+                                        }
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      <Trash2 style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Delete BOM
+                                    </button>
+
+                                    <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+
                                     {/* 1. Send Confirm / Reconfirm */}
                                     {isDraftOrPending && (
                                       <button
