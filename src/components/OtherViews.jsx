@@ -14374,6 +14374,34 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 })()}
 
                 {/* ─── SECTION 3: BOM HARD COPY DOCUMENT PREVIEW & BREAKDOWN TABLE ─── */}
+                {(() => {
+                  const rawAccItems = (accountsVerificationModal.items && accountsVerificationModal.items.length > 0)
+                    ? accountsVerificationModal.items
+                    : (accountsVerificationModal.dispatchPacking && accountsVerificationModal.dispatchPacking.length > 0)
+                      ? accountsVerificationModal.dispatchPacking
+                      : [];
+
+                  const dynamicAccItems = rawAccItems.map((it, idx) => {
+                    const q = parseFloat(it.qty || it.bomQty || 1) || 1;
+                    const r = parseFloat(it.rate || it.unitPrice || 0) || 0;
+                    return {
+                      code: it.code || `PRD-00${idx + 1}`,
+                      name: it.name || `Item ${idx + 1}`,
+                      desc: it.category || it.desc || 'Standard component',
+                      qty: q,
+                      uom: it.uom || 'Nos',
+                      rate: r,
+                      amt: q * r,
+                      packed: it.packed !== undefined ? Boolean(it.packed) : true
+                    };
+                  });
+
+                  const accSubTotal = dynamicAccItems.reduce((acc, curr) => acc + curr.amt, 0);
+                  const accCgst = accSubTotal * 0.09;
+                  const accSgst = accSubTotal * 0.09;
+                  const accGrandTotal = accSubTotal + accCgst + accSgst;
+
+                  return (
                 <div style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: '16px',
@@ -14577,13 +14605,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              { code: 'PRD-001', name: 'Long Rail 3000 mm', desc: '3 Meter Heavy Duty Extruded Aluminum Rail (Anodized 15 Micron)', qty: 8, uom: 'Nos', rate: 1800, amt: 14400 },
-                              { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Short Rail for Landscape Panel Mounting with EPDM Rubber', qty: 12, uom: 'Nos', rate: 450, amt: 5400 },
-                              { code: 'PRD-003', name: 'Mid Clamp 35 mm', desc: 'Anodized Aluminum Module Mid Fastener Clamp + SS304 Fastener', qty: 24, uom: 'Nos', rate: 85, amt: 2040 },
-                              { code: 'PRD-004', name: 'End Clamp 35 mm', desc: 'Anodized Aluminum Module End Fastener Clamp + SS304 Fastener', qty: 16, uom: 'Nos', rate: 95, amt: 1520 },
-                              { code: 'PRD-005', name: 'Raw Aluminum Coil 1.5mm', desc: 'Grade 6063 Aluminum Raw Coil (25kg bundle pack)', qty: 2, uom: 'Nos', rate: 10382, amt: 20764 }
-                            ].map((it, idx) => (
+                            {dynamicAccItems.map((it, idx) => (
                               <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
                                 <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
                                 <td style={{ padding: '10px 12px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
@@ -14627,15 +14649,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
                               <span>Taxable Subtotal:</span>
-                              <strong style={{ color: '#0F172A' }}>₹ 44,124.00</strong>
+                              <strong style={{ color: '#0F172A' }}>₹ {accSubTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
                               <span>CGST @ 9%:</span>
-                              <span>₹ 3,968.80</span>
+                              <span>₹ {accCgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#475569' }}>
                               <span>SGST @ 9%:</span>
-                              <span>₹ 3,968.80</span>
+                              <span>₹ {accSgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div style={{
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -14644,7 +14666,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             }}>
                               <span>Grand Total:</span>
                               <span style={{ color: '#166534' }}>
-                                ₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}
+                                ₹ {(orderValue > 0 ? orderValue : accGrandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
                           </div>
@@ -14667,13 +14689,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           </tr>
                         </thead>
                         <tbody>
-                          {[
-                            { code: 'PRD-001', name: 'Long Rail 3000 mm', desc: '3 Meter Heavy Duty Extruded Aluminum Rail', qty: 8, uom: 'Nos', rate: 1800, amt: 14400, packed: true },
-                            { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Short Rail for Landscape Mount', qty: 12, uom: 'Nos', rate: 450, amt: 5400, packed: true },
-                            { code: 'PRD-003', name: 'Mid Clamp 35 mm', desc: 'Anodized Module Fastening Mid Clamp', qty: 24, uom: 'Nos', rate: 85, amt: 2040, packed: true },
-                            { code: 'PRD-004', name: 'End Clamp 35 mm', desc: 'Anodized Module Fastening End Clamp', qty: 16, uom: 'Nos', rate: 95, amt: 1520, packed: true },
-                            { code: 'PRD-005', name: 'Raw Aluminum Coil 1.5mm', desc: 'Grade 6063 Aluminum Raw Coil', qty: 2, uom: 'Nos', rate: 10382, amt: 20764, packed: true }
-                          ].map((it, idx) => (
+                          {dynamicAccItems.map((it, idx) => (
                             <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFBFC' }}>
                               <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
                               <td style={{ padding: '14px 16px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
