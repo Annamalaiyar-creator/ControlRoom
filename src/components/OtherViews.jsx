@@ -14740,6 +14740,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </span>
                   </div>
                 </div>
+                  );
+                })()}
 
                 {/* ─── FOOTER SAVE BAR (Only in Verification Mode) ─── */}
                 {!isAlreadyCompleted && (
@@ -17349,9 +17351,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                                 : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
+                              const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+                              const maxNumRec = existingNumsRec.length > 0 ? Math.max(...existingNumsRec) : 600;
+                              const finalCode = newBomCode || `BOM-${maxNumRec + 1}`;
+
                               const hasPaymentProof = Boolean(newBomPaymentProofDoc);
                               const newBomRecord = {
-                                bomCode: newBomCode || `BOM-${Math.floor(100 + Math.random() * 900)}`,
+                                bomCode: finalCode,
                                 date: new Date().toISOString().split('T')[0],
                                 customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
                                 companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
@@ -17586,8 +17592,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         setNewBomDeliveryCity('');
                         setNewBomDeliveryState('');
                         setNewBomDeliveryPincode('');
-                        setNewBomPaymentType('100% Advance');
-                        setNewBomCode(`BOM-${Math.floor(100 + Math.random() * 900)}`);
+                        const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+                        const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 600;
+                        setNewBomCode(`BOM-${maxNum + 1}`);
                         setShowBOMForm(true);
                       } else if (activeTab === 'Work Orders' || pageConfig.actionText.includes('Create Work Order')) {
                         setShowWorkOrderForm(true);
