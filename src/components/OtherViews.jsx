@@ -217,32 +217,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
     
-    // Initial fetch and subscription from Supabase cloud database
-    fetchCloudStore('bom_store', bomStore).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setBomStore(prev => {
-          const map = new Map();
-          data.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, item); });
-          prev.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, { ...(map.get(item.bomCode) || {}), ...item }); });
-          return Array.from(map.values());
-        });
+    // Local storage is primary source of truth for BOM store
+    try {
+      const saved = localStorage.getItem('controlroom_bom_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBomStore(parsed);
+        }
       }
-    });
-    const sub = subscribeToCloudStore('bom_store', (latest) => {
-      if (latest && Array.isArray(latest) && latest.length > 0) {
-        setBomStore(prev => {
-          const map = new Map();
-          latest.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, item); });
-          prev.forEach(item => { if (item && item.bomCode) map.set(item.bomCode, { ...(map.get(item.bomCode) || {}), ...item }); });
-          return Array.from(map.values());
-        });
-      }
-    });
+    } catch (e) {}
 
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
-      if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe();
     };
   }, []);
 
@@ -17360,7 +17348,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               const newBomRecord = {
                                 bomCode: newBomCode || `BOM-${Math.floor(100 + Math.random() * 900)}`,
                                 date: new Date().toISOString().split('T')[0],
-                                customerName: selCust?.code || selCust?.c2 || newBomProductName || 'Customer Order',
+                                customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
                                 companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
                                 mobile: selCust?.c4 || '-',
                                 email: selCust?.c5 || '-',
