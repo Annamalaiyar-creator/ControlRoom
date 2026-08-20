@@ -217,17 +217,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
     
-    // Local storage is primary source of truth for BOM store
-    try {
-      const saved = localStorage.getItem('controlroom_bom_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setBomStore(parsed);
-        }
-      }
-    } catch (e) {}
-
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
@@ -17406,24 +17395,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 grandTotal: totals.grand
                               };
 
-                              try {
-                                const currentSaved = localStorage.getItem('controlroom_bom_store');
-                                let currentList = [];
-                                if (currentSaved) {
-                                  try { currentList = JSON.parse(currentSaved); } catch (e) {}
-                                }
-                                const updatedList = [newBomRecord, ...(Array.isArray(currentList) ? currentList : [])];
-                                localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
-                                saveCloudStore('bom_store', updatedList);
-                                window.dispatchEvent(new Event('controlroom_storage_update'));
-                              } catch (e) {}
-
                               setBomStore(prev => {
-                                const map = new Map();
-                                [newBomRecord, ...(Array.isArray(prev) ? prev : [])].forEach(item => {
-                                  if (item && item.bomCode) map.set(item.bomCode, item);
-                                });
-                                return Array.from(map.values());
+                                const current = Array.isArray(prev) ? prev : [];
+                                const filtered = current.filter(item => item && item.bomCode !== newBomRecord.bomCode);
+                                const updatedList = [newBomRecord, ...filtered];
+                                try {
+                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
+                                  saveCloudStore('bom_store', updatedList);
+                                } catch (e) {}
+                                return updatedList;
                               });
                               setNewBomPaymentProofDoc(null);
                               setNewBomDeliveryProofDoc(null);
