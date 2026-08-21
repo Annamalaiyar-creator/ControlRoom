@@ -18309,21 +18309,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                                     <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
 
-                                    {/* 1. Send Confirm / Reconfirm */}
-                                    {isDraftOrPending && (
-                                      <button
-                                        onClick={() => {
-                                          setConfirmingBomModal({ ...row, isEditMode: true });
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <CheckCircle style={{ width: '14px', height: '14px', color: '#2563EB' }} /> {row.status === 'Cancelled & Reissued to Dispatch' ? 'Reconfirm BOM' : 'Send Confirm'}
-                                      </button>
-                                    )}
-
                                     {/* 2. Re-upload Address Proof (Triggered when Invoice Desk requests it) */}
                                     {row.addressProofReuploadRequested && (
                                       <button
