@@ -17207,7 +17207,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           </div>
 
                           {newBomPaymentProofDoc ? (
-                            <div style={{ border: '1px solid #86EFAC', borderRadius: '12px', padding: '16px', backgroundColor: '#F0FDF4', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ border: '1px solid #86EFAC', borderRadius: '12px', padding: '16px', backgroundColor: '#F0FDF4', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                   <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -17226,6 +17226,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
                                 </button>
                               </div>
+                              {newBomPaymentProofDoc.dataUrl && (
+                                <div style={{ borderTop: '1px solid #BBF7D0', paddingTop: '10px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px' }}>
+                                  <img src={newBomPaymentProofDoc.dataUrl} alt="Payment Proof Preview" style={{ maxHeight: '160px', maxWidth: '100%', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }} />
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div
