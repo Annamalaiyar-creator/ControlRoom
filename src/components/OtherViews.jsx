@@ -13,6 +13,22 @@ import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
+const stripDataUrlsFromRecord = (obj) => {
+  if (!obj || typeof obj !== "object") return obj;
+  const clone = JSON.parse(JSON.stringify(obj));
+  const removeDataUrl = (target) => {
+    if (!target || typeof target !== "object") return;
+    if (target.dataUrl) delete target.dataUrl;
+    if (target.fileData) delete target.fileData;
+    if (target.proofDocData) delete target.proofDocData;
+    Object.keys(target).forEach(k => {
+      if (target[k] && typeof target[k] === "object") removeDataUrl(target[k]);
+    });
+  };
+  removeDataUrl(clone);
+  return clone;
+};
+
 const readCompressedImage = (file, callback) => {
   if (!file) {
     if (callback) callback(null);
@@ -17527,7 +17543,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 try {
                                   localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
                                   saveCloudStore('bom_store', updatedList);
-                                } catch (e) {}
+                                } catch (e) {
+                                  console.warn("Storage quota hit, saving sanitized metadata list", e);
+                                  const sanitized = updatedList.map(stripDataUrlsFromRecord);
+                                  try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized)); } catch (err) {}
+                                  saveCloudStore('bom_store', sanitized);
+                                }
                                 return updatedList;
                               });
                               setNewBomPaymentProofDoc(null);
