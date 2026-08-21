@@ -13,6 +13,40 @@ import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
+const readCompressedImage = (file, callback) => {
+  if (file && file.type && file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        callback(dataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    callback(null);
+  }
+};
+
 export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales Executive', convertingPiData, onClearConvertingPiData }) {
   // Common states
   const [searchQuery, setSearchQuery] = useState('');
@@ -17191,11 +17225,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 e.preventDefault();
                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                                 if (file) {
-                                  setNewBomPaymentProofDoc({
+                                  const fileMeta = {
     name: file.name,
     size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
     type: file.type || "application/pdf",
     uploadedAt: new Date().toISOString()
+  };
+  readCompressedImage(file, (dataUrl) => {
+    if (dataUrl) fileMeta.dataUrl = dataUrl;
+    setNewBomPaymentProofDoc(fileMeta);
   });
                                 }
                               }}
@@ -17222,11 +17260,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     onChange={(e) => {
                                       const file = e.target.files && e.target.files[0];
                                       if (file) {
-                                        setNewBomPaymentProofDoc({
+                                        const fileMeta = {
     name: file.name,
     size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
     type: file.type || "application/pdf",
     uploadedAt: new Date().toISOString()
+  };
+  readCompressedImage(file, (dataUrl) => {
+    if (dataUrl) fileMeta.dataUrl = dataUrl;
+    setNewBomPaymentProofDoc(fileMeta);
   });
                                       }
                                     }}
