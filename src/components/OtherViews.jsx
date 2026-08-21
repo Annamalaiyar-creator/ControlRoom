@@ -14,15 +14,22 @@ import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
 const readCompressedImage = (file, callback) => {
-  if (file && file.type && file.type.startsWith("image/")) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
+  if (!file) return callback(null);
+  const isImage = (file.type && file.type.startsWith("image/")) || /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(file.name || "");
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const rawDataUrl = e.target.result;
+    if (!isImage) {
+      return callback(rawDataUrl);
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
         const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 800;
+        let width = img.width || 800;
+        let height = img.height || 600;
+        const maxDim = 1000;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -36,15 +43,17 @@ const readCompressedImage = (file, callback) => {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
-        callback(dataUrl);
-      };
-      img.src = e.target.result;
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        callback(compressed || rawDataUrl);
+      } catch (err) {
+        callback(rawDataUrl);
+      }
     };
-    reader.readAsDataURL(file);
-  } else {
-    callback(null);
-  }
+    img.onerror = () => callback(rawDataUrl);
+    img.src = rawDataUrl;
+  };
+  reader.onerror = () => callback(null);
+  reader.readAsDataURL(file);
 };
 
 export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales Executive', convertingPiData, onClearConvertingPiData }) {
@@ -20457,9 +20466,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       {viewingProofDocModal && (() => {
         const pDoc = viewingProofDocModal.payments?.proofDoc || viewingProofDocModal.proofDoc || viewingProofDocModal.paymentProofDoc || 'Payment_Proof_Receipt.pdf';
         const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
-        const pDocDataUrl = (typeof pDoc === 'object' && pDoc?.dataUrl)
+        const pDocDataUrl = (typeof pDoc === object && pDoc?.dataUrl)
           ? pDoc.dataUrl
-          : (viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.paymentProofDoc?.dataUrl || viewingProofDocModal.accountsVerification?.softCopyDoc?.dataUrl || null);
+          : (viewingProofDocModal.paymentProofDoc?.dataUrl || viewingProofDocModal.payments?.proofDocObj?.dataUrl || viewingProofDocModal.salesPoDetails?.proofDocObj?.dataUrl || viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.accountsVerification?.softCopyDoc?.dataUrl || null);
         const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo || 'BOM-2026';
         const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || viewingProofDocModal.vendor || 'Customer';
         const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 52061.60);
