@@ -33,6 +33,60 @@ const readCompressedImage = (file, callback) => {
   }
 };
 
+const compressAndSaveFile = (file, callback) => {
+  if (!file) return callback(null);
+  const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(file.name || "");
+  const baseMeta = {
+    name: file.name,
+    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+    type: file.type || (isImg ? "image/png" : "application/pdf"),
+    uploadedAt: new Date().toISOString()
+  };
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const rawDataUrl = e.target ? e.target.result : null;
+    if (!isImg || !rawDataUrl) {
+      baseMeta.dataUrl = rawDataUrl;
+      return callback(baseMeta);
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        let width = img.width || 600;
+        let height = img.height || 400;
+        const maxDim = 500;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        baseMeta.dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+        callback(baseMeta);
+      } catch (err) {
+        baseMeta.dataUrl = rawDataUrl;
+        callback(baseMeta);
+      }
+    };
+    img.onerror = () => {
+      baseMeta.dataUrl = rawDataUrl;
+      callback(baseMeta);
+    };
+    img.src = rawDataUrl;
+  };
+  reader.onerror = () => callback(baseMeta);
+  reader.readAsDataURL(file);
+};
+
 export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales Executive', convertingPiData, onClearConvertingPiData }) {
   // Common states
   const [searchQuery, setSearchQuery] = useState('');
@@ -16623,11 +16677,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                         onChange={(e) => {
                                           const file = e.target.files && e.target.files[0];
                                           if (file) {
-                                            setNewBomDeliveryProofDoc({
-    name: file.name,
-    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-    type: file.type || "application/pdf",
-    uploadedAt: new Date().toISOString()
+                                            compressAndSaveFile(file, (docObj) => {
+    setNewBomDeliveryProofDoc(docObj);
   });
                                           }
                                         }}
@@ -17213,22 +17264,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             <div
                               onDragOver={(e) => e.preventDefault()}
                                onDrop={(e) => {
-                                 e.preventDefault();
-                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                                 if (file) {
-                                   const reader = new FileReader();
-                                   reader.onload = (loadEvt) => {
-                                     setNewBomPaymentProofDoc({
-                                       name: file.name,
-                                       size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                       type: file.type || "image/png",
-                                       dataUrl: loadEvt.target ? loadEvt.target.result : null,
-                                       uploadedAt: new Date().toISOString()
-                                     });
-                                   };
-                                   reader.readAsDataURL(file);
-                                 }
-                               }}
+    e.preventDefault();
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) {
+      compressAndSaveFile(file, (docObj) => {
+        setNewBomPaymentProofDoc(docObj);
+      });
+    }
+  }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
                             >
                               <UploadCloud style={{ width: '34px', height: '34px', color: '#6366F1' }} />
@@ -17249,21 +17292,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     type="file"
                                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                      onChange={(e) => {
-                                       const file = e.target.files && e.target.files[0];
-                                       if (file) {
-                                         const reader = new FileReader();
-                                         reader.onload = (loadEvt) => {
-                                           setNewBomPaymentProofDoc({
-                                             name: file.name,
-                                             size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                             type: file.type || "image/png",
-                                             dataUrl: loadEvt.target ? loadEvt.target.result : null,
-                                             uploadedAt: new Date().toISOString()
-                                           });
-                                         };
-                                         reader.readAsDataURL(file);
-                                       }
-                                     }}
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      compressAndSaveFile(file, (docObj) => {
+        setNewBomPaymentProofDoc(docObj);
+      });
+    }
+  }}
                                   />
                                 </label>
                               </div>
