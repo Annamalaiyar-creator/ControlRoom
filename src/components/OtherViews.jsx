@@ -17212,22 +17212,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           ) : (
                             <div
                               onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                const file = e.dataTransfer.files && e.dataTransfer.files[0];
-                                if (file) {
-                                  const fileMeta = {
-    name: file.name,
-    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-    type: file.type || "application/pdf",
-    uploadedAt: new Date().toISOString()
-  };
-  readCompressedImage(file, (dataUrl) => {
-    if (dataUrl) fileMeta.dataUrl = dataUrl;
-    setNewBomPaymentProofDoc(fileMeta);
-  });
-                                }
-                              }}
+                               onDrop={(e) => {
+                                 e.preventDefault();
+                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                                 if (file) {
+                                   const reader = new FileReader();
+                                   reader.onload = (loadEvt) => {
+                                     setNewBomPaymentProofDoc({
+                                       name: file.name,
+                                       size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                       type: file.type || "image/png",
+                                       dataUrl: loadEvt.target ? loadEvt.target.result : null,
+                                       uploadedAt: new Date().toISOString()
+                                     });
+                                   };
+                                   reader.readAsDataURL(file);
+                                 }
+                               }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
                             >
                               <UploadCloud style={{ width: '34px', height: '34px', color: '#6366F1' }} />
@@ -17247,22 +17248,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <input
                                     type="file"
                                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files && e.target.files[0];
-                                      if (file) {
-                                        const fileMeta = {
-    name: file.name,
-    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-    type: file.type || "application/pdf",
-    uploadedAt: new Date().toISOString()
-  };
-  readCompressedImage(file, (dataUrl) => {
-    if (dataUrl) fileMeta.dataUrl = dataUrl;
-    setNewBomPaymentProofDoc(fileMeta);
-  });
-                                      }
-                                    }}
+                                     onChange={(e) => {
+                                       const file = e.target.files && e.target.files[0];
+                                       if (file) {
+                                         const reader = new FileReader();
+                                         reader.onload = (loadEvt) => {
+                                           setNewBomPaymentProofDoc({
+                                             name: file.name,
+                                             size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                             type: file.type || "image/png",
+                                             dataUrl: loadEvt.target ? loadEvt.target.result : null,
+                                             uploadedAt: new Date().toISOString()
+                                           });
+                                         };
+                                         reader.readAsDataURL(file);
+                                       }
+                                     }}
                                   />
                                 </label>
                               </div>
