@@ -16,3 +16,8 @@
 
 4. **Line Items Form Default**:
    - Opening the "Create PO" form MUST initialize line items to an empty array (`[]`) without forcing pre-populated items.
+
+5. **BOM State Persistence & Document Upload Quota Protection**:
+   - Document upload fields (Payment Proof & Address Proof) MUST auto-compress images (`compressAndSaveFile`) to lightweight payloads (< 25 KB).
+   - In `setBomStore`, if browser `localStorage` storage limits are exceeded during `JSON.stringify(updatedList)`, the application MUST use `stripDataUrlsFromRecord` to safely strip raw data URLs while preserving all official metadata (file name, size, type, upload timestamp, payment terms, and BOM order details).
+   - BOM items with uploaded documents MUST NEVER be lost or deleted upon page refresh, browser tab reload, or logout.
