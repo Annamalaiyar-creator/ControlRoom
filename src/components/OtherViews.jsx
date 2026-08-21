@@ -18359,7 +18359,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     )}
 
                                     {/* 5. View Payment Proof (If proof document is attached) */}
-                                    {(row.payments?.proofDoc || row.paymentProofDoc) && (
+                                    {(row.payments?.proofDoc || row.payments?.proofDocObj || row.paymentProofDoc || row.salesPoDetails?.proofDocObj) && (
                                       <button
                                         onClick={() => {
                                           setViewingProofDocModal(row);
