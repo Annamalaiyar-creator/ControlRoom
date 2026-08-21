@@ -17191,16 +17191,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 e.preventDefault();
                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (loadEvt) => {
-                                    setNewBomPaymentProofDoc({
-                                      name: file.name,
-                                      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                      dataUrl: loadEvt.target.result,
-                                      uploadedAt: new Date().toISOString()
-                                    });
-                                  };
-                                  reader.readAsDataURL(file);
+                                  setNewBomPaymentProofDoc({
+    name: file.name,
+    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+    type: file.type || "application/pdf",
+    uploadedAt: new Date().toISOString()
+  });
                                 }
                               }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
@@ -17226,16 +17222,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     onChange={(e) => {
                                       const file = e.target.files && e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (loadEvt) => {
-                                          setNewBomPaymentProofDoc({
-                                            name: file.name,
-                                            size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-                                            dataUrl: loadEvt.target.result,
-                                            uploadedAt: new Date().toISOString()
-                                          });
-                                        };
-                                        reader.readAsDataURL(file);
+                                        setNewBomPaymentProofDoc({
+    name: file.name,
+    size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+    type: file.type || "application/pdf",
+    uploadedAt: new Date().toISOString()
+  });
                                       }
                                     }}
                                   />
