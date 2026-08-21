@@ -17451,7 +17451,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 paymentType: newBomPaymentType || '100% Paid',
                                 creditDays: newBomPaymentType === 'Credit Payment' ? (parseInt(newBomCreditDays) || 7) : null,
                                 creditDueDate: newBomPaymentType === 'Credit Payment' ? new Date(Date.now() + (parseInt(newBomCreditDays) || 7) * 86400000).toISOString().split('T')[0] : null,
-                                paymentProofDoc: (newBomPaymentType === '100% Paid' || newBomPaymentType === 'Partial Payment') ? newBomPaymentProofDoc : null,
+                                paymentProofDoc: newBomPaymentProofDoc || null,
                                 paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                                 remarks: newBomRemarks || '',
                                 status: isDraft ? 'Draft' : 'Pending Confirmation',
