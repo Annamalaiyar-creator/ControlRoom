@@ -14,46 +14,23 @@ import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
 const readCompressedImage = (file, callback) => {
-  if (!file) return callback(null);
-  const isImage = (file.type && file.type.startsWith("image/")) || /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(file.name || "");
-  
+  if (!file) {
+    if (callback) callback(null);
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
-    const rawDataUrl = e.target.result;
-    if (!isImage) {
-      return callback(rawDataUrl);
-    }
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        let width = img.width || 800;
-        let height = img.height || 600;
-        const maxDim = 1000;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.7);
-        callback(compressed || rawDataUrl);
-      } catch (err) {
-        callback(rawDataUrl);
-      }
-    };
-    img.onerror = () => callback(rawDataUrl);
-    img.src = rawDataUrl;
+    const result = e.target ? e.target.result : null;
+    if (callback) callback(result);
   };
-  reader.onerror = () => callback(null);
-  reader.readAsDataURL(file);
+  reader.onerror = () => {
+    if (callback) callback(null);
+  };
+  try {
+    reader.readAsDataURL(file);
+  } catch (err) {
+    if (callback) callback(null);
+  }
 };
 
 export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales Executive', convertingPiData, onClearConvertingPiData }) {
