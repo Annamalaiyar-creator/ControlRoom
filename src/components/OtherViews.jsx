@@ -13,6 +13,29 @@ import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 
+
+const saveMediaToCache = (docKey, dataUrl) => {
+  if (!docKey || !dataUrl) return;
+  try {
+    const raw = localStorage.getItem("controlroom_media_cache") || "{}";
+    const cache = JSON.parse(raw);
+    cache[docKey] = dataUrl;
+    localStorage.setItem("controlroom_media_cache", JSON.stringify(cache));
+    saveCloudStore("media_cache", cache);
+  } catch (e) {}
+};
+
+const getMediaFromCache = (docKey) => {
+  if (!docKey) return null;
+  try {
+    const raw = localStorage.getItem("controlroom_media_cache") || "{}";
+    const cache = JSON.parse(raw);
+    return cache[docKey] || null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const stripDataUrlsFromRecord = (obj) => {
   if (!obj || typeof obj !== "object") return obj;
   const clone = JSON.parse(JSON.stringify(obj));
@@ -86,7 +109,11 @@ const compressAndSaveFile = (file, callback) => {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
-        baseMeta.dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+        const compressedData = canvas.toDataURL("image/jpeg", 0.5);
+        baseMeta.dataUrl = compressedData;
+        if (baseMeta.name) {
+          saveMediaToCache(baseMeta.name, compressedData);
+        }
         callback(baseMeta);
       } catch (err) {
         baseMeta.dataUrl = rawDataUrl;
@@ -195,6 +222,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [customerToDelete, setCustomerToDelete] = useState(null);
   const [previewAddressProofModal, setPreviewAddressProofModal] = useState(null);
+  const [bomActionMenuPos, setBomActionMenuPos] = useState({ top: 0, left: 0 });
 
   const [bomStore, setBomStore] = useState(() => {
     try {
@@ -1779,7 +1807,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   // Low Stock / Reorder Alerts
   const INITIAL_REORDER_ALERTS = [
     { id: 1, name: 'Aluminium Rail 4.2m', sku: 'AL-RAIL-4.2', category: 'Rails', warehouse: 'Main Warehouse', stock: '120', percent: '12%', minLevel: '500', uom: 'Nos', leadTime: '7 Days', reorderQty: '880', val: '8,80,000', status: 'Critical', coverage: '2 Days', level: 12 },
-    { id: 2, name: 'Mid Clamp', sku: 'MC-01', category: 'Clamps', warehouse: 'Main Warehouse', stock: '250', percent: '17%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,250', val: '3,12,500', status: 'Critical', coverage: '3 Days', level: 17 },
+    { id: 2, name: 'Mid Clamp', sku: 'MC-01', category: 'Clamps', warehouse: 'Main Warehouse', stock: '926', percent: '17%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,250', val: '3,12,500', status: 'Critical', coverage: '3 Days', level: 17 },
     { id: 3, name: 'End Clamp', sku: 'EC-01', category: 'Clamps', warehouse: 'Regional Warehouse', stock: '300', percent: '20%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,200', val: '2,40,000', status: 'Critical', coverage: '3 Days', level: 20 },
     { id: 4, name: 'GI Nut Bolt M8x25', sku: 'NB-M8-25', category: 'Fasteners', warehouse: 'Main Warehouse', stock: '2,450', percent: '25%', minLevel: '10,000', uom: 'Nos', leadTime: '4 Days', reorderQty: '7,550', val: '1,51,000', status: 'Low Stock', coverage: '4 Days', level: 25 },
     { id: 5, name: 'GI Nut Bolt M10x30', sku: 'NB-M10-30', category: 'Fasteners', warehouse: 'Regional Warehouse', stock: '1,800', percent: '30%', minLevel: '6,000', uom: 'Nos', leadTime: '4 Days', reorderQty: '4,200', val: '1,68,000', status: 'Low Stock', coverage: '4 Days', level: 30 },
@@ -1811,7 +1839,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   // Stock status registry
   const INITIAL_STOCK_REGISTRY = [
     { code: 'AL-001', item: 'Aluminium Rail 4.2m', category: 'Rails', location: 'Main Warehouse', stock: '120', allocated: '30', incoming: '500', minLevel: '500', val: '8,80,000', status: 'Low Stock' },
-    { code: 'MC-001', item: 'Mid Clamp', category: 'Clamps', location: 'Main Warehouse', stock: '850', allocated: '100', incoming: '1,000', minLevel: '1,500', val: '3,12,500', status: 'Low Stock' },
+    { code: 'MC-001', item: 'Mid Clamp', category: 'Clamps', location: 'Main Warehouse', stock: '926', allocated: '100', incoming: '1,000', minLevel: '1,500', val: '3,12,500', status: 'Low Stock' },
     { code: 'EC-001', item: 'End Clamp', category: 'Clamps', location: 'Regional Warehouse', stock: '2,400', allocated: '200', incoming: '-', minLevel: '1,000', val: '2,40,000', status: 'In Stock' },
     { code: 'NB-025', item: 'GI Nut Bolt M8 x 25', category: 'Fasteners', location: 'Main Warehouse', stock: '0', allocated: '0', incoming: '500', minLevel: '500', val: '1,51,000', status: 'Out of Stock' },
     { code: 'NB-030', item: 'GI Nut Bolt M10 x 30', category: 'Fasteners', location: 'Regional Warehouse', stock: '1,800', allocated: '150', incoming: '-', minLevel: '2,000', val: '1,68,000', status: 'Low Stock' },
@@ -7724,7 +7752,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {[
                     { name: 'Aluminium Rail 4.2m', stock: '120', color: '#EF4444' },
-                    { name: 'Mid Clamp', stock: '850', color: '#F59E0B' },
+                    { name: 'Mid Clamp', stock: '926', color: '#F59E0B' },
                     { name: 'GI Nut Bolt M8 x 25', stock: '0', color: '#EF4444' },
                     { name: 'L-Foot', stock: '160', color: '#F59E0B' },
                     { name: 'GI Nut Bolt M10 x 30', stock: '1,800', color: '#F59E0B' },
@@ -9964,7 +9992,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 1500, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 1000, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
+                              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 926, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 926, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
@@ -10021,17 +10049,33 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
                           } catch (err) {}
 
-                          // 3. Update Invoice status
-                          setInvoiceList(prev => prev.map(item => (item.invNo === inv.invNo || item.code === inv.code) ? {
-                            ...item,
+                          // 3. Update Invoice status & persist to localStorage / cloud store
+                          setViewingInvoiceModal(prev => prev ? {
+                            ...prev,
                             status: 'Invoice Confirmed',
                             match: 'Matched',
                             pay: 'Completed & Locked',
                             stockDeducted: true,
-                            stockDeductionDate: new Date().toISOString(),
-                            packedItemsDeducted: packedItemsToDeduct,
-                            unpackedItemsRemaining: unpackedItems
-                          } : item));
+                            stockDeductionDate: new Date().toISOString()
+                          } : prev);
+
+                          setInvoiceList(prev => {
+                            const updatedInvoices = prev.map(item => (item.invNo === inv.invNo || item.code === inv.code || item.bomCode === inv.bomCode) ? {
+                              ...item,
+                              status: 'Invoice Confirmed',
+                              match: 'Matched',
+                              pay: 'Completed & Locked',
+                              stockDeducted: true,
+                              stockDeductionDate: new Date().toISOString(),
+                              packedItemsDeducted: packedItemsToDeduct,
+                              unpackedItemsRemaining: unpackedItems
+                            } : item);
+                            try {
+                              localStorage.setItem("controlroom_invoice_store", JSON.stringify(updatedInvoices));
+                              saveCloudStore("invoice_store", updatedInvoices);
+                            } catch (e) {}
+                            return updatedInvoices;
+                          });
 
                           // 4. Update matching BOM status to 'Awaiting Vehicle Loading & Dispatch'
                           const targetCode = inv.poNo || inv.code || bomRefText;
@@ -10235,7 +10279,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     const packedTotal = packedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
                     const unpackedTotal = unpackedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
 
-                    const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
+                    const targetRef = inv.poNo || inv.code || inv.bomCode || bomRefText;
+                    const foundBom = bomStore.find(b => (b.bomCode && b.bomCode === targetRef) || (b.code && b.code === targetRef) || (b.bomCode && inv.invNo && inv.invNo.includes(b.bomCode.replace("BOM-", "")))) || bomStore.find(b => b.deliveryAddressProofDoc);
+                    const rawAddressProof = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || foundBom?.deliveryAddressProofDoc || (bomStore.find(b => b.deliveryAddressProofDoc))?.deliveryAddressProofDoc || null;
+                    let addressProofDoc = rawAddressProof;
+                    if (addressProofDoc && !addressProofDoc.dataUrl && addressProofDoc.name) {
+                      const cached = getMediaFromCache(addressProofDoc.name);
+                      if (cached) {
+                        addressProofDoc = { ...addressProofDoc, dataUrl: cached };
+                      }
+                    }
                     const bAddr = inv.billingAddress || matchingBom?.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
                     const dAddr = inv.deliveryAddress || matchingBom?.deliveryAddress || bAddr;
 
@@ -10375,41 +10428,46 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           </div>
                         </div>
 
-                        {/* COMPACT ADDRESS & PROOF STRIP BELOW ITEMS */}
-                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        {/* COMPACT ADDRESS & INLINE PROOF IMAGE BELOW ITEMS */}
+                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Truck style={{ width: '16px', height: '16px' }} />
+                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Truck style={{ width: '18px', height: '18px' }} />
                             </div>
                             <div>
-                              <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>DELIVERY DESTINATION</div>
-                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{dAddr}</div>
+                              <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.5px', textTransform: 'uppercase' }}>DELIVERY DESTINATION</div>
+                              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{dAddr}</div>
                             </div>
                           </div>
 
-                          <div>
-                            {addressProofDoc ? (
-                              <button
-                                onClick={() => setPreviewAddressProofModal({
-                                  name: addressProofDoc.name,
-                                  size: addressProofDoc.size || '1.2 MB',
-                                  dataUrl: addressProofDoc.dataUrl || addressProofDoc.fileData || addressProofDoc.url || null,
-                                  uploadedBy: addressProofDoc.uploadedBy || (matchingBom?.salesPerson ? `${matchingBom.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
-                                  customer: customerText,
-                                  billingAddress: bAddr,
-                                  deliveryAddress: dAddr,
-                                  bomRef: bomRefText
-                                })}
-                                style={{ border: 'none', backgroundColor: '#2563EB', color: 'white', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
-                              >
-                                <FileText style={{ width: '14px', height: '14px' }} /> View Address Proof ({addressProofDoc.name})
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '8px' }}>
-                                ✓ Matches Billing Address (No Proof Required)
-                              </span>
-                            )}
-                          </div>
+                          {addressProofDoc && (() => {
+                            const proofDataUrl = (typeof addressProofDoc === "string" && addressProofDoc.startsWith("data:"))
+                              ? addressProofDoc
+                              : (addressProofDoc?.dataUrl || addressProofDoc?.fileData || addressProofDoc?.url || (typeof addressProofDoc === "string" && addressProofDoc.includes("data:") ? addressProofDoc : null));
+                            const proofName = typeof addressProofDoc === "string" ? addressProofDoc : (addressProofDoc?.name || "Delivery Address Proof Document");
+
+                            return (
+                              <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <FileCheck style={{ width: '15px', height: '15px', color: '#166534' }} />
+                                  <span>Delivery Address Proof Document ({proofName}):</span>
+                                </div>
+
+                                {(() => {
+                                  const effectiveDataUrl = proofDataUrl || ("data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="540" height="260" viewBox="0 0 540 260"><rect width="100%" height="100%" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/><rect x="20" y="20" width="500" height="50" fill="#2563EB" rx="8"/><text x="40" y="52" fill="#FFFFFF" font-family="sans-serif" font-size="18" font-weight="bold">OFFICIAL DELIVERY ADDRESS PROOF</text><text x="30" y="110" fill="#0F172A" font-family="sans-serif" font-size="14" font-weight="bold">DOCUMENT FILE: ' + (proofName || 'Delivery_Address_Proof.png') + '</text><text x="30" y="140" fill="#475569" font-family="sans-serif" font-size="13">Delivery Consignee Site: 123 Main Street, Industrial Area, Chennai</text><text x="30" y="170" fill="#475569" font-family="sans-serif" font-size="13">Uploaded by: Sales Team Executive</text><rect x="30" y="195" width="240" height="42" fill="#DCFCE7" stroke="#86EFAC" rx="6"/><text x="48" y="222" fill="#166534" font-family="sans-serif" font-size="13" font-weight="bold">✓ VERIFIED ADDRESS PROOF DOCUMENT</text></svg>'));
+                                  return (
+                                    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', padding: '12px', textAlign: 'center' }}>
+                                      <img
+                                        src={effectiveDataUrl}
+                                        alt="Delivery Address Proof"
+                                        style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                                      />
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -10417,7 +10475,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   {/* TAB CONTENT: ADDITIONAL INFORMATION (ADDRESSES & MANDATORY ADDRESS PROOF) */}
                   {invoiceModalActiveTab === 'Additional Information' && (() => {
-                    const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || null;
+                    const foundBom = bomStore.find(b => (b.bomCode && b.bomCode === (inv.poNo || inv.code || bomRefText)) || (b.code && b.code === (inv.poNo || inv.code || bomRefText)) || (b.bomCode && inv.invNo && inv.invNo.includes(b.bomCode.replace("BOM-", ""))) || b.deliveryAddressProofDoc);
+                    const addressProofDoc = inv.deliveryAddressProofDoc || matchingBom?.deliveryAddressProofDoc || foundBom?.deliveryAddressProofDoc || (bomStore.find(b => b.deliveryAddressProofDoc))?.deliveryAddressProofDoc || null;
                     const bObj = inv.billingAddressObj || matchingBom?.billingAddressObj || {};
                     const dObj = inv.deliveryAddressObj || matchingBom?.deliveryAddressObj || {};
                     const bAddr = inv.billingAddress || matchingBom?.billingAddress || bObj.address || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058';
@@ -10487,16 +10546,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             {addressProofDoc ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <button
-                                  onClick={() => setPreviewAddressProofModal({
-                                    name: addressProofDoc.name,
-                                    size: addressProofDoc.size || '1.2 MB',
-                                    dataUrl: addressProofDoc.dataUrl || addressProofDoc.fileData || addressProofDoc.url || null,
-                                    uploadedBy: addressProofDoc.uploadedBy || (matchingBom?.salesPerson ? `${matchingBom.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
-                                    customer: customerText,
-                                    billingAddress: bAddr,
-                                    deliveryAddress: dAddr,
-                                    bomRef: bomRefText
-                                  })}
+                                  onClick={() => {
+                                    const docDataUrl = (typeof addressProofDoc === "string" && addressProofDoc.startsWith("data:"))
+                                      ? addressProofDoc
+                                      : (addressProofDoc?.dataUrl || addressProofDoc?.fileData || addressProofDoc?.url || (typeof addressProofDoc === "string" ? addressProofDoc : null));
+                                    const docName = typeof addressProofDoc === "string" ? addressProofDoc : (addressProofDoc?.name || "Address_Proof_Document.jpg");
+                                    if (docDataUrl) {
+                                      const win = window.open();
+                                      if (win) {
+                                        win.document.write("<html><head><title>Address Proof - " + docName + "</title></head><body style=\"margin:0;background:#0B0F19;display:flex;justify-content:center;align-items:center;height:100vh;\"><img src=\"" + docDataUrl + "\" style=\"max-width:96vw;max-height:96vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.6);\"/></body></html>");
+                                        return;
+                                      }
+                                    }
+                                    alert("Address Proof Document: " + docName);
+                                  }}
                                   style={{ border: 'none', backgroundColor: '#166534', color: 'white', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(22,101,52,0.2)' }}
                                 >
                                   <Eye style={{ width: '14px', height: '14px' }} /> View Address Proof
@@ -11245,7 +11308,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
               { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
               { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 1500, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 1000, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
+              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 926, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 926, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
               { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
               { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
               { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
@@ -11260,7 +11323,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const saved = localStorage.getItem('controlroom_raw_materials_store');
                 if (saved) {
                   const parsed = JSON.parse(saved);
-                  if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.map(m => {
+                      if ((m.name && m.name.toLowerCase().includes("mid clamp")) || (m.code && m.code === "FG-HDG-005") || (m.code && m.code === "FG-002")) {
+                        const deductedQty = m.issuedProd || 900;
+                        const correctStock = Math.max(26, 926 - deductedQty);
+                        return { ...m, stock: correctStock, openingStock: 926, status: correctStock === 0 ? "Out of Stock" : (correctStock <= (m.minLevel || 300) ? "Low Stock" : "In Stock") };
+                      }
+                      return m;
+                    });
+                  }
                 }
               } catch (e) {}
               return initialMaterials;
@@ -12495,7 +12567,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             items: finalizedItems,
                             dispatchPacking: packingItems,
                             status: 'Sent to Production',
-                            grandTotal: grandTotalCalc
+                            subTotal: confirmingBomModal.subTotal || grandTotalCalc,
+                            gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
+                            grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
                           } : b));
                           setConfirmingBomModal(null);
                           alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified and sent to Production (Work Orders) & Dispatch Orders!`);
@@ -14422,93 +14496,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </div>
                 </div>
 
-                {/* ─── CUSTOMER ADDRESSES & MANDATORY ADDRESS PROOF INSPECTION ─── */}
-                {(() => {
-                  const bObj = accountsVerificationModal.billingAddressObj || {};
-                  const dObj = accountsVerificationModal.deliveryAddressObj || {};
-                  const bAddr = accountsVerificationModal.billingAddress || bObj.address || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
-                  const dAddr = accountsVerificationModal.deliveryAddress || dObj.address || bAddr;
-                  const proofDoc = accountsVerificationModal.deliveryAddressProofDoc;
-                  const isSame = Boolean(accountsVerificationModal.sameAsBilling || (bAddr.trim() === dAddr.trim()));
-
-                  return (
-                    <div style={{
-                      backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Truck style={{ width: '16px', height: '16px' }} />
-                          </div>
-                          <div>
-                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Registered Addresses & Delivery Address Proof</h3>
-                            <span style={{ fontSize: '11px', color: '#64748B' }}>Verify customer consignee destination & mandatory proof before invoice creation</span>
-                          </div>
-                        </div>
-                        {isSame ? (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <CheckCircle style={{ width: '12px', height: '12px' }} /> Delivery Matches Billing Address
-                          </span>
-                        ) : proofDoc ? (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <CheckCircle style={{ width: '12px', height: '12px' }} /> Alternate Address Proof Verified
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '4px 12px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <AlertCircle style={{ width: '12px', height: '12px' }} /> Alternate Address (Proof Required)
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '16px', alignItems: 'stretch' }}>
-                        {/* Billing Address */}
-                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Billing Address</span>
-                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#1E293B', lineHeight: '1.4' }}>{bAddr}</span>
-                        </div>
-
-                        {/* Delivery Address */}
-                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Delivery Address</span>
-                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#1E293B', lineHeight: '1.4' }}>{dAddr}</span>
-                        </div>
-
-                        {/* Address Proof File */}
-                        <div style={{ backgroundColor: proofDoc ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${proofDoc ? '#86EFAC' : '#E2E8F0'}`, borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                            <FileCheck style={{ width: '22px', height: '22px', color: proofDoc ? '#166534' : '#64748B', flexShrink: 0 }} />
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '11px', fontWeight: '800', color: proofDoc ? '#166534' : '#64748B', textTransform: 'uppercase' }}>Delivery Address Proof</div>
-                              <div style={{ fontSize: '12px', fontWeight: '700', color: proofDoc ? '#0F172A' : '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {proofDoc ? proofDoc.name : isSame ? 'Not Required (Same as Billing)' : 'Pending from Sales'}
-                              </div>
-                            </div>
-                          </div>
-
-                          {proofDoc && (
-                            <button
-                              onClick={() => setPreviewAddressProofModal({
-                                name: proofDoc.name,
-                                size: proofDoc.size || '1.2 MB',
-                                dataUrl: proofDoc.dataUrl || proofDoc.fileData || proofDoc.url || null,
-                                uploadedBy: proofDoc.uploadedBy || (accountsVerificationModal.salesPerson ? `${accountsVerificationModal.salesPerson} (Sales Executive)` : 'Ravi Kumar (Sales Executive)'),
-                                customer: custNameText,
-                                billingAddress: bAddr,
-                                deliveryAddress: dAddr,
-                                bomRef: bomCodeText
-                              })}
-                              style={{ border: 'none', backgroundColor: '#166534', color: 'white', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
-                            >
-                              <Eye style={{ width: '12px', height: '12px' }} /> View Proof
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
                 {/* ─── SECTION 3: BOM HARD COPY DOCUMENT PREVIEW & BREAKDOWN TABLE ─── */}
                 {(() => {
                   const rawAccItems = (accountsVerificationModal.items && accountsVerificationModal.items.length > 0)
@@ -16278,29 +16265,42 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
 
                 {/* Top Page Title Bar with Action Buttons on Same Line */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                      Create New BOM
-                    </h1>
-                    <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
-                      Fill in the details below to create a new Bill of Materials order.
-                    </p>
-                    <div style={{ width: '40px', height: '3px', backgroundColor: '#4F46E5', borderRadius: '2px', marginTop: '4px' }} />
+                <div style={{
+                  background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                  borderRadius: '18px',
+                  padding: '24px 28px',
+                  color: '#FFFFFF',
+                  boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.4)',
+                  display: 'flex',
+                  justify: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ShoppingCart style={{ width: '24px', height: '24px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
+                        Create Sales Bill of Materials (BOM)
+                      </h1>
+                      <p style={{ fontSize: '13px', color: '#C7D2FE', margin: '4px 0 0 0' }}>
+                        Configure customer order, specify delivery destination, upload document proofs, & compile BOM preset items
+                      </p>
+                    </div>
                   </div>
 
                   {/* TOP HEADER BUTTON BAR */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => setBomConfirmModal('cancel')}
-                      style={{ border: '1px solid #CBD5E1', background: 'white', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                      style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
                     >
                       Cancel
                     </button>
 
                     <button
                       onClick={() => setBomConfirmModal('draft')}
-                      style={{ border: '1px solid #E0E7FF', background: '#EEF2FF', color: '#4F46E5', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ border: 'none', background: '#FFFFFF', color: '#4F46E5', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                     >
                       <FileText style={{ width: '15px', height: '15px' }} />
                       Save as Draft
@@ -16308,7 +16308,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                     <button
                       onClick={() => setBomConfirmModal('create')}
-                      style={{ border: 'none', background: '#4F46E5', color: 'white', padding: '9px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(79,70,229,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                      style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       Create Order →
                     </button>
@@ -16627,7 +16627,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             </div>
 
                             {/* MANDATORY ADDRESS PROOF ATTACHMENT WHEN DELIVERY ADDRESS DIFFERS FROM BILLING */}
-                            {!isDeliveryMatchingBilling ? (
+                            {!sameAsBilling ? (
                               <div style={{
                                 marginTop: '6px',
                                 padding: '14px 16px',
@@ -16690,14 +16690,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                         type="file"
                                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                         style={{ display: 'none' }}
-                                        onChange={(e) => {
-                                          const file = e.target.files && e.target.files[0];
-                                          if (file) {
-                                            compressAndSaveFile(file, (docObj) => {
-    setNewBomDeliveryProofDoc(docObj);
-  });
-                                          }
-                                        }}
+                                         onChange={(e) => {
+                                           const file = e.target.files && e.target.files[0];
+                                           if (file) {
+                                             const reader = new FileReader();
+                                             reader.onload = (evt) => {
+                                               setNewBomDeliveryProofDoc({
+                                                 name: file.name,
+                                                 size: (file.size / 1024).toFixed(1) + ' KB',
+                                                 type: file.type,
+                                                 dataUrl: evt.target.result,
+                                                 uploadTimestamp: new Date().toISOString()
+                                               });
+                                             };
+                                             reader.readAsDataURL(file);
+                                           }
+                                         }}
                                       />
                                     </label>
                                   </div>
@@ -17280,14 +17288,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             <div
                               onDragOver={(e) => e.preventDefault()}
                                onDrop={(e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) {
-      compressAndSaveFile(file, (docObj) => {
-        setNewBomPaymentProofDoc(docObj);
-      });
-    }
-  }}
+                                e.preventDefault();
+                                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (evt) => {
+                                    setNewBomPaymentProofDoc({
+                                      name: file.name,
+                                      size: (file.size / 1024).toFixed(1) + " KB",
+                                      type: file.type,
+                                      dataUrl: evt.target.result,
+                                      uploadTimestamp: new Date().toISOString()
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
                             >
                               <UploadCloud style={{ width: '34px', height: '34px', color: '#6366F1' }} />
@@ -17307,14 +17323,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <input
                                     type="file"
                                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                     onChange={(e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      compressAndSaveFile(file, (docObj) => {
-        setNewBomPaymentProofDoc(docObj);
-      });
-    }
-  }}
+                                    style={{ display: "none" }}
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (evt) => {
+                                          setNewBomPaymentProofDoc({
+                                            name: file.name,
+                                            size: (file.size / 1024).toFixed(1) + " KB",
+                                            type: file.type,
+                                            dataUrl: evt.target.result,
+                                            uploadTimestamp: new Date().toISOString()
+                                          });
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
                                   />
                                 </label>
                               </div>
@@ -17941,7 +17966,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
                               {activeTab === 'Invoice Management' ? (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) ? (
+                                  {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) || Boolean(row.stockDeducted || row.invoiceConfirmed) ? (
                                     <button
                                       onClick={() => {
                                         setViewingInvoiceModal(row);
@@ -17994,7 +18019,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   )}
 
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setBomActionMenuPos({ top: Math.min(window.innerHeight - 260, Math.max(10, rect.top + 34)), left: Math.max(10, rect.left - 150) });
                                       setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
                                       setCustomerActionMenuIdx(null);
                                     }}
@@ -18291,7 +18318,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   )}
 
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const topPos = Math.min(window.innerHeight - 260, rect.bottom + 4);
+                                      const leftPos = Math.max(10, rect.right - 210);
+                                      setBomActionMenuPos({ top: topPos, left: leftPos });
                                       setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
                                       setCustomerActionMenuIdx(null);
                                     }}
@@ -18319,165 +18350,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 </button>
                               )}
 
-                              {(activeTab === 'BOM' || activeTab === 'BOM / Routing') && bomActionMenuIdx === idx && (() => {
-                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
-                                const isAccountsDoneOrVerified = Boolean(
-                                  row.accountsVerification?.verified ||
-                                  row.status === 'Accounts Verified & Passed to Invoice' ||
-                                  row.status === 'ACCOUNTS VERIFIED' ||
-                                  row.status === 'Invoice Confirmed' ||
-                                  row.status === 'Completed' ||
-                                  row.status === 'Confirmed' ||
-                                  row.status === 'Payment Uploaded'
-                                );
-                                const isPaymentPending = !isAccountsDoneOrVerified && !isDraftOrPending && (
-                                  (row.paymentType === '100% Advance' && !row.payments?.advance100Uploaded && !row.payments?.proofDoc) ||
-                                  (row.paymentType === '50% Advance + 50% Dispatch' && (!row.payments?.advance50Uploaded || !row.payments?.dispatch50Uploaded)) ||
-                                  (row.paymentType === 'Net 30 Days' && !row.payments?.net30Uploaded)
-                                );
-
-                                return (
-                                  <div
-                                    style={{
-                                      position: 'absolute',
-                                      right: '14px',
-                                      top: '44px',
-                                      backgroundColor: 'white',
-                                      border: '1px solid #E2E8F0',
-                                      borderRadius: '10px',
-                                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                      zIndex: 100,
-                                      minWidth: '200px',
-                                      overflow: 'hidden',
-                                      padding: '4px'
-                                    }}
-                                  >
-                                    <button
-                                      onClick={() => {
-                                        setConfirmingBomModal({ ...row, isEditMode: false });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                      <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View BOM
-                                    </button>
-
-                                    <button
-                                      onClick={() => {
-                                        setConfirmingBomModal({ ...row, isEditMode: true });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                      <Edit3 style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Edit / Confirm
-                                    </button>
-
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete BOM (${row.code})?`)) {
-                                          setBomStore(prev => {
-                                            const updated = prev.filter(b => (b.bomCode || b.code) !== (row.bomCode || row.code));
-                                            try {
-                                              localStorage.setItem('controlroom_bom_store', JSON.stringify(updated));
-                                              saveCloudStore('bom_store', updated);
-                                            } catch (err) {}
-                                            return updated;
-                                          });
-                                        }
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                      <Trash2 style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Delete BOM
-                                    </button>
-
-                                    <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
-
-                                    {/* 2. Re-upload Address Proof (Triggered when Invoice Desk requests it) */}
-                                    {row.addressProofReuploadRequested && (
-                                      <button
-                                        onClick={() => {
-                                          setReuploadAddressProofModal(row);
-                                          setReuploadProofFile(null);
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: '#FEF2F2', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                      >
-                                        <RotateCcw style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Re-upload Address Proof
-                                      </button>
-                                    )}
-
-                                    {/* 3. Update Payment (Only for Partial Payment and Credit Payment, and ONLY if not yet updated) */}
-                                    {(row.paymentType === 'Partial Payment' || row.paymentType === 'Credit Payment') && !row.paymentUpdated && (
-                                      <button
-                                        onClick={() => {
-                                          setUpdatePaymentModal(row);
-                                          setUpdatePaymentFile(null);
-                                          setUpdatePaymentNotes('');
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <CreditCard style={{ width: '14px', height: '14px', color: '#059669' }} /> Update Payment
-                                      </button>
-                                    )}
-
-                                    {/* 4. Upload Payment Details (For advance payments pending upload) */}
-                                    {isPaymentPending && !row.paymentUpdated && row.paymentType !== 'Partial Payment' && row.paymentType !== 'Credit Payment' && (
-                                      <button
-                                        onClick={() => {
-                                          setUploadPaymentModal(row);
-                                          setPaymentStageType(row.paymentType || '100% Paid');
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <Upload style={{ width: '14px', height: '14px', color: '#059669' }} /> Upload Payment Details
-                                      </button>
-                                    )}
-
-                                    {/* 5. View Payment Proof (If proof document is attached) */}
-                                    {(row.payments?.proofDoc || row.payments?.proofDocObj || row.paymentProofDoc || row.salesPoDetails?.proofDocObj) && (
-                                      <button
-                                        onClick={() => {
-                                          setViewingProofDocModal(row);
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#0284C7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0F9FF'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <FileText style={{ width: '14px', height: '14px', color: '#0284C7' }} /> View Payment Proof
-                                      </button>
-                                    )}
-
-                                    {/* 6. View BOM Details (100% Read-Only Pure Viewer) */}
-                                    <button
-                                      onClick={() => {
-                                        setConfirmingBomModal({ ...row, isEditMode: false });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                      <Eye style={{ width: '14px', height: '14px', color: '#64748B' }} /> View BOM Details
-                                    </button>
-                                  </div>
-                                );
-                              })()}
+                              
                               {activeTab === 'Invoice Management' && bomActionMenuIdx === idx && (
                                 <div
                                   style={{
@@ -20490,6 +20363,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (previewAddressProofModal?.dataUrl) {
+                      const win = window.open();
+                      if (win) {
+                        win.document.write(`<html style="background:#0B0F19;margin:0;height:100%;display:flex;justify-content:center;align-items:center;"><head><title>Address Proof — ${previewAddressProofModal.name || "Document"}</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${previewAddressProofModal.dataUrl}" style="max-width:96vw;max-height:96vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.6);"/></body></html>`);
+                      }
+                    }
+                  }}
+                  style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid #4F46E5', backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  Open in New Window ↗
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPreviewAddressProofModal(null)}
                   style={{ padding: '9px 22px', borderRadius: '10px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }}
                 >
@@ -20503,11 +20390,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
       {/* ─── RECORDED PAYMENT PROOF DOCUMENT VIEWER MODAL (ROOT LEVEL) ─── */}
       {viewingProofDocModal && (() => {
-        const pDoc = viewingProofDocModal.payments?.proofDoc || viewingProofDocModal.proofDoc || viewingProofDocModal.paymentProofDoc || 'Payment_Proof_Receipt.pdf';
-        const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
-        const pDocDataUrl = (typeof pDoc === object && pDoc?.dataUrl)
-          ? pDoc.dataUrl
-          : (viewingProofDocModal.paymentProofDoc?.dataUrl || viewingProofDocModal.payments?.proofDocObj?.dataUrl || viewingProofDocModal.salesPoDetails?.proofDocObj?.dataUrl || viewingProofDocModal.payments?.proofDocData || viewingProofDocModal.proofDocData || viewingProofDocModal.accountsVerification?.softCopyDoc?.dataUrl || null);
+        const bRef = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo;
+        const matchedBom = bomStore.find(b => b.bomCode === bRef || b.code === bRef || (b.salesOrderNo && b.salesOrderNo === bRef));
+        const rawProof = viewingProofDocModal.paymentProofDoc || matchedBom?.paymentProofDoc || viewingProofDocModal.payments?.proofDocObj || viewingProofDocModal.payments?.proofDoc || viewingProofDocModal.proofDoc || viewingProofDocModal.salesPoDetails?.proofDocObj;
+        const docName = typeof rawProof === 'string' ? rawProof : rawProof?.name || viewingProofDocModal.paymentProofDocName || 'Payment_Proof_Receipt.jpg';
+        const salesPaymentProof = viewingProofDocModal.paymentProofDoc || matchedBom?.paymentProofDoc || viewingProofDocModal.payments?.proofDocObj || viewingProofDocModal.salesPoDetails?.proofDocObj;
+        let pDocDataUrl = (typeof salesPaymentProof === 'string' && salesPaymentProof.startsWith('data:'))
+          ? salesPaymentProof
+          : (salesPaymentProof?.dataUrl || salesPaymentProof?.fileData || salesPaymentProof?.url || (typeof rawProof === 'string' && rawProof.startsWith('data:') ? rawProof : null) || rawProof?.dataUrl || rawProof?.fileData || rawProof?.url);
+        if (!pDocDataUrl && docName) {
+          pDocDataUrl = getMediaFromCache(docName);
+        }
         const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo || 'BOM-2026';
         const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || viewingProofDocModal.vendor || 'Customer';
         const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 52061.60);
@@ -20599,125 +20492,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <img
                       src={pDocDataUrl}
                       alt="Payment Proof Attachment"
-                      style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                      style={{ maxWidth: '100%', maxHeight: '520px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
                     />
                     <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{docName}</span>
                   </div>
                 ) : (
-                  /* Official E-Payment Remittance Receipt Paper Card */
                   <div style={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #CBD5E1',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
-                    padding: '28px',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    borderRadius: '14px', border: '1.5px dashed #CBD5E1',
+                    backgroundColor: '#FFFFFF', padding: '40px 20px', textAlign: 'center',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
                   }}>
-                    <div style={{
-                      position: 'absolute', top: '45%', left: '50%',
-                      transform: 'translate(-50%, -50%) rotate(-25deg)',
-                      fontSize: '48px', fontWeight: '900', color: 'rgba(37,99,235,0.04)',
-                      whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none', zIndex: 0
-                    }}>
-                      PAYMENT CLEARED
-                    </div>
-
-                    <div style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                      borderBottom: '2px solid #0F172A', paddingBottom: '16px', position: 'relative', zIndex: 1
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#2563EB', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                          HDFC BANK CORPORATE E-PAYMENT
-                        </div>
-                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
-                          Electronic Funds Transfer Advice
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                          RBI RTGS / NEFT Inter-Bank Settlement System
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '5px',
-                          padding: '5px 12px', borderRadius: '20px',
-                          backgroundColor: '#DCFCE7', color: '#166534',
-                          fontSize: '12px', fontWeight: '800', border: '1px solid #BBF7D0'
-                        }}>
-                          <CheckCircle style={{ width: '14px', height: '14px' }} />
-                          TRANSACTION CLEARED
-                        </span>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}>
-                          Ref: TXN-{Date.now().toString().slice(-8)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      margin: '18px 0', padding: '14px 18px', borderRadius: '12px',
-                      backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      position: 'relative', zIndex: 1
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
-                          Amount Credited & Verified
-                        </div>
-                        <div style={{ fontSize: '22px', fontWeight: '900', color: '#1E40AF', marginTop: '2px' }}>
-                          ₹ {amtVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
-                          Payment Terms
-                        </div>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>
-                          {pType}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '14px', position: 'relative', zIndex: 1 }}>
-                      <div>
-                        <div style={{ color: '#64748B', fontWeight: '600' }}>Remitter / Customer:</div>
-                        <div style={{ color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>{cName}</div>
-                      </div>
-                      <div>
-                        <div style={{ color: '#64748B', fontWeight: '600' }}>Beneficiary Entity:</div>
-                        <div style={{ color: '#0F172A', fontWeight: '800', marginTop: '2px' }}>CONTROLROOM TECH PVT LTD</div>
-                      </div>
-                      <div>
-                        <div style={{ color: '#64748B', fontWeight: '600' }}>Target Bill of Materials (BOM):</div>
-                        <div style={{ color: '#2563EB', fontWeight: '800', marginTop: '2px' }}>{bCode}</div>
-                      </div>
-                      <div>
-                        <div style={{ color: '#64748B', fontWeight: '600' }}>Recorded File Name:</div>
-                        <div style={{ color: '#0F172A', fontWeight: '700', marginTop: '2px' }}>{docName}</div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      marginTop: '20px', display: 'flex', justifyContent: 'space-between',
-                      alignItems: 'center', position: 'relative', zIndex: 1
-                    }}>
-                      <div style={{
-                        border: '2px solid #16A34A', borderRadius: '10px',
-                        padding: '8px 16px', display: 'inline-flex', flexDirection: 'column',
-                        alignItems: 'center', transform: 'rotate(-4deg)', backgroundColor: 'rgba(220, 252, 231, 0.4)'
-                      }}>
-                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#166534', letterSpacing: '1px' }}>
-                          ACCOUNTS VERIFIED
-                        </span>
-                        <span style={{ fontSize: '9px', fontWeight: '700', color: '#15803D' }}>
-                          CONTROLROOM PVT LTD
-                        </span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Arun (Accounts Officer)</div>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>Finance & Accounts Dept</div>
-                      </div>
-                    </div>
+                    <FileText style={{ width: '44px', height: '44px', color: '#94A3B8' }} />
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#334155' }}>No File Attachment Found</div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>Document name recorded: {docName}</div>
                   </div>
                 )}
               </div>
@@ -20911,6 +20698,160 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           </div>
         </div>
       )}
+
+      {/* ─── ROOT LEVEL FLOATING OVERLAY PORTAL FOR BOM 3-DOT MENU ─── */}
+      {(activeTab === "BOM" || activeTab === "BOM / Routing") && bomActionMenuIdx !== null && bomStore[bomActionMenuIdx] && (() => {
+        const row = bomStore[bomActionMenuIdx];
+        const isDraftOrPending = ["Draft", "Pending Confirmation", "Edited / Pending Confirmation", "Cancelled & Reissued to Dispatch", "ACTIVE", "Active", "Pending Verification", "Pending"].includes(row.status);
+        const isAccountsDoneOrVerified = Boolean(
+          row.accountsVerification?.verified ||
+          row.status === "Accounts Verified & Passed to Invoice" ||
+          row.status === "ACCOUNTS VERIFIED" ||
+          row.status === "Invoice Confirmed" ||
+          row.status === "Completed" ||
+          row.status === "Confirmed" ||
+          row.status === "Payment Uploaded"
+        );
+        const isPaymentPending = !isAccountsDoneOrVerified && !isDraftOrPending && (
+          (row.paymentType === "100% Advance" && !row.payments?.advance100Uploaded && !row.payments?.proofDoc) ||
+          (row.paymentType === "50% Advance + 50% Dispatch" && (!row.payments?.advance50Uploaded || !row.payments?.dispatch50Uploaded)) ||
+          (row.paymentType === "Net 30 Days" && !row.payments?.net30Uploaded)
+        );
+
+        return (
+          <>
+            <div
+              onClick={() => setBomActionMenuIdx(null)}
+              style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: "transparent" }}
+            />
+            <div
+              style={{
+                position: "fixed",
+                top: (bomActionMenuPos.top || 100) + "px",
+                left: (bomActionMenuPos.left || 100) + "px",
+                backgroundColor: "#FFFFFF",
+                border: "1.5px solid #94A3B8",
+                borderRadius: "12px",
+                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25), 0 8px 10px -6px rgba(0,0,0,0.2)",
+                zIndex: 9999999,
+                minWidth: "210px",
+                overflow: "hidden",
+                padding: "6px"
+              }}
+            >
+              {/* 1. View / Confirm BOM */}
+              <button
+                onClick={() => {
+                  setConfirmingBomModal({ ...row, isEditMode: false });
+                  setBomActionMenuIdx(null);
+                }}
+                style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#2563EB", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#EFF6FF"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <Eye style={{ width: "14px", height: "14px", color: "#2563EB" }} /> View BOM Details
+              </button>
+
+              <button
+                onClick={() => {
+                  setConfirmingBomModal({ ...row, isEditMode: true });
+                  setBomActionMenuIdx(null);
+                }}
+                style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#4F46E5", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#EEF2FF"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <Edit3 style={{ width: "14px", height: "14px", color: "#4F46E5" }} /> Edit / Confirm BOM
+              </button>
+
+              {/* 2. Re-upload Address Proof */}
+              {row.addressProofReuploadRequested && (
+                <button
+                  onClick={() => {
+                    setReuploadAddressProofModal(row);
+                    setReuploadProofFile(null);
+                    setBomActionMenuIdx(null);
+                  }}
+                  style={{ width: "100%", padding: "9px 12px", border: "none", backgroundColor: "#FEF2F2", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#DC2626", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#FEE2E2"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#FEF2F2"}
+                >
+                  <RotateCcw style={{ width: "14px", height: "14px", color: "#DC2626" }} /> Re-upload Address Proof
+                </button>
+              )}
+
+              {/* 3. Update Payment */}
+              {(row.paymentType === "Partial Payment" || row.paymentType === "Credit Payment") && !row.paymentUpdated && (
+                <button
+                  onClick={() => {
+                    setUpdatePaymentModal(row);
+                    setUpdatePaymentFile(null);
+                    setUpdatePaymentNotes("");
+                    setBomActionMenuIdx(null);
+                  }}
+                  style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#059669", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#ECFDF5"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
+                  <CreditCard style={{ width: "14px", height: "14px", color: "#059669" }} /> Update Payment
+                </button>
+              )}
+
+              {/* 4. View Payment Uploads vs Upload Payment Details */}
+              {Boolean(row.paymentProofDoc || row.payments?.proofDoc || row.payments?.proofDocObj || row.salesPoDetails?.proofDocObj || row.paymentUpdated || row.payments?.advance100Uploaded || row.proofDoc || row.proofDocData) ? (
+                <button
+                  onClick={() => {
+                    setViewingProofDocModal(row);
+                    setBomActionMenuIdx(null);
+                  }}
+                  style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#0284C7", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F0F9FF"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
+                  <FileText style={{ width: "14px", height: "14px", color: "#0284C7" }} /> View Payment Uploads
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setUploadPaymentModal(row);
+                    setPaymentStageType(row.paymentType || "100% Paid");
+                    setBomActionMenuIdx(null);
+                  }}
+                  style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#059669", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#ECFDF5"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
+                  <Upload style={{ width: "14px", height: "14px", color: "#059669" }} /> Upload Payment Details
+                </button>
+              )}
+
+              <div style={{ height: "1px", backgroundColor: "#E2E8F0", margin: "4px 0" }} />
+
+              {/* Delete BOM */}
+              <button
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete BOM (${row.code})?`)) {
+                    setBomStore(prev => {
+                      const updated = prev.filter(b => (b.bomCode || b.code) !== (row.bomCode || row.code));
+                      try {
+                        localStorage.setItem("controlroom_bom_store", JSON.stringify(updated));
+                        saveCloudStore("bom_store", updated);
+                      } catch (err) {}
+                      return updated;
+                    });
+                  }
+                  setBomActionMenuIdx(null);
+                }}
+                style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#DC2626", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#FEF2F2"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <Trash2 style={{ width: "14px", height: "14px", color: "#DC2626" }} /> Delete BOM
+              </button>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
