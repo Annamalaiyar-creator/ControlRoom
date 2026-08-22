@@ -18385,7 +18385,33 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 })()
                               ) : (activeTab === 'BOM' || activeTab === 'BOM / Routing') ? (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status) ? (
+                                  {(row.addressProofReuploadRequested || row.status === 'Wrong Proof' || row.addressProofStatus === 'Wrong Proof') ? (
+                                    <button
+                                      onClick={() => {
+                                        setReuploadAddressProofModal(row);
+                                        setReuploadProofFile(null);
+                                        setBomActionMenuIdx(null);
+                                      }}
+                                      style={{
+                                        backgroundColor: '#FEF2F2',
+                                        color: '#DC2626',
+                                        border: '1px solid #FECACA',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                    >
+                                      <RotateCcw style={{ width: '13px', height: '13px', color: '#DC2626' }} /> Re-upload Address Proof
+                                    </button>
+                                  ) : ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status) ? (
                                     <button
                                       onClick={() => {
                                         setConfirmingBomModal({ ...row, isEditMode: true });
