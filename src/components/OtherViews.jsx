@@ -10811,14 +10811,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           // Dynamically compute unified invoices list ensuring ONLY Accounts-Verified BOMs show up in Invoice Management
           const verifiedBomInvoices = (bomStore || [])
-            .filter(b => b && (b.bomCode || b.code) && (b.accountsVerification?.verified === true || b.status === 'Accounts Verified & Passed to Invoice' || b.status === 'Invoice Confirmed' || b.invoiceConfirmed === true))
+            .filter(b => b && (b.bomCode || b.code) && (
+              b.accountsVerification?.verified === true ||
+              b.status === 'Accounts Verified & Passed to Invoice' ||
+              b.status === 'Invoice Confirmed' ||
+              b.status === 'Ready for Payment' ||
+              b.invoiceConfirmed === true
+            ))
             .map(b => {
               const bCode = b.bomCode || b.code || 'BOM-2026';
               const cleanNum = bCode.replace(/[^0-9]/g, '') || '101';
               const invNo = b.invoiceNo || `INV-2026-${cleanNum}`;
               const oVal = parseFloat(b.grandTotal || 0);
               const isConf = b.status === 'Invoice Confirmed' || b.status === 'Completed' || b.invoiceConfirmed;
-              
+              const statusVal = isConf ? 'Invoice Confirmed' : (b.status === 'Accounts Verified & Passed to Invoice' ? 'Accounts Verified & Passed to Invoice' : 'Ready for Payment');
+
               const packedItems = (b.dispatchPacking && Array.isArray(b.dispatchPacking) && b.dispatchPacking.length > 0)
                 ? b.dispatchPacking.map((p, pIdx) => ({
                     code: p.code || `PRD-00${pIdx + 1}`,
@@ -10846,7 +10853,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 grnVal: `₹ ${oVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                 diff: '0.00', match: 'Matched',
                 pay: isConf ? 'Completed & Locked' : 'Ready for Payment',
-                status: isConf ? 'Invoice Confirmed' : 'Ready for Payment',
+                status: statusVal,
                 items: packedItems,
                 dispatchPacking: b.dispatchPacking,
                 billingAddress: b.billingAddress,
@@ -10922,13 +10929,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               searchPlaceholder: 'Search Invoices (Invoice No, Customer / Vendor, BOM Ref)...',
               tabs: [
                 { id: 'All', label: 'All Invoices', count: allInvoicesUnified.length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Ready for Payment', label: 'Ready for Payment', count: allInvoicesUnified.filter(i => i.status === 'Ready for Payment' || i.pay === 'Ready' || i.pay === 'Ready for Payment').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Ready for Payment', label: 'Ready for Payment', count: allInvoicesUnified.filter(i => i.status === 'Ready for Payment' || i.status === 'Accounts Verified & Passed to Invoice' || i.pay === 'Ready' || i.pay === 'Ready for Payment').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Invoice Confirmed', label: 'Confirmed', count: allInvoicesUnified.filter(i => i.status === 'Invoice Confirmed' || i.pay === 'Completed & Locked').length, bg: '#dcfce7', fg: '#166534' },
                 { id: 'On Hold', label: 'On Hold', count: allInvoicesUnified.filter(i => i.status === 'On Hold' || i.pay === 'Hold').length, bg: '#fee2e2', fg: '#991b1b' }
               ],
               headers: ['Invoice No.', 'Customer / Vendor', 'BOM Ref', 'Invoice Date', 'Invoice Amount (₹)', 'Payment Status', 'Status', 'Action'],
               rows: allInvoicesUnified.map(i => {
                 const isConfirmed = i.status === 'Invoice Confirmed' || i.status === 'Completed' || i.status === 'Confirmed' || i.pay === 'Completed & Locked';
-                const isReady = i.status === 'Ready for Payment' || i.pay === 'Ready' || i.pay === 'Ready for Payment';
+                const isReady = i.status === 'Ready for Payment' || i.status === 'Accounts Verified & Passed to Invoice' || i.pay === 'Ready' || i.pay === 'Ready for Payment';
 
                 return {
                   ...i,
@@ -10942,7 +10950,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   stBg: isConfirmed ? '#DCFCE7' : (isReady ? '#EFF6FF' : '#FEF3C7'),
                   stFg: isConfirmed ? '#166534' : (isReady ? '#2563EB' : '#B45309'),
                   stBorder: isConfirmed ? '1px solid #86EFAC' : (isReady ? '1px solid #BFDBFE' : '1px solid #FDE68A'),
-                  tabGroup: i.status || 'Ready for Payment'
+                  tabGroup: isConfirmed ? 'Invoice Confirmed' : (isReady ? 'Ready for Payment' : 'On Hold')
                 };
               })
             },
