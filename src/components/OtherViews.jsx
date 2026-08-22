@@ -10878,9 +10878,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               (b.salesOrderNo && (b.salesOrderNo === inv.poNo || b.salesOrderNo === inv.c3))
             );
             if (matchingBom) {
-              return matchingBom.accountsVerification?.verified === true || matchingBom.status === 'Accounts Verified & Passed to Invoice' || matchingBom.status === 'Invoice Confirmed' || matchingBom.invoiceConfirmed === true;
+              return matchingBom.accountsVerification?.verified === true ||
+                matchingBom.status === 'Accounts Verified & Passed to Invoice' ||
+                matchingBom.status === 'Invoice Confirmed' ||
+                matchingBom.status === 'Ready for Payment' ||
+                matchingBom.invoiceConfirmed === true;
             }
-            return false;
+            // Standalone or pre-existing invoices stay visible
+            return true;
           }).map(inv => {
             const matchingBom = (bomStore || []).find(b =>
               b.bomCode === inv.poNo ||
