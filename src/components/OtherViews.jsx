@@ -20894,7 +20894,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               </button>
 
               {/* 2. Re-upload Address Proof */}
-              {row.addressProofReuploadRequested && (
+              {(row.addressProofReuploadRequested || row.status === 'Wrong Proof' || row.addressProofStatus === 'Wrong Proof') && (
                 <button
                   onClick={() => {
                     setReuploadAddressProofModal(row);
