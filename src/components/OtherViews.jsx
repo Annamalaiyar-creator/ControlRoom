@@ -20915,32 +20915,51 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               )}
 
               {/* 4. View Payment Uploads vs Upload Payment Details */}
-              {Boolean(row.paymentProofDoc || row.payments?.proofDoc || row.payments?.proofDocObj || row.salesPoDetails?.proofDocObj || row.paymentUpdated || row.payments?.advance100Uploaded || row.proofDoc || row.proofDocData) ? (
-                <button
-                  onClick={() => {
-                    setViewingProofDocModal(row);
-                    setBomActionMenuIdx(null);
-                  }}
-                  style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#0284C7", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F0F9FF"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                >
-                  <FileText style={{ width: "14px", height: "14px", color: "#0284C7" }} /> View Payment Uploads
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setUploadPaymentModal(row);
-                    setPaymentStageType(row.paymentType || "100% Paid");
-                    setBomActionMenuIdx(null);
-                  }}
-                  style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#059669", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#ECFDF5"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                >
-                  <Upload style={{ width: "14px", height: "14px", color: "#059669" }} /> Upload Payment Details
-                </button>
-              )}
+              {(() => {
+                const bRef = row.bomCode || row.code || row.poNo;
+                const matched = (bomStore || []).find(b => b.bomCode === bRef || b.code === bRef);
+                const hasProof = Boolean(
+                  row.paymentProofDoc ||
+                  row.payments?.proofDoc ||
+                  row.payments?.proofDocObj ||
+                  row.salesPoDetails?.proofDocObj ||
+                  row.paymentUpdated ||
+                  row.payments?.advance100Uploaded ||
+                  row.proofDoc ||
+                  row.proofDocData ||
+                  matched?.paymentProofDoc ||
+                  matched?.payments?.proofDoc ||
+                  matched?.payments?.proofDocObj ||
+                  matched?.paymentUpdated ||
+                  matched?.payments?.advance100Uploaded
+                );
+                return hasProof ? (
+                  <button
+                    onClick={() => {
+                      setViewingProofDocModal(matched || row);
+                      setBomActionMenuIdx(null);
+                    }}
+                    style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#0284C7", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F0F9FF"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  >
+                    <FileText style={{ width: "14px", height: "14px", color: "#0284C7" }} /> View Payment Uploads
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setUploadPaymentModal(row);
+                      setPaymentStageType(row.paymentType || "100% Paid");
+                      setBomActionMenuIdx(null);
+                    }}
+                    style={{ width: "100%", padding: "9px 12px", border: "none", background: "transparent", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#059669", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px" }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#ECFDF5"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  >
+                    <Upload style={{ width: "14px", height: "14px", color: "#059669" }} /> Upload Payment Details
+                  </button>
+                );
+              })()}
 
               <div style={{ height: "1px", backgroundColor: "#E2E8F0", margin: "4px 0" }} />
 
