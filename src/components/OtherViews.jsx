@@ -14163,6 +14163,36 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   {!isAlreadyCompleted && (
                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                       <button
+                        onClick={() => {
+                          const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
+                          setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
+                            ...b,
+                            status: 'Wrong Proof',
+                            addressProofStatus: 'Wrong Proof',
+                            addressProofReuploadRequested: true,
+                            addressProofRequestedAt: new Date().toISOString()
+                          } : b));
+
+                          setInvoiceList(prev => (prev || []).map(i => (i.invNo === accountsVerificationModal.invNo || i.poNo === targetCode || i.code === targetCode) ? {
+                            ...i,
+                            status: 'Pending Address Proof',
+                            addressProofStatus: 'Wrong Proof',
+                            addressProofReuploadRequested: true
+                          } : i));
+
+                          alert(`⚠️ Address Proof Request sent to Sales team for ${targetCode}! Status updated to "Wrong Proof".`);
+                          setAccountsVerificationModal(null);
+                        }}
+                        style={{
+                          border: '1px solid #FDBA74', backgroundColor: '#FFF7ED',
+                          color: '#C2410C', height: '42px', padding: '0 16px', borderRadius: '10px',
+                          fontSize: '13px', fontWeight: '800', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}
+                      >
+                        <AlertCircle style={{ width: '15px', height: '15px', color: '#C2410C' }} /> Request Address Proof
+                      </button>
+                      <button
                         onClick={() => setAccountsVerificationModal(null)}
                         style={{
                           border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)',
