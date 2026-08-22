@@ -85,46 +85,53 @@ const compressAndSaveFile = (file, callback) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     const rawDataUrl = e.target ? e.target.result : null;
-    if (!isImg || !rawDataUrl) {
-      baseMeta.dataUrl = rawDataUrl;
+    if (!rawDataUrl) {
       return callback(baseMeta);
     }
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        let width = img.width || 600;
-        let height = img.height || 400;
-        const maxDim = 500;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
+    if (isImg) {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          let width = img.width || 600;
+          let height = img.height || 400;
+          const maxDim = 600;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
           }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedData = canvas.toDataURL("image/jpeg", 0.6);
+          baseMeta.dataUrl = compressedData;
+          if (baseMeta.name) {
+            saveMediaToCache(baseMeta.name, compressedData);
+          }
+          callback(baseMeta);
+        } catch (err) {
+          baseMeta.dataUrl = rawDataUrl;
+          if (baseMeta.name) saveMediaToCache(baseMeta.name, rawDataUrl);
+          callback(baseMeta);
         }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedData = canvas.toDataURL("image/jpeg", 0.5);
-        baseMeta.dataUrl = compressedData;
-        if (baseMeta.name) {
-          saveMediaToCache(baseMeta.name, compressedData);
-        }
-        callback(baseMeta);
-      } catch (err) {
+      };
+      img.onerror = () => {
         baseMeta.dataUrl = rawDataUrl;
+        if (baseMeta.name) saveMediaToCache(baseMeta.name, rawDataUrl);
         callback(baseMeta);
-      }
-    };
-    img.onerror = () => {
+      };
+      img.src = rawDataUrl;
+    } else {
       baseMeta.dataUrl = rawDataUrl;
+      if (baseMeta.name) saveMediaToCache(baseMeta.name, rawDataUrl);
       callback(baseMeta);
-    };
-    img.src = rawDataUrl;
+    }
   };
   reader.onerror = () => callback(baseMeta);
   reader.readAsDataURL(file);
