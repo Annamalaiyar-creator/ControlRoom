@@ -19038,16 +19038,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         onChange={(e) => {
                           const f = e.target.files && e.target.files[0];
                           if (f) {
-                            const reader = new FileReader();
-                            reader.onload = (loadEvt) => {
-                              setReuploadProofFile({
-                                name: f.name,
-                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
-                                dataUrl: loadEvt.target.result,
-                                uploadedAt: new Date().toISOString()
-                              });
-                            };
-                            reader.readAsDataURL(f);
+                            compressAndSaveFile(f, (res) => {
+                              if (res) {
+                                setReuploadProofFile(res);
+                              }
+                            });
                           }
                         }}
                         style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
@@ -19077,11 +19072,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const newDoc = {
                             name: reuploadProofFile.name,
                             size: reuploadProofFile.size,
+                            type: reuploadProofFile.type,
                             dataUrl: reuploadProofFile.dataUrl,
                             uploadedAt: reuploadedTime
                           };
+                          if (newDoc.name && newDoc.dataUrl) {
+                            saveMediaToCache(newDoc.name, newDoc.dataUrl);
+                          }
 
-                          setBomStore(prev => prev.map(b => b.bomCode === targetCode ? {
+                          setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                             ...b,
                             status: 'Pending Verification for Invoice',
                             addressProofStatus: 'Pending Verification for Invoice',
