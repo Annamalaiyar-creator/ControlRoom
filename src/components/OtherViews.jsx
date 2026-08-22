@@ -89,7 +89,7 @@ const compressAndSaveFile = (file, callback) => {
       return callback(baseMeta);
     }
     if (isImg) {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
@@ -16818,15 +16818,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                             compressAndSaveFile(file, (docMeta) => {
                                               if (docMeta) {
                                                 saveMediaToCache(docMeta.name, docMeta.dataUrl);
-                                                setNewBomDeliveryProofDoc(prev => {
-                                                  const history = prev?.history || (prev ? [prev] : []);
-                                                  return {
-                                                    ...docMeta,
-                                                    reuploaded: true,
-                                                    reuploadedAt: new Date().toISOString(),
-                                                    history: [...history, docMeta]
-                                                  };
-                                                });
+                                                setNewBomDeliveryProofDoc(docMeta);
                                               }
                                             });
                                           }
