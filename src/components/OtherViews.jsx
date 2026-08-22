@@ -17409,17 +17409,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 e.preventDefault();
                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (evt) => {
-                                    setNewBomPaymentProofDoc({
-                                      name: file.name,
-                                      size: (file.size / 1024).toFixed(1) + " KB",
-                                      type: file.type,
-                                      dataUrl: evt.target.result,
-                                      uploadTimestamp: new Date().toISOString()
-                                    });
-                                  };
-                                  reader.readAsDataURL(file);
+                                  compressAndSaveFile(file, (res) => {
+                                    if (res) {
+                                      if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                      setNewBomPaymentProofDoc(res);
+                                    }
+                                  });
                                 }
                               }}
                               style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
@@ -17445,17 +17440,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     onChange={(e) => {
                                       const file = e.target.files && e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (evt) => {
-                                          setNewBomPaymentProofDoc({
-                                            name: file.name,
-                                            size: (file.size / 1024).toFixed(1) + " KB",
-                                            type: file.type,
-                                            dataUrl: evt.target.result,
-                                            uploadTimestamp: new Date().toISOString()
-                                          });
-                                        };
-                                        reader.readAsDataURL(file);
+                                        compressAndSaveFile(file, (res) => {
+                                          if (res) {
+                                            if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                            setNewBomPaymentProofDoc(res);
+                                          }
+                                        });
                                       }
                                     }}
                                   />
@@ -18929,16 +18919,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         onChange={(e) => {
                           const f = e.target.files && e.target.files[0];
                           if (f) {
-                            const reader = new FileReader();
-                            reader.onload = (loadEvt) => {
-                              setUpdatePaymentFile({
-                                name: f.name,
-                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
-                                dataUrl: loadEvt.target.result,
-                                uploadedAt: new Date().toISOString()
-                              });
-                            };
-                            reader.readAsDataURL(f);
+                            compressAndSaveFile(f, (res) => {
+                              if (res) {
+                                if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                setUpdatePaymentFile(res);
+                              }
+                            });
                           }
                         }}
                         style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
@@ -18982,10 +18968,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const updatedDoc = {
                             name: updatePaymentFile.name,
                             size: updatePaymentFile.size || `${(updatePaymentFile.size / (1024 * 1024)).toFixed(2)} MB`,
+                            type: updatePaymentFile.type,
                             dataUrl: updatePaymentFile.dataUrl || null,
                             uploadedAt: new Date().toISOString(),
                             notes: updatePaymentNotes
                           };
+                          if (updatedDoc.name && updatedDoc.dataUrl) {
+                            saveMediaToCache(updatedDoc.name, updatedDoc.dataUrl);
+                          }
                           setBomStore(prev => prev.map(b => b.bomCode === updatePaymentModal.bomCode ? {
                             ...b,
                             status: 'Payment Uploaded & Settled',
