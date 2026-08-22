@@ -10430,14 +10430,54 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                         {/* COMPACT ADDRESS & INLINE PROOF IMAGE BELOW ITEMS */}
                         <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Truck style={{ width: '18px', height: '18px' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Truck style={{ width: '18px', height: '18px' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.5px', textTransform: 'uppercase' }}>DELIVERY DESTINATION</div>
+                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{dAddr}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.5px', textTransform: 'uppercase' }}>DELIVERY DESTINATION</div>
-                              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{dAddr}</div>
-                            </div>
+
+                            <button
+                              onClick={() => {
+                                const targetCode = inv.poNo || inv.code || inv.bomCode || bomRefText;
+                                setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
+                                  ...b,
+                                  status: 'Wrong Proof',
+                                  addressProofStatus: 'Wrong Proof',
+                                  addressProofRequestedAt: new Date().toISOString()
+                                } : b));
+
+                                setInvoiceList(prev => prev.map(i => (i.invNo === inv.invNo || i.poNo === targetCode || i.code === targetCode) ? {
+                                  ...i,
+                                  status: 'Pending Address Proof',
+                                  addressProofStatus: 'Wrong Proof'
+                                } : i));
+
+                                alert(`Address Proof Request sent to Sales team for ${targetCode}! Status updated to "Wrong Proof".`);
+                              }}
+                              style={{
+                                border: '1px solid #FED7AA',
+                                backgroundColor: '#FFF7ED',
+                                color: '#C2410C',
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFEDD5'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFF7ED'}
+                            >
+                              <AlertCircle style={{ width: '14px', height: '14px', color: '#C2410C' }} /> Request Address Proof
+                            </button>
                           </div>
 
                           {addressProofDoc && (() => {
@@ -10455,13 +10495,40 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                                 {(() => {
                                   const effectiveDataUrl = proofDataUrl || ("data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="540" height="260" viewBox="0 0 540 260"><rect width="100%" height="100%" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/><rect x="20" y="20" width="500" height="50" fill="#2563EB" rx="8"/><text x="40" y="52" fill="#FFFFFF" font-family="sans-serif" font-size="18" font-weight="bold">OFFICIAL DELIVERY ADDRESS PROOF</text><text x="30" y="110" fill="#0F172A" font-family="sans-serif" font-size="14" font-weight="bold">DOCUMENT FILE: ' + (proofName || 'Delivery_Address_Proof.png') + '</text><text x="30" y="140" fill="#475569" font-family="sans-serif" font-size="13">Delivery Consignee Site: 123 Main Street, Industrial Area, Chennai</text><text x="30" y="170" fill="#475569" font-family="sans-serif" font-size="13">Uploaded by: Sales Team Executive</text><rect x="30" y="195" width="240" height="42" fill="#DCFCE7" stroke="#86EFAC" rx="6"/><text x="48" y="222" fill="#166534" font-family="sans-serif" font-size="13" font-weight="bold">✓ VERIFIED ADDRESS PROOF DOCUMENT</text></svg>'));
+                                  const historyList = addressProofDoc?.history || [addressProofDoc];
+
                                   return (
-                                    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', padding: '12px', textAlign: 'center' }}>
-                                      <img
-                                        src={effectiveDataUrl}
-                                        alt="Delivery Address Proof"
-                                        style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                                      />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                      {historyList.length > 1 && (
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                          Document Version History ({historyList.length} Uploads Tracked):
+                                        </div>
+                                      )}
+
+                                      <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', padding: '12px', textAlign: 'center' }}>
+                                        <img
+                                          src={effectiveDataUrl}
+                                          alt="Delivery Address Proof"
+                                          style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                                        />
+                                      </div>
+
+                                      {historyList.length > 1 && (
+                                        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingTop: '6px' }}>
+                                          {historyList.map((hDoc, hIdx) => {
+                                            const hUrl = hDoc?.dataUrl || (typeof hDoc === "string" ? hDoc : null);
+                                            return (
+                                              <div key={hIdx} style={{ border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', backgroundColor: '#FFFFFF', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FileText style={{ width: '14px', height: '14px', color: '#2563EB' }} />
+                                                <div>
+                                                  <div style={{ fontWeight: '700', color: '#0F172A' }}>Version {hIdx + 1}: {hDoc.name || 'Proof.png'}</div>
+                                                  <div style={{ fontSize: '10px', color: '#64748B' }}>{hDoc.uploadedAt ? new Date(hDoc.uploadedAt).toLocaleString('en-GB') : 'Uploaded'}</div>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })()}
@@ -10866,13 +10933,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: '',
               searchPlaceholder: 'Search Accounts Verification (BOM Code, Customer Name)...',
               tabs: [
-                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).filter(b => b.status === 'Packed & Ready for Dispatch' || b.status === 'Partially Packed' || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Partially Packed') && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Verified', label: 'Verified', count: (bomStore || []).filter(b => (b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'Cancelled', label: 'Cancelled / Reissued', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEE2E2', fg: '#DC2626' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Status', 'Document Receipt', 'Status', 'Action'],
-              rows: (bomStore || []).map(b => {
+              rows: (bomStore || []).filter(b => b.status === 'Packed & Ready for Dispatch' || b.status === 'Partially Packed' || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).map(b => {
                 const acc = b.accountsVerification || {};
                 const isReissuedOrCancelled = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
                 const isVerified = !isReissuedOrCancelled && Boolean(
@@ -10930,15 +10997,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: '',
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
-                { id: 'All', label: 'All Orders', count: (bomStore || []).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status !== 'Closed' && b.status !== 'CLOSED' && !b.status.includes('Packed') && b.status !== 'Partially Packed' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && b.status !== 'Draft' && b.status !== 'Pending Confirmation').length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && b.status !== 'Draft' && b.status !== 'Pending Confirmation' && b.status !== 'Closed' && b.status !== 'CLOSED' && !b.status.includes('Packed') && b.status !== 'Partially Packed' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#FFEDD5', fg: '#C2410C' },
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && b.status !== 'Closed' && b.status !== 'CLOSED' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && b.status !== 'Closed' && b.status !== 'CLOSED' && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts)).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
-              rows: (bomStore || []).map(b => {
+              rows: (bomStore || []).filter(b => b.status && b.status !== 'Draft' && b.status !== 'Pending Confirmation').map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
@@ -11819,16 +11886,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               ]
             };
 
-            const [selectedTab, setSelectedTab] = useState('All');
-
-            const displayedMaterials = useMemo(() => {
-              return filteredMaterials.filter(m => {
-                if (selectedTab === 'Sufficient') return m.status === 'In Stock';
-                if (selectedTab === 'Warning') return m.status === 'Low Stock';
-                if (selectedTab === 'Critical') return m.status === 'Out of Stock';
-                return true;
-              });
-            }, [filteredMaterials, selectedTab]);
+            const displayedMaterials = filteredMaterials.filter(m => {
+              if (selectedSubTab === 'Sufficient') return m.status === 'In Stock';
+              if (selectedSubTab === 'Warning') return m.status === 'Low Stock';
+              if (selectedSubTab === 'Critical') return m.status === 'Out of Stock';
+              return true;
+            });
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
@@ -14883,29 +14946,69 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
                           const reissueTime = new Date().toISOString();
                           
-                          setBomStore(prev => prev.map(b => b.bomCode === targetCode ? {
-                            ...b,
-                            status: 'Cancelled & Reissued to Dispatch',
-                            isAccountsDone: false,
-                            reissuedByAccounts: true,
-                            reissuedAt: reissueTime,
-                            reissueCount: (b.reissueCount || 0) + 1,
-                            accountsVerification: {
-                              verified: false,
-                              paymentStatus: null,
-                              hardCopyReceived: false,
-                              softCopyReceived: false,
-                              reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
-                            },
-                            dispatchPacking: (b.items || []).map(it => ({
-                              name: it.name,
-                              bomQty: it.qty || 1,
-                              packed: false
-                            }))
-                          } : b));
+                          setBomStore(prev => {
+                            const existingBom = prev.find(b => b.bomCode === targetCode || b.code === targetCode);
+                            const currentCount = existingBom?.reissueCount || 0;
+                            
+                            // If reissued 2nd time (currentCount >= 1), cancel & generate a new sequential BOM code
+                            if (currentCount >= 1) {
+                              const numMatch = targetCode.match(/\d+/);
+                              const baseNum = numMatch ? parseInt(numMatch[0], 10) : 550;
+                              const newBomCode = `BOM-${baseNum + 1}`;
+                              
+                              return prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
+                                ...b,
+                                status: 'Cancelled & Reissued (New BOM Generated)',
+                                originalBomCode: targetCode,
+                                bomCode: newBomCode,
+                                code: newBomCode,
+                                isAccountsDone: false,
+                                reissuedByAccounts: true,
+                                reissuedAt: reissueTime,
+                                reissueCount: currentCount + 1,
+                                accountsVerification: {
+                                  verified: false,
+                                  paymentStatus: null,
+                                  hardCopyReceived: false,
+                                  softCopyReceived: false,
+                                  reissueRemarks: `Cancelled (2nd Reissue). Upgraded to new BOM Code (${newBomCode}) and returned to Dispatch.`
+                                },
+                                dispatchPacking: (b.items || []).map(it => ({
+                                  name: it.name,
+                                  bomQty: it.qty || 1,
+                                  packed: false
+                                }))
+                              } : b);
+                            }
+
+                            // 1st Reissue: prefix with RE- if not already prefixed
+                            const reCode = targetCode.startsWith('RE-') ? targetCode : `RE-${targetCode}`;
+                            return prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
+                              ...b,
+                              status: 'Cancelled & Reissued to Dispatch',
+                              bomCode: reCode,
+                              code: reCode,
+                              isAccountsDone: false,
+                              reissuedByAccounts: true,
+                              reissuedAt: reissueTime,
+                              reissueCount: currentCount + 1,
+                              accountsVerification: {
+                                verified: false,
+                                paymentStatus: null,
+                                hardCopyReceived: false,
+                                softCopyReceived: false,
+                                reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
+                              },
+                              dispatchPacking: (b.items || []).map(it => ({
+                                name: it.name,
+                                bomQty: it.qty || 1,
+                                packed: false
+                              }))
+                            } : b);
+                          });
 
                           setAccountsVerificationModal(null);
-                          alert(`🔄 BOM (${targetCode}) marked as Cancelled & Reissued back to Dispatch team for physical re-verification and packing!`);
+                          alert(`🔄 BOM (${targetCode}) marked as Cancelled & Reissued back to Dispatch team!`);
                         }}
                         style={{
                           border: '1px solid #FCA5A5',
@@ -16690,22 +16793,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                         type="file"
                                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                         style={{ display: 'none' }}
-                                         onChange={(e) => {
-                                           const file = e.target.files && e.target.files[0];
-                                           if (file) {
-                                             const reader = new FileReader();
-                                             reader.onload = (evt) => {
-                                               setNewBomDeliveryProofDoc({
-                                                 name: file.name,
-                                                 size: (file.size / 1024).toFixed(1) + ' KB',
-                                                 type: file.type,
-                                                 dataUrl: evt.target.result,
-                                                 uploadTimestamp: new Date().toISOString()
-                                               });
-                                             };
-                                             reader.readAsDataURL(file);
-                                           }
-                                         }}
+                                        onChange={(e) => {
+                                          const file = e.target.files && e.target.files[0];
+                                          if (file) {
+                                            compressAndSaveFile(file, (docMeta) => {
+                                              if (docMeta) {
+                                                saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                                setNewBomDeliveryProofDoc(prev => {
+                                                  const history = prev?.history || (prev ? [prev] : []);
+                                                  return {
+                                                    ...docMeta,
+                                                    reuploaded: true,
+                                                    reuploadedAt: new Date().toISOString(),
+                                                    history: [...history, docMeta]
+                                                  };
+                                                });
+                                              }
+                                            });
+                                          }
+                                        }}
                                       />
                                     </label>
                                   </div>
@@ -17965,58 +18071,58 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           {pageConfig.headers.includes('Action') && (
                             <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
                               {activeTab === 'Invoice Management' ? (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status) || Boolean(row.stockDeducted || row.invoiceConfirmed) ? (
-                                    <button
-                                      onClick={() => {
-                                        setViewingInvoiceModal(row);
-                                        setInvoiceModalActiveTab('Invoice Items');
-                                      }}
-                                      style={{
-                                        backgroundColor: '#F0FDF4',
-                                        color: '#166534',
-                                        border: '1px solid #BBF7D0',
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
-                                    >
-                                      <Receipt style={{ width: '14px', height: '14px', color: '#166534' }} /> View Invoice
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setViewingInvoiceModal(row);
-                                        setInvoiceModalActiveTab('Invoice Items');
-                                      }}
-                                      style={{
-                                        backgroundColor: '#EFF6FF',
-                                        color: '#2563EB',
-                                        border: '1px solid #BFDBFE',
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                    >
-                                      <Receipt style={{ width: '14px', height: '14px', color: '#2563EB' }} /> Generate Invoice
-                                    </button>
-                                  )}
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <button
+                                    onClick={() => {
+                                      setViewingInvoiceModal(row);
+                                      setInvoiceModalActiveTab('Invoice Items');
+                                    }}
+                                    style={{
+                                      backgroundColor: '#F0FDF4',
+                                      color: '#166534',
+                                      border: '1px solid #BBF7D0',
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                                    title="View Full Invoice Details"
+                                  >
+                                    <Eye style={{ width: '13px', height: '13px', color: '#166534' }} /> Full View
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setViewingInvoiceModal(row);
+                                      setTimeout(() => window.print(), 300);
+                                    }}
+                                    style={{
+                                      backgroundColor: '#EFF6FF',
+                                      color: '#2563EB',
+                                      border: '1px solid #BFDBFE',
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                    title="Download / Print Invoice PDF"
+                                  >
+                                    <Download style={{ width: '13px', height: '13px', color: '#2563EB' }} /> Download
+                                  </button>
 
                                   <button
                                     onClick={(e) => {
@@ -18977,7 +19083,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                           setBomStore(prev => prev.map(b => b.bomCode === targetCode ? {
                             ...b,
-                            deliveryAddressProofDoc: newDoc,
+                            status: 'Pending Verification for Invoice',
+                            addressProofStatus: 'Pending Verification for Invoice',
+                            deliveryAddressProofDoc: {
+                              ...newDoc,
+                              history: [...((b.deliveryAddressProofDoc?.history) || (b.deliveryAddressProofDoc ? [b.deliveryAddressProofDoc] : [])), newDoc]
+                            },
                             addressProofReuploadRequested: false,
                             addressProofReuploaded: true,
                             addressProofReuploadedAt: reuploadedTime
@@ -18985,7 +19096,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                           setInvoiceList(prev => prev.map(i => (i.poNo === targetCode || i.invNo === targetCode || i.code === targetCode) ? {
                             ...i,
-                            deliveryAddressProofDoc: newDoc,
+                            status: 'Pending Address Proof',
+                            addressProofStatus: 'Pending Verification for Invoice',
+                            deliveryAddressProofDoc: {
+                              ...newDoc,
+                              history: [...((i.deliveryAddressProofDoc?.history) || (i.deliveryAddressProofDoc ? [i.deliveryAddressProofDoc] : [])), newDoc]
+                            },
                             addressProofReuploadRequested: false,
                             addressProofReuploadedAt: reuploadedTime
                           } : i));
