@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   ClipboardList, TrendingUp, Percent, CheckCircle2, XCircle, Clock, Cpu,
   Calendar, Filter, AlertTriangle, AlertCircle, Info, ShieldCheck, Factory,
   Users, Layers, Award, BarChart2, Package, ArrowUpRight, ArrowDownRight, Settings,
@@ -36,9 +36,9 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     setDismissedAlerts(updated);
     try {
       localStorage.setItem('controlroom_prod_dismissed_alerts', JSON.stringify(updated));
-    } catch (e) {}
+    } catch (e) { }
   };
-  
+
   // New Work Order Form State
   const [newWO, setNewWO] = useState({
     productName: 'Mini Rail 100 mm',
@@ -163,7 +163,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
 
     segments.forEach(seg => {
       if (seg.pct <= 0) return;
-      
+
       const arcSpan = seg.pct * 2 * Math.PI;
       const startAngle = currentAngle;
       const endAngle = currentAngle + arcSpan;
@@ -190,16 +190,16 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    
+
     const paddingLeft = 40;
     const paddingRight = 20;
     const graphWidth = rect.width - paddingLeft - paddingRight;
     const count = trendData.length;
-    
+
     let idx = Math.round(((x - paddingLeft) / graphWidth) * (count - 1));
     if (idx < 0) idx = 0;
     if (idx > count - 1) idx = count - 1;
-    
+
     if (idx !== activeTrendIndex) {
       setActiveTrendIndex(idx);
     }
@@ -290,7 +290,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
       for (let i = 0; i < points.length - 1; i++) {
         const p0 = points[i];
         const p1 = points[i + 1];
-        
+
         const cpX1 = p0.x + (p1.x - p0.x) / 2;
         const cpY1 = p0.y;
         const cpX2 = p0.x + (p1.x - p0.x) / 2;
@@ -450,7 +450,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
 
   return (
     <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '4px' }}>
-      
+
 
 
       {/* ROW 1: KPI SUMMARY CARDS (5 CARDS FOR DISPATCH / 6 CARDS FOR FLOOR & PRODUCTION) */}
@@ -648,7 +648,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
         ]).map((kpi, kIdx) => {
           const IconComp = kpi.icon;
           return (
-            <div 
+            <div
               key={kIdx}
               style={{
                 backgroundColor: '#FFFFFF',
@@ -667,10 +667,10 @@ export default function ProductionAdminView({ activeTab, userRole }) {
             >
               {/* Top Main Section */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-                <span 
-                  style={{ 
-                    fontSize: '11.5px', 
-                    fontWeight: '800', 
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    fontWeight: '800',
                     color: '#64748B',
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
@@ -686,9 +686,9 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                   <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px', lineHeight: '1.1' }}>
                     {kpi.value}
                   </span>
-                  
-                  <span 
-                    style={{ 
+
+                  <span
+                    style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '2px',
@@ -713,8 +713,8 @@ export default function ProductionAdminView({ activeTab, userRole }) {
               </div>
 
               {/* Bottom Sub-Card Box */}
-              <div 
-                style={{ 
+              <div
+                style={{
                   backgroundColor: '#F8FAFC',
                   border: '1px solid #F1F5F9',
                   borderRadius: '12px',
@@ -740,47 +740,47 @@ export default function ProductionAdminView({ activeTab, userRole }) {
 
       {/* 2 CONTINUOUS FLEX COLUMNS LAYOUT (ORIGINAL SCRIPT DESIGN) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '16px', width: '100%', boxSizing: 'border-box', alignItems: 'start' }}>
-        
+
         {/* ==================== LEFT CONTINUOUS FLEX COLUMN ==================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
-          
+
           {/* 1. STATUS BREAKDOWN WITH MASTER PIE CHART COMPONENT */}
-          <POStatusOverview 
-            title={isFloorView ? "My Assigned Work Orders" : isDispatchView ? "Dispatch Orders by Status" : "Work Orders by Status"} 
+          <POStatusOverview
+            title={isFloorView ? "My Assigned Work Orders" : isDispatchView ? "Dispatch Orders by Status" : "Work Orders by Status"}
             totalCount={String(realEngineWOs.length)}
             totalLabel={isFloorView ? "ASSIGNED WOs" : isDispatchView ? "TOTAL ORDERS" : "TOTAL ORDERS"}
             items={[
-              { 
-                name: 'In Production', 
-                count: `${realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length} WOs`, 
-                color: '#0284C7', 
-                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length / realEngineWOs.length) : 0 
+              {
+                name: 'In Production',
+                count: `${realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length} WOs`,
+                color: '#0284C7',
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length / realEngineWOs.length) : 0
               },
-              { 
-                name: 'Completed & Approved', 
-                count: `${realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length} WOs`, 
-                color: '#16A34A', 
-                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length / realEngineWOs.length) : 0 
+              {
+                name: 'Completed & Approved',
+                count: `${realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length} WOs`,
+                color: '#16A34A',
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length / realEngineWOs.length) : 0
               },
-              { 
-                name: 'Pending Verification', 
-                count: `${realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length} WOs`, 
-                color: '#0E7490', 
-                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length / realEngineWOs.length) : 0 
+              {
+                name: 'Pending Verification',
+                count: `${realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length} WOs`,
+                color: '#0E7490',
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length / realEngineWOs.length) : 0
               },
-              { 
-                name: 'Draft / Pending Material', 
-                count: `${realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length} WOs`, 
-                color: '#EA580C', 
-                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length / realEngineWOs.length) : 0 
+              {
+                name: 'Draft / Pending Material',
+                count: `${realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length} WOs`,
+                color: '#EA580C',
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length / realEngineWOs.length) : 0
               }
             ]}
           />
 
           {/* 2. DAILY DISPATCH / PRODUCTION TREND WITH CORAL ORANGE BAR DESIGN */}
-          <DailyProductionTrendChart 
-            title={isDispatchView ? "Daily Dispatch Volume & On-Time %" : "Workflow Runs Over Time"} 
-            mainValue={isDispatchView ? "352" : "6,324"} 
+          <DailyProductionTrendChart
+            title={isDispatchView ? "Daily Dispatch Volume & On-Time %" : "Workflow Runs Over Time"}
+            mainValue={isDispatchView ? "352" : "6,324"}
           />
 
           {/* 3. DISPATCH / PRODUCTION / MY MACHINE PRODUCTION */}
@@ -901,7 +901,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
           </div>
 
           {/* 5. VEHICLE UTILIZATION / QUALITY REJECTION BREAKDOWN */}
-          <POStatusOverview 
+          <POStatusOverview
             title={isDispatchView ? "Vehicle Fleet Status Breakdown" : "Quality Rejection Breakdown"}
             totalCount={isDispatchView ? "32" : "116"}
             totalLabel={isDispatchView ? "TOTAL VEHICLES" : "TOTAL REJECTS"}
@@ -923,7 +923,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
 
         {/* ==================== RIGHT CONTINUOUS FLEX COLUMN ==================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
-          
+
           {/* 1. TOP 5 DELAYED PRODUCTION ORDERS / DISPATCH ORDERS */}
           <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1316,7 +1316,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-              
+
               {/* ALERT 1 */}
               {!dismissedAlerts.includes(1) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
                 <div style={{ position: 'relative', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -1336,7 +1336,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
                       Inspect QC
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDismissAlert(1)}
                       style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
                     >
@@ -1365,7 +1365,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
                       Issue Material
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDismissAlert(2)}
                       style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
                     >
@@ -1391,7 +1391,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
                       View Changes
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDismissAlert(3)}
                       style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
                     >

@@ -102,7 +102,7 @@ export default function POStatusOverview({
         backgroundColor: '#FFFFFF',
         border: '1px solid #EAEFEF',
         borderRadius: '24px',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         height: '100%',
         boxSizing: 'border-box',
         boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
