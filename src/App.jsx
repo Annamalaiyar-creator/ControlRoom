@@ -32,15 +32,19 @@ function App() {
     setToastAlert({ message: msg, title, type });
   };
 
-  // Authentication & Role State (Always requires Login on fresh visit)
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Authentication & Role State (Persists logged-in session on page refresh)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('controlroom_is_authenticated') === 'true';
+  });
 
   const [userRole, setUserRole] = useState(() => {
     return localStorage.getItem('controlroom_user_role') || 'Procurement Admin';
   });
 
-  // Active Tab State (Resets to Dashboard upon fresh login)
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  // Active Tab State (Restores current active tab on page refresh)
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
+  });
 
   const [targetPoNo, setTargetPoNo] = useState(null);
   const [convertingPiData, setConvertingPiData] = useState(null);
