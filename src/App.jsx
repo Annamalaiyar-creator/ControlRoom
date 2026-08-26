@@ -25,21 +25,15 @@ function App() {
   // Default sidebar collapsed to TRUE (closed/inside by default on loading)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
-  // Authentication & Role State with localStorage Persistence Across Page Refresh
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('controlroom_is_authenticated') === 'true';
-  });
+  // Authentication & Role State (Always requires Login on fresh visit)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [userRole, setUserRole] = useState(() => {
     return localStorage.getItem('controlroom_user_role') || 'Procurement Admin';
   });
 
-  // Active Tab State with localStorage Persistence (Stays on same page upon refresh)
-  const [activeTab, setActiveTab] = useState(() => {
-    const savedTab = localStorage.getItem('controlroom_active_tab');
-    if (savedTab) return savedTab;
-    return 'Dashboard';
-  });
+  // Active Tab State (Resets to Dashboard upon fresh login)
+  const [activeTab, setActiveTab] = useState('Dashboard');
 
   const [targetPoNo, setTargetPoNo] = useState(null);
   const [convertingPiData, setConvertingPiData] = useState(null);
