@@ -63,6 +63,7 @@ function App() {
     localStorage.removeItem('controlroom_is_authenticated');
     localStorage.removeItem('controlroom_active_tab');
     setIsAuthenticated(false);
+    setActiveTab('Dashboard');
     setShowLoginModal(false);
   };
 
