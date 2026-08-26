@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 import NotificationToast from './NotificationToast';
+import { addLiveNotification } from './Header';
 
 export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   // 1. GENERAL & PRODUCTION STATE
@@ -131,6 +132,16 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         leftoverStrategy,
         excessFgQty: matCalc ? matCalc.excessOutputPossible : 0,
         returnedOffcutMeters: matCalc ? Number(((2414 - (((Number(targetQty) || 0) % matCalc.piecesPerLength) * (matCalc.cutLenMm || 100))) / 1000).toFixed(2)) : 0
+      });
+
+      addLiveNotification({
+        id: `notif-wo-${Date.now()}`,
+        role: 'Production Admin',
+        title: 'Work Order Issued',
+        message: `Work Order ${newWO.id} issued. Raw Material (${newWO.rawMaterialPhysicalToIssue} ${newWO.rawMaterialUnit}) reserved & issued to floor.`,
+        time: 'Just now',
+        targetTab: 'Work Orders',
+        badgeColor: '#0284C7'
       });
 
       if (onWorkOrderCreated) {

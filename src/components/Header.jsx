@@ -1,83 +1,16 @@
 import React, { useState } from 'react';
 import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code } from 'lucide-react';
 
-const defaultNotifications = [
-  // ─── PRODUCTION ADMIN NOTIFICATIONS ───
-  {
-    id: 'prod-wo-1',
-    role: 'Production Admin',
-    title: 'Work Order Status Updated',
-    message: 'VRM26/07/118 marked as Overdue on Line 2',
-    time: '5 minutes ago',
-    targetTab: 'Work Orders',
-    badgeColor: '#EA580C'
-  },
-  {
-    id: 'prod-mach-1',
-    role: 'Production Admin',
-    title: 'CNC Cutting Machine Alert',
-    message: 'Tool wear warning on CNC Unit #3',
-    time: '20 minutes ago',
-    targetTab: 'Machine Maintenance',
-    badgeColor: '#DC2626'
-  },
-  {
-    id: 'prod-qc-1',
-    role: 'Production Admin',
-    title: 'Quality Inspection Audit Ready',
-    message: 'Batch #QC-904 passed lab verification',
-    time: '45 minutes ago',
-    targetTab: 'Quality Control',
-    badgeColor: '#16A34A'
-  },
-  {
-    id: 'prod-shift-1',
-    role: 'Production Admin',
-    title: 'Shift Output Compiled',
-    message: 'Morning Shift A completed 2,438 units (92.4% OEE)',
-    time: '1 hour ago',
-    targetTab: 'Production Reports',
-    badgeColor: '#0E7490'
-  },
-
-  // ─── PROCUREMENT ADMIN NOTIFICATIONS ───
-  {
-    id: 'proc-po-1',
-    role: 'Procurement Admin',
-    title: 'New Purchase Order Generated',
-    message: 'PO-00054 synced with Zoho Books',
-    time: '2 minutes ago',
-    targetTab: 'Purchase Orders',
-    badgeColor: '#0E7490'
-  },
-  {
-    id: 'proc-overdue-1',
-    role: 'Procurement Admin',
-    title: 'Overdue Vendor Delivery',
-    message: 'PO-00048 delayed by 5 days from Prime Aluminum Corp',
-    time: '15 minutes ago',
-    targetTab: 'Purchase Orders',
-    badgeColor: '#DC2626'
-  },
-  {
-    id: 'proc-approval-1',
-    role: 'Procurement Admin',
-    title: 'Approval Pending',
-    message: '3 POs awaiting manager approval',
-    time: '40 minutes ago',
-    targetTab: 'Purchase Orders',
-    badgeColor: '#EA580C'
-  },
-  {
-    id: 'proc-stock-1',
-    role: 'Procurement Admin',
-    title: 'Raw Material Low Stock',
-    message: 'Aluminum Coil stock below reorder safety limit',
-    time: '1 hour ago',
-    targetTab: 'Inventory (Raw Material)',
-    badgeColor: '#D97706'
+export const addLiveNotification = (notif) => {
+  try {
+    const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
+    const updated = [notif, ...existing.filter(n => n.id !== notif.id)];
+    localStorage.setItem('vrm_live_notifications', JSON.stringify(updated));
+    window.dispatchEvent(new Event('vrm_notifications_updated'));
+  } catch (e) {
+    console.error('Error adding live notification:', e);
   }
-];
+};
 
 export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal, onSelectTab }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -92,10 +25,30 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     }
   });
 
+  const [liveNotifications, setLiveNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vrm_live_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('vrm_live_notifications');
+        setLiveNotifications(saved ? JSON.parse(saved) : []);
+      } catch (e) {}
+    };
+    window.addEventListener('vrm_notifications_updated', handleUpdate);
+    return () => window.removeEventListener('vrm_notifications_updated', handleUpdate);
+  }, []);
+
   const isProdAdmin = userRole === 'Production Admin' || (userRole && userRole.includes('Production'));
   
   // Filter notifications strictly based on active user login role
-  const roleNotifications = defaultNotifications.filter(n => {
+  const roleNotifications = liveNotifications.filter(n => {
     if (isProdAdmin) {
       return n.role === 'Production Admin';
     } else {

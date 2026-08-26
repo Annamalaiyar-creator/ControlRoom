@@ -14,6 +14,7 @@ import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 import NotificationToast from './NotificationToast';
+import { addLiveNotification } from './Header';
 
 
 const saveMediaToCache = (docKey, dataUrl) => {
@@ -14153,19 +14154,37 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             try {
                               if (updateStatusChoice === 'IN_PROGRESS') {
                                 prodModuleEngine.startWork(selectedWoForStatusUpdate.id);
-                                alert(`Work Order ${selectedWoForStatusUpdate.id} is now ON PROCESS / IN PROGRESS.`);
+                                addLiveNotification({
+                                  id: `notif-start-${Date.now()}`,
+                                  role: 'Production Admin',
+                                  title: 'Work Progress Started',
+                                  message: `Work Order ${selectedWoForStatusUpdate.id} is now IN PROGRESS on floor line.`,
+                                  time: 'Just now',
+                                  targetTab: 'Work Orders',
+                                  badgeColor: '#16A34A'
+                                });
+                                showCustomAlert(`Work Order ${selectedWoForStatusUpdate.id} is now ON PROCESS / IN PROGRESS.`, 'Work Started', 'success');
                               } else if (updateStatusChoice === 'PENDING_MATERIAL') {
                                 prodModuleEngine.updateWorkOrderStatus(selectedWoForStatusUpdate.id, 'PENDING_MATERIAL');
-                                alert(`Work Order ${selectedWoForStatusUpdate.id} marked as PENDING MATERIAL.`);
+                                showCustomAlert(`Work Order ${selectedWoForStatusUpdate.id} marked as PENDING MATERIAL.`, 'Status Updated', 'warning');
                               } else if (updateStatusChoice === 'COMPLETED') {
                                 const good = Number(actualGoodOutputVal || selectedWoForStatusUpdate.targetQty);
                                 const rej = Number(actualRejectedOutputVal || 0);
                                 prodModuleEngine.submitCompletion(selectedWoForStatusUpdate.id, { goodQty: good, rejectedQty: rej, operatorRemarks: operatorRemarksVal });
-                                alert(`Work Order ${selectedWoForStatusUpdate.id} submitted as COMPLETED! Awaiting Production Head approval.`);
+                                addLiveNotification({
+                                  id: `notif-comp-${Date.now()}`,
+                                  role: 'Production Admin',
+                                  title: 'Work Order Pending Verification',
+                                  message: `Floor Employee completed Work Order ${selectedWoForStatusUpdate.id} (${good} pcs). Verification & FG Stock Approval required by Production Head.`,
+                                  time: 'Just now',
+                                  targetTab: 'Work Orders',
+                                  badgeColor: '#0E7490'
+                                });
+                                showCustomAlert(`Work Order ${selectedWoForStatusUpdate.id} submitted for verification! Production Head has been notified to approve & credit FG stock.`, 'Submitted for Verification', 'success');
                               }
                               setSelectedWoForStatusUpdate(null);
                             } catch (err) {
-                              alert(`Error updating status: ${err.message}`);
+                              showCustomAlert(`Error updating status: ${err.message}`, 'Status Update Error', 'error');
                             }
                           }}
                           style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }}
@@ -14206,7 +14225,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       justifyContent: 'space-between',
                       padding: '24px',
                       boxSizing: 'border-box',
-                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                      fontFamily: "'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif"
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         
@@ -14456,6 +14475,64 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             <CheckCircle size={14} /> Accept & Start Assignment
                           </button>
                         )}
+
+                        {/* PRODUCTION HEAD VERIFY & APPROVE ACTION */}
+                        {!isFloorEmployee && (
+                          selectedWoForAcceptanceModal.status === 'COMPLETED_PENDING_VERIFICATION' ? (
+                            <button
+                              onClick={() => {
+                                try {
+                                  prodModuleEngine.approveProduction(selectedWoForAcceptanceModal.id);
+                                  addLiveNotification({
+                                    id: `notif-appr-${Date.now()}`,
+                                    role: 'Production Admin',
+                                    title: 'Production Verified & Approved',
+                                    message: `Work Order ${selectedWoForAcceptanceModal.id} approved by Production Head. ${selectedWoForAcceptanceModal.actualGoodOutput || selectedWoForAcceptanceModal.targetQty} ${selectedWoForAcceptanceModal.unit || 'pcs'} of ${selectedWoForAcceptanceModal.finishedProductName} added to FG Inventory.`,
+                                    time: 'Just now',
+                                    targetTab: 'Work Orders',
+                                    badgeColor: '#16A34A'
+                                  });
+                                  showCustomAlert(`✅ Work Order ${selectedWoForAcceptanceModal.id} Verified & Approved! Finished Goods stock (+${selectedWoForAcceptanceModal.actualGoodOutput || selectedWoForAcceptanceModal.targetQty} ${selectedWoForAcceptanceModal.unit || 'pcs'}) has been added to FG Inventory Store.`, 'Production Approved', 'success');
+                                  setSelectedWoForAcceptanceModal(null);
+                                  setSelectedRows([]);
+                                } catch (err) {
+                                  showCustomAlert(`❌ Error approving production: ${err.message}`, 'Approval Error', 'error');
+                                }
+                              }}
+                              style={{
+                                padding: '9px 18px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                backgroundColor: '#16A34A',
+                                color: '#FFFFFF',
+                                fontSize: '13px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.35)'
+                              }}
+                            >
+                              <CheckCircle size={15} style={{ color: '#FFFFFF' }} /> Verify & Approve Production (Add FG Stock)
+                            </button>
+                          ) : selectedWoForAcceptanceModal.status === 'APPROVED_CLOSED' ? (
+                            <span style={{
+                              padding: '6px 14px',
+                              borderRadius: '20px',
+                              backgroundColor: '#DCFCE7',
+                              color: '#15803D',
+                              border: '1px solid #86EFAC',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <CheckCircle size={14} style={{ color: '#15803D' }} /> Approved & Closed (FG Stock Added)
+                            </span>
+                          ) : null
+                        )}
                       </div>
                     </div>
                   </div>
@@ -14609,6 +14686,50 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         >
                           <Eye size={14} style={{ color: '#0F172A' }} /> View Details
                         </button>
+                        {(!isFloorEmployee && selectedWoObjects.some(w => w.status === 'COMPLETED_PENDING_VERIFICATION')) && (
+                          <button
+                            onClick={() => {
+                              let countApproved = 0;
+                              selectedWoObjects.forEach(w => {
+                                if (w.status === 'COMPLETED_PENDING_VERIFICATION') {
+                                  try {
+                                    prodModuleEngine.approveProduction(w.id);
+                                    countApproved++;
+                                  } catch (e) {}
+                                }
+                              });
+                              if (countApproved > 0) {
+                                addLiveNotification({
+                                  id: `notif-appr-${Date.now()}`,
+                                  role: 'Production Admin',
+                                  title: 'Production Verified & Approved',
+                                  message: `${countApproved} Work Orders verified & approved by Production Head. Finished Goods stock added to FG Store.`,
+                                  time: 'Just now',
+                                  targetTab: 'Work Orders',
+                                  badgeColor: '#16A34A'
+                                });
+                                showCustomAlert(`✅ ${countApproved} Work Orders Verified & Approved! Finished Goods stock has been added to FG Inventory Store.`, 'Production Approved', 'success');
+                                setSelectedRows([]);
+                              }
+                            }}
+                            style={{
+                              backgroundColor: '#16A34A',
+                              border: 'none',
+                              color: '#FFFFFF',
+                              borderRadius: '10px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+                            }}
+                          >
+                            <CheckCircle size={14} style={{ color: '#FFFFFF' }} /> Approve Production & Add FG Stock
+                          </button>
+                        )}
                       </>
                     )}
 
