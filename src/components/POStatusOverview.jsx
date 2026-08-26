@@ -1,73 +1,96 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { Maximize2, Sparkles } from 'lucide-react';
 
-export default function POStatusOverview() {
-  const canvasRef = useRef(null);
+const defaultStatusItems = [
+  { name: 'Completed', count: '4,746', color: '#22C55E', pct: 0.68 },
+  { name: 'In Progress', count: '342', color: '#0084FF', pct: 0.18 },
+  { name: 'Planned', count: '142', color: '#06B6D4', pct: 0.09 },
+  { name: 'Approved', count: '50', color: '#38BDF8', pct: 0.05 }
+];
 
-  const drawChart = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+export default function POStatusOverview({ 
+  title = "Work Orders by Status",
+  items = defaultStatusItems,
+  totalCount = "5,280",
+  totalLabel = "TOTAL ORDERS"
+}) {
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, item: null });
 
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    
-    const size = 160;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, size, size);
+  const statusItems = items;
 
-    const x = size / 2;
-    const y = size / 2;
-    const radius = 66;
-    const thickness = 18;
+  const cx = 100;
+  const cy = 100;
+  const outerR = 80;
+  const innerR = 56;
+  const gapRad = 0.08; // Exact equal gap angle between every single segment pair
 
-    // Background grey track
-    ctx.beginPath();
-    ctx.arc(x, y, radius - (thickness / 2), 0, 2 * Math.PI);
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = thickness;
-    ctx.stroke();
+  const numSegments = statusItems.length;
+  const totalGaps = numSegments * gapRad;
+  const availableAngle = (2 * Math.PI) - totalGaps;
 
-    // Segments: Draft (4), Approved (24), Partially Received (22), Fully Received (36), Cancelled (0) -> Total 86
-    const segments = [
-      { color: '#0284c7', value: 4 / 86 },   // Draft
-      { color: '#16a34a', value: 24 / 86 },  // Approved
-      { color: '#ea580c', value: 22 / 86 },  // Partially Received
-      { color: '#2563eb', value: 36 / 86 },  // Fully Received
-      { color: '#dc2626', value: 0 }         // Cancelled
-    ];
+  let currentAngle = -Math.PI / 2;
 
-    let startAngle = -Math.PI / 2;
+  const segmentPaths = statusItems.map((item, idx) => {
+    const arcSpan = item.pct * availableAngle;
+    const a1 = currentAngle + (gapRad / 2);
+    const a2 = a1 + Math.max(0.04, arcSpan);
 
-    segments.forEach(seg => {
-      if (seg.value <= 0) return;
-      const angle = seg.value * 2 * Math.PI;
-      ctx.beginPath();
-      ctx.arc(x, y, radius - (thickness / 2), startAngle, startAngle + angle, false);
-      ctx.strokeStyle = seg.color;
-      ctx.lineWidth = thickness;
-      ctx.lineCap = 'butt';
-      ctx.stroke();
-      startAngle += angle;
-    });
-  };
+    currentAngle = a2 + (gapRad / 2);
 
-  useEffect(() => {
-    drawChart();
-    window.addEventListener('resize', drawChart);
-    return () => window.removeEventListener('resize', drawChart);
-  }, []);
+    if (a2 <= a1) return null;
 
-  const statusItems = [
-    { name: 'Draft', count: '4 POs', color: '#0284c7' },
-    { name: 'Approved', count: '24 POs', color: '#16a34a' },
-    { name: 'Part. Rec.', count: '22 POs', color: '#ea580c' },
-    { name: 'Fully Rec.', count: '36 POs', color: '#2563eb' },
-    { name: 'Cancelled', count: '0 POs', color: '#dc2626' }
-  ];
+    const x1_out = cx + outerR * Math.cos(a1);
+    const y1_out = cy + outerR * Math.sin(a1);
+    const x2_out = cx + outerR * Math.cos(a2);
+    const y2_out = cy + outerR * Math.sin(a2);
+
+    const x1_in = cx + innerR * Math.cos(a1);
+    const y1_in = cy + innerR * Math.sin(a1);
+    const x2_in = cx + innerR * Math.cos(a2);
+    const y2_in = cy + innerR * Math.sin(a2);
+
+    const largeArc = (a2 - a1) > Math.PI ? 1 : 0;
+
+    const pathData = `M ${x1_out} ${y1_out} A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2_out} ${y2_out} L ${x2_in} ${y2_in} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x1_in} ${y1_in} Z`;
+
+    const isHovered = hoveredIdx === idx;
+
+    return (
+      <path
+        key={idx}
+        d={pathData}
+        fill={item.color}
+        stroke={item.color}
+        strokeWidth="4"
+        strokeLinejoin="round"
+        style={{
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transformOrigin: '100px 100px',
+          transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+          opacity: hoveredIdx !== null && !isHovered ? 0.55 : 1,
+          filter: isHovered ? `drop-shadow(0px 4px 8px ${item.color}66)` : 'none'
+        }}
+        onMouseEnter={(e) => {
+          setHoveredIdx(idx);
+          setTooltip({
+            visible: true,
+            x: e.clientX,
+            y: e.clientY - 40,
+            item
+          });
+        }}
+        onMouseMove={(e) => {
+          setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY - 40 }));
+        }}
+        onMouseLeave={() => {
+          setHoveredIdx(null);
+          setTooltip(prev => ({ ...prev, visible: false }));
+        }}
+      />
+    );
+  });
 
   return (
     <div 
@@ -75,26 +98,35 @@ export default function POStatusOverview() {
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        padding: '16px 20px', 
+        padding: '24px', 
         backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: '12px',
+        border: '1px solid #EAEFEF',
+        borderRadius: '24px',
         justify: 'space-between',
         height: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
+        fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+        position: 'relative'
       }}
     >
-      {/* Top Title matching Screenshot */}
-      <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-        <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-          PURCHASE STATUS BREAKDOWN
-        </span>
+      {/* Top Title matching Reference Image */}
+      <div>
+        <h3 style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {title}
+        </h3>
       </div>
 
-      {/* Centered Donut Canvas with Text matching Screenshot */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 0', position: 'relative' }}>
-        <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-          <canvas ref={canvasRef}></canvas>
+      {/* Main Body Split: LEFT Pie Chart SVG + RIGHT Legend Items */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', gap: '20px' }}>
+        
+        {/* LEFT SIDE: Donut SVG with Center Numbers */}
+        <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
+          <svg width="200" height="200" viewBox="0 0 200 200" style={{ overflow: 'visible' }}>
+            {segmentPaths}
+          </svg>
+
+          {/* Center Numbers matching user request */}
           <div 
             style={{
               position: 'absolute',
@@ -106,43 +138,91 @@ export default function POStatusOverview() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              transition: 'all 0.2s ease'
             }}
           >
-            <span style={{ fontSize: '28px', fontWeight: '800', color: '#0F172A', lineHeight: '1.1' }}>
-              86
+            <span style={{ fontSize: '26px', fontWeight: '900', color: hoveredIdx !== null ? statusItems[hoveredIdx].color : '#0F172A', lineHeight: '1.1' }}>
+              {hoveredIdx !== null ? statusItems[hoveredIdx].count : totalCount}
             </span>
-            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '800', letterSpacing: '0.5px', marginTop: '2px', textTransform: 'uppercase' }}>
-              TOTAL POS
+            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '800', letterSpacing: '0.4px', marginTop: '4px', textTransform: 'uppercase' }}>
+              {hoveredIdx !== null ? statusItems[hoveredIdx].name : totalLabel}
             </span>
           </div>
         </div>
+
+        {/* RIGHT SIDE: Legend List (Completed, In Progress, Planned, Approved) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flexGrow: 1, justifyContent: 'center' }}>
+          {statusItems.map((item, idx) => (
+            <div 
+              key={idx} 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: '12px',
+                cursor: 'pointer',
+                opacity: hoveredIdx !== null && hoveredIdx !== idx ? 0.45 : 1,
+                padding: '6px 10px',
+                borderRadius: '10px',
+                backgroundColor: hoveredIdx === idx ? `${item.color}15` : 'transparent',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Color Circle Dot */}
+                <span style={{ 
+                  width: '9px', 
+                  height: '9px', 
+                  borderRadius: '50%', 
+                  backgroundColor: item.color, 
+                  flexShrink: 0 
+                }} />
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                  {item.name}
+                </span>
+              </div>
+              <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>
+                {item.count}
+              </span>
+            </div>
+          ))}
+        </div>
+
       </div>
 
-      {/* Bottom Horizontal Pills Row matching Screenshot */}
-      <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', width: '100%' }}>
-        {statusItems.map((item, idx) => (
-          <div 
-            key={idx} 
-            style={{ 
-              backgroundColor: '#F8FAFC', 
-              border: '1px solid #E2E8F0', 
-              borderRadius: '8px', 
-              padding: '10px 8px', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '4px',
-              minWidth: 0
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }}></span>
-              <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
-            </div>
-            <strong style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>{item.count}</strong>
-          </div>
-        ))}
-      </div>
+      {/* Interactive Floating Tooltip when Hovering Pie Chart */}
+      {tooltip.visible && tooltip.item && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
+            transform: 'translate(-50%, -100%)',
+            backgroundColor: '#0F172A',
+            color: '#FFFFFF',
+            padding: '8px 14px',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: '700',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: tooltip.item.color }} />
+          <span>{tooltip.item.name}:</span>
+          <span style={{ color: '#38BDF8', fontWeight: '900' }}>{tooltip.item.count}</span>
+          <span style={{ color: '#94A3B8', fontSize: '11px' }}>({Math.round(tooltip.item.pct * 100)}%)</span>
+        </div>
+      )}
+
     </div>
   );
 }

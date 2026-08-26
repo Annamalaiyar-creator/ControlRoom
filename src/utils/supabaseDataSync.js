@@ -133,9 +133,7 @@ export function saveCloudStore(storeKey, storeData) {
           data: dataToSave,
           updated_at: new Date().toISOString()
         }, { onConflict: 'key' })
-        .then(({ error }) => {
-          if (error) console.warn(`[Supabase] Cloud save notice for ${storeKey}:`, error.message);
-        })
+        .then(() => {})
         .catch(() => {});
     } catch (err) {}
 

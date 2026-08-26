@@ -130,16 +130,18 @@ function App() {
           userRole={userRole}
           onSwitchRole={handleRoleSwitch}
           onOpenLoginModal={handleSignOut}
+          onSelectTab={handleTabChange}
         />
 
         {/* Scrollable Center Content Pane */}
         <div className="content-pane procurement-layout">
-          {(activeTab === 'Production Dashboard' || activeTab === 'Supervisor Dashboard' || activeTab === 'Operator Workspace' || (userRole.includes('Production') && activeTab.includes('Dashboard'))) ? (
-            <ProductionAdminView activeTab={activeTab} />
+          {(activeTab === 'Dashboard' || activeTab === 'Production Dashboard' || activeTab === 'Dispatch Dashboard' || activeTab === 'Supervisor Dashboard' || activeTab === 'Operator Workspace' || activeTab === 'Floor Employee') && (userRole.includes('Production') || userRole === 'Dispatch Head' || userRole === 'Floor Employee' || userRole === 'Machine Operator' || userRole === 'Production Head') ? (
+            <ProductionAdminView activeTab={activeTab} userRole={userRole} />
           ) : activeTab === 'Dashboard' || activeTab === 'Executive Dashboard' || activeTab === 'Procurement Dashboard' || activeTab === 'Finance & Accounts' || activeTab === 'Sales & CRM' || activeTab === 'Design & BOM Center' ? (
             <DashboardFullReference userRole={userRole} />
           ) : (activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
             <PerformaInvoiceView 
+              userRole={userRole}
               onConvertToBom={(piData) => {
                 setConvertingPiData(piData);
                 handleTabChange('Sales BOM');
@@ -150,7 +152,7 @@ function App() {
           ) : activeTab === 'Zoho Integration' ? (
             <ZohoIntegrationView />
           ) : activeTab === 'Material Calculation Engine' ? (
-            <MaterialCalculationEngine onBack={() => handleTabChange('BOM / Routing')} />
+            <MaterialCalculationEngine onBack={() => handleTabChange('BOM')} />
           ) : (activeTab === 'Inventory Stock Conversion' || activeTab === 'Enter Coil Purchase (in Ton)' || activeTab === 'Inventory - (Auto Conversion)') ? (
             <InventoryAutoConversion />
           ) : (

@@ -1,13 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Remove up/down number input spin buttons across all browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
 
 /* ==========================================================================
    01. DESIGN TOKENS (VARIABLES)
    ========================================================================== */
 :root {
+  --font-family: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
   /* Colors */
-  --color-primary-blue: #233B76;
-  --color-primary-hover: #1B2F5F;
-  --color-primary-light: #EAF1FF;
+  --color-primary-blue: #0E7490;
+  --color-primary-hover: #0891B2;
+  --color-primary-light: #CFFAFE;
+  --color-primary-gradient: linear-gradient(135deg, #094E67 0%, #0E7490 50%, #0891B2 100%);
   
   --color-solar-orange: #F39C12;
   --color-orange-hover: #D98200;
@@ -803,42 +819,54 @@ table td {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
 }
 
-.ds-table, .custom-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+.custom-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  text-align: left !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 12.5px !important;
 }
 
-.ds-table th, .custom-table th {
-  padding: 16px 20px !important;
-  background-color: #f8fafc;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
-  text-transform: none;
-  letter-spacing: normal;
-  white-space: nowrap;
+.custom-table th {
+  padding: 12px 14px !important;
+  background-color: #F8FAFC !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #64748B !important;
+  border: 1px solid #E2E8F0 !important;
+  white-space: nowrap !important;
 }
 
-.ds-table td, .custom-table td {
-  padding: 16px 20px !important;
-  font-size: 13px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
-  white-space: nowrap;
+.custom-table td {
+  padding: 12px 14px !important;
+  font-size: 12.5px !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #1E293B !important;
+  vertical-align: middle !important;
+  transition: background-color 0.15s ease !important;
+  white-space: nowrap !important;
 }
 
-.ds-table tr:last-child td, .custom-table tr:last-child td {
-  border-bottom: none;
+.custom-table tr:hover td {
+  background-color: #F8FAFC !important;
 }
 
-.ds-table tr:hover td, .custom-table tr:hover td {
-  background-color: #f8fafc;
+/* Selected Row Style matching user reference screenshot */
+.custom-table tr.selected-row td,
+.custom-table tbody tr:has(input[type="checkbox"]:checked) td {
+  background-color: #ECFEFF !important;
+}
+
+.custom-table tr.selected-row td:first-child,
+.custom-table tbody tr:has(input[type="checkbox"]:checked) td:first-child {
+  border-left: 4px solid #0E7490 !important;
+  font-weight: 700 !important;
 }
 
 .custom-table.detail-table,
@@ -1800,3 +1828,116 @@ table td {
   width: 60%;
 }
 
+/* ==========================================================================
+   REF TABLE DESIGN SYSTEM (MATCHING USER REFERENCE IMAGE)
+   ========================================================================== */
+.ref-table-container {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.ref-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 12.5px;
+  color: #1E293B;
+}
+
+.ref-table th {
+  background-color: #F8FAFC;
+  color: #64748B;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #E2E8F0;
+  border-right: 1px solid #F1F5F9;
+  white-space: nowrap;
+}
+
+.ref-table th:last-child {
+  border-right: none;
+}
+
+.ref-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #F1F5F9;
+  border-right: 1px solid #F1F5F9;
+  color: #1E293B;
+  vertical-align: middle;
+  transition: background-color 0.15s ease;
+}
+
+.ref-table td:last-child {
+  border-right: none;
+}
+
+.ref-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ref-table tbody tr {
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.ref-table tbody tr:hover {
+  background-color: #F8FAFC;
+}
+
+/* Selected Row Style matching reference screenshot */
+.ref-table tbody tr.selected-row {
+  background-color: #ECFEFF !important;
+}
+
+.ref-table tbody tr.selected-row td:first-child {
+  border-left: 4px solid #0E7490 !important;
+  font-weight: 700;
+}
+
+/* Status Pill Badges matching reference screenshot */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Specific Pill Badges */
+.status-pill-blue {
+  background-color: #EFF6FF;
+  color: #2563EB;
+}
+
+.status-pill-green {
+  background-color: #ECFDF5;
+  color: #10B981;
+}
+
+.status-pill-yellow {
+  background-color: #FFFBEB;
+  color: #F59E0B;
+}
+
+.status-pill-red {
+  background-color: #FEF2F2;
+  color: #EF4444;
+}
+
+.ref-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #CBD5E1;
+  accent-color: #0E7490;
+  cursor: pointer;
+}

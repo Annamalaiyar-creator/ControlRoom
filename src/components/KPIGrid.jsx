@@ -1,10 +1,10 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, Package, FileCheck, Truck, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = false }) {
   const cleanAmount = (amountStr) => {
     if (!amountStr) return 0;
-    const cleaned = amountStr.replace(/[^0-9.]/g, '');
+    const cleaned = String(amountStr).replace(/[^0-9.]/g, '');
     return parseFloat(cleaned) || 0;
   };
 
@@ -21,93 +21,93 @@ export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = f
     const st = (po.statusText || '').toLowerCase();
     return st.includes('shipped') || st.includes('billed') || st.includes('received') || st.includes('open') || st.includes('approved');
   }).length;
-  const realPayments = purchaseOrders
-    .filter(po => {
-      const st = (po.statusText || '').toLowerCase();
-      return st.includes('shipped') || st.includes('billed') || st.includes('received');
-    })
-    .reduce((sum, po) => sum + cleanAmount(po.amount), 0);
 
   const kpis = [
     {
-      title: 'TOTAL PO VALUE (THIS MONTH)',
+      title: 'TOTAL PO VALUE',
       value: hasRealData ? `₹${realTotalValue.toLocaleString('en-IN')}` : '₹ 4.28 Cr',
       trend: '16.2%',
       trendUp: true,
-      bottomText: hasRealData ? 'Total value of all synced Zoho POs' : 'vs Last Month',
-      bottomHighlight: ''
+      icon: Wallet,
+      iconColor: '#F97316',
+      iconBg: '#FFF7ED',
+      bottomPrefix: 'This month, generated extra ',
+      bottomHighlight: '₹ 4.2 Lakhs'
     },
     {
       title: 'TOTAL PO QTY (MT/NOS)',
       value: '1,256',
       trend: '12.8%',
       trendUp: true,
-      bottomText: 'vs Last Month',
-      bottomHighlight: ''
+      icon: Package,
+      iconColor: '#0284C7',
+      iconBg: '#F0F9FF',
+      bottomPrefix: 'This month, dispatched ',
+      bottomHighlight: '+142 MT'
     },
     {
       title: 'POS RAISED (THIS MONTH)',
       value: hasRealData ? `${realIssued}` : '86',
       trend: '10.3%',
       trendUp: true,
-      bottomText: 'vs Last Month',
-      bottomHighlight: ''
+      icon: FileCheck,
+      iconColor: '#0E7490',
+      iconBg: '#ECFEFF',
+      bottomPrefix: 'This month, issued ',
+      bottomHighlight: '86 new POs'
     },
     {
       title: 'POS RECEIVED (THIS MONTH)',
       value: hasRealData ? `${realCompleted}` : '72',
       trend: '14.1%',
       trendUp: true,
-      bottomText: 'vs Last Month',
-      bottomHighlight: ''
+      icon: Truck,
+      iconColor: '#16A34A',
+      iconBg: '#F0FDF4',
+      bottomPrefix: 'This month, completed ',
+      bottomHighlight: '72 orders'
     },
     {
       title: 'OVERDUE POS',
       value: hasRealData ? `${realPending}` : '14',
       trend: '3',
       trendUp: false,
-      bottomText: 'vs Last Month',
-      bottomHighlight: ''
+      icon: AlertTriangle,
+      iconColor: '#DC2626',
+      iconBg: '#FEF2F2',
+      bottomPrefix: 'Requires attention, ',
+      bottomHighlight: '14 pending POs'
     }
   ];
 
   return (
-    <div className="kpi-grid-5">
+    <div className="kpi-grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
       {kpis.map((kpi, idx) => {
+        const IconComponent = kpi.icon;
+
         if (isLoading) {
           return (
             <div 
               key={idx} 
-              className="kpi-card" 
               style={{ 
-                boxShadow: 'var(--shadow-sm)',
-                padding: 0,
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1px solid #EAEFEF',
+                padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-                backgroundColor: 'white',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-card)',
-                height: '115px'
+                gap: '16px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
               }}
             >
-              <div style={{ padding: 'var(--spacing-16) var(--spacing-16) var(--spacing-12) var(--spacing-16)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-12)' }}>
-                <div className="skeleton-shimmer skeleton-text" style={{ width: '50%', height: '10px' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)' }}>
-                  <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '22px' }} />
-                  <div className="skeleton-shimmer skeleton-text" style={{ width: '25%', height: '16px', borderRadius: '12px' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '60%' }}>
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '10px' }} />
+                  <div className="skeleton-shimmer skeleton-text" style={{ width: '90%', height: '24px' }} />
                 </div>
+                <div className="skeleton-shimmer" style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
               </div>
-              <div 
-                style={{ 
-                  padding: '10px var(--spacing-16)', 
-                  borderTop: '1px solid var(--color-border)',
-                  backgroundColor: '#fafbfc'
-                }}
-              >
-                <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '8px' }} />
-              </div>
+              <div className="skeleton-shimmer" style={{ width: '100%', height: '36px', borderRadius: '12px' }} />
             </div>
           );
         }
@@ -115,81 +115,87 @@ export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = f
         return (
           <div 
             key={idx} 
-            className="kpi-card" 
             style={{ 
-              boxShadow: 'var(--shadow-sm)',
-              padding: 0,
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #EAEFEF',
+              padding: '16px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              overflow: 'hidden',
-              backgroundColor: 'white',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-card)'
+              gap: '16px',
+              boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
+              transition: 'all 0.2s ease',
+              fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif"
             }}
           >
             {/* Top Main Section */}
-            <div style={{ padding: 'var(--spacing-16) var(--spacing-16) var(--spacing-12) var(--spacing-16)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-8)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+              <span 
+                style={{ 
+                  fontSize: '11.5px', 
+                  fontWeight: '800', 
+                  color: '#64748B',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {kpi.title}
+              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px', lineHeight: '1.1' }}>
+                  {kpi.value}
+                </span>
+                
+                {/* Green / Red Trend Pill Badge right next to metric */}
                 <span 
                   style={{ 
-                    fontSize: '12px', 
-                    fontWeight: 'bold', 
-                    color: 'var(--color-text-secondary)',
-                    letterSpacing: '0.05em'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    color: kpi.trendUp ? '#059669' : '#DC2626',
+                    backgroundColor: kpi.trendUp ? '#ECFDF5' : '#FEF2F2',
+                    border: kpi.trendUp ? '1px solid #A7F3D0' : '1px solid #FECACA',
+                    padding: '2px 7.5px',
+                    borderRadius: '8px',
+                    lineHeight: '1.2'
                   }}
                 >
-                  {kpi.title}
+                  {kpi.trendUp ? (
+                    <ArrowUpRight style={{ width: '13px', height: '13px' }} />
+                  ) : (
+                    <ArrowDownRight style={{ width: '13px', height: '13px' }} />
+                  )}
+                  {kpi.trend}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    {kpi.value}
-                  </span>
-                  
-                  {/* Trend Pill */}
-                  <span 
-                    style={{ 
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      color: kpi.trendUp ? '#16a34a' : '#dc2626',
-                      backgroundColor: kpi.trendUp ? '#f0fdf4' : '#fef2f2',
-                      border: kpi.trendUp ? '1px solid #bbf7d0' : '1px solid #fecaca',
-                      padding: '2px 6px',
-                      borderRadius: '12px'
-                    }}
-                  >
-                    {kpi.trendUp ? (
-                      <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    ) : (
-                      <TrendingDown style={{ width: '12px', height: '12px' }} />
-                    )}
-                    {kpi.trend}
-                  </span>
-                </div>
               </div>
             </div>
 
-            {/* Bottom Separator & Sub-text box */}
+            {/* Bottom Sub-Card Box / Footer Section matching reference image */}
             <div 
               style={{ 
-                padding: '10px var(--spacing-16)', 
-                borderTop: '1px solid var(--color-border)',
-                backgroundColor: '#fafbfc',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #F1F5F9',
+                borderRadius: '12px',
+                padding: '9px 12px',
                 fontSize: '12px',
-                color: 'var(--color-text-secondary)',
-                lineHeight: '1.4'
+                fontWeight: '500',
+                color: '#64748B',
+                lineHeight: '1.4',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
               }}
             >
-              {kpi.bottomText}
-              {kpi.bottomHighlight && (
-                <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
-                  {kpi.bottomHighlight}
-                </span>
-              )}
+              <span>{kpi.bottomPrefix}</span>
+              <span style={{ color: kpi.trendUp ? '#059669' : '#DC2626', fontWeight: '800' }}>
+                {kpi.bottomHighlight}
+              </span>
             </div>
+
           </div>
         );
       })}

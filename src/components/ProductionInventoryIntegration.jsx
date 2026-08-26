@@ -5,6 +5,7 @@ import {
   BarChart3, Warehouse, CircleDot
 } from 'lucide-react';
 import { prodInventoryStore, BOM_REGISTRY } from '../utils/productionInventoryStore';
+import StatusBadge from './StatusBadge';
 
 /* ─── Shared Style Constants ─── */
 const CARD = {
@@ -59,36 +60,8 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
 
   /* ─── Standard Status Badge Renderer ─── */
   const renderStatusBadge = (status) => {
-    let colors = { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
-    const cleanStatus = status.replace(/^[✓⚠️]\s*/, '');
-    if (status.includes('Issued') || status.includes('Completed') || cleanStatus.includes('SUFFICIENT') || cleanStatus.includes('Stock Issued')) {
-      colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
-    } else if (status.includes('Closed')) {
-      colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-    } else if (status.includes('Pending')) {
-      colors = { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
-    } else if (cleanStatus.includes('SHORTAGE') || status.includes('Warning')) {
-      colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
-    }
-
-    return (
-      <span style={{ 
-        display: 'inline-flex', 
-        alignItems: 'center', 
-        gap: '6px', 
-        padding: '4px 10px', 
-        borderRadius: '6px', 
-        fontSize: '11px', 
-        fontWeight: 'bold', 
-        backgroundColor: colors.bg, 
-        color: colors.color, 
-        border: `1px solid ${colors.border}`,
-        whiteSpace: 'nowrap'
-      }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-        {cleanStatus}
-      </span>
-    );
+    const cleanStatus = status ? status.replace(/^[✓⚠️]\s*/, '') : '';
+    return <StatusBadge status={cleanStatus} size="sm" />;
   };
 
   /* ─── KPI Summary Cards ─── */
@@ -274,18 +247,23 @@ export default function ProductionInventoryIntegration({ onNavigateToCalcEngine 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ ...CARD, padding: '16px 20px', background: 'linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, auto)', gap: '28px' }}>
-                {[
-                  { lbl: 'ORDER', val: activeWo.id, clr: '#6366F1' },
-                  { lbl: 'PRODUCT', val: activeWo.productName, clr: '#0F172A' },
-                  { lbl: 'QUANTITY', val: `${activeWo.plannedQty} Nos`, clr: '#2563EB' },
-                  { lbl: 'STATUS', val: activeWo.status, clr: '#16A34A' },
-                ].map((s, i) => (
-                  <div key={i}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.lbl}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: s.clr, marginTop: '2px' }}>{s.val}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ORDER</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#6366F1', marginTop: '2px' }}>{activeWo.id}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>PRODUCT</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{activeWo.productName}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>QUANTITY</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#2563EB', marginTop: '2px' }}>{activeWo.plannedQty} Nos</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>STATUS</div>
+                  <StatusBadge status={activeWo.status} size="sm" />
+                </div>
               </div>
               {activeWo.status !== 'Material Issued' && !activeWo.status.includes('Closed') && (
                 <button onClick={() => { const r = prodInventoryStore.issueMaterial(activeWo.id); if (r.success) { alert(`✅ Material issued for ${activeWo.id}! Stock deducted.`); forceRefresh(); } else { alert(r.message); } }}

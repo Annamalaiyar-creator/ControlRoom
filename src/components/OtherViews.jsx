@@ -7,11 +7,13 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
   ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw,
-  CreditCard, Bell, Video, Play, Pause, Film, Sparkles
+  CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass
 } from 'lucide-react';
 import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
+import { prodModuleEngine } from '../utils/productionModuleEngine';
+import NotificationToast from './NotificationToast';
 
 
 const saveMediaToCache = (docKey, dataUrl) => {
@@ -168,11 +170,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   const [prodSearchQueryText, setProdSearchQueryText] = useState('');
   const [prodFilterDateVal, setProdFilterDateVal] = useState('');
   const [prodFilterStatusSelect, setProdFilterStatusSelect] = useState('All');
+  const [prodStatusFilterText, setProdStatusFilterText] = useState('All');
 
   useEffect(() => {
     setProdActiveSubTab('All');
     setProdSearchQueryText('');
     setProdFilterStatusSelect('All');
+    if (typeof setCurrentPage === 'function') setCurrentPage(1);
   }, [activeTab]);
 
   const [showBOMForm, setShowBOMForm] = useState(false);
@@ -372,6 +376,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   }, []);
 
   const [bomActionMenuIdx, setBomActionMenuIdx] = useState(null);
+  const [showFloatingMoreMenu, setShowFloatingMoreMenu] = useState(false);
+  const [quickPreviewRecord, setQuickPreviewRecord] = useState(null);
   const [confirmingBomModal, setConfirmingBomModal] = useState(null); // Full BOM object being confirmed by Salesperson
   const [uploadPaymentModal, setUploadPaymentModal] = useState(null); // Full BOM object uploading payment proof
   const [paymentProofFile, setPaymentProofFile] = useState(null);
@@ -512,31 +518,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     const strMsg = String(msg || '');
 
     if (!detectedType) {
-      if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || strMsg.toLowerCase().includes('please')) {
+      if (strMsg.includes('❌') || strMsg.toLowerCase().includes('wrong') || strMsg.toLowerCase().includes('error') || strMsg.toLowerCase().includes('fail') || strMsg.toLowerCase().includes('invalid') || strMsg.toLowerCase().includes('unable') || strMsg.toLowerCase().includes('cannot')) {
+        detectedType = 'error';
+        if (!detectedTitle) detectedTitle = 'Uh oh! Something went wrong';
+      } else if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || strMsg.toLowerCase().includes('please')) {
         detectedType = 'warning';
         if (!detectedTitle) detectedTitle = 'Attention Required';
       } else if (strMsg.includes('✅') || strMsg.toLowerCase().includes('success') || strMsg.toLowerCase().includes('approved') || strMsg.toLowerCase().includes('verified') || strMsg.toLowerCase().includes('completed')) {
         detectedType = 'success';
         if (!detectedTitle) detectedTitle = 'Action Successful';
-      } else if (strMsg.includes('📦') || strMsg.toLowerCase().includes('packing') || strMsg.toLowerCase().includes('dispatch')) {
-        detectedType = 'package';
-        if (!detectedTitle) detectedTitle = 'Dispatch & Packing Notice';
-      } else if (strMsg.includes('🚚')) {
-        detectedType = 'truck';
-        if (!detectedTitle) detectedTitle = 'Delivery Challan Generated';
-      } else if (strMsg.includes('🔄')) {
-        detectedType = 'info';
-        if (!detectedTitle) detectedTitle = 'Status Update';
       } else {
         detectedType = 'info';
-        if (!detectedTitle) detectedTitle = 'ControlRoom Notification';
+        if (!detectedTitle) detectedTitle = 'System Notification';
       }
     }
 
-    const cleanMsg = strMsg.replace(/^[✅⚠️📦🚚🔄📝📩]\s*/, '');
+    const cleanMsg = strMsg.replace(/^[✅⚠️❌📦🚚🔄📝📩]\s*/, '');
     setCustomAlert({
-      title: detectedTitle || 'Notification',
-      message: cleanMsg,
+      title: detectedTitle || (detectedType === 'error' ? 'Uh oh! Something went wrong' : 'Notification'),
+      message: cleanMsg || (detectedType === 'error' ? 'We apologize for the inconvenience you experienced.' : 'Action completed.'),
       type: detectedType || 'info'
     });
   };
@@ -1342,6 +1342,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   });
   const [itemsCurrentPage, setItemsCurrentPage] = useState(1);
   const [itemsRowsPerPage, setItemsRowsPerPage] = useState(10);
+  const [itemsGoToPageInput, setItemsGoToPageInput] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [selectedItemWarehouse, setSelectedItemWarehouse] = useState('All Warehouses');
@@ -1842,6 +1843,43 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       console.error('Error saving reorderAlerts', e);
     }
   }, [reorderAlerts]);
+  const [reorderPage, setReorderPage] = useState(1);
+  const [reorderRowsPerPage, setReorderRowsPerPage] = useState(10);
+  const [selectedReorders, setSelectedReorders] = useState([]);
+
+  const [editingReorderItem, setEditingReorderItem] = useState(null);
+  const [reorder3DotMenuId, setReorder3DotMenuId] = useState(null);
+
+  const currentReorderRows = useMemo(() => {
+    return reorderAlerts.slice(
+      (reorderPage - 1) * reorderRowsPerPage,
+      reorderPage * reorderRowsPerPage
+    );
+  }, [reorderAlerts, reorderPage, reorderRowsPerPage]);
+
+  const handleCreatePoFromReorder = (selectedIds) => {
+    const selectedItems = reorderAlerts.filter(r => selectedIds.includes(r.id));
+    if (selectedItems.length === 0) return;
+    const poItemsPayload = selectedItems.map(item => ({
+      name: item.name,
+      account: 'Raw Material',
+      qty: parseFloat(String(item.reorderQty || '1').replace(/,/g, '')) || 1,
+      unit: item.uom || 'NOS',
+      rate: Math.round((parseFloat(String(item.val || '0').replace(/,/g, '')) || 0) / (parseFloat(String(item.reorderQty || '1').replace(/,/g, '')) || 1)) || 1000,
+      tax: 18
+    }));
+    try {
+      localStorage.setItem('controlroom_pending_reorder_po', JSON.stringify({
+        items: poItemsPayload,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.error('Failed to store pending reorder PO payload', e);
+    }
+    if (typeof onChangeTab === 'function') {
+      onChangeTab('Purchase Orders');
+    }
+  };
 
   // Stock status registry
   const INITIAL_STOCK_REGISTRY = [
@@ -2822,7 +2860,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
         const handleSelectAllVendors = (e) => {
           if (e.target.checked) {
-            setSelectedVendors(currentVendorRows.map(v => v.code));
+            const allCodes = currentVendorRows.map(v => v.code);
+            setSelectedVendors(allCodes);
           } else {
             setSelectedVendors([]);
           }
@@ -3576,7 +3615,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Mobile / Email</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Status</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Payment Terms</th>
-                        <th style={{ width: '60px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 'bold' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3636,76 +3674,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 {renderStatusBadge(vendor.status)}
                               </td>
                               <td style={{ padding: '12px 16px', color: '#475569' }}>{vendor.terms}</td>
-                              <td style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', cursor: 'pointer', position: 'relative' }}>
-                                <div
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveVendorActionMenu(activeVendorActionMenu === vendor.code ? null : vendor.code);
-                                  }}
-                                  style={{ display: 'inline-flex', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
-                                >
-                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                </div>
-                                {activeVendorActionMenu === vendor.code && (
-                                  <>
-                                    <div
-                                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
-                                      onClick={(e) => { e.stopPropagation(); setActiveVendorActionMenu(null); }}
-                                    />
-                                    <div style={{
-                                      position: 'absolute',
-                                      right: '16px',
-                                      top: '36px',
-                                      backgroundColor: '#FFFFFF',
-                                      border: '1px solid #E2E8F0',
-                                      borderRadius: '8px',
-                                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                                      zIndex: 999,
-                                      width: '120px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      padding: '4px 0'
-                                    }}>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenVendorDetails(vendor);
-                                          setActiveVendorActionMenu(null);
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', textAlign: 'left', fontWeight: '500' }}
-                                      >
-                                        View Details
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingVendor(vendor);
-                                          setActiveVendorActionMenu(null);
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', textAlign: 'left', fontWeight: '500' }}
-                                      >
-                                        Edit Vendor
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDeleteConfirmVendor(vendor);
-                                          setActiveVendorActionMenu(null);
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#EF4444', cursor: 'pointer', textAlign: 'left', fontWeight: 'bold' }}
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
                             No vendors match the active filter criteria.
                           </td>
                         </tr>
@@ -3773,6 +3747,275 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   )}
                 </div>
               </>
+            )}
+
+            {/* Floating Selection Toolbar for Vendor Management */}
+            {selectedVendors.length > 0 && (
+              <div style={{
+                position: 'fixed',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '16px',
+                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: 10000,
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                  <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedVendors.length}</strong> Selected
+                </span>
+
+                <button
+                  onClick={() => {
+                    if (selectedVendors.length > 1) {
+                      alert('You cannot edit multiple items at once.');
+                    } else if (selectedVendors.length === 1) {
+                      const codeVal = selectedVendors[0];
+                      const targetRow = (vendorList || []).find(r => r.code === codeVal || r.id === codeVal) || { code: codeVal };
+                      setEditingVendor(targetRow);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete ${selectedVendors.length} selected vendor(s)?`)) {
+                      setVendorList(prev => prev.filter(v => !selectedVendors.includes(v.code) && !selectedVendors.includes(v.id)));
+                      setSelectedVendors([]);
+                      setSelectedRows([]);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                </button>
+
+                {/* Dots / More Actions Button & Popup Menu */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowFloatingMoreMenu(!showFloatingMoreMenu)}
+                    title="More actions"
+                    style={{
+                      backgroundColor: showFloatingMoreMenu ? '#F1F5F9' : '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#64748B',
+                      borderRadius: '10px',
+                      padding: '6px 10px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+
+                  {showFloatingMoreMenu && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '44px',
+                      right: '0',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                      minWidth: '170px',
+                      padding: '6px',
+                      zIndex: 10001,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (selectedVendors && selectedVendors.length > 1) {
+                            alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                            setShowFloatingMoreMenu(false);
+                            return;
+                          }
+                          const codeVal = (selectedVendors && selectedVendors.length > 0) ? selectedVendors[0] : null;
+                          const targetRow = codeVal
+                            ? ((vendorList || []).find(r => r.code === codeVal || r.id === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
+                            : (vendorList && vendorList[0] ? vendorList[0] : { code: 'VEND-001', name: 'Sample Vendor' });
+                          setQuickPreviewRecord(targetRow);
+                          setShowFloatingMoreMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          position: 'relative',
+                          zIndex: 10002
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (selectedVendors.length === 1) {
+                            alert(`Cloned #${selectedVendors[0]} as a new duplicate draft.`);
+                          } else {
+                            alert(`Cloned ${selectedVendors.length} selected items.`);
+                          }
+                          setShowFloatingMoreMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Copy size={14} style={{ color: '#2563EB' }} /> Clone / Duplicate
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          window.print();
+                          setShowFloatingMoreMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Printer size={14} style={{ color: '#475569' }} /> Print Selected
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          alert(`Exported ${selectedVendors.length} vendor record(s) to CSV/PDF.`);
+                          setShowFloatingMoreMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedVendors([]);
+                    setSelectedRows([]);
+                    setShowFloatingMoreMenu(false);
+                  }}
+                  title="Deselect all"
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+                >
+                  <X size={16} />
+                </button>
+              </div>
             )}
 
             {/* Edit Vendor Modal */}
@@ -7359,202 +7602,448 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           </div>
 
           {/* Middle Row: Reorder Alerts List Table (Full Width) */}
-          <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <strong style={{ fontSize: '15px', color: '#0F172A' }}>Reorder Alerts List (81 Items)</strong>
+          <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+              <strong style={{ fontSize: '15px', color: '#0F172A' }}>Reorder Alerts List ({reorderAlerts.length} Items)</strong>
+              {selectedReorders.length > 0 && (
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0E7490' }}>
+                  {selectedReorders.length} items selected
+                </span>
+              )}
+            </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>#</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Category</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Current Stock</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>UOM</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Lead Time</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Est. Reorder Qty</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Est. Value (₹)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Action</th>
-                    <th style={{ padding: '10px 4px' }}></th>
+                  <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
+                    <th style={{ padding: '12px 14px', width: '30px' }}>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                        checked={currentReorderRows.length > 0 && currentReorderRows.every(r => selectedReorders.includes(r.id))}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedReorders(currentReorderRows.map(r => r.id));
+                          } else {
+                            setSelectedReorders([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>#</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Material / SKU</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Category</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Warehouse</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Current Stock</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Reorder Level</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>UOM</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Lead Time</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Est. Reorder Qty</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Est. Value (₹)</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reorderAlerts.map((row, idx) => (
-                    <tr key={row.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                      <td style={{ padding: '12px 4px', color: '#94A3B8' }}>{idx + 1}</td>
-                      <td style={{ padding: '12px 4px' }}>
-                        <div style={{ fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          {row.name}
-                          {row.status === 'Critical' && <span style={{ color: '#EF4444' }}>*</span>}
-                        </div>
-                        <div style={{ fontSize: '10px', color: '#64748B' }}>{row.sku}</div>
-                      </td>
-                      <td style={{ padding: '12px 4px', color: '#475569' }}>{row.category}</td>
-                      <td style={{ padding: '12px 4px', color: '#475569' }}>{row.warehouse}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <div style={{ fontWeight: '700', color: row.status === 'Critical' ? '#EF4444' : '#F59E0B' }}>{row.stock}</div>
-                        <div style={{ fontSize: '10px', color: row.status === 'Critical' ? '#EF4444' : '#F59E0B', fontWeight: '600' }}>{row.percent}</div>
-                      </td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B' }}>{row.uom}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.leadTime}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          backgroundColor: '#EFF6FF',
-                          color: '#1E40AF'
-                        }}>
-                          {row.reorderQty}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        {(() => {
-                          let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-                          if (row.status === 'Critical') {
-                            colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
-                          } else {
-                            colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
-                          }
-                          return (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              backgroundColor: colors.bg,
-                              color: colors.color,
-                              border: `1px solid ${colors.border}`,
-                              whiteSpace: 'nowrap'
-                            }}>
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-                              {row.status}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => {
-                            if (typeof onChangeTab === 'function') {
-                              onChangeTab('Purchase Orders');
-                            }
-                          }}
-                          style={{
-                            height: '30px',
-                            padding: '0 12px',
+                  {currentReorderRows.map((row, idx) => {
+                    const isChecked = selectedReorders.includes(row.id);
+                    return (
+                      <tr
+                        key={row.id}
+                        style={{
+                          borderBottom: '1px solid #F1F5F9',
+                          transition: 'all 0.15s ease',
+                          backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
+                          borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                        }}
+                        className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
+                      >
+                        <td style={{ padding: '12px 14px', width: '30px' }}>
+                          <input
+                            type="checkbox"
+                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            checked={isChecked}
+                            onChange={() => {
+                              if (selectedReorders.includes(row.id)) {
+                                setSelectedReorders(selectedReorders.filter(i => i !== row.id));
+                              } else {
+                                setSelectedReorders([...selectedReorders, row.id]);
+                              }
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 14px', color: '#94A3B8', fontWeight: 'bold' }}>{(reorderPage - 1) * reorderRowsPerPage + idx + 1}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {row.name}
+                            {row.status === 'Critical' && <span style={{ color: '#EF4444' }}>*</span>}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>{row.sku}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', color: '#475569' }}>{row.category}</td>
+                        <td style={{ padding: '12px 14px', color: '#475569' }}>{row.warehouse}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <div style={{ fontWeight: '700', color: row.status === 'Critical' ? '#EF4444' : '#F59E0B' }}>{row.stock}</div>
+                          <div style={{ fontSize: '10px', color: row.status === 'Critical' ? '#EF4444' : '#F59E0B', fontWeight: '600' }}>{row.percent}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>{row.uom}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569' }}>{row.leadTime}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '4px 10px',
                             borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: '#2563EB',
-                            color: '#FFFFFF',
                             fontSize: '11px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          + Create PO
-                        </button>
-                      </td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                        <MoreVertical style={{ width: '14px', height: '14px' }} />
-                      </td>
-                    </tr>
-                  ))}
+                            fontWeight: 'bold',
+                            backgroundColor: '#EFF6FF',
+                            color: '#1E40AF'
+                          }}>
+                            {row.reorderQty}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          {(() => {
+                            let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+                            if (row.status === 'Critical') {
+                              colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
+                            } else {
+                              colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
+                            }
+                            return (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                backgroundColor: colors.bg,
+                                color: colors.color,
+                                border: `1px solid ${colors.border}`,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
+                                {row.status}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginTop: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748B' }}>Showing 1 to 10 of 81 items</span>
+            {/* Standard Pagination Footer Layout */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', fontSize: '13px', color: '#64748B', borderTop: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
+              {/* Left Side: Rows per page selector (restricted to 5, 10) + Showing X to Y of Z entries */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                    <ChevronLeft style={{ width: '14px', height: '14px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>Showing per page</span>
+                  <select
+                    value={reorderRowsPerPage}
+                    onChange={(e) => { setReorderRowsPerPage(Number(e.target.value)); setReorderPage(1); }}
+                    style={{ height: '32px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', padding: '0 8px', backgroundColor: 'white', fontWeight: 'bold' }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                  </select>
+                </div>
+                <span>Showing {(reorderPage - 1) * reorderRowsPerPage + 1} to {Math.min(reorderPage * reorderRowsPerPage, reorderAlerts.length)} of {reorderAlerts.length} entries</span>
+              </div>
+
+              {/* Right Side: Page navigation controls adjacent to Go to page input */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <button
+                    disabled={reorderPage === 1}
+                    onClick={() => setReorderPage(1)}
+                    style={{ border: '1px solid #E2E8F0', background: reorderPage === 1 ? '#F8FAFC' : 'white', cursor: reorderPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                  >
+                    &laquo;
                   </button>
-                  {[1, 2, 3, 4].map((page) => (
-                    <button key={page} style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '6px',
-                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF',
-                      color: page === 1 ? '#FFFFFF' : '#475569',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}>
-                      {page}
-                    </button>
-                  ))}
-                  <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                    <ChevronRight style={{ width: '14px', height: '14px' }} />
+                  <button
+                    disabled={reorderPage === 1}
+                    onClick={() => setReorderPage(prev => Math.max(prev - 1, 1))}
+                    style={{ border: '1px solid #E2E8F0', background: reorderPage === 1 ? '#F8FAFC' : 'white', cursor: reorderPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                  >
+                    &lt;
+                  </button>
+
+                  {(() => {
+                    const totalPages = Math.ceil(reorderAlerts.length / reorderRowsPerPage);
+                    let start = Math.max(1, reorderPage - 1);
+                    let end = start + 2;
+                    if (end > totalPages) {
+                      end = totalPages;
+                      start = Math.max(1, end - 2);
+                    }
+                    return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setReorderPage(page)}
+                        style={{
+                          border: '1px solid #E2E8F0',
+                          background: page === reorderPage ? '#0E7490' : 'white',
+                          color: page === reorderPage ? 'white' : '#475569',
+                          cursor: 'pointer',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontWeight: page === reorderPage ? 'bold' : '500'
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ));
+                  })()}
+
+                  <button
+                    disabled={reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage)}
+                    onClick={() => setReorderPage(prev => Math.min(prev + 1, Math.ceil(reorderAlerts.length / reorderRowsPerPage)))}
+                    style={{ border: '1px solid #E2E8F0', background: reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage) ? '#F8FAFC' : 'white', cursor: reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                  >
+                    &gt;
+                  </button>
+                  <button
+                    disabled={reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage)}
+                    onClick={() => setReorderPage(Math.ceil(reorderAlerts.length / reorderRowsPerPage))}
+                    style={{ border: '1px solid #E2E8F0', background: reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage) ? '#F8FAFC' : 'white', cursor: reorderPage === Math.ceil(reorderAlerts.length / reorderRowsPerPage) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                  >
+                    &raquo;
                   </button>
                 </div>
-                <select style={{ height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: '#FFFFFF', color: '#475569' }}>
-                  <option>10 / page</option>
-                </select>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Go to page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={Math.ceil(reorderAlerts.length / reorderRowsPerPage) || 1}
+                    defaultValue={reorderPage}
+                    id="reorder-goto-page-input"
+                    style={{ width: '42px', height: '32px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}
+                  />
+                  <button
+                    onClick={() => {
+                      const val = parseInt(document.getElementById('reorder-goto-page-input')?.value || '1', 10);
+                      const totalPages = Math.ceil(reorderAlerts.length / reorderRowsPerPage);
+                      if (val >= 1 && val <= totalPages) setReorderPage(val);
+                    }}
+                    style={{ height: '32px', padding: '0 10px', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#0E7490', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Go &rsaquo;
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Quick Actions Card (Full Width Row) */}
-          <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <strong style={{ fontSize: '14px', color: '#0F172A' }}>Quick Actions</strong>
+          {/* Floating Selection Toolbar for Reorder Alerts Table */}
+          {selectedReorders.length > 0 && (
+            <div style={{
+              position: 'fixed',
+              bottom: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '16px',
+              boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              zIndex: 10000,
+              fontFamily: "'Plus Jakarta Sans', sans-serif"
+            }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedReorders.length}</strong> Selected
+              </span>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              {[
-                { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
-                { label: 'Create Indent', icon: FileText, action: () => onChangeTab('purchase-orders') },
-                { label: 'Stock Report', icon: TrendingUp, action: () => window.print() }
-              ].map((act, idx) => {
-                const ActIcon = act.icon || FileText;
-                return (
-                  <button key={idx}
-                    onClick={act.action || null}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '12px 6px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      height: '75px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F8FAFC';
-                      e.currentTarget.style.borderColor = '#CBD5E1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#E2E8F0';
-                    }}>
-                    <ActIcon style={{ width: '18px', height: '18px', color: '#2563EB' }} />
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#475569', textAlign: 'center', lineHeight: '1.2' }}>{act.label}</span>
-                  </button>
-                );
-              })}
+              {/* Create PO button when 1 item is selected; Create Bulk PO button when 2 or more items are selected */}
+              <button
+                onClick={() => handleCreatePoFromReorder(selectedReorders)}
+                style={{
+                  backgroundColor: '#0E7490',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  padding: '7px 16px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+              >
+                + {selectedReorders.length === 1 ? 'Create PO' : 'Create Bulk PO'}
+              </button>
+
+              {/* 3-Dot Menu Dropdown containing Edit and Delete */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setReorder3DotMenuId(reorder3DotMenuId ? null : 'floating-menu')}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#475569',
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  •••
+                </button>
+
+                {reorder3DotMenuId === 'floating-menu' && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    right: '0',
+                    marginBottom: '8px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '10px',
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                    width: '140px',
+                    padding: '4px 0',
+                    zIndex: 10001
+                  }}>
+                    <button
+                      onClick={() => {
+                        const firstItem = reorderAlerts.find(r => selectedReorders.includes(r.id));
+                        if (firstItem) setEditingReorderItem({ ...firstItem });
+                        setReorder3DotMenuId(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 14px',
+                        textAlign: 'left',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <Edit3 size={14} style={{ color: '#0E7490' }} /> Edit Info
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${selectedReorders.length} selected item(s)?`)) {
+                          setReorderAlerts(prev => prev.filter(r => !selectedReorders.includes(r.id)));
+                          setSelectedReorders([]);
+                        }
+                        setReorder3DotMenuId(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 14px',
+                        textAlign: 'left',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: '#DC2626',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  setSelectedReorders([]);
+                  setReorder3DotMenuId(null);
+                }}
+                title="Deselect all"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+              >
+                <X size={16} />
+              </button>
             </div>
-          </div>
+          )}
+
+          {/* Quick Actions Card (Full Width Row - Hidden for Procurement Head) */}
+          {!['Procurement Head', 'Head of Procurement', 'Procurement Manager'].includes(userRole) && (
+            <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <strong style={{ fontSize: '14px', color: '#0F172A' }}>Quick Actions</strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                {[
+                  { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
+                  { label: 'Create Indent', icon: FileText, action: () => onChangeTab('purchase-orders') },
+                  { label: 'Stock Report', icon: TrendingUp, action: () => window.print() }
+                ].map((act, idx) => {
+                  const ActIcon = act.icon || FileText;
+                  return (
+                    <button key={idx}
+                      onClick={act.action || null}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 6px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        height: '75px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        e.currentTarget.style.borderColor = '#CBD5E1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#FFFFFF';
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                      }}>
+                      <ActIcon style={{ width: '18px', height: '18px', color: '#2563EB' }} />
+                      <span style={{ fontSize: '10px', fontWeight: '600', color: '#475569', textAlign: 'center', lineHeight: '1.2' }}>{act.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Bottom Info alerts bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#EFF6FF', borderRadius: '12px', padding: '14px 20px', border: '1px solid #DBEAFE' }}>
@@ -7567,6 +8056,96 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               </a>
             </span>
           </div>
+
+          {/* Edit Material Reorder Modal */}
+          {editingReorderItem && (
+            <div style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 20000
+            }}>
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                width: '450px',
+                padding: '24px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>Edit Reorder Item</h3>
+                  <button onClick={() => setEditingReorderItem(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '4px' }}>Material Name</label>
+                    <input
+                      type="text"
+                      value={editingReorderItem.name || ''}
+                      onChange={(e) => setEditingReorderItem({ ...editingReorderItem, name: e.target.value })}
+                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '4px' }}>Est. Reorder Qty</label>
+                      <input
+                        type="text"
+                        value={editingReorderItem.reorderQty || ''}
+                        onChange={(e) => setEditingReorderItem({ ...editingReorderItem, reorderQty: e.target.value })}
+                        style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '4px' }}>UOM</label>
+                      <input
+                        type="text"
+                        value={editingReorderItem.uom || ''}
+                        onChange={(e) => setEditingReorderItem({ ...editingReorderItem, uom: e.target.value })}
+                        style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '4px' }}>Est. Value (₹)</label>
+                    <input
+                      type="text"
+                      value={editingReorderItem.val || ''}
+                      onChange={(e) => setEditingReorderItem({ ...editingReorderItem, val: e.target.value })}
+                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', pt: '12px', borderTop: '1px solid #E2E8F0', marginTop: '8px' }}>
+                  <button
+                    onClick={() => setEditingReorderItem(null)}
+                    style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReorderAlerts(prev => prev.map(r => r.id === editingReorderItem.id ? editingReorderItem : r));
+                      setEditingReorderItem(null);
+                    }}
+                    style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       )}
@@ -9247,23 +9826,39 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     setCreateStatus(null);
                   }}
                   style={{
-                    height: '38px',
-                    padding: '0 18px',
-                    borderRadius: '8px',
+                    backgroundColor: '#0E7490',
                     border: 'none',
-                    backgroundColor: '#2563EB',
                     color: '#FFFFFF',
+                    height: '40px',
+                    padding: '0 6px 0 20px',
+                    borderRadius: '50px',
                     fontSize: '13px',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '12px',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                    boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.2px'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
                 >
-                  <Plus style={{ width: '16px', height: '16px' }} />
-                  Add New Product
+                  <span>Add New Product</span>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0E7490',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
+                    <ArrowRight size={16} strokeWidth={2.5} />
+                  </div>
                 </button>
               </div>
               <div className="section-card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '12px' }}>
@@ -9426,7 +10021,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <th style={{ padding: '14px 16px', textAlign: 'center', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Unit</th>
                         <th style={{ padding: '14px 16px', textAlign: 'left', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Description</th>
                         <th style={{ padding: '14px 16px', textAlign: 'center', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Status</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'center', color: '#475569', fontWeight: '600', width: '100px', whiteSpace: 'nowrap' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -9452,133 +10046,63 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         const currentItemRows = filtered.slice(indexOfFirstItemRow, indexOfLastItemRow);
 
                         return currentItemRows.length > 0 ? (
-                          currentItemRows.map((item, idx) => (
-                            <tr key={item.itemId || idx} className="table-row-hover" style={{ borderBottom: idx === currentItemRows.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedItems.includes(item.itemId)}
-                                  onChange={() => {
-                                    if (selectedItems.includes(item.itemId)) {
-                                      setSelectedItems(selectedItems.filter(id => id !== item.itemId));
-                                    } else {
-                                      setSelectedItems([...selectedItems, item.itemId]);
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td style={{ padding: '14px 16px', color: '#1e293b', fontWeight: 'bold' }}>{item.name}</td>
-                              <td style={{ padding: '14px 16px' }}>{item.sku}</td>
-                              <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '500' }}>{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                              <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748b' }}>{item.unit}</td>
-                              <td style={{ padding: '14px 16px' }}>
-                                {item.description && item.description.length > 60
-                                  ? `${item.description.substring(0, 60)}...`
-                                  : (item.description || '')}
-                              </td>
-                              <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                <span style={{
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  backgroundColor: item.status === 'Active' ? '#E6F7ED' : '#FEE2E2',
-                                  color: item.status === 'Active' ? '#137333' : '#EF4444'
+                          currentItemRows.map((item, idx) => {
+                            const isSelected = selectedItems.includes(item.itemId);
+                            return (
+                              <tr
+                                key={item.itemId || idx}
+                                className="table-row-hover"
+                                style={{
+                                  backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
+                                  borderBottom: idx === currentItemRows.length - 1 ? 'none' : '1px solid #f1f5f9',
+                                  transition: 'background-color 0.15s ease'
+                                }}
+                              >
+                                <td style={{
+                                  padding: '14px 16px',
+                                  textAlign: 'center',
+                                  borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
                                 }}>
-                                  {item.status}
-                                </span>
-                              </td>
-                              <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                                <div
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveItemActionMenu(activeItemActionMenu === item.itemId ? null : item.itemId);
-                                  }}
-                                  style={{ display: 'inline-flex', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
-                                >
-                                  <MoreVertical style={{ width: '16px', height: '16px', margin: '0 auto' }} />
-                                </div>
-                                {activeItemActionMenu === item.itemId && (
-                                  <>
-                                    <div
-                                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }}
-                                      onClick={(e) => { e.stopPropagation(); setActiveItemActionMenu(null); }}
-                                    />
-                                    <div style={{
-                                      position: 'absolute',
-                                      right: '16px',
-                                      top: '36px',
-                                      backgroundColor: '#FFFFFF',
-                                      border: '1px solid #E2E8F0',
-                                      borderRadius: '8px',
-                                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                                      zIndex: 999,
-                                      width: '120px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      padding: '4px 0'
-                                    }}>
-                                      <button
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          setActiveItemActionMenu(null);
-                                          try {
-                                            const res = await fetch(`/api/zoho/items/${item.itemId}`);
-                                            if (res.ok) {
-                                              const detail = await res.json();
-                                              setViewingItem(detail);
-                                            } else {
-                                              setViewingItem(item);
-                                            }
-                                          } catch (err) {
-                                            console.error("Failed to load item detail from Zoho:", err);
-                                            setViewingItem(item);
-                                          }
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', textAlign: 'left', fontWeight: '500' }}
-                                      >
-                                        View Details
-                                      </button>
-                                      <button
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          setActiveItemActionMenu(null);
-                                          try {
-                                            const res = await fetch(`/api/zoho/items/${item.itemId}`);
-                                            if (res.ok) {
-                                              const detail = await res.json();
-                                              setEditingItem(detail);
-                                            } else {
-                                              setEditingItem(item);
-                                            }
-                                          } catch (err) {
-                                            console.error("Failed to load item detail for editing:", err);
-                                            setEditingItem(item);
-                                          }
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', textAlign: 'left', fontWeight: '500' }}
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDeleteConfirmItem(item);
-                                          setActiveItemActionMenu(null);
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '8px 12px', fontSize: '13px', color: '#EF4444', cursor: 'pointer', textAlign: 'left', fontWeight: 'bold' }}
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          ))
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {
+                                      if (isSelected) {
+                                        setSelectedItems(selectedItems.filter(id => id !== item.itemId));
+                                      } else {
+                                        setSelectedItems([...selectedItems, item.itemId]);
+                                      }
+                                    }}
+                                    style={{ accentColor: '#0E7490', width: '16px', height: '16px', cursor: 'pointer' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '14px 16px', color: '#1e293b', fontWeight: 'bold' }}>{item.name}</td>
+                                <td style={{ padding: '14px 16px' }}>{item.sku}</td>
+                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '500' }}>{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748b' }}>{item.unit}</td>
+                                <td style={{ padding: '14px 16px' }}>
+                                  {item.description && item.description.length > 60
+                                    ? `${item.description.substring(0, 60)}...`
+                                    : (item.description || '')}
+                                </td>
+                                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    backgroundColor: item.status === 'Active' ? '#E6F7ED' : '#FEE2E2',
+                                    color: item.status === 'Active' ? '#137333' : '#EF4444'
+                                  }}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
                         ) : (
                           <tr>
-                            <td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                            <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
                               No items found in your Zoho Catalog.
                             </td>
                           </tr>
@@ -9588,8 +10112,96 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </table>
                 </div>
 
-                {/* Pagination footer */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #f1f5f9', backgroundColor: 'white' }}>
+                {/* Floating Selection Toolbar for Items Catalog Table */}
+                {selectedItems.length > 0 && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    zIndex: 10000,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                  }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                      <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedItems.length}</strong> Selected
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        const firstItem = itemsList.find(i => selectedItems.includes(i.itemId));
+                        if (firstItem) setEditingItem(firstItem);
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        color: '#334155',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Edit3 size={14} style={{ color: '#0E7490' }} /> Edit Info
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${selectedItems.length} selected product(s)?`)) {
+                          setItemsList(prev => prev.filter(i => !selectedItems.includes(i.itemId)));
+                          setSelectedItems([]);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#DC2626',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedItems([])}
+                      title="Deselect all"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: '#94A3B8',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '6px'
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Standard Pagination Footer Layout */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #f1f5f9', backgroundColor: 'white', flexWrap: 'wrap', gap: '12px' }}>
                   {(() => {
                     const query = itemSearchQuery.toLowerCase().trim();
                     const filtered = itemsList.filter(item => {
@@ -9608,39 +10220,51 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       return true;
                     });
 
+                    const totalPages = Math.ceil(filtered.length / itemsRowsPerPage) || 1;
+
                     return (
                       <>
-                        <span style={{ fontSize: '13px', color: '#64748b' }}>
-                          Showing {filtered.length === 0 ? 0 : (itemsCurrentPage - 1) * itemsRowsPerPage + 1} to {Math.min(itemsCurrentPage * itemsRowsPerPage, filtered.length)} of {filtered.length} entries
-                        </span>
-                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '13px', color: '#64748b' }}>Rows per page:</span>
-                            <select
-                              value={itemsRowsPerPage}
-                              onChange={(e) => { setItemsRowsPerPage(parseInt(e.target.value)); setItemsCurrentPage(1); }}
-                              style={{ height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white' }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                            Showing per page
+                          </span>
+                          <select
+                            value={itemsRowsPerPage}
+                            onChange={(e) => { setItemsRowsPerPage(parseInt(e.target.value)); setItemsCurrentPage(1); }}
+                            style={{ height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', fontWeight: '600', color: '#334155' }}
+                          >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                          </select>
+                          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                            Showing {filtered.length === 0 ? 0 : (itemsCurrentPage - 1) * itemsRowsPerPage + 1} to {Math.min(itemsCurrentPage * itemsRowsPerPage, filtered.length)} of {filtered.length} entries
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <button
+                              disabled={itemsCurrentPage === 1}
+                              onClick={() => setItemsCurrentPage(1)}
+                              title="First Page"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === 1 ? 'not-allowed' : 'pointer', color: itemsCurrentPage === 1 ? '#cbd5e1' : '#475569', fontWeight: 'bold', fontSize: '11px' }}
                             >
-                              <option value={5}>5</option>
-                              <option value={10}>10</option>
-                              <option value={20}>20</option>
-                            </select>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                              &lt;&lt;
+                            </button>
                             <button
                               disabled={itemsCurrentPage === 1}
                               onClick={() => setItemsCurrentPage(itemsCurrentPage - 1)}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === 1 ? 'not-allowed' : 'pointer', color: itemsCurrentPage === 1 ? '#cbd5e1' : '#475569' }}
+                              title="Previous Page"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === 1 ? 'not-allowed' : 'pointer', color: itemsCurrentPage === 1 ? '#cbd5e1' : '#475569', fontWeight: 'bold', fontSize: '11px' }}
                             >
-                              <ChevronLeft style={{ width: '16px', height: '16px' }} />
+                              &lt;
                             </button>
                             {(() => {
-                              const totalPages = Math.ceil(filtered.length / itemsRowsPerPage);
                               let start = Math.max(1, itemsCurrentPage - 1);
-                              let end = start + 3;
+                              let end = start + 2;
                               if (end > totalPages) {
                                 end = totalPages;
-                                start = Math.max(1, end - 3);
+                                start = Math.max(1, end - 2);
                               }
                               const pages = [];
                               for (let i = start; i <= end; i++) {
@@ -9656,7 +10280,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   height: '32px',
                                   border: pageNum === itemsCurrentPage ? 'none' : '1px solid #cbd5e1',
                                   borderRadius: '6px',
-                                  backgroundColor: pageNum === itemsCurrentPage ? '#2563eb' : 'white',
+                                  backgroundColor: pageNum === itemsCurrentPage ? '#0E7490' : 'white',
                                   color: pageNum === itemsCurrentPage ? 'white' : '#475569',
                                   fontWeight: 'bold',
                                   cursor: 'pointer'
@@ -9666,11 +10290,55 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </button>
                             ))}
                             <button
-                              disabled={itemsCurrentPage === Math.ceil(filtered.length / itemsRowsPerPage) || Math.ceil(filtered.length / itemsRowsPerPage) === 0}
+                              disabled={itemsCurrentPage === totalPages}
                               onClick={() => setItemsCurrentPage(itemsCurrentPage + 1)}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === Math.ceil(filtered.length / itemsRowsPerPage) || Math.ceil(filtered.length / itemsRowsPerPage) === 0 ? 'not-allowed' : 'pointer', color: itemsCurrentPage === Math.ceil(filtered.length / itemsRowsPerPage) || Math.ceil(filtered.length / itemsRowsPerPage) === 0 ? '#cbd5e1' : '#475569' }}
+                              title="Next Page"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === totalPages ? 'not-allowed' : 'pointer', color: itemsCurrentPage === totalPages ? '#cbd5e1' : '#475569', fontWeight: 'bold', fontSize: '11px' }}
                             >
-                              <ChevronRight style={{ width: '16px', height: '16px' }} />
+                              &gt;
+                            </button>
+                            <button
+                              disabled={itemsCurrentPage === totalPages}
+                              onClick={() => setItemsCurrentPage(totalPages)}
+                              title="Last Page"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: 'white', cursor: itemsCurrentPage === totalPages ? 'not-allowed' : 'pointer', color: itemsCurrentPage === totalPages ? '#cbd5e1' : '#475569', fontWeight: 'bold', fontSize: '11px' }}
+                            >
+                              &gt;&gt;
+                            </button>
+                          </div>
+
+                          {/* Go to page jump controls */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Go to page</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max={totalPages}
+                              value={itemsGoToPageInput}
+                              onChange={(e) => setItemsGoToPageInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const p = parseInt(itemsGoToPageInput);
+                                  if (p >= 1 && p <= totalPages) {
+                                    setItemsCurrentPage(p);
+                                    setItemsGoToPageInput('');
+                                  }
+                                }
+                              }}
+                              placeholder="#"
+                              style={{ width: '40px', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 6px', fontSize: '12px', textAlign: 'center', outline: 'none' }}
+                            />
+                            <button
+                              onClick={() => {
+                                const p = parseInt(itemsGoToPageInput);
+                                if (p >= 1 && p <= totalPages) {
+                                  setItemsCurrentPage(p);
+                                  setItemsGoToPageInput('');
+                                }
+                              }}
+                              style={{ height: '32px', padding: '0 10px', borderRadius: '6px', border: '1px solid #0E7490', backgroundColor: '#ECFEFF', color: '#0E7490', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                            >
+                              Go ›
                             </button>
                           </div>
                         </div>
@@ -9763,17 +10431,633 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         </div>
       )}
 
+      {/* ==================== 13. DISPATCH DASHBOARD SCREEN (CONTROL ROOM DESIGN SYSTEM) ==================== */}
+      {(activeTab === 'Dispatch Dashboard' || (userRole === 'Dispatch Head' && activeTab === 'Dashboard')) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
+          
+          {/* Top 7 KPI Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', width: '100%' }}>
+            
+            {/* KPI 1 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#15803D', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Truck size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>TOTAL ORDERS READY</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>64</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#16A34A' }}>
+                <TrendingUp size={12} /> 15.9% vs Last Month
+              </div>
+            </div>
+
+            {/* KPI 2 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0284C7', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Truck size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DISPATCHED TODAY</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>28</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>Till 09:30 AM</div>
+              <div style={{ fontSize: '10px', color: '#94A3B8' }}>--</div>
+            </div>
+
+            {/* KPI 3 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#6B21A8', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Package size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DISPATCHED (MTD)</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>352</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#16A34A' }}>
+                <TrendingUp size={12} /> 12.6% vs Last Month
+              </div>
+            </div>
+
+            {/* KPI 4 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0D9488', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CheckCircle size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>ON TIME DISPATCH %</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>96.4%</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#16A34A' }}>
+                <TrendingUp size={12} /> 4.2% vs Last Month
+              </div>
+            </div>
+
+            {/* KPI 5 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#EA580C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DISPATCH PENDING</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>14</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#DC2626' }}>
+                <TrendingDown size={12} /> 2 vs Last Month
+              </div>
+            </div>
+
+            {/* KPI 6 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0E7490', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>INVOICES PENDING</span>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>11</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#DC2626' }}>
+                <TrendingDown size={12} /> 3 vs Last Month
+              </div>
+            </div>
+
+            {/* KPI 7 */}
+            <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#A21CAF', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <IndianRupee size={16} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DISPATCH VALUE (MTD)</span>
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', lineHeight: '1' }}>₹ 3.26 Cr</div>
+              <div style={{ fontSize: '10px', color: '#64748B' }}>This Month</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: '700', color: '#16A34A' }}>
+                <TrendingUp size={12} /> 14.8% vs Last Month
+              </div>
+            </div>
+
+          </div>
+
+          {/* ROW 1: Dispatch Status | Daily Trend | Top 5 Delayed */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '16px', width: '100%' }}>
+            
+            {/* Card 1: Dispatch Status (This Month) */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                DISPATCH STATUS (This Month)
+              </div>
+              <div style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                {/* Donut Simulation */}
+                <div style={{ position: 'relative', width: '120px', height: '120px', borderRadius: '50%', background: 'conic-gradient(#15803D 0% 68.8%, #0284C7 68.8% 96.9%, #EAB308 96.9% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>64</span>
+                    <span style={{ fontSize: '8px', color: '#64748B', fontWeight: '700' }}>Total Orders</span>
+                  </div>
+                </div>
+                {/* Legend */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, fontSize: '11px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '600' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#15803D' }} /> Dispatched</span>
+                    <strong style={{ color: '#0F172A' }}>44 <span style={{ color: '#64748B', fontWeight: '400' }}>(68.8%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '600' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284C7' }} /> In Transit</span>
+                    <strong style={{ color: '#0F172A' }}>18 <span style={{ color: '#64748B', fontWeight: '400' }}>(28.1%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '600' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EAB308' }} /> Ready for Dispatch</span>
+                    <strong style={{ color: '#0F172A' }}>6 <span style={{ color: '#64748B', fontWeight: '400' }}>(9.4%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '600' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EC4899' }} /> Pending (Not Ready)</span>
+                    <strong style={{ color: '#0F172A' }}>8 <span style={{ color: '#64748B', fontWeight: '400' }}>(12.5%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '600' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EF4444' }} /> Cancelled</span>
+                    <strong style={{ color: '#0F172A' }}>0 <span style={{ color: '#64748B', fontWeight: '400' }}>(0.0%)</span></strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Daily Dispatch Trend (Orders) */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>DAILY DISPATCH TREND (Orders)</span>
+                <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '500' }}>• Dispatched Orders  — On Time %</span>
+              </div>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '110px', paddingTop: '10px', borderBottom: '1px solid #E2E8F0' }}>
+                  {[
+                    { day: '18-Jul', count: 26, pct: '96%' },
+                    { day: '19-Jul', count: 24, pct: '92%' },
+                    { day: '20-Jul', count: 31, pct: '97%' },
+                    { day: '21-Jul', count: 32, pct: '94%' },
+                    { day: '22-Jul', count: 30, pct: '93%' },
+                    { day: '23-Jul', count: 29, pct: '95%' },
+                    { day: '24-Jul', count: 28, pct: '98%' }
+                  ].map((bar, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#16A34A' }}>{bar.pct}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#0F172A' }}>{bar.count}</span>
+                      <div style={{ width: '22px', height: `${(bar.count / 35) * 65}px`, backgroundColor: '#0B2545', borderRadius: '4px 4px 0 0' }} />
+                      <span style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>{bar.day}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Top 5 Delayed Dispatch Orders */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                TOP 5 DELAYED DISPATCH ORDERS
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Order No.</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Customer</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Delay Days</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Reason</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { order: 'VRM/26/07/118', cust: 'ABC Solar Pvt Ltd', delay: 2, reason: 'Material Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
+                      { order: 'VRM/26/07/101', cust: 'Sun Power EPC', delay: 2, reason: 'Packing Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
+                      { order: 'VRM/26/07/089', cust: 'Green Infra Ltd', delay: 1, reason: 'Invoice Pending', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
+                      { order: 'VRM/26/07/074', cust: 'Bright Energy', delay: 1, reason: 'Vehicle Not Available', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
+                      { order: 'VRM/26/07/061', cust: 'Voltix Solutions', delay: 1, reason: 'QC Hold', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{row.order}</td>
+                        <td style={{ padding: '8px 10px', color: '#334155' }}>{row.cust}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', color: '#DC2626' }}>{row.delay}</td>
+                        <td style={{ padding: '8px 10px', color: '#64748B' }}>{row.reason}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: row.stBg, color: row.stFg }}>
+                            {row.st}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ROW 2: Dispatch by Product | Vehicle Utilization | Dispatch Performance */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: '16px', width: '100%' }}>
+            
+            {/* Table 1: Dispatch By Product / Profile (MTD) */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                DISPATCH BY PRODUCT / PROFILE (MTD)
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Product / Profile</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Orders</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Qty (Nos)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Weight (MT)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Value (₹)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>On Time %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prod: 'Mini Rail 100 mm', orders: 18, qty: '12,450', wt: '18.25', val: '72.45 L', pct: '97.2%' },
+                      { prod: 'Mini Rail 60 mm', orders: 12, qty: '8,300', wt: '12.15', val: '48.10 L', pct: '96.1%' },
+                      { prod: 'Long Rail 3000 mm', orders: 8, qty: '5,200', wt: '9.80', val: '33.28 L', pct: '95.0%' },
+                      { prod: 'Mid Clamp 35 mm', orders: 11, qty: '22,600', wt: '6.25', val: '41.76 L', pct: '94.5%' },
+                      { prod: 'End Clamp 35 mm', orders: 6, qty: '8,900', wt: '2.10', val: '16.75 L', pct: '100%' },
+                      { prod: 'Others', orders: 9, qty: '6,420', wt: '3.60', val: '20.40 L', pct: '96.0%' }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{row.prod}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{row.orders}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{row.qty}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{row.wt}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 'bold' }}>{row.val}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#16A34A', fontWeight: 'bold' }}>{row.pct}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold', borderTop: '2px solid #CBD5E1' }}>
+                      <td style={{ padding: '8px 10px' }}>Total</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>64</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>63,870</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right' }}>52.15</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', color: '#0E7490' }}>2.32 Cr</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'center', color: '#16A34A' }}>96.4%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Vehicle Utilization (Today) */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                VEHICLE UTILIZATION (Today)
+              </div>
+              <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <div style={{ position: 'relative', width: '110px', height: '110px', borderRadius: '50%', background: 'conic-gradient(#15803D 0% 56.3%, #0284C7 56.3% 84.4%, #EAB308 84.4% 96.9%, #EF4444 96.9% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>32</span>
+                    <span style={{ fontSize: '7px', color: '#64748B', fontWeight: '700' }}>Vehicles</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, fontSize: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#334155' }}><span style={{ color: '#15803D' }}>•</span> Loaded & Dispatched</span>
+                    <strong>18 <span style={{ color: '#64748B' }}>(56.3%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#334155' }}><span style={{ color: '#0284C7' }}>•</span> In Transit</span>
+                    <strong>18 <span style={{ color: '#64748B' }}>(56.3%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#334155' }}><span style={{ color: '#EAB308' }}>•</span> Loading</span>
+                    <strong>4 <span style={{ color: '#64748B' }}>(12.5%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#334155' }}><span style={{ color: '#EC4899' }}>•</span> Waiting (For Loading)</span>
+                    <strong>5 <span style={{ color: '#64748B' }}>(15.6%)</span></strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#334155' }}><span style={{ color: '#EF4444' }}>•</span> Cancelled / Rescheduled</span>
+                    <strong>1 <span style={{ color: '#64748B' }}>(3.1%)</span></strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dispatch Performance Metrics */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                DISPATCH PERFORMANCE (This Month)
+              </div>
+              <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Avg Loading</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={14} /></div>
+                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>52 Mins</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↓ 8 Mins vs Last Month</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Avg Waiting</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Hourglass size={14} /></div>
+                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>41 Mins</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 10 Mins vs Last Month</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Right First Time</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle size={14} /></div>
+                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>99.0%</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 1.2% vs Last Month</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Documentation</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileCheck size={14} /></div>
+                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>98.5%</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 1.0% vs Last Month</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Complaints</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertCircle size={14} /></div>
+                  <strong style={{ fontSize: '16px', color: '#0F172A' }}>2</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↓ 1 vs Last Month</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ROW 3: Today's Dispatch Plan | Vehicles in Transit | Dispatch Value Trend */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '16px', width: '100%' }}>
+            
+            {/* Table: Today's Dispatch Plan */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                TODAY'S DISPATCH PLAN
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Order No.</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Customer</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Item</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Qty</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Weight</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Planned</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { order: 'VRM/26/07/128', cust: 'ABC Solar', item: 'Mini Rail 100 mm', qty: 500, wt: '0.90', date: '24 Jul 2026', st: 'Dispatched', bg: '#DCFCE7', fg: '#166534' },
+                      { order: 'VRM/26/07/129', cust: 'Sun Power', item: 'Long Rail 3000 mm', qty: 200, wt: '1.20', date: '24 Jul 2026', st: 'In Transit', bg: '#E0F2FE', fg: '#0369A1' },
+                      { order: 'VRM/26/07/130', cust: 'Green Infra', item: 'Mid Clamp 35 mm', qty: 1500, wt: '0.45', date: '24 Jul 2026', st: 'Dispatched', bg: '#DCFCE7', fg: '#166534' },
+                      { order: 'VRM/26/07/131', cust: 'Bright Energy', item: 'Alu. Bracket', qty: 400, wt: '0.60', date: '24 Jul 2026', st: 'Loading', bg: '#FEF3C7', fg: '#B45309' },
+                      { order: 'VRM/26/07/132', cust: 'Voltix', item: 'End Clamp 35 mm', qty: 300, wt: '0.25', date: '24 Jul 2026', st: 'Ready', bg: '#ECFEFF', fg: '#0E7490' }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{row.order}</td>
+                        <td style={{ padding: '8px 10px' }}>{row.cust}</td>
+                        <td style={{ padding: '8px 10px' }}>{row.item}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{row.qty}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>{row.wt}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748B' }}>{row.date}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: row.bg, color: row.fg }}>{row.st}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Table: Vehicles in Transit */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                VEHICLES IN TRANSIT
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Vehicle No.</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Transporter</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Order No.</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>Customer</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Dispatched</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>ETA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { vNo: 'TN 09 AB 1234', trans: 'SRS Logistics', order: 'VRM/26/07/101', cust: 'Sun Power', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'TN 37 CD 5678', trans: 'VRM Transport', order: 'VRM/26/07/089', cust: 'Green Infra', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'KA 01 EF 9012', trans: 'Safe Way', order: 'VRM/26/07/074', cust: 'Bright Energy', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'AP 39 GH 3456', trans: 'SST Transport', order: 'VRM/26/07/061', cust: 'Voltix', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'TN 88 U 7890', trans: 'Speed Cargo', order: 'VRM/26/07/090', cust: 'KPR Mill', disp: '23-Jul-2026', eta: '25-Jul-2026' }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0E7490' }}>{row.vNo}</td>
+                        <td style={{ padding: '8px 10px' }}>{row.trans}</td>
+                        <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>{row.order}</td>
+                        <td style={{ padding: '8px 10px' }}>{row.cust}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748B' }}>{row.disp}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 'bold', backgroundColor: '#E0F2FE', color: '#0369A1' }}>{row.eta}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Dispatch Value Trend Bar Chart */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                DISPATCH VALUE TREND (₹ Cr)
+              </div>
+              <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '110px', borderBottom: '1px solid #E2E8F0' }}>
+                  {[
+                    { m: 'Jan-26', v: '2.15', count: 210 },
+                    { m: 'Feb-26', v: '2.34', count: 228 },
+                    { m: 'Mar-26', v: '2.48', count: 240 },
+                    { m: 'Apr-26', v: '2.62', count: 246 },
+                    { m: 'May-26', v: '2.71', count: 262 },
+                    { m: 'Jun-26', v: '2.84', count: 270 },
+                    { m: 'Jul-26', v: '3.26', count: 352 }
+                  ].map((bar, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
+                      <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#0E7490' }}>₹{bar.v}</span>
+                      <div style={{ width: '18px', height: `${(parseFloat(bar.v) / 4) * 70}px`, backgroundColor: '#0B2545', borderRadius: '4px 4px 0 0' }} />
+                      <span style={{ fontSize: '9px', color: '#64748B' }}>{bar.m}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ROW 4: Document Checklist | Invoices Pending | Key Alerts | Today's Snapshot */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', width: '100%' }}>
+            
+            {/* Card 1: Document Checklist */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                DOCUMENT CHECKLIST (Today)
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '6px 10px', textAlign: 'left' }}>Documents</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'center' }}>Required</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'center' }}>Completed</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'center' }}>Pending</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { doc: 'Invoice', req: 28, comp: 27, pend: 1 },
+                      { doc: 'E-Way Bill', req: 28, comp: 28, pend: 0 },
+                      { doc: 'LR / Delivery Challan', req: 28, comp: 28, pend: 0 },
+                      { doc: 'Packing List', req: 28, comp: 27, pend: 1 },
+                      { doc: 'Test Certificate', req: 12, comp: 10, pend: 2 }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '6px 10px', fontWeight: '600' }}>{row.doc}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>{row.req}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'center', color: '#16A34A', fontWeight: 'bold' }}>{row.comp}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'center', color: row.pend > 0 ? '#DC2626' : '#64748B', fontWeight: row.pend > 0 ? 'bold' : 'normal' }}>{row.pend}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Card 2: Invoices Pending Dispatch */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                INVOICES PENDING DISPATCH (This Month)
+              </div>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                      <th style={{ padding: '6px 10px', textAlign: 'left' }}>Order No.</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'left' }}>Customer</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Invoice Value</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'left' }}>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { order: 'VRM/26/07/089', cust: 'Green Infra', val: '12,48,000', reason: 'Payment Pending' },
+                      { order: 'VRM/26/07/074', cust: 'Bright Energy', val: '8,36,000', reason: 'Document Pending' },
+                      { order: 'VRM/26/07/061', cust: 'Voltix Solutions', val: '7,28,000', reason: 'QC Hold' }
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '6px 10px', fontWeight: 'bold' }}>{row.order}</td>
+                        <td style={{ padding: '6px 10px' }}>{row.cust}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 'bold' }}>₹ {row.val}</td>
+                        <td style={{ padding: '6px 10px', color: '#EA580C', fontWeight: '600' }}>{row.reason}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
+                      <td colSpan="2" style={{ padding: '6px 10px' }}>Total</td>
+                      <td style={{ padding: '6px 10px', textAlign: 'right', color: '#0E7490' }}>28,12,000</td>
+                      <td />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Card 3: Key Alerts */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                KEY ALERTS
+              </div>
+              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EF4444', flexShrink: 0 }} />
+                  <span style={{ color: '#334155' }}><strong>14 dispatches</strong> are overdue.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B', flexShrink: 0 }} />
+                  <span style={{ color: '#334155' }}>Material shortage for <strong>Mini Rail 60 mm</strong> - Follow up with Purchase.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B', flexShrink: 0 }} />
+                  <span style={{ color: '#334155' }}><strong>2 invoices</strong> are pending - Expedite documentation.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0 }} />
+                  <span style={{ color: '#334155' }}><strong>2 vehicles</strong> are waiting for loading.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0 }} />
+                  <span style={{ color: '#334155' }}>All <strong>E-Way Bills</strong> generated on time.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Today's Snapshot */}
+            <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                TODAY'S SNAPSHOT
+              </div>
+              <div style={{ padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+                <div style={{ backgroundColor: '#F8FAFC', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Dispatch Plan</div>
+                  <strong style={{ fontSize: '14px', color: '#0F172A' }}>28</strong>
+                </div>
+                <div style={{ backgroundColor: '#F0FDF4', padding: '8px', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
+                  <div style={{ fontSize: '9px', color: '#166534', fontWeight: '700' }}>Dispatched</div>
+                  <strong style={{ fontSize: '14px', color: '#15803D' }}>28</strong>
+                </div>
+                <div style={{ backgroundColor: '#F0F9FF', padding: '8px', borderRadius: '8px', border: '1px solid #E0F2FE' }}>
+                  <div style={{ fontSize: '9px', color: '#0369A1', fontWeight: '700' }}>In Transit</div>
+                  <strong style={{ fontSize: '14px', color: '#0284C7' }}>18</strong>
+                </div>
+                <div style={{ backgroundColor: '#ECFEFF', padding: '8px', borderRadius: '8px', border: '1px solid #CFFAFE' }}>
+                  <div style={{ fontSize: '9px', color: '#0E7490', fontWeight: '700' }}>Ready</div>
+                  <strong style={{ fontSize: '14px', color: '#085D75' }}>6</strong>
+                </div>
+                <div style={{ backgroundColor: '#FFF7ED', padding: '8px', borderRadius: '8px', border: '1px solid #FFEDD5' }}>
+                  <div style={{ fontSize: '9px', color: '#C2410C', fontWeight: '700' }}>Pending</div>
+                  <strong style={{ fontSize: '14px', color: '#EA580C' }}>14</strong>
+                </div>
+                <div style={{ backgroundColor: '#FAF5FF', padding: '8px', borderRadius: '8px', border: '1px solid #F3E8FF' }}>
+                  <div style={{ fontSize: '9px', color: '#7E22CE', fontWeight: '700' }}>Value</div>
+                  <strong style={{ fontSize: '12px', color: '#6B21A8' }}>₹ 28.45 L</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div style={{ fontSize: '10px', color: '#94A3B8', fontStyle: 'italic', textAlign: 'left', marginTop: '-4px' }}>
+            Note: All numbers are based on system data as of last updated time.
+          </div>
+
+        </div>
+      )}
+
       {/* ==================== 14. PRODUCTION ADMIN DEDICATED PAGES (EXACT PURCHASE ORDERS SCREENSHOT TEMPLATE) ==================== */}
       {(![
         'Goods Receipt Note', 'Vendor Management', 'Vendor Performance', 'Material Reorder',
         'Stock Status', 'Price Comparison', 'Items Directory', 'Payments',
         'Spend Analytics', 'Procurement Reports', 'Spend Reports', 'Supplier Reports',
-        'Procurement Settings', 'Approval Workflows'
+        'Procurement Settings', 'Approval Workflows', 'Dispatch Dashboard'
       ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
         'Quality Control', 'Machine Maintenance', 'Inventory (Raw Material)', 'BOM / Routing', 'BOM', 'Customer Management',
         'Production Reports', 'Efficiency Reports', 'Downtime Analytics',
         'Add Work Order', 'Record Production', 'Report Downtime', 'Dispatch Orders', 'Accounts Verification', 'Invoice Management'
-      ].includes(activeTab)) && (() => {
+      ].includes(activeTab)) && activeTab !== 'Dispatch Dashboard' && (() => {
         try {
           // If viewing an individual Invoice in full screen
           if (activeTab === 'Invoice Management' && viewingInvoiceModal) {
@@ -11418,43 +12702,44 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             ];
 
             const [materials, setMaterials] = useState(() => {
-              try {
-                const saved = localStorage.getItem('controlroom_raw_materials_store');
-                if (saved) {
-                  const parsed = JSON.parse(saved);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed.map(m => {
-                      if ((m.name && m.name.toLowerCase().includes("mid clamp")) || (m.code && m.code === "FG-HDG-005") || (m.code && m.code === "FG-002")) {
-                        const deductedQty = m.issuedProd || 900;
-                        const correctStock = Math.max(26, 926 - deductedQty);
-                        return { ...m, stock: correctStock, openingStock: 926, status: correctStock === 0 ? "Out of Stock" : (correctStock <= (m.minLevel || 300) ? "Low Stock" : "In Stock") };
-                      }
-                      return m;
-                    });
-                  }
-                }
-              } catch (e) {}
-              return initialMaterials;
+              const engineItems = prodModuleEngine.getInventory().map(item => ({
+                code: item.code,
+                name: item.name,
+                cat: item.category,
+                unit: item.unit,
+                stock: item.physicalStock,
+                reserved: item.reservedStock,
+                available: item.availableStock,
+                issued: item.issuedStock,
+                consumed: item.consumedStock,
+                minLevel: item.safetyStock,
+                status: item.physicalStock === 0 ? 'Out of Stock' : item.physicalStock <= item.safetyStock ? 'Low Stock' : 'In Stock',
+                store: item.bayLocation,
+                lastUpdated: 'Live Engine'
+              }));
+              return [...engineItems, ...initialMaterials];
             });
 
             useEffect(() => {
-              try {
-                localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(materials));
-              } catch (e) {}
-            }, [materials]);
-
-            useEffect(() => {
-              const handleRawMatSync = () => {
-                try {
-                  const saved = localStorage.getItem('controlroom_raw_materials_store');
-                  if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) setMaterials(parsed);
-                  }
-                } catch (e) {}
-              };
-              window.addEventListener('controlroom_raw_materials_update', handleRawMatSync);
-              return () => window.removeEventListener('controlroom_raw_materials_update', handleRawMatSync);
+              const unsubscribe = prodModuleEngine.subscribe(() => {
+                const updatedEngineItems = prodModuleEngine.getInventory().map(item => ({
+                  code: item.code,
+                  name: item.name,
+                  cat: item.category,
+                  unit: item.unit,
+                  stock: item.physicalStock,
+                  reserved: item.reservedStock,
+                  available: item.availableStock,
+                  issued: item.issuedStock,
+                  consumed: item.consumedStock,
+                  minLevel: item.safetyStock,
+                  status: item.physicalStock === 0 ? 'Out of Stock' : item.physicalStock <= item.safetyStock ? 'Low Stock' : 'In Stock',
+                  store: item.bayLocation,
+                  lastUpdated: 'Live Engine'
+                }));
+                setMaterials([...updatedEngineItems, ...initialMaterials]);
+              });
+              return () => unsubscribe();
             }, []);
             const [selectedCode, setSelectedCode] = useState('RM-001');
             const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
@@ -11554,6 +12839,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               setAddStockActive(true);
             };
 
+            const handleOpenStockAdj = (mat) => {
+              if (mat && mat.code) {
+                setSelectedCode(mat.code);
+              }
+              setShowAdjModal(true);
+            };
+
             const handleAddMaterialRow = () => {
               setReceiptItems(prev => [
                 ...prev,
@@ -11636,7 +12928,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       {/* SECTION 1: Receipt Information */}
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                          <span style={{ backgroundColor: '#2563EB', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
+                          <span style={{ backgroundColor: '#0E7490', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
                           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Receipt Information</h3>
                         </div>
 
@@ -11724,7 +13016,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       {/* SECTION 2: Material Details Table */}
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                          <span style={{ backgroundColor: '#2563EB', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
+                          <span style={{ backgroundColor: '#0E7490', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
                           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Material Details</h3>
                         </div>
 
@@ -11817,7 +13109,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                         <button
                           onClick={handleAddMaterialRow}
-                          style={{ border: '1px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                          style={{ border: '1px solid #0E7490', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
                           <Plus style={{ width: '15px', height: '15px' }} /> Add Another Material
                         </button>
@@ -11855,11 +13147,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       </div>
 
                       {/* Important Notes Card */}
-                      <div style={{ backgroundColor: '#EFF6FF', borderRadius: '16px', border: '1px solid #BFDBFE', padding: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '14px', fontWeight: '800', color: '#1E40AF' }}>
-                          <Info style={{ width: '18px', height: '18px', color: '#2563EB' }} /> Important Notes
+                      <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                          <Info style={{ width: '18px', height: '18px', color: '#0E7490' }} /> Important Notes
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', color: '#1E3A8A', lineHeight: '1.5' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', color: '#64748B', lineHeight: '1.5' }}>
                           <div>• Please verify the material quality and quantity before confirming.</div>
                           <div>• Stock will be updated only after saving this receipt.</div>
                           <div>• You can view this receipt in Material Receipts list.</div>
@@ -11911,19 +13203,43 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: 'Add Stock',
               searchPlaceholder: 'Search Inventory (Material Code, Description, Store)...',
               tabs: [
-                { id: 'All', label: 'All Stock Items', count: filteredMaterials.length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Sufficient', label: 'Sufficient Stock', count: materials.filter(m => m.status === 'In Stock').length, bg: '#dcfce7', fg: '#166534' },
-                { id: 'Warning', label: 'Reorder Warning', count: materials.filter(m => m.status === 'Low Stock').length, bg: '#ffedd5', fg: '#ea580c' },
-                { id: 'Critical', label: 'Critical Shortage', count: materials.filter(m => m.status === 'Out of Stock').length, bg: '#fee2e2', fg: '#dc2626' }
+                { id: 'All', label: 'All Stock Items', count: filteredMaterials.length, bg: '#F1F5F9', fg: '#475569' },
+                { id: 'Sufficient', label: 'Sufficient Stock', count: materials.filter(m => m.status === 'In Stock').length, bg: '#F0FDF4', fg: '#15803D' },
+                { id: 'Warning', label: 'Reorder Warning', count: materials.filter(m => m.status === 'Low Stock').length, bg: '#FFF7ED', fg: '#C2410C' },
+                { id: 'Critical', label: 'Critical Shortage', count: materials.filter(m => m.status === 'Out of Stock').length, bg: '#FEF2F2', fg: '#B91C1C' }
               ]
             };
 
+            const [selectedTab, setSelectedTab] = useState('All');
+            const [selectedRows, setSelectedRows] = useState([]);
+            const [pageSize, setPageSize] = useState(10);
+            const [goToPageInput, setGoToPageInput] = useState('');
+
             const displayedMaterials = filteredMaterials.filter(m => {
-              if (selectedSubTab === 'Sufficient') return m.status === 'In Stock';
-              if (selectedSubTab === 'Warning') return m.status === 'Low Stock';
-              if (selectedSubTab === 'Critical') return m.status === 'Out of Stock';
+              if (selectedTab === 'Sufficient') return m.status === 'In Stock';
+              if (selectedTab === 'Warning') return m.status === 'Low Stock';
+              if (selectedTab === 'Critical') return m.status === 'Out of Stock';
               return true;
             });
+
+            const totalPages = Math.ceil(displayedMaterials.length / pageSize) || 1;
+            const currentMaterialsPage = displayedMaterials.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+            const handleSelectAll = (e) => {
+              if (e.target.checked) {
+                setSelectedRows(currentMaterialsPage.map(m => m.code));
+              } else {
+                setSelectedRows([]);
+              }
+            };
+
+            const handleToggleRow = (code) => {
+              if (selectedRows.includes(code)) {
+                setSelectedRows(selectedRows.filter(c => c !== code));
+              } else {
+                setSelectedRows([...selectedRows, code]);
+              }
+            };
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
@@ -11942,86 +13258,69 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   <button
                     onClick={handleOpenAddStock}
                     style={{
-                      backgroundColor: '#2563eb',
+                      backgroundColor: '#0E7490',
                       border: 'none',
-                      color: 'white',
+                      color: '#FFFFFF',
                       height: '40px',
-                      padding: '0 18px',
-                      borderRadius: '10px',
+                      padding: '0 6px 0 20px',
+                      borderRadius: '50px',
                       fontSize: '13px',
-                      fontWeight: 'bold',
+                      fontWeight: '700',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '12px',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+                      boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                      transition: 'all 0.2s ease',
+                      letterSpacing: '0.2px'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
                   >
-                    <Plus style={{ width: '16px', height: '16px' }} />
-                    {pageConfig.actionText}
+                    <span>{pageConfig.actionText}</span>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0E7490',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      <Plus size={16} strokeWidth={2.5} />
+                    </div>
                   </button>
                 </div>
 
-                {/* 2. SEARCH & FILTER CONTROLS CARD MATCHING BOM SCREENSHOT */}
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  padding: '16px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justify: 'space-between',
-                  gap: '16px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                }}>
-                  {/* Left: Search input */}
-                  <div style={{ position: 'relative', width: '340px' }}>
-                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#94A3B8' }} />
+                {/* 2. FILTERS & SEARCH ROW CARD (EXACT MATCH FOR BOM & PO DESIGN) */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '340px' }}>
+                    <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
                     <input
                       type="text"
                       placeholder="Search Inventory (Material Code, Description)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{
-                        width: '100%',
-                        height: '38px',
-                        paddingLeft: '36px',
-                        paddingRight: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        backgroundColor: '#FFFFFF',
-                        outline: 'none'
-                      }}
+                      style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
                     />
                   </div>
 
-                  {/* Right: Date picker, Status dropdown, Refresh icon button */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '0 12px', height: '38px' }}>
-                      <Calendar style={{ width: '15px', height: '15px', color: '#64748B' }} />
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
+                      <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
                       <input
                         type="text"
                         placeholder="dd/mm/yyyy"
-                        style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#475569', width: '90px', backgroundColor: 'transparent' }}
+                        style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#334155', width: '90px', backgroundColor: 'transparent' }}
                       />
                     </div>
 
                     <select
                       value={selectedStatus}
                       onChange={(e) => setSelectedStatus(e.target.value)}
-                      style={{
-                        height: '38px',
-                        padding: '0 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        fontSize: '13px',
-                        color: '#475569',
-                        backgroundColor: '#FFFFFF',
-                        cursor: 'pointer',
-                        outline: 'none'
-                      }}
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none' }}
                     >
                       <option value="All Status">Status: All</option>
                       <option value="In Stock">In Stock</option>
@@ -12029,25 +13328,29 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <option value="Out of Stock">Out of Stock</option>
                     </select>
 
-                    <button style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      color: '#64748B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justify: 'center',
-                      cursor: 'pointer'
-                    }}>
+                    <button
+                      onClick={() => { setSearchQuery(''); setSelectedStatus('All Status'); }}
+                      title="Clear Filters"
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        height: '38px',
+                        width: '38px'
+                      }}
+                    >
                       <RotateCcw style={{ width: '15px', height: '15px' }} />
                     </button>
                   </div>
                 </div>
 
-                {/* 3. UNDERLINE TABS ROW MATCHING BOM SCREENSHOT ALIGNMENT */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '0', marginTop: '4px' }}>
+                {/* 3. STATUS SUB-TABS ROW (EXACT MATCH FOR BOM & PO DESIGN) */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap' }}>
                   {pageConfig.tabs.map((tab) => {
                     const isActive = selectedTab === tab.id;
                     return (
@@ -12055,27 +13358,27 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         key={tab.id}
                         onClick={() => setSelectedTab(tab.id)}
                         style={{
-                          background: 'none',
                           border: 'none',
-                          borderBottom: isActive ? '3px solid #2563EB' : '3px solid transparent',
-                          paddingBottom: '10px',
+                          background: 'transparent',
+                          padding: '10px 4px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: isActive ? '#2563eb' : '#64748b',
+                          borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          gap: '6px'
                         }}
                       >
-                        <span style={{ fontSize: '13.5px', fontWeight: isActive ? '700' : '600', color: isActive ? '#2563EB' : '#475569' }}>
-                          {tab.label}
-                        </span>
+                        {tab.label}
                         <span style={{
+                          fontSize: '10px',
+                          padding: '2px 7px',
+                          borderRadius: '12px',
                           backgroundColor: tab.bg,
                           color: tab.fg,
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: '800'
+                          fontWeight: 'bold'
                         }}>
                           {tab.count}
                         </span>
@@ -12084,57 +13387,85 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   })}
                 </div>
 
-                {/* 4. TABLE CONTAINER MATCHING CONTROLROOM DESIGN SYSTEM */}
-                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                {/* 4. MAIN DATA TABLE (EXACT MATCH FOR BOM & PO DESIGN) */}
+                <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ overflowX: 'auto', width: '100%' }}>
+                    <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          <th style={{ padding: '14px 18px' }}><input type="checkbox" /></th>
-                          <th style={{ padding: '14px 18px' }}>Material Code</th>
-                          <th style={{ padding: '14px 18px' }}>Material Description</th>
-                          <th style={{ padding: '14px 18px' }}>Category</th>
-                          <th style={{ padding: '14px 18px' }}>Unit</th>
-                          <th style={{ padding: '14px 18px', textAlign: 'right' }}>Current Stock</th>
-                          <th style={{ padding: '14px 18px', textAlign: 'right' }}>Min. Level</th>
-                          <th style={{ padding: '14px 18px' }}>Status</th>
-                          <th style={{ padding: '14px 18px', textAlign: 'center' }}>Action</th>
+                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
+                          <th style={{ padding: '12px 14px', width: '30px' }}>
+                            <input
+                              type="checkbox"
+                              checked={currentMaterialsPage.length > 0 && selectedRows.length === currentMaterialsPage.length}
+                              onChange={handleSelectAll}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            />
+                          </th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Material Code</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Material Description</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Category</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Unit</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Reserved Stock</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Available Stock</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {displayedMaterials.map((m, idx) => {
+                        {currentMaterialsPage.map((m, idx) => {
+                          const isSelected = selectedRows.includes(m.code);
                           const isOut = m.status === 'Out of Stock';
                           const isLow = m.status === 'Low Stock';
 
-                          const stBg = isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7';
-                          const stFg = isOut ? '#DC2626' : isLow ? '#EA580C' : '#166534';
-                          const stBorder = isOut ? '1px solid #FCA5A5' : isLow ? '1px solid #FED7AA' : '1px solid #BBF7D0';
+                          const stBg = isOut ? '#FEF2F2' : isLow ? '#FFF7ED' : '#F0FDF4';
+                          const stFg = isOut ? '#B91C1C' : isLow ? '#C2410C' : '#15803D';
+                          const stBorder = isOut ? '1px solid #FEE2E2' : isLow ? '1px solid #FFEDD5' : '1px solid #DCFCE7';
 
                           return (
-                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background-color 0.15s ease' }}>
-                              <td style={{ padding: '14px 18px' }}><input type="checkbox" /></td>
-                              <td style={{ padding: '14px 18px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{m.code}</td>
-                              <td style={{ padding: '14px 18px', fontWeight: 'bold', color: '#1E293B' }}>{m.name}</td>
-                              <td style={{ padding: '14px 18px', color: '#475569' }}>{m.cat}</td>
-                              <td style={{ padding: '14px 18px', fontWeight: '600', color: '#475569' }}>{m.unit}</td>
-                              <td style={{ padding: '14px 18px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#DC2626' : isLow ? '#EA580C' : '#0F172A' }}>
+                            <tr
+                              key={idx}
+                              style={{
+                                borderBottom: '1px solid #F1F5F9',
+                                backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
+                                transition: 'all 0.15s ease'
+                              }}
+                              className={`table-row-hover ${isSelected ? 'selected-row' : ''}`}
+                            >
+                              <td style={{ padding: '12px 14px', borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleRow(m.code)}
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                />
+                              </td>
+                              <td
+                                onClick={() => handleOpenStockAdj(m)}
+                                style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
+                              >
+                                {m.code}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{m.name}</td>
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.cat}</td>
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.unit}</td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#B91C1C' : isLow ? '#C2410C' : '#334155' }}>
                                 {m.stock.toLocaleString()}
                               </td>
-                              <td style={{ padding: '14px 18px', textAlign: 'right', color: '#64748B' }}>{m.minLevel.toLocaleString()}</td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '600', color: '#475569' }}>
+                                {(m.reserved || 0).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: '#15803D' }}>
+                                {(m.available !== undefined ? m.available : (m.stock - (m.reserved || 0))).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748B' }}>{m.minLevel.toLocaleString()}</td>
 
-                              {/* Status Badge with bullet dot matching design system */}
-                              <td style={{ padding: '14px 18px' }}>
-                                <span style={{ backgroundColor: stBg, color: stFg, border: stBorder, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              {/* Status Badge */}
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <span style={{ backgroundColor: stBg, color: stFg, border: stBorder, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
                                   {m.status}
                                 </span>
-                              </td>
-
-                              {/* Action Ellipsis */}
-                              <td style={{ padding: '14px 18px', textAlign: 'center' }}>
-                                <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}>
-                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                </button>
                               </td>
                             </tr>
                           );
@@ -12143,29 +13474,172 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </table>
                   </div>
 
-                  {/* 5. PAGINATION FOOTER ROW MATCHING CONTROLROOM DESIGN SYSTEM */}
+                  {/* 5. STRICT RULE 6 PAGINATION FOOTER */}
                   <div style={{ padding: '12px 20px', backgroundColor: '#FFFFFF', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748B' }}>
-                    <span>Showing 1 to {displayedMaterials.length} of 126 entries</span>
+                    {/* Left side: Showing per page selector (5, 10) + entries info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>Showing per page</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                          style={{ height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#0F172A', cursor: 'pointer' }}
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                        </select>
+                      </div>
+                      <span>| Showing {Math.min((currentPage - 1) * pageSize + 1, displayedMaterials.length)} to {Math.min(currentPage * pageSize, displayedMaterials.length)} of {displayedMaterials.length} entries</span>
+                    </div>
 
+                    {/* Right side: Page number buttons Adjacent to Go to page */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>«</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>‹</button>
-                      <button style={{ border: '1px solid #2563EB', background: '#EFF6FF', color: '#2563EB', fontWeight: 'bold', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>1</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>2</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>3</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>4</button>
-                      <button style={{ width: '28px', height: '28px', border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', cursor: 'pointer' }}>5</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>›</button>
-                      <button style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>»</button>
+                      <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>«</button>
+                      <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>‹</button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          style={{
+                            border: currentPage === p ? '1px solid #0E7490' : '1px solid #E2E8F0',
+                            background: currentPage === p ? '#ECFEFF' : 'white',
+                            color: currentPage === p ? '#0E7490' : '#475569',
+                            fontWeight: 'bold',
+                            borderRadius: '6px',
+                            width: '28px',
+                            height: '28px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {p}
+                        </button>
+                      ))}
 
-                      <select style={{ height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', marginLeft: '10px' }}>
-                        <option>10 / page</option>
-                        <option>25 / page</option>
-                        <option>50 / page</option>
-                      </select>
+                      <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}>›</button>
+                      <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}>»</button>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px' }}>
+                        <span>Go to page</span>
+                        <input
+                          type="number"
+                          value={goToPageInput}
+                          onChange={(e) => setGoToPageInput(e.target.value)}
+                          placeholder={currentPage.toString()}
+                          style={{ width: '45px', height: '28px', border: '1px solid #E2E8F0', borderRadius: '6px', textAlign: 'center', fontSize: '12px', outline: 'none' }}
+                        />
+                        <button
+                          onClick={() => {
+                            const p = parseInt(goToPageInput);
+                            if (p >= 1 && p <= totalPages) setCurrentPage(p);
+                            setGoToPageInput('');
+                          }}
+                          style={{ border: '1px solid #0E7490', background: '#0E7490', color: 'white', borderRadius: '6px', padding: '0 10px', height: '28px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                          Go ›
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* FLOATING SELECTION TOOLBAR MATCHING STANDARD PURCHASE ORDERS & BOM DESIGN */}
+                {selectedRows.length > 0 && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    zIndex: 10000,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                  }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                      <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        if (selectedRows.length > 1) {
+                          alert('You cannot edit multiple items at once.');
+                        } else if (selectedRows.length === 1) {
+                          const targetCode = selectedRows[0];
+                          const targetMat = materials.find(m => m.code === targetCode) || { code: targetCode, name: targetCode };
+                          handleOpenStockAdj(targetMat);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Edit3 size={14} style={{ color: '#64748B' }} /> Edit / Adjust
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected item(s)?`)) {
+                          setMaterials(materials.filter(m => !selectedRows.includes(m.code)));
+                          setSelectedRows([]);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid #FCA5A5',
+                        color: '#EF4444',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    >
+                      <Trash2 size={14} style={{ color: '#EF4444' }} /> Delete
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedRows([])}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#94A3B8',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
 
                 {/* MODAL 1: Stock Adjustment */}
                 {showAdjModal && (
@@ -12228,12 +13702,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             </tr>
                             <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '10px' }}>19 Aug 2026</td>
-                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>PI-045</td>
-                              <td style={{ padding: '10px', color: '#dc2626', fontWeight: '700' }}>Material Issue</td>
-                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#dc2626' }}>- 180</td>
-                            </tr>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '10px' }}>19 Aug 2026</td>
                               <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>ADJ-008</td>
                               <td style={{ padding: '10px', color: '#ea580c', fontWeight: '700' }}>Stock Adjustment</td>
                               <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#ea580c' }}>+ 10</td>
@@ -12245,6 +13713,927 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <button onClick={() => setShowTxModal(false)} style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>Close</button>
                       </div>
                     </div>
+                  </div>
+                )}
+
+              </div>
+            );
+          };
+
+          // =========================================================================
+          // DEDICATED WORK ORDERS VIEW (WITH FLOATING ACTION BAR & ROW SELECTION)
+          // =========================================================================
+          const WorkOrdersView = ({ userRole, setShowWorkOrderForm, prodSearchQueryText, setProdSearchQueryText, prodStatusFilterText, setProdStatusFilterText }) => {
+            const [, setEngineTick] = useState(0);
+            const [prodFilterStatusSelect, setProdFilterStatusSelect] = useState('All');
+            const [selectedRows, setSelectedRows] = useState([]);
+            const [selectedWoForStatusUpdate, setSelectedWoForStatusUpdate] = useState(null);
+            const [selectedWoForAcceptanceModal, setSelectedWoForAcceptanceModal] = useState(null);
+            const [updateStatusChoice, setUpdateStatusChoice] = useState('IN_PROGRESS');
+            const [actualGoodOutputVal, setActualGoodOutputVal] = useState('');
+            const [actualRejectedOutputVal, setActualRejectedOutputVal] = useState('0');
+            const [operatorRemarksVal, setOperatorRemarksVal] = useState('');
+
+            const isFloorEmployee = String(userRole || '').toLowerCase().includes('employee') || String(userRole || '').toLowerCase().includes('floor') || String(userRole || '').toLowerCase().includes('operator');
+
+            useEffect(() => {
+              const unsubscribe = prodModuleEngine.subscribe(() => {
+                setEngineTick(t => t + 1);
+              });
+              return () => unsubscribe();
+            }, []);
+
+            // Helper to toggle single row selection
+            const toggleSelectRow = (woId) => {
+              setSelectedRows(prev => 
+                prev.includes(woId) ? prev.filter(id => id !== woId) : [...prev, woId]
+              );
+            };
+
+            // Helper to toggle select all visible rows
+            const toggleSelectAll = (visibleWoIds) => {
+              if (selectedRows.length === visibleWoIds.length && visibleWoIds.length > 0) {
+                setSelectedRows([]);
+              } else {
+                setSelectedRows(visibleWoIds);
+              }
+            };
+
+            const allWorkOrderRows = [
+              ...prodModuleEngine.getWorkOrders().map(wo => {
+                let stBg = '#EFF6FF';
+                let stFg = '#2563EB';
+                let progress = 0;
+                const statusStr = (wo.status || 'PLANNED').toUpperCase();
+
+                let formattedStatus = (wo.status || 'PLANNED').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                if (statusStr === 'ACCEPTED') { formattedStatus = 'Accept / Work Start'; }
+
+                if (statusStr === 'PENDING_MATERIAL') { stBg = '#FEF3C7'; stFg = '#D97706'; progress = 10; }
+                else if (statusStr === 'MATERIAL_RESERVED') { stBg = '#E0F2FE'; stFg = '#0284C7'; progress = 25; }
+                else if (statusStr === 'MATERIAL_ISSUED') { stBg = '#EDE9FE'; stFg = '#7C3AED'; progress = 35; }
+                else if (statusStr === 'ACCEPTED') { stBg = '#E0E7FF'; stFg = '#4338CA'; progress = 45; }
+                else if (statusStr === 'IN_PROGRESS') { stBg = '#DCFCE7'; stFg = '#16A34A'; progress = 75; }
+                else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { stBg = '#CFFAFE'; stFg = '#0E7490'; progress = 90; }
+                else if (statusStr === 'APPROVED_CLOSED') { stBg = '#DCFCE7'; stFg = '#15803D'; progress = 100; }
+
+                return {
+                  rawWO: wo,
+                  woNo: wo.id,
+                  product: wo.finishedProductName || 'Product',
+                  customer: wo.salesOrderNo ? `SO #${wo.salesOrderNo}` : 'Internal Stock',
+                  line: wo.productionLine || 'Line A',
+                  qty: `${(wo.targetQty || 0).toLocaleString()} ${wo.unit || 'Pcs'}`,
+                  plannedDate: (wo.createdAt || '').split('T')[0] || '2026-08-25',
+                  dueDate: wo.dueDate || '2026-08-30',
+                  status: formattedStatus,
+                  statusBg: stBg,
+                  statusFg: stFg,
+                  priority: wo.priority || 'Normal',
+                  priorityColor: wo.priority === 'High' ? '#DC2626' : '#2563EB',
+                  assignedTo: wo.operatorName || 'Floor Team',
+                  progress
+                };
+              })
+            ];
+
+            const filteredRows = allWorkOrderRows.filter(row => {
+              const searchLower = (prodSearchQueryText || '').toLowerCase();
+              const matchesSearch = !searchLower || row.woNo.toLowerCase().includes(searchLower) || row.product.toLowerCase().includes(searchLower) || row.customer.toLowerCase().includes(searchLower);
+              const matchesStatus = prodFilterStatusSelect === 'All' || row.status === prodFilterStatusSelect;
+              return matchesSearch && matchesStatus;
+            });
+
+            const visibleWoIds = filteredRows.map(r => r.woNo);
+            const isAllSelected = visibleWoIds.length > 0 && selectedRows.length === visibleWoIds.length;
+
+            // Selected Work Order objects for floating bar actions
+            const selectedWoObjects = prodModuleEngine.getWorkOrders().filter(w => selectedRows.includes(w.id));
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+
+                {/* 1. TOP HEADER SECTION */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                      {isFloorEmployee ? 'My Production Floor Work Orders' : 'Work Orders Management'}
+                    </h2>
+                    <span style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                      {isFloorEmployee 
+                        ? 'Select a work order checkbox to open floating actions (Accept WO, Update Status).'
+                        : 'View and manage all work orders across the production floor.'}
+                    </span>
+                  </div>
+
+                  {!isFloorEmployee && (
+                    <button
+                      onClick={() => setShowWorkOrderForm(true)}
+                      style={{
+                        backgroundColor: '#0E7490',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        height: '40px',
+                        padding: '0 6px 0 20px',
+                        borderRadius: '50px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                        transition: 'all 0.2s ease',
+                        letterSpacing: '0.2px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                    >
+                      <span>Create Work Order</span>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        backgroundColor: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0E7490',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}>
+                        <Plus size={16} strokeWidth={2.5} />
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                {/* 2. SEARCH & FILTER CONTROLS CARD */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  {/* Search bar */}
+                  <div style={{ position: 'relative', width: '340px' }}>
+                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#94A3B8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search Work Orders (WO No, Product, Customer)..."
+                      value={prodSearchQueryText}
+                      onChange={(e) => setProdSearchQueryText(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        paddingLeft: '36px',
+                        paddingRight: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        backgroundColor: '#FFFFFF',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Filter dropdowns */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <select
+                      value={prodFilterStatusSelect}
+                      onChange={(e) => setProdFilterStatusSelect(e.target.value)}
+                      style={{
+                        height: '38px',
+                        padding: '0 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        fontSize: '13px',
+                        color: '#475569',
+                        backgroundColor: '#FFFFFF',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="In Progress">On Process / In Progress</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Pending">Pending Material</option>
+                      <option value="Planned">Planned</option>
+                    </select>
+
+                    <button 
+                      onClick={() => {
+                        setProdSearchQueryText('');
+                        setProdFilterStatusSelect('All');
+                        setProdStatusFilterText('All');
+                      }}
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
+                        color: '#64748B',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RotateCcw style={{ width: '15px', height: '15px' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. TABS ROW */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {['All Work Orders', 'Pending Material', 'Material Issued', 'In Progress', 'Pending Verification', 'Completed'].map((tabLabel, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setProdStatusFilterText(tabLabel === 'All Work Orders' ? 'All' : tabLabel)}
+                      style={{
+                        border: 'none',
+                        background: 'none',
+                        borderBottom: (prodStatusFilterText === tabLabel || (tabLabel === 'All Work Orders' && prodStatusFilterText === 'All')) ? '3px solid #2563eb' : '3px solid transparent',
+                        padding: '8px 12px',
+                        fontSize: '13.5px',
+                        fontWeight: '700',
+                        color: (prodStatusFilterText === tabLabel || (tabLabel === 'All Work Orders' && prodStatusFilterText === 'All')) ? '#2563eb' : '#64748b',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {tabLabel}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 4. MAIN WORK ORDERS DATA TABLE */}
+                <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ overflowX: 'auto', width: '100%' }}>
+                    <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
+                          <th style={{ padding: '12px 14px', width: '30px' }}>
+                            <input 
+                              type="checkbox"
+                              checked={isAllSelected}
+                              onChange={() => toggleSelectAll(visibleWoIds)}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            />
+                          </th>
+                          <th style={{ padding: '12px 14px' }}>WO No.</th>
+                          <th style={{ padding: '12px 14px' }}>Product</th>
+                          {!isFloorEmployee && <th style={{ padding: '12px 14px' }}>WO Date</th>}
+                          {isFloorEmployee && <th style={{ padding: '12px 14px' }}>Customer / Project</th>}
+                          <th style={{ padding: '12px 14px' }}>Qty (Planned)</th>
+                          <th style={{ padding: '12px 14px' }}>{!isFloorEmployee ? 'Expected Start' : 'Planned Date'}</th>
+                          <th style={{ padding: '12px 14px' }}>{!isFloorEmployee ? 'Expected Completion' : 'Due Date'}</th>
+                          <th style={{ padding: '12px 14px' }}>Status</th>
+                          <th style={{ padding: '12px 14px' }}>Priority</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRows.map((row, idx) => {
+                          const isSelected = selectedRows.includes(row.woNo);
+
+                          return (
+                            <tr 
+                              key={idx} 
+                              style={{ 
+                                borderBottom: '1px solid #F1F5F9',
+                                backgroundColor: isSelected ? '#ECFEFF' : '#FFFFFF',
+                                transition: 'background-color 0.15s ease'
+                              }}
+                            >
+                              <td style={{ 
+                                padding: '12px 14px',
+                                borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
+                              }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectRow(row.woNo)}
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.woNo}</td>
+                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#1E293B' }}>{row.product}</td>
+                              {!isFloorEmployee && <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.plannedDate}</td>}
+                              {isFloorEmployee && <td style={{ padding: '12px 14px', color: '#475569' }}>{row.customer}</td>}
+                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A' }}>{row.qty}</td>
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.plannedDate}</td>
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.dueDate}</td>
+
+                              {/* Status Badge with bullet dot */}
+                              <td style={{ padding: '12px 14px' }}>
+                                <span style={{ backgroundColor: row.statusBg, color: row.statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.statusFg }}></span>
+                                  {row.status}
+                                </span>
+                              </td>
+
+                              {/* Priority */}
+                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: row.priorityColor, fontSize: '12px' }}>
+                                {row.priority === 'High' ? 'High' : row.priority}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* PAGINATION FOOTER ROW */}
+                  <div style={{ padding: '12px 20px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' }}>
+                    <span>Showing 1 to {filteredRows.length} entries</span>
+                  </div>
+                </div>
+
+                {/* MODAL: FLOOR EMPLOYEE STATUS UPDATE */}
+                {selectedWoForStatusUpdate && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15,23,42,0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      width: '460px',
+                      boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
+                      fontFamily: "'DM Sans', sans-serif"
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                            Update Work Progress: {selectedWoForStatusUpdate.id}
+                          </h3>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>
+                            Product: {selectedWoForStatusUpdate.finishedProductName} (Target: {selectedWoForStatusUpdate.targetQty} Pcs)
+                          </span>
+                        </div>
+                        <button onClick={() => setSelectedWoForStatusUpdate(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748B' }}>✕</button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>SELECT NEW WORK STATUS</label>
+                          <select
+                            value={updateStatusChoice}
+                            onChange={(e) => setUpdateStatusChoice(e.target.value)}
+                            style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A' }}
+                          >
+                            <option value="IN_PROGRESS">On Process / Start Work</option>
+                            <option value="PENDING_MATERIAL">Pending Material Request</option>
+                            <option value="COMPLETED">Completed (Submit for Production Head Approval)</option>
+                          </select>
+                        </div>
+
+                        {updateStatusChoice === 'COMPLETED' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#166534', marginBottom: '4px' }}>ACTUAL GOOD QTY</label>
+                              <input
+                                type="number"
+                                value={actualGoodOutputVal}
+                                onChange={(e) => setActualGoodOutputVal(e.target.value)}
+                                style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#166534' }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#DC2626', marginBottom: '4px' }}>REJECTED QTY</label>
+                              <input
+                                type="number"
+                                value={actualRejectedOutputVal}
+                                onChange={(e) => setActualRejectedOutputVal(e.target.value)}
+                                style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#DC2626' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>OPERATOR REMARKS / NOTES</label>
+                          <textarea
+                            rows="2"
+                            value={operatorRemarksVal}
+                            onChange={(e) => setOperatorRemarksVal(e.target.value)}
+                            placeholder="Enter any production notes, machine status, or cutting remarks..."
+                            style={{ width: '100%', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '8px 12px', fontSize: '12.5px', resize: 'vertical' }}
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #E2E8F0', paddingTop: '14px' }}>
+                        <button
+                          onClick={() => setSelectedWoForStatusUpdate(null)}
+                          style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            try {
+                              if (updateStatusChoice === 'IN_PROGRESS') {
+                                prodModuleEngine.startWork(selectedWoForStatusUpdate.id);
+                                alert(`Work Order ${selectedWoForStatusUpdate.id} is now ON PROCESS / IN PROGRESS.`);
+                              } else if (updateStatusChoice === 'PENDING_MATERIAL') {
+                                prodModuleEngine.updateWorkOrderStatus(selectedWoForStatusUpdate.id, 'PENDING_MATERIAL');
+                                alert(`Work Order ${selectedWoForStatusUpdate.id} marked as PENDING MATERIAL.`);
+                              } else if (updateStatusChoice === 'COMPLETED') {
+                                const good = Number(actualGoodOutputVal || selectedWoForStatusUpdate.targetQty);
+                                const rej = Number(actualRejectedOutputVal || 0);
+                                prodModuleEngine.submitCompletion(selectedWoForStatusUpdate.id, { goodQty: good, rejectedQty: rej, operatorRemarks: operatorRemarksVal });
+                                alert(`Work Order ${selectedWoForStatusUpdate.id} submitted as COMPLETED! Awaiting Production Head approval.`);
+                              }
+                              setSelectedWoForStatusUpdate(null);
+                            } catch (err) {
+                              alert(`Error updating status: ${err.message}`);
+                            }
+                          }}
+                          style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }}
+                        >
+                          Save Work Status
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SIDE DRAWER: WORK ORDER DETAILS REVIEW & ACCEPTANCE (MATCHING REFERENCE UI) */}
+                {selectedWoForAcceptanceModal && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+                    backdropFilter: 'blur(3px)',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    zIndex: 9999
+                  }}
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setSelectedWoForAcceptanceModal(null);
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      width: '540px',
+                      maxWidth: '100vw',
+                      height: '100vh',
+                      overflowY: 'auto',
+                      boxShadow: '-10px 0 30px rgba(0, 0, 0, 0.12)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      padding: '24px',
+                      boxSizing: 'border-box',
+                      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        
+                        {/* 1. Header with Page Counter */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1E293B' }}>
+                              {!isFloorEmployee ? 'Work Order Management & Audit' : 'Work Order Preview'}
+                            </h3>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', borderRadius: '20px', padding: '2px 8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>1 of 1</span>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {isFloorEmployee && (
+                              !(selectedWoForAcceptanceModal.status === 'ACCEPTED' || selectedWoForAcceptanceModal.status === 'IN_PROGRESS' || selectedWoForAcceptanceModal.status === 'COMPLETED_PENDING_VERIFICATION') ? (
+                                <button
+                                  onClick={() => {
+                                    try {
+                                      prodModuleEngine.acceptWorkOrder(selectedWoForAcceptanceModal.id);
+                                      alert(`✅ Work Order ${selectedWoForAcceptanceModal.id} has been ACCEPTED!`);
+                                      setSelectedWoForAcceptanceModal(null);
+                                      setSelectedRows([]);
+                                    } catch (err) {
+                                      alert(`❌ Error accepting Work Order: ${err.message}`);
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #E2E8F0',
+                                    backgroundColor: '#FFFFFF',
+                                    color: '#1E293B',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                  }}
+                                >
+                                  <CheckCircle size={14} style={{ color: '#10B981' }} /> Accept WO
+                                </button>
+                              ) : (
+                                <span style={{
+                                  padding: '5px 12px',
+                                  borderRadius: '20px',
+                                  backgroundColor: '#ECFDF5',
+                                  color: '#047857',
+                                  border: '1px solid #A7F3D0',
+                                  fontSize: '12px',
+                                  fontWeight: '700',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  cursor: 'default',
+                                  userSelect: 'none'
+                                }}>
+                                  <CheckCircle size={14} style={{ color: '#047857' }} /> Accepted the WO
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 2. Main Title Profile Block */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingTop: '4px' }}>
+                          <div style={{
+                            width: '52px',
+                            height: '52px',
+                            borderRadius: '50%',
+                            backgroundColor: '#EEF2FF',
+                            color: '#4F46E5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '20px',
+                            fontWeight: '800'
+                          }}>
+                            {(selectedWoForAcceptanceModal.finishedProductName || 'WO').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0F172A' }}>
+                                {selectedWoForAcceptanceModal.finishedProductName}
+                              </h2>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>
+                                • {selectedWoForAcceptanceModal.status || 'ISSUED'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                              WO ID: <strong>{selectedWoForAcceptanceModal.id}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Top Metrics Metric Grid (Reference Style Bar) */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          padding: '12px 8px',
+                          backgroundColor: '#FFFFFF',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TARGET QTY</span>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', marginTop: '4px' }}>
+                              {selectedWoForAcceptanceModal.targetQty} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>Pcs</span>
+                            </div>
+                          </div>
+                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CUT LENGTH</span>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#0284C7', marginTop: '4px' }}>
+                              {selectedWoForAcceptanceModal.cutLengthMm || 100} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>mm</span>
+                            </div>
+                          </div>
+                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL RAW M</span>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669', marginTop: '4px' }}>
+                              {((selectedWoForAcceptanceModal.materialRequirement?.items || [])[0]?.requiredTotalMeters || '0.00')} <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>m</span>
+                            </div>
+                          </div>
+                          <div style={{ padding: '0 8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>LENGTHS</span>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#D97706', marginTop: '4px' }}>
+                              {((selectedWoForAcceptanceModal.materialRequirement?.items || [])[0]?.rawLengthsRequired || '0')}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Details List (Clean 2-column key-value grid) */}
+                        <div>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                            Work Order Details
+                          </h4>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '14px 20px',
+                            padding: '16px',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '12px',
+                            backgroundColor: '#FFFFFF',
+                            fontSize: '13px'
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>WO Number</span>
+                              <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.id}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Status</span>
+                              <div>
+                                <span style={{ backgroundColor: '#F3E8FF', color: '#7C3AED', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }}>
+                                  {(selectedWoForAcceptanceModal.status || 'ISSUED').replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Assigned Employee</span>
+                              <strong style={{ color: '#2563EB', fontWeight: '700' }}>{selectedWoForAcceptanceModal.operatorName || selectedWoForAcceptanceModal.assignedEmployee || 'Floor Team'}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Production Line</span>
+                              <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.productionLine || 'Line A'}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Stock Length</span>
+                              <strong style={{ color: '#0284C7', fontWeight: '700' }}>2414 mm</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Cut Spec</span>
+                              <strong style={{ color: '#0E7490', fontWeight: '700' }}>{selectedWoForAcceptanceModal.cutLengthMm || 100} mm</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 5. BOM Material Breakdown Card */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                              Required Materials (BOM)
+                            </h4>
+                          </div>
+
+                          {(selectedWoForAcceptanceModal.materialRequirement?.items || []).map((mat, i) => (
+                            <div key={i} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', backgroundColor: '#FFFFFF', marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>
+                                  {mat.materialName}
+                                </span>
+                                <span style={{ backgroundColor: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
+                                  BOM Standard
+                                </span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '8px', fontSize: '12px' }}>
+                                <div>
+                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Pieces / Length</span>
+                                  <strong style={{ color: '#0F172A', fontWeight: '600' }}>{mat.piecesPerLength} pcs</strong>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Raw Lengths</span>
+                                  <strong style={{ color: '#D97706', fontWeight: '700' }}>{mat.rawLengthsRequired} Lengths</strong>
+                                </div>
+                                <div>
+                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Total Meters</span>
+                                  <strong style={{ color: '#059669', fontWeight: '700' }}>{mat.requiredTotalMeters} m</strong>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                      </div>
+
+                      {/* 6. Side Drawer Footer Action Buttons */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #E2E8F0', paddingTop: '16px', marginTop: '16px' }}>
+                        <button
+                          onClick={() => setSelectedWoForAcceptanceModal(null)}
+                          style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                          Close Details
+                        </button>
+
+                        {isFloorEmployee && !(selectedWoForAcceptanceModal.status === 'ACCEPTED' || selectedWoForAcceptanceModal.status === 'IN_PROGRESS' || selectedWoForAcceptanceModal.status === 'COMPLETED_PENDING_VERIFICATION') && (
+                          <button
+                            onClick={() => {
+                              try {
+                                prodModuleEngine.acceptWorkOrder(selectedWoForAcceptanceModal.id);
+                                alert(`✅ Work Order ${selectedWoForAcceptanceModal.id} has been ACCEPTED by Floor Employee! Status is now ACCEPTED.`);
+                                setSelectedWoForAcceptanceModal(null);
+                                setSelectedRows([]);
+                              } catch (err) {
+                                alert(`❌ Error accepting Work Order: ${err.message}`);
+                              }
+                            }}
+                            style={{ padding: '9px 22px', borderRadius: '8px', border: 'none', backgroundColor: '#7C3AED', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 6px rgba(124,58,237,0.25)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <CheckCircle size={14} /> Accept & Start Assignment
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* FLOATING BOTTOM ACTION BAR (MATCHES EXACT CONTROL ROOM FLOATING TOOLBAR DESIGN) */}
+                {selectedRows.length > 0 && !selectedWoForStatusUpdate && !selectedWoForAcceptanceModal && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    zIndex: 10000,
+                    fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif"
+                  }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                      <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
+                    </span>
+
+                    {/* ROLE SEPARATED FLOATING ACTIONS */}
+                    {isFloorEmployee ? (
+                      <>
+                        {/* VIEW WORK ORDER DETAILS (FLOOR EMPLOYEE) */}
+                        <button
+                          onClick={() => {
+                            const targetId = selectedRows[0];
+                            const allWOs = prodModuleEngine.getWorkOrders();
+                            const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
+                            if (targetWO) {
+                              setSelectedWoForAcceptanceModal(targetWO);
+                            }
+                          }}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            color: '#0F172A',
+                            borderRadius: '10px',
+                            padding: '6px 14px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          <Eye size={14} style={{ color: '#0F172A' }} /> View Details
+                        </button>
+
+                        {/* ACCEPT WORK ORDER ACTION (ONLY IF NOT YET ACCEPTED / IN_PROGRESS) */}
+                        {!(selectedWoObjects[0]?.status === 'ACCEPTED' || selectedWoObjects[0]?.status === 'IN_PROGRESS' || selectedWoObjects[0]?.status === 'COMPLETED_PENDING_VERIFICATION') && (
+                          <button
+                            onClick={() => {
+                              const targetId = selectedRows[0];
+                              const allWOs = prodModuleEngine.getWorkOrders();
+                              const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
+                              if (targetWO) {
+                                setSelectedWoForAcceptanceModal(targetWO);
+                              }
+                            }}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #E2E8F0',
+                              color: '#7C3AED',
+                              borderRadius: '10px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                          >
+                            <CheckCircle size={14} style={{ color: '#7C3AED' }} /> Accept WO
+                          </button>
+                        )}
+
+                        {/* UPDATE STATUS ACTION */}
+                        <button
+                          onClick={() => {
+                            const targetWO = selectedWoObjects[0] || prodModuleEngine.getWorkOrders()[0];
+                            if (targetWO) {
+                              setSelectedWoForStatusUpdate(targetWO);
+                              setActualGoodOutputVal(String(targetWO.targetQty || ''));
+                              setActualRejectedOutputVal('0');
+                              setOperatorRemarksVal('');
+                              setUpdateStatusChoice(targetWO.status === 'ACCEPTED' ? 'IN_PROGRESS' : 'IN_PROGRESS');
+                            }
+                          }}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            color: '#0284C7',
+                            borderRadius: '10px',
+                            padding: '6px 14px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0F9FF'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                        >
+                          <Edit3 size={14} style={{ color: '#0284C7' }} /> Update Status
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {/* VIEW WORK ORDER DETAILS (PRODUCTION HEAD) */}
+                        <button
+                          onClick={() => {
+                            const targetId = selectedRows[0];
+                            const allWOs = prodModuleEngine.getWorkOrders();
+                            const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
+                            if (targetWO) {
+                              setSelectedWoForAcceptanceModal(targetWO);
+                            }
+                          }}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            color: '#0F172A',
+                            borderRadius: '10px',
+                            padding: '6px 14px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          <Eye size={14} style={{ color: '#0F172A' }} /> View Details
+                        </button>
+                      </>
+                    )}
+
+                    {/* CLEAR SELECTION BUTTON */}
+                    <button
+                      onClick={() => setSelectedRows([])}
+                      title="Clear selection"
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#64748B',
+                        borderRadius: '10px',
+                        padding: '6px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                 )}
 
@@ -12268,297 +14657,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               return (
                 <CreateWorkOrderPage
                   onBack={() => setShowWorkOrderForm(false)}
-                  onWorkOrderCreated={() => setShowWorkOrderForm(false)}
+                  onWorkOrderCreated={(newWO) => {
+                    setShowWorkOrderForm(false);
+                    showCustomAlert(`Work Order ${newWO?.id || ''} created & issued successfully! Raw Material Required: ${newWO?.rawMaterialPhysicalToIssue || ''} ${newWO?.rawMaterialUnit || ''}`, `Work Order ${newWO?.id || ''} Issued Successfully!`, 'success');
+                  }}
                 />
               );
             }
 
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
-
-                {/* 1. TOP HEADER SECTION WITH BLUE PRIMARY BUTTON */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
-                      Work Orders
-                    </h2>
-                    <span style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-                      View and manage all work orders across the production floor.
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => setShowWorkOrderForm(true)}
-                    style={{
-                      backgroundColor: '#2563eb',
-                      border: 'none',
-                      color: 'white',
-                      height: '40px',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '0 18px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
-                    }}
-                  >
-                    <Plus style={{ width: '16px', height: '16px' }} />
-                    Create Work Order
-                  </button>
-                </div>
-
-                {/* 2. FILTERS & SEARCH BAR ROW */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '14px 16px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#ffffff', width: '260px' }}>
-                    <Search style={{ width: '15px', height: '15px', color: '#94a3b8' }} />
-                    <input
-                      type="text"
-                      placeholder="Search WO / Product / Customer..."
-                      value={prodSearchQueryText}
-                      onChange={(e) => setProdSearchQueryText(e.target.value)}
-                      style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#1e293b' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
-
-                    {/* Production Line Dropdown */}
-                    <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none', width: '130px' }}>
-                      <option value="All">All Lines</option>
-                      <option value="Structure Line 1">Structure Line 1</option>
-                      <option value="Rail Line 1">Rail Line 1</option>
-                      <option value="Rail Line 2">Rail Line 2</option>
-                      <option value="FRP Line">FRP Line</option>
-                    </select>
-
-                    {/* Priority Dropdown */}
-                    <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', outline: 'none', width: '120px' }}>
-                      <option value="All">All Priority</option>
-                      <option value="High">High</option>
-                      <option value="Normal">Normal</option>
-                      <option value="Low">Low</option>
-                    </select>
-
-                    {/* Date Range Picker */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', height: '38px', backgroundColor: 'white', fontSize: '12px', color: '#334155' }}>
-                      <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
-                      <span>13 Aug 2026 - 13 Aug 2026</span>
-                    </div>
-
-                    {/* Clear Button */}
-                    <button
-                      onClick={() => { setProdSearchQueryText(''); setProdFilterDateVal(''); setProdFilterStatusSelect('All'); }}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #cbd5e1',
-                        color: '#2563eb',
-                        cursor: 'pointer',
-                        borderRadius: '8px',
-                        height: '38px',
-                        padding: '0 16px',
-                        fontSize: '13px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4. STATUS SUB-TABS ROW & EXPORT BUTTON */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0' }}>
-                  <div style={{ display: 'flex', gap: '24px' }}>
-                    {['All Work Orders', 'My Work Orders', 'Overdue', 'Due Today', 'This Week'].map(tabLabel => (
-                      <button
-                        key={tabLabel}
-                        onClick={() => setProdActiveSubTab(tabLabel)}
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          padding: '12px 0',
-                          fontSize: '13px',
-                          fontWeight: 'bold',
-                          color: prodActiveSubTab === tabLabel || (prodActiveSubTab === 'All' && tabLabel === 'All Work Orders') ? '#2563eb' : '#64748b',
-                          borderBottom: prodActiveSubTab === tabLabel || (prodActiveSubTab === 'All' && tabLabel === 'All Work Orders') ? '2px solid #2563eb' : '2px solid transparent',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {tabLabel}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', backgroundColor: 'white', fontSize: '13px', fontWeight: 'bold', color: '#475569', cursor: 'pointer', marginBottom: '8px' }}>
-                    <Download style={{ width: '14px', height: '14px' }} />
-                    Export
-                  </button>
-                </div>
-
-                {/* 5. MAIN WORK ORDERS DATA TABLE MATCHING EXACT REFERENCE DESIGN */}
-                <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ overflowX: 'auto', width: '100%' }}>
-                    <table className="custom-table" style={{ width: '100%', minWidth: '1250px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                          <th style={{ padding: '12px 14px', width: '30px' }}><input type="checkbox" /></th>
-                          <th style={{ padding: '12px 14px' }}>WO No.</th>
-                          <th style={{ padding: '12px 14px' }}>Product</th>
-                          <th style={{ padding: '12px 14px' }}>Customer / Project</th>
-                          <th style={{ padding: '12px 14px' }}>Production Line</th>
-                          <th style={{ padding: '12px 14px' }}>Qty (Planned)</th>
-                          <th style={{ padding: '12px 14px' }}>Planned Date</th>
-                          <th style={{ padding: '12px 14px' }}>Due Date</th>
-                          <th style={{ padding: '12px 14px' }}>Status</th>
-                          <th style={{ padding: '12px 14px' }}>Priority</th>
-                          <th style={{ padding: '12px 14px' }}>Assigned To</th>
-                          <th style={{ padding: '12px 14px', width: '140px' }}>Progress</th>
-                          <th style={{ padding: '12px 14px', textAlign: 'center' }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          ...(bomStore || []).map(b => {
-                            const totalQty = (b.items || []).reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0) || 100;
-                            const productName = (b.items && b.items.length > 0 && b.items[0].name) ? b.items[0].name : (b.productName || 'Solar Structure Assembly');
-                            
-                            let stLabel = 'Ready to Start';
-                            let stBg = '#eff6ff';
-                            let stFg = '#2563eb';
-                            let progress = 20;
-
-                            if (b.status === 'Packed & Ready for Dispatch' || b.status === 'Closed' || b.status === 'CLOSED') {
-                              stLabel = 'Completed';
-                              stBg = '#f0fdf4';
-                              stFg = '#0d9488';
-                              progress = 100;
-                            } else if (b.status === 'In Production' || b.status === 'Partially Packed') {
-                              stLabel = 'In Progress';
-                              stBg = '#f0fdf4';
-                              stFg = '#16a34a';
-                              progress = 60;
-                            } else if (b.status === 'Draft' || b.status === 'Pending Confirmation') {
-                              stLabel = 'Pending Approval';
-                              stBg = '#fffbebe6';
-                              stFg = '#d97706';
-                              progress = 0;
-                            }
-
-                            return {
-                              woNo: `WO-${b.bomCode}`,
-                              product: productName,
-                              customer: b.customerName || 'Customer Order',
-                              line: 'Structure Line 1',
-                              qty: totalQty.toLocaleString(),
-                              plannedDate: b.date || b.createdDate || '18 Aug 2026',
-                              dueDate: b.creditDueDate || '24 Aug 2026',
-                              status: stLabel,
-                              statusBg: stBg,
-                              statusFg: stFg,
-                              priority: 'High',
-                              priorityColor: '#dc2626',
-                              assignedTo: 'Arun Kumar',
-                              progress: progress,
-                              bomRef: b.bomCode
-                            };
-                          }),
-                          { woNo: 'WO-2026-001', product: 'Triangle Structure', customer: 'VRM Solar Project', line: 'Structure Line 1', qty: '500', plannedDate: '13 Aug 2026', dueDate: '14 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Arun Kumar', progress: 65 },
-                          { woNo: 'WO-2026-002', product: 'Mini Rail 100mm', customer: 'ABC Solar Pvt Ltd', line: 'Rail Line 1', qty: '2,000', plannedDate: '13 Aug 2026', dueDate: '15 Aug 2026', status: 'Ready to Start', statusBg: '#eff6ff', statusFg: '#2563eb', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Kumaravel', progress: 0 },
-                          { woNo: 'WO-2026-003', product: 'Long Rail', customer: 'XYZ Solar', line: 'Rail Line 2', qty: '1,000', plannedDate: '12 Aug 2026', dueDate: '13 Aug 2026', status: 'On Hold', statusBg: '#fff7ed', statusFg: '#ea580c', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Suresh B', progress: 40 },
-                          { woNo: 'WO-2026-004', product: 'Carport Structure', customer: 'SunRay Energy', line: 'Structure Line 1', qty: '300', plannedDate: '11 Aug 2026', dueDate: '13 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Arun Kumar', progress: 80 },
-                          { woNo: 'WO-2026-005', product: 'Mini Rail 120mm', customer: 'GreenVolt Solar', line: 'Rail Line 1', qty: '1,500', plannedDate: '10 Aug 2026', dueDate: '14 Aug 2026', status: 'Pending Approval', statusBg: '#fffbebe6', statusFg: '#d97706', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Ramesh P', progress: 0 },
-                          { woNo: 'WO-2026-006', product: 'FRP Walkway', customer: 'VRM Internal', line: 'FRP Line', qty: '200', plannedDate: '09 Aug 2026', dueDate: '12 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'Low', priorityColor: '#64748b', assignedTo: 'Kumaravel', progress: 100 },
-                          { woNo: 'WO-2026-007', product: 'Handrail System', customer: 'Mega Power', line: 'FRP Line', qty: '400', plannedDate: '09 Aug 2026', dueDate: '12 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'Low', priorityColor: '#64748b', assignedTo: 'Suresh B', progress: 100 },
-                          { woNo: 'WO-2026-008', product: 'Double C Rail', customer: 'ABC Solar Pvt Ltd', line: 'Rail Line 2', qty: '800', plannedDate: '08 Aug 2026', dueDate: '11 Aug 2026', status: 'Completed', statusBg: '#f0fdf4', statusFg: '#0d9488', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Arun Kumar', progress: 100 },
-                          { woNo: 'WO-2026-009', product: 'RCC Roof Structure', customer: 'BuildTech Pvt Ltd', line: 'Structure Line 2', qty: '150', plannedDate: '08 Aug 2026', dueDate: '10 Aug 2026', status: 'Overdue', statusBg: '#fef2f2', statusFg: '#dc2626', priority: 'High', priorityColor: '#dc2626', assignedTo: 'Ramesh P', progress: 20 },
-                          { woNo: 'WO-2026-010', product: 'Custom Structure', customer: 'Sky Sun Energy', line: 'Structure Line 1', qty: '250', plannedDate: '07 Aug 2026', dueDate: '10 Aug 2026', status: 'In Progress', statusBg: '#f0fdf4', statusFg: '#16a34a', priority: 'Normal', priorityColor: '#2563eb', assignedTo: 'Kumaravel', progress: 55 }
-                        ].filter(row => {
-                          const searchLower = prodSearchQueryText.toLowerCase();
-                          const matchesSearch = !searchLower || row.woNo.toLowerCase().includes(searchLower) || row.product.toLowerCase().includes(searchLower) || row.customer.toLowerCase().includes(searchLower);
-                          const matchesStatus = prodFilterStatusSelect === 'All' || row.status === prodFilterStatusSelect;
-                          return matchesSearch && matchesStatus;
-                        }).map((row, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '12px 14px' }}><input type="checkbox" /></td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.woNo}</td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#1E293B' }}>{row.product}</td>
-                            <td style={{ padding: '12px 14px', color: '#475569' }}>{row.customer}</td>
-                            <td style={{ padding: '12px 14px', color: '#475569' }}>{row.line}</td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A' }}>{row.qty}</td>
-                            <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.plannedDate}</td>
-                            <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.dueDate}</td>
-
-                            {/* Status Badge with bullet dot */}
-                            <td style={{ padding: '12px 14px' }}>
-                              <span style={{ backgroundColor: row.statusBg, color: row.statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.statusFg }}></span>
-                                {row.status}
-                              </span>
-                            </td>
-
-                            {/* Priority with Up Arrow if High */}
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: row.priorityColor, fontSize: '12px' }}>
-                              {row.priority === 'High' ? '↑ High' : row.priority}
-                            </td>
-
-                            {/* Assigned To Avatar & Name */}
-                            <td style={{ padding: '12px 14px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justify: 'center' }}>
-                                  {row.assignedTo.split(' ').map(n => n[0]).join('')}
-                                </div>
-                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{row.assignedTo}</span>
-                              </div>
-                            </td>
-
-                            {/* Progress Bar */}
-                            <td style={{ padding: '12px 14px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', minWidth: '30px' }}>{row.progress}%</span>
-                                <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
-                                  <div style={{ width: `${row.progress}%`, height: '100%', backgroundColor: row.progress === 100 ? '#0d9488' : '#2563eb', borderRadius: '3px' }}></div>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* Actions Ellipsis */}
-                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                              <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}>
-                                <MoreVertical style={{ width: '16px', height: '16px' }} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* PAGINATION FOOTER ROW MATCHING EXACT SCREENSHOT (UNSCROLLABLE FULL WIDTH) */}
-                  <div style={{ padding: '12px 20px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' }}>
-                    <span>Showing 1 to 10 of 42 entries</span>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>«</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>‹</button>
-                      <button style={{ border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', fontWeight: 'bold', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>1</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>2</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>3</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>4</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>5</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>›</button>
-                      <button style={{ border: '1px solid #e2e8f0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}>»</button>
-
-                      <select style={{ height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '0 8px', fontSize: '12px', marginLeft: '10px' }}>
-                        <option>10 / page</option>
-                        <option>25 / page</option>
-                        <option>50 / page</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <WorkOrdersView
+                userRole={userRole}
+                setShowWorkOrderForm={setShowWorkOrderForm}
+                prodSearchQueryText={prodSearchQueryText}
+                setProdSearchQueryText={setProdSearchQueryText}
+                prodStatusFilterText={prodStatusFilterText}
+                setProdStatusFilterText={setProdStatusFilterText}
+              />
             );
           }
 
@@ -16437,7 +18552,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   color: '#FFFFFF',
                   boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.4)',
                   display: 'flex',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -17856,6 +19971,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       tabGroup: 'Pending'
                     });
                   }
+                  showCustomAlert(`Work Order ${newWO?.id || ''} created & issued successfully! Raw Material Required: ${newWO?.rawMaterialPhysicalToIssue || ''} ${newWO?.rawMaterialUnit || ''}`, `Work Order ${newWO?.id || ''} Issued Successfully!`, 'success');
                 }}
               />
             );
@@ -17904,23 +20020,39 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       }
                     }}
                     style={{
-                      backgroundColor: '#2563eb',
+                      backgroundColor: '#0E7490',
                       border: 'none',
-                      color: 'white',
-                      height: '38px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
+                      color: '#FFFFFF',
+                      height: '40px',
+                      padding: '0 6px 0 20px',
+                      borderRadius: '50px',
+                      fontSize: '13px',
+                      fontWeight: '700',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '0 16px',
-                      borderRadius: '8px',
+                      gap: '12px',
                       cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
+                      boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                      transition: 'all 0.2s ease',
+                      letterSpacing: '0.2px'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
                   >
-                    <Plus style={{ width: '14px', height: '14px' }} />
-                    {pageConfig.actionText.replace(/^\+\s*/, '')}
+                    <span>{pageConfig.actionText.replace(/^\+\s*/, '')}</span>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0E7490',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      <Plus size={16} strokeWidth={2.5} />
+                    </div>
                   </button>
                 ) : null}
               </div>
@@ -18016,18 +20148,31 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 ))}
               </div>
 
-              {/* 4. MAIN DATA TABLE (EXACT MATCH FOR PURCHASE ORDERS SCREENSHOT) */}
+              {/* 4. MAIN DATA TABLE (EXACT MATCH FOR PI & PO DESIGN) */}
               <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
                 <div style={{ overflowX: 'auto', width: '100%' }}>
-                  <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                  <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                        <th style={{ padding: '12px 14px', width: '30px' }}><input type="checkbox" /></th>
-                        {pageConfig.headers.map((h, i) => (
+                      <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
+                        <th style={{ padding: '12px 14px', width: '30px' }}>
+                          <input
+                            type="checkbox"
+                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            checked={filteredRows.length > 0 && filteredRows.every(r => selectedRows.includes(r.code))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRows(filteredRows.map(r => r.code));
+                              } else {
+                                setSelectedRows([]);
+                              }
+                            }}
+                          />
+                        </th>
+                        {pageConfig.headers.filter(h => h !== 'Action' && h !== 'Actions').map((h, i) => (
                           <th key={i} style={{
                             padding: '12px 14px',
                             fontWeight: 'bold',
-                            textAlign: (h === 'Status' || h === 'Fulfillment Status' || h === 'Action' || h === 'Dispatch Packing Status') ? 'center' : (h.includes('Total') || h.includes('Value')) ? 'right' : 'left'
+                            textAlign: (h === 'Status' || h === 'Fulfillment Status' || h === 'Dispatch Packing Status') ? 'center' : (h.includes('Total') || h.includes('Value')) ? 'right' : 'left'
                           }}>
                             {h}
                           </th>
@@ -18035,11 +20180,29 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRows.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '12px 14px', width: '30px' }}>
-                            <input type="checkbox" />
-                          </td>
+                      {(() => {
+                        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                        const indexOfLastRow = currentPage * rowsPerPage;
+                        const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+                        const currentRows = filteredRows.slice(indexOfFirstRow, indexOfLastRow);
+
+                        return currentRows.map((row, idx) => {
+                          const isChecked = selectedRows.includes(row.code);
+                          return (
+                            <tr key={idx} style={{
+                              borderBottom: '1px solid #F1F5F9',
+                              transition: 'all 0.15s ease',
+                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
+                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                            }} className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}>
+                              <td style={{ padding: '12px 14px', width: '30px' }}>
+                                <input
+                                  type="checkbox"
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                  checked={isChecked}
+                                  onChange={() => handleSelectRowGeneric(row.code)}
+                                />
+                              </td>
                           <td
                             onClick={() => {
                               if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
@@ -18064,7 +20227,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           </td>
                           <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
                           <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
-                          {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5.toString().includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
+                          {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5?.toString()?.includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
                           {row.c6 !== undefined && activeTab !== 'Customer Management' && (
                             <td style={{ padding: '12px 14px', color: '#475569' }}>
                               {activeTab === 'Invoice Management' ? (
@@ -18112,733 +20275,644 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </span>
                             </td>
                           )}
-                          {pageConfig.headers.includes('Action') && (
-                            <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
-                              {activeTab === 'Invoice Management' ? (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                  <button
-                                    onClick={() => {
-                                      setViewingInvoiceModal(row);
-                                      setInvoiceModalActiveTab('Invoice Items');
-                                    }}
-                                    style={{
-                                      backgroundColor: '#F0FDF4',
-                                      color: '#166534',
-                                      border: '1px solid #BBF7D0',
-                                      padding: '6px 10px',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
-                                      fontWeight: '700',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
-                                    title="View Full Invoice Details"
-                                  >
-                                    <Eye style={{ width: '13px', height: '13px', color: '#166534' }} /> Full View
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      setViewingInvoiceModal(row);
-                                      setTimeout(() => window.print(), 300);
-                                    }}
-                                    style={{
-                                      backgroundColor: '#EFF6FF',
-                                      color: '#2563EB',
-                                      border: '1px solid #BFDBFE',
-                                      padding: '6px 10px',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
-                                      fontWeight: '700',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                    title="Download / Print Invoice PDF"
-                                  >
-                                    <Download style={{ width: '13px', height: '13px', color: '#2563EB' }} /> Download
-                                  </button>
-
-                                  <button
-                                    onClick={(e) => {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setBomActionMenuPos({ top: Math.min(window.innerHeight - 260, Math.max(10, rect.top + 34)), left: Math.max(10, rect.left - 150) });
-                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                      setCustomerActionMenuIdx(null);
-                                    }}
-                                    title="More Actions"
-                                    style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                  >
-                                    <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                  </button>
-                                </div>
-                              ) : activeTab === 'Dispatch Orders' ? (
-                                (() => {
-                                  const isAwaitingVehicleLoading = Boolean(
-                                    row.status === 'Awaiting Vehicle Loading & Dispatch' ||
-                                    row.status === 'Invoice Confirmed' ||
-                                    row.status === 'Ready for Vehicle Loading' ||
-                                    (row.invoiceConfirmed && !row.vehicleLoading)
-                                  );
-                                  const isFlowCompleted = Boolean(
-                                    row.status === 'Completed' ||
-                                    row.status === 'Fully Dispatched & BOM Flow Completed' ||
-                                    row.status === 'Fully Dispatched & Delivered' ||
-                                    row.status === 'Closed' ||
-                                    row.status === 'CLOSED' ||
-                                    row.vehicleLoading
-                                  );
-                                  const isPacked = Boolean(
-                                    row.status === 'Packed & Ready for Dispatch' ||
-                                    row.status === 'PACKED & READY FOR DISPATCH' ||
-                                    row.status === 'Packed & Awaiting Dispatch Payment' ||
-                                    row.status === 'Accounts Verified & Passed to Invoice' ||
-                                    row.status === 'ACCOUNTS VERIFIED'
-                                  );
-
-                                  if (isAwaitingVehicleLoading) {
-                                    return (
-                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        <button
-                                          onClick={() => setVehicleLoadingModal(row)}
-                                          style={{
-                                            backgroundColor: '#4F46E5',
-                                            color: '#FFFFFF',
-                                            border: 'none',
-                                            padding: '6px 14px',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            fontWeight: '800',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            boxShadow: '0 2px 6px rgba(79,70,229,0.3)',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#4338CA'; }}
-                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#4F46E5'; }}
-                                        >
-                                          <Truck style={{ width: '14px', height: '14px', color: '#FFFFFF' }} /> Verify Vehicle Loading
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                            setCustomerActionMenuIdx(null);
-                                          }}
-                                          title="More Actions"
-                                          style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >
-                                          <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                        </button>
-                                      </div>
-                                    );
-                                  }
-
-                                  if (isFlowCompleted) {
-                                    return (
-                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        <button
-                                          onClick={() => setVehicleLoadingModal({ ...row, isReadOnly: true })}
-                                          style={{
-                                            backgroundColor: '#F0FDF4',
-                                            color: '#166534',
-                                            border: '1px solid #BBF7D0',
-                                            padding: '6px 12px',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            fontWeight: '800',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
-                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                                        >
-                                          <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> Flow Completed
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                            setCustomerActionMenuIdx(null);
-                                          }}
-                                          title="More Actions"
-                                          style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >
-                                          <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                        </button>
-                                      </div>
-                                    );
-                                  }
-
-                                  return (
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                      {isPacked ? (
-                                        <button
-                                          onClick={() => setDispatchPackingModal({ ...row, isReadOnly: true })}
-                                          style={{
-                                            backgroundColor: '#F0FDF4',
-                                            color: '#166534',
-                                            border: '1px solid #BBF7D0',
-                                            padding: '6px 14px',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; }}
-                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                                        >
-                                          <CheckCircle style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => setDispatchPackingModal(row)}
-                                          style={{
-                                            backgroundColor: '#EEF2FF',
-                                            color: '#4F46E5',
-                                            border: '1px solid #C7D2FE',
-                                            padding: '6px 14px',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E0E7FF'; }}
-                                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#EEF2FF'; }}
-                                        >
-                                          <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => {
-                                          setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                          setCustomerActionMenuIdx(null);
-                                        }}
-                                        title="More Actions"
-                                        style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                      >
-                                        <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                      </button>
-                                    </div>
-                                  );
-                                })()
-                              ) : activeTab === 'Accounts Verification' ? (
-                                (() => {
-                                  const acc = row.accountsVerification || {};
-                                  const isAccountsDone = Boolean(
-                                    row.isAccountsDone ||
-                                    acc.verified ||
-                                    row.status === 'Accounts Verified & Passed to Invoice' ||
-                                    row.status === 'ACCOUNTS VERIFIED' ||
-                                    (acc.hardCopyReceived && acc.softCopyReceived && (acc.paymentStatus || row.paymentType === 'Net 30 Days'))
-                                  );
-
-                                  return isAccountsDone ? (
-                                    <button
-                                      onClick={() => {
-                                        setAccountsVerificationModal(row);
-                                        setIsAccountsViewOnly(true);
-                                      }}
-                                      style={{
-                                        backgroundColor: '#EFF6FF',
-                                        color: '#2563EB',
-                                        border: '1px solid #BFDBFE',
-                                        padding: '6px 16px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '800',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#DBEAFE';
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                      }}
-                                    >
-                                      <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setAccountsVerificationModal(row);
-                                        setIsAccountsViewOnly(false);
-                                      }}
-                                      style={{
-                                        backgroundColor: '#FEF3C7',
-                                        color: '#B45309',
-                                        border: '1px solid #FDE68A',
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#FDE68A';
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#FEF3C7';
-                                      }}
-                                    >
-                                      <Receipt style={{ width: '14px', height: '14px', color: '#B45309' }} /> Verify Payment
-                                    </button>
-                                  );
-                                })()
-                              ) : (activeTab === 'BOM' || activeTab === 'BOM / Routing') ? (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {(row.addressProofReuploadRequested || row.status === 'Wrong Proof' || row.addressProofStatus === 'Wrong Proof') ? (
-                                    <button
-                                      onClick={() => {
-                                        setReuploadAddressProofModal(row);
-                                        setReuploadProofFile(null);
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{
-                                        backgroundColor: '#FEF2F2',
-                                        color: '#DC2626',
-                                        border: '1px solid #FECACA',
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '800',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                    >
-                                      <RotateCcw style={{ width: '13px', height: '13px', color: '#DC2626' }} /> Re-upload Address Proof
-                                    </button>
-                                  ) : ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status) ? (
-                                    <button
-                                      onClick={() => {
-                                        setConfirmingBomModal({ ...row, isEditMode: true });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{
-                                        backgroundColor: '#EFF6FF',
-                                        color: '#2563EB',
-                                        border: '1px solid #BFDBFE',
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '800',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                    >
-                                      <CheckCircle style={{ width: '13px', height: '13px', color: '#2563EB' }} /> Confirm BOM
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setConfirmingBomModal({ ...row, isEditMode: false });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{
-                                        backgroundColor: '#F8FAFC',
-                                        color: '#475569',
-                                        border: '1px solid #CBD5E1',
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        transition: 'all 0.15s ease'
-                                      }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                                    >
-                                      <Eye style={{ width: '13px', height: '13px', color: '#64748B' }} /> View BOM
-                                    </button>
-                                  )}
-
-                                  <button
-                                    onClick={(e) => {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      const topPos = Math.min(window.innerHeight - 260, rect.bottom + 4);
-                                      const leftPos = Math.max(10, rect.right - 210);
-                                      setBomActionMenuPos({ top: topPos, left: leftPos });
-                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                      setCustomerActionMenuIdx(null);
-                                    }}
-                                    title="More Actions"
-                                    style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                  >
-                                    <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    if (activeTab === 'Customer Management') {
-                                      setCustomerActionMenuIdx(customerActionMenuIdx === idx ? null : idx);
-                                      setBomActionMenuIdx(null);
-                                    } else {
-                                      setBomActionMenuIdx(bomActionMenuIdx === idx ? null : idx);
-                                      setCustomerActionMenuIdx(null);
-                                    }
-                                  }}
-                                  title="Actions"
-                                  style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                  <MoreVertical style={{ width: '16px', height: '16px' }} />
-                                </button>
-                              )}
-
-                              
-                              {activeTab === 'Invoice Management' && bomActionMenuIdx === idx && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: '14px',
-                                    top: '44px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: '10px',
-                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                    zIndex: 100,
-                                    minWidth: '170px',
-                                    overflow: 'hidden',
-                                    padding: '4px'
-                                  }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      setViewingInvoiceModal(row);
-                                      setInvoiceModalActiveTab('Invoice Items');
-                                      setBomActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View Details
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      alert(`Downloading Invoice ${row.invNo || row.code} PDF...`);
-                                      setBomActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Download style={{ width: '14px', height: '14px', color: '#059669' }} /> Download PDF
-                                  </button>
-
-                                  {(() => {
-                                    const isInvoiceCompleted = ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(row.status);
-
-                                    // Look up matching BOM to check if there are unpacked items
-                                    const matchingBom = bomStore.find(b =>
-                                      b.bomCode === row.poNo ||
-                                      b.bomCode === row.code ||
-                                      b.bomCode === row.c3 ||
-                                      (b.salesOrderNo && (b.salesOrderNo === row.poNo || b.salesOrderNo === row.c3))
-                                    );
-
-                                    let hasUnpackedItems = (row.items || []).some(it => it.selected === false);
-                                    if (!hasUnpackedItems && matchingBom && matchingBom.dispatchPacking && Array.isArray(matchingBom.dispatchPacking)) {
-                                      hasUnpackedItems = matchingBom.dispatchPacking.some(dp => dp.packed === false);
-                                    }
-
-                                    // If invoice is fully completed with NO unpacked items, hide these actions
-                                    if (isInvoiceCompleted && !hasUnpackedItems) return null;
-
-                                    return (
-                                      <>
-                                        <button
-                                          onClick={() => {
-                                            setPendingDcModal(row);
-                                            setBomActionMenuIdx(null);
-                                          }}
-                                          style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
-                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                          <Truck style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Create DC for Pending
-                                        </button>
-
-                                        <button
-                                          onClick={() => {
-                                            setCloseInvoiceReasonModal(row);
-                                            setCloseReasonText('');
-                                            setBomActionMenuIdx(null);
-                                          }}
-                                          style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                          <XCircle style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Close Invoice
-                                        </button>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-                              )}
-
-                              {activeTab === 'Accounts Verification' && bomActionMenuIdx === idx && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: '14px',
-                                    top: '44px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: '10px',
-                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                    zIndex: 100,
-                                    minWidth: '180px',
-                                    overflow: 'hidden',
-                                    padding: '4px'
-                                  }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      setAccountsVerificationModal(row);
-                                      setBomActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#B45309', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF3C7'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Receipt style={{ width: '14px', height: '14px', color: '#B45309' }} /> Verify Payment & Copies
-                                  </button>
-                                </div>
-                              )}
-
-                              {activeTab === 'Dispatch Orders' && bomActionMenuIdx === idx && (() => {
-                                const isLocked = row.status === 'Packed & Ready for Dispatch' ||
-                                  row.status === 'Partially Packed' ||
-                                  row.status === 'Closed' ||
-                                  row.status === 'CLOSED' ||
-                                  (row.dispatchPacking && Array.isArray(row.dispatchPacking) && row.dispatchPacking.length > 0 && row.dispatchPacking.every(p => p.packed));
-
-                                const isAwaitingLoading = Boolean(
-                                  row.status === 'Awaiting Vehicle Loading & Dispatch' ||
-                                  row.status === 'Invoice Confirmed' ||
-                                  row.status === 'Ready for Vehicle Loading' ||
-                                  (row.invoiceConfirmed && !row.vehicleLoading)
-                                );
-                                const isDone = Boolean(row.status === 'Completed' || row.status === 'Fully Dispatched & BOM Flow Completed' || row.vehicleLoading);
-
-                                return (
-                                  <div
-                                    style={{
-                                      position: 'absolute',
-                                      right: '14px',
-                                      top: '44px',
-                                      backgroundColor: 'white',
-                                      border: '1px solid #E2E8F0',
-                                      borderRadius: '10px',
-                                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                      zIndex: 100,
-                                      minWidth: '200px',
-                                      overflow: 'hidden',
-                                      padding: '4px'
-                                    }}
-                                  >
-                                    {isAwaitingLoading && (
-                                      <button
-                                        onClick={() => {
-                                          setVehicleLoadingModal(row);
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF2FF'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <Truck style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify Vehicle Loading
-                                      </button>
-                                    )}
-
-                                    {isDone && (
-                                      <button
-                                        onClick={() => {
-                                          setVehicleLoadingModal({ ...row, isReadOnly: true });
-                                          setBomActionMenuIdx(null);
-                                        }}
-                                        style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        <Eye style={{ width: '14px', height: '14px', color: '#166534' }} /> View Loading Media
-                                      </button>
-                                    )}
-
-                                    <button
-                                      onClick={() => {
-                                        setDispatchPackingModal({ ...row, isReadOnly: isLocked });
-                                        setBomActionMenuIdx(null);
-                                      }}
-                                      style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: isLocked ? '#166534' : '#4F46E5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isLocked ? '#F0FDF4' : '#EEF2FF'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                      {isLocked ? (
-                                        <>
-                                          <Eye style={{ width: '14px', height: '14px', color: '#166534' }} /> View Packing Details
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Package style={{ width: '14px', height: '14px', color: '#4F46E5' }} /> Verify & Pack Items
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                );
-                              })()}
-
-                              {!['BOM', 'BOM / Routing', 'Accounts Verification', 'Dispatch Orders', 'Invoice Management', 'Customer Management'].includes(activeTab) && bomActionMenuIdx === idx && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: '14px',
-                                    top: '44px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: '10px',
-                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                    zIndex: 100,
-                                    minWidth: '140px',
-                                    overflow: 'hidden',
-                                    padding: '4px'
-                                  }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      alert(`Viewing details for ${row.code}`);
-                                      setBomActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View Details
-                                  </button>
-                                </div>
-                              )}
-
-                              {activeTab === 'Customer Management' && customerActionMenuIdx === idx && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: '14px',
-                                    top: '44px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: '10px',
-                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-                                    zIndex: 100,
-                                    minWidth: '130px',
-                                    overflow: 'hidden',
-                                    padding: '4px'
-                                  }}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      setViewingCustomer(row);
-                                      setCustomerActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Eye style={{ width: '14px', height: '14px', color: '#2563EB' }} /> View
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      setEditingCustomer({ ...row, originalCode: row.code });
-                                      setCustFormName(row.code);
-                                      setCustFormCompany(row.c2 || row.code);
-                                      setCustFormMobile(row.c4 || '');
-                                      setCustFormEmail(row.c5 || '');
-
-                                      const bObj = row.billingAddressObj || {};
-                                      const dObj = row.deliveryAddressObj || {};
-                                      setCustFormBillingAddress(bObj.address || row.c6 || row.billingAddress || '');
-                                      setCustFormBillingCity(bObj.city || '');
-                                      setCustFormBillingState(bObj.state || '');
-                                      setCustFormBillingPincode(bObj.pincode || '');
-
-                                      const isSame = (row.deliveryAddress === row.billingAddress && Boolean(row.billingAddress)) || (!row.c7 && !row.deliveryAddress);
-                                      setCustFormSameAsBilling(isSame);
-                                      setCustFormDeliveryAddress(dObj.address || row.c7 || row.deliveryAddress || '');
-                                      setCustFormDeliveryCity(dObj.city || '');
-                                      setCustFormDeliveryState(dObj.state || '');
-                                      setCustFormDeliveryPincode(dObj.pincode || '');
-                                      setCustomerActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Edit3 style={{ width: '14px', height: '14px', color: '#D97706' }} /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setCustomerToDelete(row);
-                                      setCustomerActionMenuIdx(null);
-                                    }}
-                                    style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  >
-                                    <Trash2 style={{ width: '14px', height: '14px', color: '#DC2626' }} /> Delete
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          )}
+                          {/* Action column removed per user request */}
                         </tr>
-                      ))}
+                      );
+                    });
+                  })()}
                     </tbody>
                   </table>
                 </div>
+
+                {/* 4. PAGINATION FOOTER EXACT MATCHING PI & PO DESIGN RULES */}
+                {filteredRows.length > 0 && (() => {
+                  const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                  const indexOfLastRow = currentPage * rowsPerPage;
+                  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', fontSize: '13px', color: '#64748B', borderTop: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
+                      {/* Left Side: Rows per page selector + Showing X to Y of Z entries */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>Showing per page</span>
+                          <select
+                            value={rowsPerPage}
+                            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                            style={{ height: '32px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', padding: '0 8px', backgroundColor: 'white', fontWeight: 'bold' }}
+                          >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                          </select>
+                        </div>
+                        <span>Showing {filteredRows.length === 0 ? 0 : indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredRows.length)} of {filteredRows.length} entries</span>
+                      </div>
+
+                      {/* Right Side: Page navigation controls adjacent to Go to page input */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(1)}
+                            style={{ border: '1px solid #E2E8F0', background: currentPage === 1 ? '#F8FAFC' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                          >
+                            &laquo;
+                          </button>
+                          <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            style={{ border: '1px solid #E2E8F0', background: currentPage === 1 ? '#F8FAFC' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                          >
+                            &lt;
+                          </button>
+
+                          {(() => {
+                            let start = Math.max(1, currentPage - 1);
+                            let end = start + 2;
+                            if (end > totalPages) {
+                              end = totalPages;
+                              start = Math.max(1, end - 2);
+                            }
+                            return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i).map(page => (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                style={{
+                                  border: '1px solid #E2E8F0',
+                                  background: page === currentPage ? '#0E7490' : 'white',
+                                  color: page === currentPage ? 'white' : '#475569',
+                                  cursor: 'pointer',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontWeight: page === currentPage ? 'bold' : '500'
+                                }}
+                              >
+                                {page}
+                              </button>
+                            ));
+                          })()}
+
+                          <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            style={{ border: '1px solid #E2E8F0', background: (currentPage === totalPages || totalPages === 0) ? '#F8FAFC' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                          >
+                            &gt;
+                          </button>
+                          <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(totalPages)}
+                            style={{ border: '1px solid #E2E8F0', background: (currentPage === totalPages || totalPages === 0) ? '#F8FAFC' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                          >
+                            &raquo;
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>Go to page</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={totalPages || 1}
+                            defaultValue={currentPage}
+                            id="bom-goto-page-input"
+                            style={{ width: '42px', height: '32px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}
+                          />
+                          <button
+                            onClick={() => {
+                              const val = parseInt(document.getElementById('bom-goto-page-input')?.value || '1', 10);
+                              if (val >= 1 && val <= totalPages) setCurrentPage(val);
+                            }}
+                            style={{ height: '32px', padding: '0 10px', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#0E7490', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                          >
+                            Go &rsaquo;
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
+
+              {/* Floating Selection Toolbar with interactive More Actions menu */}
+              {selectedRows.length > 0 && (
+                <div style={{
+                  position: 'fixed',
+                  bottom: '24px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '16px',
+                  boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  padding: '8px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  zIndex: 10000,
+                  fontFamily: "'Plus Jakarta Sans', sans-serif"
+                }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                    <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
+                  </span>
+
+                  <button
+                    onClick={() => {
+                      if (selectedRows.length > 1) {
+                        alert('You cannot edit multiple items at once.');
+                      } else if (selectedRows.length === 1) {
+                        const codeVal = selectedRows[0];
+                        const targetRow = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal };
+
+                        if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
+                          setConfirmingBomModal({ ...targetRow, isEditMode: true });
+                        } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
+                          setEditingVendor(targetRow);
+                        } else if (activeTab === 'Customer Management') {
+                          setEditingCustomer({ ...targetRow, originalCode: targetRow.code });
+                          setCustFormName(targetRow.code);
+                          setCustFormCompany(targetRow.c2 || targetRow.code);
+                          setCustFormGstNo(targetRow.gstNo || '33AABCU9603R1ZM');
+                          setCustFormMobile(targetRow.c4 || '');
+                          setCustFormEmail(targetRow.c5 || '');
+
+                          const bObj = targetRow.billingAddressObj || {};
+                          const dObj = targetRow.deliveryAddressObj || {};
+                          setCustFormBillingAddress(bObj.address || targetRow.c6 || targetRow.billingAddress || '');
+                          setCustFormBillingCity(bObj.city || '');
+                          setCustFormBillingState(bObj.state || '');
+                          setCustFormBillingPincode(bObj.pincode || '');
+
+                          const isSame = (targetRow.deliveryAddress === targetRow.billingAddress && Boolean(targetRow.billingAddress)) || (!targetRow.c7 && !targetRow.deliveryAddress);
+                          setCustFormSameAsBilling(isSame);
+                          setCustFormDeliveryAddress(dObj.address || targetRow.c7 || targetRow.deliveryAddress || '');
+                          setCustFormDeliveryCity(dObj.city || '');
+                          setCustFormDeliveryState(dObj.state || '');
+                          setCustFormDeliveryPincode(dObj.pincode || '');
+                        } else if (activeTab === 'Goods Receipt Note (GRN)') {
+                          resetCreateGRNForm();
+                          loadPOItems(targetRow.poRef || targetRow.code);
+                          if (targetRow.challanNo) setGrnChallanNo(targetRow.challanNo);
+                          if (targetRow.receivedBy) setGrnReceivedBy(targetRow.receivedBy);
+                          if (targetRow.inspectorName) setGrnInspectorName(targetRow.inspectorName);
+                          if (targetRow.inspectionRemarks) setGrnInspectionRemarks(targetRow.inspectionRemarks);
+                          setEditingGrnId(targetRow.id || targetRow.code);
+                          setIsViewOnlyMode(false);
+                          setShowCreateGRN(true);
+                        } else if (activeTab === 'Invoice Management') {
+                          setViewingInvoiceModal(targetRow);
+                          setInvoiceModalActiveTab('Invoice Items');
+                        } else if (activeTab === 'Dispatch Orders') {
+                          setDispatchPackingModal(targetRow);
+                        } else if (activeTab === 'Accounts Verification') {
+                          setAccountsVerificationModal(targetRow);
+                          setIsAccountsViewOnly(false);
+                        } else {
+                          setConfirmingBomModal({ ...targetRow, isEditMode: true });
+                        }
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected item(s)?`)) {
+                        setSelectedRows([]);
+                        setSelectedVendors([]);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                  </button>
+
+                  {/* Dots / More Actions Button & Popup Menu */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowFloatingMoreMenu(!showFloatingMoreMenu)}
+                      title="More actions"
+                      style={{
+                        backgroundColor: showFloatingMoreMenu ? '#F1F5F9' : '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#64748B',
+                        borderRadius: '10px',
+                        padding: '6px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      <MoreHorizontal size={14} />
+                    </button>
+
+                    {showFloatingMoreMenu && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '44px',
+                        right: '0',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        minWidth: '170px',
+                        padding: '6px',
+                        zIndex: 10001,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px'
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (selectedRows && selectedRows.length > 1) {
+                              alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                              setShowFloatingMoreMenu(false);
+                              return;
+                            }
+                            const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+                            const targetRow = codeVal
+                              ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
+                              : (filteredRows && filteredRows[0] ? filteredRows[0] : { code: 'CR-001', name: 'Sample Record' });
+                            setQuickPreviewRecord(targetRow);
+                            setShowFloatingMoreMenu(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: 'none',
+                            background: 'transparent',
+                            textAlign: 'left',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#1E293B',
+                            cursor: 'pointer',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            position: 'relative',
+                            zIndex: 10002
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (selectedRows.length === 1) {
+                              alert(`Cloned #${selectedRows[0]} as a new duplicate draft.`);
+                            } else {
+                              alert(`Cloned ${selectedRows.length} selected items.`);
+                            }
+                            setShowFloatingMoreMenu(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: 'none',
+                            background: 'transparent',
+                            textAlign: 'left',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#1E293B',
+                            cursor: 'pointer',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Copy size={14} style={{ color: '#2563EB' }} /> Clone / Duplicate
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            window.print();
+                            setShowFloatingMoreMenu(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: 'none',
+                            background: 'transparent',
+                            textAlign: 'left',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#1E293B',
+                            cursor: 'pointer',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                        </button>
+
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedRows([]);
+                      setSelectedVendors([]);
+                      setShowFloatingMoreMenu(false);
+                    }}
+                    title="Deselect all"
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#94A3B8',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+              {quickPreviewRecord && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(15, 23, 42, 0.55)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 20000,
+                  fontFamily: "'Plus Jakarta Sans', sans-serif"
+                }}>
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '24px',
+                    width: '90%',
+                    maxWidth: '640px',
+                    maxHeight: '88vh',
+                    overflowY: 'auto',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    padding: '28px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    boxSizing: 'border-box'
+                  }}>
+                    {/* Drawer Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                          {activeTab} Preview
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', color: '#64748B', fontWeight: '700' }}>
+                          <ChevronLeft size={14} style={{ cursor: 'pointer' }} />
+                          <ChevronRight size={14} style={{ cursor: 'pointer' }} />
+                          <span>1 of {(filteredRows || []).length || 1}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                          onClick={() => {
+                            const rec = quickPreviewRecord;
+                            setQuickPreviewRecord(null);
+
+                            if (activeTab === 'BOM' || activeTab === 'BOM / Routing') {
+                              setConfirmingBomModal({ ...rec, isEditMode: true });
+                            } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
+                              handleOpenVendorDetails(rec);
+                            } else if (activeTab === 'Customer Management') {
+                              setViewingCustomer(rec);
+                            } else if (activeTab === 'Goods Receipt Note (GRN)') {
+                              resetCreateGRNForm();
+                              loadPOItems(rec.poRef || rec.code);
+                              setEditingGrnId(rec.id || rec.code);
+                              setIsViewOnlyMode(true);
+                              setShowCreateGRN(true);
+                            } else if (activeTab === 'Invoice Management') {
+                              setViewingInvoiceModal(rec);
+                              setInvoiceModalActiveTab('Invoice Items');
+                            } else if (activeTab === 'Dispatch Orders') {
+                              setDispatchPackingModal(rec);
+                            } else if (activeTab === 'Accounts Verification') {
+                              setAccountsVerificationModal(rec);
+                              setIsAccountsViewOnly(true);
+                            } else {
+                              setConfirmingBomModal({ ...rec, isEditMode: true });
+                            }
+                          }}
+                          style={{
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF',
+                            color: '#1E293B',
+                            padding: '6px 14px',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                        >
+                          View Full Details
+                        </button>
+
+                        <button
+                          onClick={() => setQuickPreviewRecord(null)}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B', padding: '4px', display: 'inline-flex', alignItems: 'center' }}
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Customer / Main Profile Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '10px' }}>
+                      <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        backgroundColor: '#E0F2FE',
+                        color: '#0284C7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '22px',
+                        fontWeight: '800'
+                      }}>
+                        {(quickPreviewRecord.c2 || quickPreviewRecord.code || 'CR').charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                            {quickPreviewRecord.c2 || quickPreviewRecord.code || quickPreviewRecord.name || 'Record Overview'}
+                          </h3>
+                          <span style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
+                            • Active
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#64748B' }}>
+                          Ref Code: <strong>{quickPreviewRecord.code || quickPreviewRecord.id || quickPreviewRecord.bomCode || '—'}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stat Badges Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                      <div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>TICKETS</span>
+                        <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800' }}>16</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>OVERDUE</span>
+                        <strong style={{ fontSize: '15px', color: '#DC2626', fontWeight: '800' }}>4</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>AVG RESP</span>
+                        <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800' }}>25:00</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>TOTAL RESP</span>
+                        <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800' }}>1:32:08</strong>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Customer Details */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#334155', margin: 0 }}>Customer Details</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block' }}>Source</span>
+                          <strong style={{ color: '#0F172A' }}>Contact us form</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block' }}>Phone Number</span>
+                          <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.c4 || '(209) 555-0104'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block' }}>Email</span>
+                          <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.c5 || 'hello@santi.com'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block' }}>Billing / Delivery</span>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.c6 || quickPreviewRecord.billingAddress || 'Tamil Nadu, India'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Active Ticket Card */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#334155', margin: 0 }}>Ticket Active</h4>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', cursor: 'pointer' }}>View More Ticket</span>
+                      </div>
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                            #TC-196 &nbsp; Defective Item Received
+                          </span>
+                          <span style={{ backgroundColor: '#0EA5E9', color: 'white', fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
+                            Open
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', fontSize: '11px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Ticket Type</span>
+                            <strong>Question</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Priority</span>
+                            <strong style={{ color: '#D97706' }}>Medium</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Assigned to</span>
+                            <strong>Bagus Fikri</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Request Date</span>
+                            <strong>01/08/2026</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Activity Timeline */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#334155', margin: 0 }}>Activity</h4>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', cursor: 'pointer' }}>View More Activity</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#10B981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>✓</div>
+                          <div>
+                            <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.code || 'Record'} was added to contacts</strong>
+                            <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>11:12 AM - Today</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
               {uploadPaymentModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
                   <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -20728,160 +22802,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         );
       })()}
 
-      {/* ─── CUSTOM IN-APP NOTIFICATION & ALERT POPUP (REPLACES BROWSER ALERT) ─── */}
+      {/* ─── CUSTOM TOAST NOTIFICATION POPUP (MATCHES DESIGN SYSTEM) ─── */}
       {customAlert && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999999,
-          padding: '20px',
-          fontFamily: "'DM Sans', sans-serif"
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '24px',
-            maxWidth: '480px',
-            width: '100%',
-            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.8)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
-            {/* Top Accent Bar */}
-            <div style={{
-              height: '5px',
-              width: '100%',
-              background: customAlert.type === 'success'
-                ? 'linear-gradient(90deg, #10B981, #059669)'
-                : customAlert.type === 'warning'
-                  ? 'linear-gradient(90deg, #F59E0B, #D97706)'
-                  : customAlert.type === 'package'
-                    ? 'linear-gradient(90deg, #6366F1, #4F46E5)'
-                    : customAlert.type === 'truck'
-                      ? 'linear-gradient(90deg, #0EA5E9, #0284C7)'
-                      : 'linear-gradient(90deg, #3B82F6, #2563EB)'
-            }} />
-
-            {/* Close X */}
-            <button
-              onClick={() => setCustomAlert(null)}
-              style={{
-                position: 'absolute',
-                top: '18px',
-                right: '18px',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: '#F1F5F9',
-                color: '#64748B',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
-            >
-              <X size={16} />
-            </button>
-
-            <div style={{ padding: '32px 28px 24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Icon & Title */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '16px',
-                  backgroundColor: customAlert.type === 'success' ? '#DCFCE7' : customAlert.type === 'warning' ? '#FEF3C7' : customAlert.type === 'package' ? '#EEF2FF' : customAlert.type === 'truck' ? '#E0F2FE' : '#EFF6FF',
-                  color: customAlert.type === 'success' ? '#166534' : customAlert.type === 'warning' ? '#B45309' : customAlert.type === 'package' ? '#4F46E5' : customAlert.type === 'truck' ? '#0284C7' : '#2563EB',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: customAlert.type === 'success' ? '0 4px 12px rgba(16,185,129,0.2)' : customAlert.type === 'warning' ? '0 4px 12px rgba(245,158,11,0.2)' : '0 4px 12px rgba(37,99,235,0.2)'
-                }}>
-                  {customAlert.type === 'success' ? (
-                    <CheckCircle size={28} />
-                  ) : customAlert.type === 'warning' ? (
-                    <AlertCircle size={28} />
-                  ) : customAlert.type === 'package' ? (
-                    <Package size={28} />
-                  ) : customAlert.type === 'truck' ? (
-                    <Truck size={28} />
-                  ) : (
-                    <Info size={28} />
-                  )}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.2px' }}>
-                    {customAlert.title || 'ControlRoom Notification'}
-                  </h3>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    System Notice
-                  </span>
-                </div>
-              </div>
-
-              {/* Message Box */}
-              <div style={{
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '14px',
-                padding: '16px 18px',
-                fontSize: '13.5px',
-                lineHeight: '1.6',
-                color: '#334155',
-                maxHeight: '280px',
-                overflowY: 'auto'
-              }}>
-                {customAlert.message.split('\n').map((line, lIdx) => (
-                  <p key={lIdx} style={{ margin: lIdx === 0 ? 0 : '8px 0 0 0' }}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-
-              {/* Action Button */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setCustomAlert(null)}
-                  style={{
-                    backgroundColor: customAlert.type === 'success'
-                      ? '#059669'
-                      : customAlert.type === 'warning'
-                        ? '#D97706'
-                        : '#2563EB',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '12px 28px',
-                    fontSize: '13.5px',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15,23,42,0.2)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.15)'; }}
-                >
-                  Got It
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NotificationToast
+          alert={customAlert}
+          onClose={() => setCustomAlert(null)}
+        />
       )}
 
       {/* ─── ROOT LEVEL FLOATING OVERLAY PORTAL FOR BOM 3-DOT MENU ─── */}

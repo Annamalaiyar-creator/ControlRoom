@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy, Tag, MoreHorizontal } from 'lucide-react';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
+import StatusBadge from './StatusBadge';
+import NotificationToast from './NotificationToast';
 
 const PRESET_MATERIALS = [
   { name: 'GI Steel Coil 2mm', account: 'Raw Material', unit: 'MT', rate: 45000, tax: 18 },
@@ -89,7 +91,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Confirmation and edit states
   const [deleteIdx, setDeleteIdx] = useState(null); // Row index to delete
   const [showSaveConfirm, setShowSaveConfirm] = useState(false); // Save confirmation
@@ -121,6 +123,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [poTab, setPoTab] = useState('All');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showFloatingMenu, setShowFloatingMenu] = useState(false);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -214,6 +217,36 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
     }
   }, [targetPoNo, poList, clearTargetPo]);
 
+  // Handle pending reorder PO items payload automatically transferred from Material Reorder
+  useEffect(() => {
+    try {
+      const savedPending = localStorage.getItem('controlroom_pending_reorder_po');
+      if (savedPending) {
+        const parsed = JSON.parse(savedPending);
+        if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          setEditIdx(null);
+          setItems(parsed.items);
+          setViewMode('create');
+          const todayStr = new Date().toISOString().split('T')[0];
+          setPoDate(todayStr);
+          
+          fetch('/api/zoho/next-po-number')
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data && data.nextPoNumber) {
+                setPoNumber(data.nextPoNumber);
+              }
+            })
+            .catch(err => console.error("Error fetching next PO number for reorder:", err));
+
+          localStorage.removeItem('controlroom_pending_reorder_po');
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing controlroom_pending_reorder_po payload:', e);
+    }
+  }, []);
+
   // Form Fields State (Start Fresh / Empty)
   const [vendorName, setVendorName] = useState('');
   const [branch, setBranch] = useState('');
@@ -269,6 +302,15 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const uploadTimerRef = useRef(null);
   const [validationErrorModal, setValidationErrorModal] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
+
+  useEffect(() => {
+    if (customAlert) {
+      const timer = setTimeout(() => {
+        setCustomAlert(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [customAlert]);
 
   const showCustomAlert = (msg, title = null, type = null) => {
     let detectedType = type;
@@ -516,7 +558,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const handleApprovePoSubmit = (poTarget) => {
     if (!poTarget) return;
     const poId = poTarget.poNo || poTarget.id;
-    
+
     fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -739,7 +781,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           setPoNumber(data.nextPoNo);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     setVendorName('');
     setBranch('');
     setContactPerson('');
@@ -779,7 +821,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
     if (deleteIdx !== null && poList[deleteIdx]) {
       const targetPO = poList[deleteIdx];
       const targetId = targetPO.id || targetPO.poNo || targetPO.zohoId;
-      
+
       setPoList(prev => prev.filter((_, i) => i !== deleteIdx));
       setDeleteIdx(null);
 
@@ -810,78 +852,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   }, []);
 
   const renderStatusBadge = (type, label) => {
-    let bg = '';
-    let text = '';
-    let border = '';
-    let displayLabel = label || 'OPEN';
-
-    if (type === 'closed' || (label && (label.includes('CLOSED') || label.includes('Received')))) {
-      bg = '#dcfce7';
-      text = '#15803d';
-      border = '1px solid #86efac';
-      displayLabel = label || 'CLOSED / FULLY RECEIVED';
-    } else if (type === 'approved' || label === 'Approved' || label === 'OPEN' || label === 'Issued') {
-      bg = '#f0fdf4';
-      text = '#15803d';
-      border = '1px solid #bbf7d0';
-      displayLabel = 'OPEN';
-    } else if (type === 'partially_received' || (label && label.includes('PARTIALLY'))) {
-      bg = '#fef3c7';
-      text = '#b45309';
-      border = '1px solid #fde68a';
-      displayLabel = 'OPEN / PARTIALLY RECEIVED';
-    } else if (type === 'shipped' || label === 'Shipped') {
-      bg = '#faf5ff';
-      text = '#7e22ce';
-      border = '1px solid #e9d5ff';
-      displayLabel = 'Shipped';
-    } else if (type === 'rejected' || label === 'REJECTED') {
-      bg = '#fee2e2';
-      text = '#dc2626';
-      border = '1px solid #fca5a5';
-      displayLabel = 'REJECTED';
-    } else if (label === 'Draft / Pending Approval' || label === 'WAITING FOR APPROVAL' || label === 'Pending Approval' || type === 'pending') {
-      bg = '#fff7ed';
-      text = '#c2410c';
-      border = '1px solid #fdba74';
-      displayLabel = 'Draft / Pending Approval';
-    } else if (label === 'Draft' || label === 'DRAFT' || type === 'draft') {
-      bg = '#f1f5f9';
-      text = '#475569';
-      border = '1px solid #cbd5e1';
-      displayLabel = 'Draft';
-    } else {
-      bg = '#f0fdf4';
-      text = '#15803d';
-      border = '1px solid #bbf7d0';
-      displayLabel = 'OPEN';
-    }
-
-    return (
-      <span 
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '4px 10px',
-          borderRadius: '6px',
-          backgroundColor: bg,
-          color: text,
-          border: border,
-          fontSize: '11px',
-          fontWeight: 'bold',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: text, display: 'inline-block' }} />
-        {displayLabel}
-      </span>
-    );
+    return <StatusBadge status={label || type} size="sm" />;
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)' }}>
-      
+
       {/* ==================== VIEW 1: MAIN PO LIST SCREEN ==================== */}
       {viewMode === 'list' && (() => {
         const allStatusOptions = [
@@ -900,11 +876,11 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           const pVend = String(po.vendor || po.companyName || '');
           const matchesSearch = pNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
             pVend.toLowerCase().includes(searchQuery.toLowerCase());
-          
+
           const statusStr = String(po.status || '');
           const statusTypeStr = String(po.statusType || '');
 
-          const matchesStatus = statusFilter === 'All' || 
+          const matchesStatus = statusFilter === 'All' ||
             (statusFilter === 'Draft' && (statusStr === 'Draft' || statusTypeStr === 'draft')) ||
             (statusFilter === 'Draft / Pending Approval' && (statusStr === 'Draft / Pending Approval' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'pending')) ||
             (statusFilter === 'OPEN' && (statusStr === 'OPEN' || statusTypeStr === 'approved')) ||
@@ -913,7 +889,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
             (statusFilter === 'REJECTED' && (statusStr === 'REJECTED' || statusTypeStr === 'rejected')) ||
             statusStr === statusFilter;
 
-          const matchesTab = poTab === 'All' || 
+          const matchesTab = poTab === 'All' ||
             (poTab === 'Draft' && (statusStr === 'Draft' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'draft' || statusTypeStr === 'pending')) ||
             (poTab === 'Approved' && ((statusStr === 'OPEN' || statusStr === 'Approved' || statusTypeStr === 'approved') && !statusStr.includes('PARTIALLY'))) ||
             (poTab === 'PARTIALLY_RECEIVED' && (statusStr === 'OPEN / PARTIALLY RECEIVED' || statusStr.includes('PARTIALLY') || statusTypeStr === 'partially_received')) ||
@@ -959,402 +935,546 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-          
-          {/* Header section with Action Button */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
-                Purchase Orders (PO)
-              </h2>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                Generate, tracking and dispatch management of corporate Purchase Orders
-              </span>
-            </div>
-            
-            <button 
-              onClick={handleStartFreshPO}
-              className="btn" 
-              style={{ 
-                backgroundColor: '#2563eb', 
-                border: 'none', 
-                color: 'white', 
-                height: '38px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0 16px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                flexShrink: 0,
-                boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
-              }}
-            >
-              <Plus style={{ width: '14px', height: '14px' }} />
-              Create PO
-            </button>
-          </div>
 
-          {/* 1. FILTERS & SEARCH ROW CARD */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '320px', maxWidth: '100%', boxSizing: 'border-box' }}>
-              <Search style={{ width: '15px', height: '15px', color: '#64748b', flexShrink: 0 }} />
-              <input
-                type="text"
-                placeholder="Search Purchase Orders (PO No, Vendor Name)..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
-              />
+            {/* Header section with Action Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <h2 style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+                  Purchase Orders (PO)
+                </h2>
+                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                  Generate, tracking and dispatch management of corporate Purchase Orders
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleStartFreshPO()}
+                style={{
+                  backgroundColor: '#0E7490',
+                  border: 'none',
+                  color: 'white',
+                  height: '40px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '0 6px 0 20px',
+                  borderRadius: '50px',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                  transition: 'all 0.2s ease',
+                  letterSpacing: '0.2px'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+              >
+                <span>Create PO</span>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#0E7490',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                }}>
+                  <ArrowRight size={16} strokeWidth={2.5} />
+                </div>
+              </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
-                <Calendar style={{ width: '14px', height: '14px', color: '#64748b', flexShrink: 0 }} />
+            {/* 1. FILTERS & SEARCH ROW CARD */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '320px', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <Search style={{ width: '15px', height: '15px', color: '#64748b', flexShrink: 0 }} />
                 <input
-                  type="date"
-                  value={filterDate}
-                  title="Filter by Date"
-                  onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
-                  style={{ border: 'none', outline: 'none', fontSize: '12px', color: '#334155', backgroundColor: 'transparent' }}
+                  type="text"
+                  placeholder="Search Purchase Orders (PO No, Vendor Name)..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
                 />
               </div>
 
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '12px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
-                {allStatusOptions.map(s => (
-                  <option key={s} value={s}>
-                    {s === 'All' ? 'Status: All' : s}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
+                  <Calendar style={{ width: '14px', height: '14px', color: '#64748b', flexShrink: 0 }} />
+                  <input
+                    type="date"
+                    value={filterDate}
+                    title="Filter by Date"
+                    onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
+                    style={{ border: 'none', outline: 'none', fontSize: '12px', color: '#334155', backgroundColor: 'transparent' }}
+                  />
+                </div>
 
-              <button 
-                onClick={clearFilters} 
-                title="Clear Filters"
-                style={{ 
-                  background: '#f1f5f9', 
-                  border: '1px solid #cbd5e1', 
-                  color: '#475569', 
-                  cursor: 'pointer', 
-                  padding: '0', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  borderRadius: '8px', 
-                  height: '38px',
-                  width: '38px',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <RotateCcw style={{ width: '15px', height: '15px' }} />
-              </button>
+                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '12px', backgroundColor: 'white', color: '#334155', outline: 'none' }}>
+                  {allStatusOptions.map(s => (
+                    <option key={s} value={s}>
+                      {s === 'All' ? 'Status: All' : s}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={clearFilters}
+                  title="Clear Filters"
+                  style={{
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#475569',
+                    cursor: 'pointer',
+                    padding: '0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    height: '38px',
+                    width: '38px',
+                    flexShrink: 0,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <RotateCcw style={{ width: '15px', height: '15px' }} />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* 2. STATUS TABS ROW */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {[
-              { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
-              { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
-              { id: 'Approved', label: 'Approved (OPEN)', count: poList.filter(po => (po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY')).length, bg: '#dcfce7', fg: '#166534' },
-              { id: 'PARTIALLY_RECEIVED', label: 'Open / Partially Received', count: poList.filter(po => po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received').length, bg: '#fef3c7', fg: '#b45309' },
-              { id: 'CLOSED', label: 'Closed / Fully Received', count: poList.filter(po => po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed').length, bg: '#dcfce7', fg: '#15803d' },
-              { id: 'REJECTED', label: 'Rejected', count: poList.filter(po => po.status === 'REJECTED' || po.statusType === 'rejected').length, bg: '#fee2e2', fg: '#dc2626' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => { setPoTab(tab.id); setCurrentPage(1); }}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  padding: '10px 4px',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  color: poTab === tab.id ? '#2563eb' : '#64748b',
-                  borderBottom: poTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>{tab.label}</span>
-                <span style={{ fontSize: '10px', fontWeight: 'bold', backgroundColor: tab.bg, color: tab.fg, padding: '1px 6px', borderRadius: '10px' }}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
+            {/* 2. STATUS TABS ROW */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {[
+                { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Approved', label: 'Approved (OPEN)', count: poList.filter(po => (po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY')).length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'PARTIALLY_RECEIVED', label: 'Open / Partially Received', count: poList.filter(po => po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received').length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'CLOSED', label: 'Closed / Fully Received', count: poList.filter(po => po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed').length, bg: '#dcfce7', fg: '#15803d' },
+                { id: 'REJECTED', label: 'Rejected', count: poList.filter(po => po.status === 'REJECTED' || po.statusType === 'rejected').length, bg: '#fee2e2', fg: '#dc2626' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setPoTab(tab.id); setCurrentPage(1); }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    padding: '10px 4px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    color: poTab === tab.id ? '#2563eb' : '#64748b',
+                    borderBottom: poTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', backgroundColor: tab.bg, color: tab.fg, padding: '1px 6px', borderRadius: '10px' }}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-          {/* PO Table */}
-          <div className="section-card" style={{ padding: 0, overflowX: 'auto', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
-            <div className="table-responsive" style={{ border: 'none', borderRadius: '16px', margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
-              <table className="ds-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#475569', height: '48px' }}>
-                    <th style={{ width: '48px', textAlign: 'center', padding: '12px 14px' }}>
-                      <input 
-                        type="checkbox" 
-                        onChange={(e) => handleSelectAll(e, filteredPOList)}
-                        checked={filteredPOList.length > 0 && filteredPOList.every(po => selectedPOs.includes(po.poNo))}
-                        style={{ cursor: 'pointer', borderRadius: '4px' }}
-                      />
-                    </th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>PO No.</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Vendor Name</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>PO Date</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Expected Delivery</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Total Value</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155' }}>Status</th>
-                    <th style={{ fontWeight: '700', padding: '12px 14px', textAlign: 'right', color: '#334155' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableLoading ? (
-                    Array.from({ length: 6 }).map((_, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" defaultChecked={false} disabled />
-                        </td>
-                        {Array.from({ length: 6 }).map((_, cIdx) => (
-                          <td key={cIdx}>
-                            <div className="skeleton-shimmer skeleton-text" style={{ width: `${50 + (cIdx * 9) % 40}%`, height: '14px' }} />
-                          </td>
-                        ))}
-                        <td style={{ textAlign: 'center' }}>
-                          <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (() => {
-                    return currentRows.map((po, idx) => {
-                      const isChecked = selectedPOs.includes(po.poNo);
-                      return (
-                        <tr 
-                          key={idx} 
-                          style={{ 
-                            borderBottom: idx === currentRows.length - 1 ? 'none' : '1px solid #f1f5f9',
-                            transition: 'background-color 0.2s',
-                            backgroundColor: isChecked ? '#f8fafc' : 'transparent'
-                          }}
-                          className="table-row-hover"
-                        >
+            {/* PO Table */}
+            <div className="section-card" style={{ padding: 0, overflowX: 'auto', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
+              <div className="table-responsive" style={{ border: 'none', borderRadius: '16px', margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
+                <table className="custom-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#475569', height: '48px' }}>
+                      <th style={{ width: '48px', textAlign: 'center', padding: '12px 14px' }}>
+                        <input
+                          type="checkbox"
+                          onChange={(e) => handleSelectAll(e, filteredPOList)}
+                          checked={filteredPOList.length > 0 && filteredPOList.every(po => selectedPOs.includes(po.poNo))}
+                          style={{ cursor: 'pointer', borderRadius: '4px' }}
+                        />
+                      </th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO No.</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Vendor Name</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO Date</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Expected Delivery</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'right' }}>Total Value</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableLoading ? (
+                      Array.from({ length: 6 }).map((_, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ textAlign: 'center' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked}
-                              onChange={() => handleSelectRow(po.poNo)}
-                            />
+                            <input type="checkbox" defaultChecked={false} disabled />
                           </td>
-                          <td>
-                            <a 
-                              href="#" 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleStartView(po);
-                              }}
-                              style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}
-                            >
-                              {po.poNo}
-                            </a>
-                          </td>
-                          <td style={{ fontWeight: '500', color: '#1e293b' }}>{po.vendor}</td>
-                          <td style={{ color: '#64748b' }}>{po.poDate}</td>
-                          <td style={{ color: '#64748b' }}>{po.deliveryDate}</td>
-                          <td style={{ fontWeight: '600', color: '#1e293b' }}>{po.amount}</td>
-                          <td>
-                            {renderStatusBadge(po.statusType, po.status)}
-                          </td>
-                          <td style={{ textAlign: 'center', position: 'relative' }}>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveDropdownIdx(activeDropdownIdx === idx ? null : idx);
-                              }}
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', padding: '6px', borderRadius: '4px' }}
-                            >
-                              <MoreVertical style={{ width: '16px', height: '16px' }} />
-                            </button>
-                            
-                            {activeDropdownIdx === idx && (
-                              <div 
-                                style={{
-                                  position: 'absolute',
-                                  right: '24px',
-                                  top: '38px',
-                                  backgroundColor: 'white',
-                                  borderRadius: '8px',
-                                  border: '1px solid #e2e8f0',
-                                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-                                  zIndex: 50,
-                                  minWidth: '100px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  overflow: 'hidden'
-                                }}
-                              >
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStartView(po);
-                                  }}
-                                  style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: '500', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <Eye style={{ width: '12px', height: '12px', color: '#3b82f6' }} />
-                                  View
-                                </button>
-                                <button 
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     handleStartClone(po);
-                                   }}
-                                   style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: '500', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
-                                 >
-                                   <Copy style={{ width: '12px', height: '12px', color: '#6366f1' }} />
-                                   Clone PO
-                                 </button>
-                                {po.statusType !== 'approved' && po.statusType !== 'shipped' && (
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStartEdit(po, idx);
-                                    }}
-                                    style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: '500', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
-                                  >
-                                    <Edit style={{ width: '12px', height: '12px', color: '#10b981' }} />
-                                    Edit
-                                  </button>
-                                )}
-                                {(po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'pending') && (
-                                  <>
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setApprovingPo(po);
-                                        setActiveDropdownIdx(null);
-                                      }}
-                                      style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', color: '#16a34a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
-                                    >
-                                      <CheckCircle style={{ width: '12px', height: '12px', color: '#16a34a' }} />
-                                      Approve PO
-                                    </button>
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setRejectingPo(po);
-                                        setActiveDropdownIdx(null);
-                                      }}
-                                      style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
-                                    >
-                                      <X style={{ width: '12px', height: '12px', color: '#dc2626' }} />
-                                      Reject PO
-                                    </button>
-                                  </>
-                                )}
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteIdx(idx);
-                                    setActiveDropdownIdx(null);
-                                  }}
-                                  style={{ border: 'none', background: 'transparent', textAlign: 'left', padding: '8px 12px', fontSize: '12px', fontWeight: '500', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #f1f5f9' }}
-                                >
-                                  <Trash2 style={{ width: '12px', height: '12px', color: '#ef4444' }} />
-                                  Delete
-                                </button>
-                              </div>
-                            )}
+                          {Array.from({ length: 6 }).map((_, cIdx) => (
+                            <td key={cIdx}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: `${50 + (cIdx * 9) % 40}%`, height: '14px' }} />
+                            </td>
+                          ))}
+                          <td style={{ textAlign: 'center' }}>
+                            <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
                           </td>
                         </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
-              {/* 4. PAGINATION FOOTER */}
-              {filteredPOList.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', fontSize: '13px', color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
-                  <div>
-                    Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredPOList.length)} of {filteredPOList.length} entries
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>Rows per page:</span>
-                      <select 
-                        value={rowsPerPage} 
-                        onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} 
-                        style={{ height: '30px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', padding: '0 4px', backgroundColor: 'white' }}
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                        <option value={50}>50</option>
-                      </select>
+                      ))
+                    ) : (() => {
+                      return currentRows.map((po, idx) => {
+                        const isChecked = selectedPOs.includes(po.poNo);
+                        return (
+                          <tr
+                            key={idx}
+                            style={{
+                              borderBottom: idx === currentRows.length - 1 ? 'none' : '1px solid #f1f5f9',
+                              transition: 'all 0.15s ease',
+                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
+                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                            }}
+                            className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
+                          >
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleSelectRow(po.poNo)}
+                                style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td style={{ fontWeight: '600', color: '#2563eb', textAlign: 'left' }}>
+                              <a
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleStartView(po);
+                                }}
+                                style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}
+                              >
+                                {po.poNo}
+                              </a>
+                            </td>
+                            <td style={{ fontWeight: '500', color: '#1e293b', textAlign: 'left' }}>{po.vendor}</td>
+                            <td style={{ color: '#64748b', textAlign: 'left' }}>{po.poDate}</td>
+                            <td style={{ color: '#64748b', textAlign: 'left' }}>{po.deliveryDate}</td>
+                            <td style={{ fontWeight: '600', color: '#1e293b', textAlign: 'right' }}>{po.amount}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {renderStatusBadge(po.statusType, po.status)}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+                {/* 4. PAGINATION FOOTER */}
+                {filteredPOList.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', fontSize: '13px', color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
+                    <div>
+                      Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredPOList.length)} of {filteredPOList.length} entries
                     </div>
 
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button 
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        style={{ border: '1px solid #cbd5e1', background: currentPage === 1 ? '#f1f5f9' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                      >
-                        <ChevronLeft style={{ width: '14px', height: '14px' }} />
-                      </button>
-                      
-                      {(() => {
-                        let start = Math.max(1, currentPage - 1);
-                        let end = start + 3;
-                        if (end > totalPages) {
-                          end = totalPages;
-                          start = Math.max(1, end - 3);
-                        }
-                        const pages = [];
-                        for (let i = start; i <= end; i++) {
-                          pages.push(i);
-                        }
-                        return pages;
-                      })().map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          style={{
-                            border: page === currentPage ? 'none' : '1px solid #cbd5e1',
-                            background: page === currentPage ? '#2563eb' : 'white',
-                            color: page === currentPage ? 'white' : '#475569',
-                            cursor: 'pointer',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            fontWeight: page === currentPage ? 'bold' : 'normal'
-                          }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>Rows per page:</span>
+                        <select
+                          value={rowsPerPage}
+                          onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                          style={{ height: '30px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', padding: '0 4px', backgroundColor: 'white' }}
                         >
-                          {page}
-                        </button>
-                      ))}
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                        </select>
+                      </div>
 
-                      <button 
-                        disabled={currentPage === totalPages || totalPages === 0}
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        style={{ border: '1px solid #cbd5e1', background: (currentPage === totalPages || totalPages === 0) ? '#f1f5f9' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                      >
-                        <ChevronRight style={{ width: '14px', height: '14px' }} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          style={{ border: '1px solid #cbd5e1', background: currentPage === 1 ? '#f1f5f9' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <ChevronLeft style={{ width: '14px', height: '14px' }} />
+                        </button>
+
+                        {(() => {
+                          let start = Math.max(1, currentPage - 1);
+                          let end = start + 3;
+                          if (end > totalPages) {
+                            end = totalPages;
+                            start = Math.max(1, end - 3);
+                          }
+                          const pages = [];
+                          for (let i = start; i <= end; i++) {
+                            pages.push(i);
+                          }
+                          return pages;
+                        })().map(page => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            style={{
+                              border: page === currentPage ? 'none' : '1px solid #cbd5e1',
+                              background: page === currentPage ? '#0E7490' : 'white',
+                              color: page === currentPage ? 'white' : '#475569',
+                              cursor: 'pointer',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontWeight: page === currentPage ? 'bold' : 'normal'
+                            }}
+                          >
+                            {page}
+                          </button>
+                        ))}
+
+                        <button
+                          disabled={currentPage === totalPages || totalPages === 0}
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          style={{ border: '1px solid #cbd5e1', background: (currentPage === totalPages || totalPages === 0) ? '#f1f5f9' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <ChevronRight style={{ width: '14px', height: '14px' }} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+
+            {/* Floating Selection Toolbar (exact reference design) */}
+            {selectedPOs.length > 0 && (
+              <div style={{
+                position: 'fixed',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '16px',
+                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: 10000,
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                  <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPOs.length}</strong> Selected
+                </span>
+
+                <button
+                  onClick={() => {
+                    if (selectedPOs.length > 1) {
+                      alert('You cannot edit multiple items at once.');
+                    } else if (selectedPOs.length === 1) {
+                      const targetPoNo = selectedPOs[0];
+                      const idx = poList.findIndex(p => p.poNo === targetPoNo);
+                      const targetPo = poList[idx] || { poNo: targetPoNo, vendor: '' };
+                      handleStartEdit(targetPo, idx >= 0 ? idx : 0);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete ${selectedPOs.length} selected PO(s)?`)) {
+                      setSelectedPOs([]);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                </button>
+
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowFloatingMenu(!showFloatingMenu)}
+                    title="More actions"
+                    style={{
+                      backgroundColor: showFloatingMenu ? '#F1F5F9' : '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#64748B',
+                      borderRadius: '10px',
+                      padding: '6px 10px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+
+                  {showFloatingMenu && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '44px',
+                      right: '0',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                      minWidth: '170px',
+                      padding: '6px',
+                      zIndex: 10001,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}>
+                      <button
+                        onClick={() => {
+                          if (selectedPOs && selectedPOs.length > 1) {
+                            alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                            setShowFloatingMenu(false);
+                            return;
+                          }
+                          const target = (selectedPOs && selectedPOs.length > 0)
+                            ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
+                            : (poList[0] || null);
+                          if (target) {
+                            handleStartView(target);
+                          }
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          alert(`Cloned ${selectedPOs.length} selected PO record(s).`);
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Copy size={14} style={{ color: '#2563EB' }} /> Duplicate / Clone
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          window.print();
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <FileText size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                      </button>
+
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setSelectedPOs([])}
+                  title="Deselect all"
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
           </div>
-        </div>
         );
       })()}
 
       {/* ==================== VIEW 2: DEDICATED FULL-PAGE CREATOR/EDITOR/VIEW SCREEN ==================== */}
       {(viewMode === 'create' || viewMode === 'edit' || viewMode === 'view') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', color: '#1e293b' }}>
-          
+
           {/* Title Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1369,14 +1489,14 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
             <div style={{ display: 'flex', gap: '12px' }}>
               {viewMode === 'view' ? (
                 <>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setViewMode('list')}
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Back to List
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       const matchedPo = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
@@ -1391,13 +1511,13 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   >
                     <Copy style={{ width: '14px', height: '14px', color: '#4338CA' }} /> Clone PO
                   </button>
-                  <button 
+                  <button
                     type="button"
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Generate PDF
                   </button>
-                  <button 
+                  <button
                     type="button"
                     style={{ backgroundColor: '#2563eb', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
@@ -1406,20 +1526,20 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                 </>
               ) : (
                 <>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowCancelConfirm(true)}
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     type="button"
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
                   >
                     Generate PDF
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={(e) => executeCreatePO(e, 'Draft')}
                     style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#c2410c', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1427,7 +1547,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <FileText style={{ width: '15px', height: '15px' }} />
                     Save as Draft
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={triggerSaveConfirm}
                     style={{ backgroundColor: '#2563eb', border: 'none', borderRadius: '8px', padding: '8px 24px', fontSize: '13px', fontWeight: '600', color: 'white', cursor: 'pointer' }}
@@ -1444,7 +1564,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           {/* Skeleton loader — shown while Zoho PO detail is fetching */}
           {poDetailLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="section-card" style={{ padding: '30px', borderRadius: '16px', borderTop: '4px solid #2563EB', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="section-card" style={{ padding: '30px', borderRadius: '16px', borderTop: '4px solid #0E7490', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '40%' }}>
                     <div className="skeleton-shimmer" style={{ height: '22px', width: '70%', borderRadius: '6px' }} />
@@ -1490,7 +1610,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           {viewMode === 'view' && !poDetailLoading ? (
             /* ==================== PREMIUM READ-ONLY PO DOCUMENT LAYOUT ==================== */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-              
+
               {/* Visual PO Workflow History Timeline */}
               <div className="section-card" style={{ padding: '20px', borderRadius: '12px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1545,8 +1665,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               </div>
 
               {/* Official Purchase Order Header Card */}
-              <div className="section-card" style={{ padding: '30px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', borderTop: '4px solid #2563EB', backgroundColor: '#FFFFFF', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-                
+              <div className="section-card" style={{ padding: '30px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', borderTop: '4px solid #0E7490', backgroundColor: '#FFFFFF', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+
                 {/* Header Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
@@ -1557,14 +1677,14 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '1px' }}>PURCHASE ORDER</div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '13px', color: '#2563EB' }}>{poNumber}</strong>
+                      <strong style={{ fontSize: '13px', color: '#0E7490' }}>{poNumber}</strong>
                       <span style={{
                         padding: '2px 8px',
                         borderRadius: '12px',
                         fontSize: '10px',
                         fontWeight: 'bold',
-                        backgroundColor: (priority === 'Critical' || priority === 'High') ? '#FEE2E2' : (priority === 'Medium' ? '#FEF3C7' : '#EFF6FF'),
-                        color: (priority === 'Critical' || priority === 'High') ? '#EF4444' : (priority === 'Medium' ? '#D97706' : '#2563EB')
+                        backgroundColor: (priority === 'Critical' || priority === 'High') ? '#FEE2E2' : (priority === 'Medium' ? '#FEF3C7' : '#ECFEFF'),
+                        color: (priority === 'Critical' || priority === 'High') ? '#EF4444' : (priority === 'Medium' ? '#D97706' : '#0E7490')
                       }}>{priority} Priority</span>
                     </div>
                   </div>
@@ -1593,7 +1713,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', fontSize: '11px' }}>
-                  
+
                   {/* Vendor Details Card */}
                   <div style={{ border: '1px solid #F1F5F9', borderRadius: '8px', padding: '16px', backgroundColor: '#F8FAFC' }}>
                     <strong style={{ fontSize: '11px', color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Vendor Details</strong>
@@ -1768,18 +1888,18 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           ) : (
             /* ==================== CREATOR & EDITOR ACTIVE FIELDS LAYOUT ==================== */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
+
               {/* 1. Vendor Information */}
               <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>1. Vendor Information</strong>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       Vendor Name <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <select 
-                      value={vendorName} 
+                    <select
+                      value={vendorName}
                       onChange={(e) => {
                         const val = e.target.value;
                         setVendorName(val);
@@ -1792,8 +1912,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                           const vAddr = found.billingAddress || found.address || found.registeredAddress || `${val}, Main Road, Industrial Estate, Tamil Nadu - 600028`;
                           setBillingAddress(vAddr);
                         }
-                      }} 
-                      required 
+                      }}
+                      required
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155', width: '100%', cursor: 'pointer', outline: 'none' }}
                     >
                       <option value="" disabled>Select Zoho Vendor...</option>
@@ -1842,13 +1962,13 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       Delivery Address <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <textarea 
-                      value={deliveryAddress} 
-                      onChange={(e) => setDeliveryAddress(e.target.value)} 
-                      rows="3" 
-                      required 
-                      placeholder="Enter destination delivery address..." 
-                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }} 
+                    <textarea
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      rows="3"
+                      required
+                      placeholder="Enter destination delivery address..."
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1856,12 +1976,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Billing Address</label>
                       <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563eb', backgroundColor: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>Auto-populated from Vendor</span>
                     </div>
-                    <textarea 
-                      value={billingAddress} 
-                      readOnly 
-                      rows="3" 
-                      placeholder="Select vendor to auto-populate billing address..." 
-                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', backgroundColor: '#f8fafc', color: '#334155', fontWeight: '500' }} 
+                    <textarea
+                      value={billingAddress}
+                      readOnly
+                      rows="3"
+                      placeholder="Select vendor to auto-populate billing address..."
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', backgroundColor: '#f8fafc', color: '#334155', fontWeight: '500' }}
                     />
                   </div>
                 </div>
@@ -1871,7 +1991,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               {/* 2. Purchase Order Information */}
               <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>2. Purchase Order Information</strong>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>PO Number</label>
@@ -1908,11 +2028,11 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       PO Issued By <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value="Arun" 
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
+                    <input
+                      type="text"
+                      readOnly
+                      value="Arun"
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1944,12 +2064,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                       <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                         Transport Name / Carrier <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                       </label>
-                      <input 
-                        type="text" 
-                        value={transportName} 
-                        onChange={(e) => setTransportName(e.target.value)} 
-                        placeholder="e.g. A2B transport, Blackbird..." 
-                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }} 
+                      <input
+                        type="text"
+                        value={transportName}
+                        onChange={(e) => setTransportName(e.target.value)}
+                        placeholder="e.g. A2B transport, Blackbird..."
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}
                       />
                     </div>
                   )}
@@ -1958,11 +2078,11 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       Currency <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value="INR - Indian Rupee" 
-                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }} 
+                    <input
+                      type="text"
+                      readOnly
+                      value="INR - Indian Rupee"
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1983,7 +2103,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               {/* 3. Items Table */}
               <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px 0' }}>
                 <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', margin: '0 20px' }}>3. Line Items</strong>
-                
+
                 <div style={{ overflowX: 'auto', width: '100%' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
@@ -2006,8 +2126,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                           <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '8px 12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <select 
-                                  value={item.name} 
+                                <select
+                                  value={item.name}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     const found = zohoItems.find(zi => zi.name === val);
@@ -2019,21 +2139,24 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                                         handleItemChange(idx, 'description', found.description);
                                       }
                                     }
-                                  }} 
-                                  required 
+                                  }}
+                                  required
                                   style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', color: '#334155', cursor: 'pointer', outline: 'none' }}
                                 >
                                   <option value="" disabled>Select Zoho Item...</option>
+                                  {item.name && !zohoItems.some(zi => zi.name === item.name) && (
+                                    <option value={item.name}>{item.name}</option>
+                                  )}
                                   {zohoItems.map((zi, zidx) => (
                                     <option key={zidx} value={zi.name}>{zi.name}</option>
                                   ))}
                                 </select>
-                                <input 
-                                  type="text" 
-                                  value={item.description || ''} 
-                                  onChange={(e) => handleItemChange(idx, 'description', e.target.value)} 
-                                  placeholder="Enter item description / specifications..." 
-                                  style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '11px', backgroundColor: '#f8fafc', color: '#334155', outline: 'none' }} 
+                                <input
+                                  type="text"
+                                  value={item.description || ''}
+                                  onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                  placeholder="Enter item description / specifications..."
+                                  style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '11px', backgroundColor: '#f8fafc', color: '#334155', outline: 'none' }}
                                 />
                               </div>
                             </td>
@@ -2050,19 +2173,23 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                             </td>
                             <td style={{ padding: '8px 12px' }}>
                               <select value={item.unit} onChange={(e) => handleItemChange(idx, 'unit', e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 4px', fontSize: '12px' }}>
+                                {item.unit && !['MT', 'NOS', 'KG', 'PCS', 'MTR'].includes(item.unit) && (
+                                  <option value={item.unit}>{item.unit}</option>
+                                )}
                                 <option>MT</option>
                                 <option>NOS</option>
                                 <option>KG</option>
                                 <option>PCS</option>
+                                <option>MTR</option>
                               </select>
                             </td>
                             <td style={{ padding: '8px 12px' }}>
                               <input type="number" value={item.rate} onChange={(e) => handleItemChange(idx, 'rate', e.target.value === '' ? '' : Number(e.target.value))} required style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', textAlign: 'right' }} />
                             </td>
                             <td style={{ padding: '8px 12px' }}>
-                              <select 
-                                value={item.tax !== undefined && item.tax !== '' ? Number(item.tax) : 18} 
-                                onChange={(e) => handleItemChange(idx, 'tax', Number(e.target.value))} 
+                              <select
+                                value={item.tax !== undefined && item.tax !== '' ? Number(item.tax) : 18}
+                                onChange={(e) => handleItemChange(idx, 'tax', Number(e.target.value))}
                                 style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 4px', fontSize: '12px' }}
                               >
                                 <option value={18}>18%</option>
@@ -2097,11 +2224,11 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
               {/* 4. Calculations Summary & Notes */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
-                
+
                 {/* Notes & Terms */}
                 <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>Notes & Terms</strong>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Notes & Remarks</label>
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" placeholder="Add remarks for internal reference..." style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '13px', fontFamily: 'inherit', resize: 'none' }} />
@@ -2160,12 +2287,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                       ))}
                     </div>
 
-                    <textarea 
-                      value={terms} 
-                      onChange={(e) => setTerms(e.target.value)} 
-                      rows="6" 
+                    <textarea
+                      value={terms}
+                      onChange={(e) => setTerms(e.target.value)}
+                      rows="6"
                       placeholder="Select a preset above or type custom Terms & Conditions..."
-                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', minHeight: '130px', backgroundColor: '#FFFFFF' }} 
+                      style={{ borderRadius: '8px', border: '1px solid #cbd5e1', padding: '10px 12px', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', minHeight: '130px', backgroundColor: '#FFFFFF' }}
                     />
                   </div>
                 </div>
@@ -2173,7 +2300,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                 {/* Calculations Summary */}
                 <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#f8fafc' }}>
                   <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>Summary Details</strong>
-                  
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: '#64748b' }}>Subtotal</span>
                     <strong style={{ color: '#334155' }}>₹ {items.reduce((acc, curr) => acc + ((curr.qty || 0) * (curr.rate || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
@@ -2220,7 +2347,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               {/* 5. Approval Info */}
               <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>5. Approval Workflows</strong>
-                
+
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Requires CEO / Director Approval?</span>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: '500', color: '#475569', fontSize: '12px' }}>
@@ -2342,10 +2469,10 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Reject PO {rejectingPo.poNo}?</h3>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{rejectingPo.vendor}</strong> | Amount: <strong>{rejectingPo.amount}</strong></span>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#dc2626' }}>Rejection Reason (Mandatory) *</label>
-                <textarea 
+                <textarea
                   value={rejectionReasonInput}
                   onChange={(e) => setRejectionReasonInput(e.target.value)}
                   placeholder="Enter detailed reason for rejecting this PO..."
@@ -2372,10 +2499,10 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Approve PO {approvingPo.poNo}?</h3>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{approvingPo.vendor}</strong> | Amount: <strong>{approvingPo.amount}</strong></span>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Approval Remarks (Optional)</label>
-                <textarea 
+                <textarea
                   value={approvalRemarksInput}
                   onChange={(e) => setApprovalRemarksInput(e.target.value)}
                   placeholder="Enter approval remarks or notes..."
@@ -2414,8 +2541,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               </ul>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-              <button 
-                onClick={() => setValidationErrorModal(null)} 
+              <button
+                onClick={() => setValidationErrorModal(null)}
                 style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
               >
                 OK, I'll fill it
@@ -2425,142 +2552,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         </div>
       )}
 
-      {/* ─── CUSTOM ALERT POPUP MODAL ─── */}
+      {/* ─── CUSTOM TOAST NOTIFICATION POPUP (MATCHES DESIGN SYSTEM) ─── */}
       {customAlert && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999999,
-          padding: '20px',
-          fontFamily: "'DM Sans', sans-serif"
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '24px',
-            maxWidth: '460px',
-            width: '100%',
-            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.8)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
-            {/* Top Accent Bar */}
-            <div style={{
-              height: '5px',
-              width: '100%',
-              background: customAlert.type === 'success'
-                ? 'linear-gradient(90deg, #10B981, #059669)'
-                : customAlert.type === 'warning'
-                  ? 'linear-gradient(90deg, #F59E0B, #D97706)'
-                  : 'linear-gradient(90deg, #3B82F6, #2563EB)'
-            }} />
-
-            {/* Close X */}
-            <button
-              onClick={() => setCustomAlert(null)}
-              style={{
-                position: 'absolute',
-                top: '18px',
-                right: '18px',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: '#F1F5F9',
-                color: '#64748B',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#E2E8F0'; e.currentTarget.style.color = '#0F172A'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
-            >
-              <X size={16} />
-            </button>
-
-            <div style={{ padding: '32px 28px 24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Icon & Title */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '16px',
-                  backgroundColor: customAlert.type === 'success' ? '#DCFCE7' : customAlert.type === 'warning' ? '#FEF3C7' : '#EFF6FF',
-                  color: customAlert.type === 'success' ? '#166534' : customAlert.type === 'warning' ? '#B45309' : '#2563EB',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {customAlert.type === 'success' ? (
-                    <CheckCircle size={28} />
-                  ) : customAlert.type === 'warning' ? (
-                    <AlertCircle size={28} />
-                  ) : (
-                    <Info size={28} />
-                  )}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.2px' }}>
-                    {customAlert.title || 'Notification'}
-                  </h3>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Purchase Order Notice
-                  </span>
-                </div>
-              </div>
-
-              {/* Message Box */}
-              <div style={{
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '14px',
-                padding: '16px 18px',
-                fontSize: '13.5px',
-                lineHeight: '1.6',
-                color: '#334155'
-              }}>
-                {customAlert.message}
-              </div>
-
-              {/* Action Button */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setCustomAlert(null)}
-                  style={{
-                    backgroundColor: customAlert.type === 'success'
-                      ? '#059669'
-                      : customAlert.type === 'warning'
-                        ? '#D97706'
-                        : '#2563EB',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '11px 26px',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(15,23,42,0.15)'
-                  }}
-                >
-                  Got It
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NotificationToast
+          alert={customAlert}
+          onClose={() => setCustomAlert(null)}
+        />
       )}
 
     </div>

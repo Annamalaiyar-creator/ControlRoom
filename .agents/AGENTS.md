@@ -21,3 +21,15 @@
    - Document upload fields (Payment Proof & Address Proof) MUST auto-compress images (`compressAndSaveFile`) to lightweight payloads (< 25 KB).
    - In `setBomStore`, if browser `localStorage` storage limits are exceeded during `JSON.stringify(updatedList)`, the application MUST use `stripDataUrlsFromRecord` to safely strip raw data URLs while preserving all official metadata (file name, size, type, upload timestamp, payment terms, and BOM order details).
    - BOM items with uploaded documents MUST NEVER be lost or deleted upon page refresh, browser tab reload, or logout.
+
+6. **Standard Table Design & Pagination System Rules**:
+   - **Interactive Row Selection**:
+     - Standard tables MUST include row selection checkboxes (`accent-color: #0E7490`).
+     - Selected rows MUST highlight in soft teal tint (`#ECFEFF`) with a `4px solid #0E7490` vertical left border accent line on the first cell.
+   - **Floating Bottom Action Bar**:
+     - When 1 or more rows are selected, a floating pill action bar MUST appear fixed at bottom center (`position: fixed`, `bottom: 24px`, `left: 50%`, `transform: translateX(-50%)`) showing: `X Selected | ✏️ Edit Info | 🗑️ Delete | ••• | ✕`.
+   - **Pagination Footer Layout**:
+     - **Left Side**: `Showing per page [5, 10]` rows-per-page selector (restricted strictly to 5 and 10) + `Showing X to Y of Z entries` text.
+     - **Right Side**: Page number buttons (`<< < 1 2 3 > >>`) with active page highlighted in `#0E7490`, placed on the right side directly adjacent to **`Go to page [ ]`** input and **`Go ›`** button.
+   - **Dashboard Exception**:
+     - Simple overview cards/dashboard preview tables (`ProductionAdminView.jsx`, `RecentPurchaseOrders.jsx`) MUST remain clean without checkboxes.

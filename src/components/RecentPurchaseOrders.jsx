@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Check, Hourglass, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import StatusBadge from './StatusBadge';
 
 export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrders = [], isLoading = false }) {
-  const [selectedPOs, setSelectedPOs] = useState([]);
+  const [selectedPOs, setSelectedPOs] = useState(['ARMS/PO/26-07-086']);
 
   const defaultPurchaseOrders = [
     {
@@ -11,8 +12,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       poDate: '23-Jul-26',
       deliveryDate: '28-Jul-26',
       amount: '₹52,48,000',
-      status: 'Approved',
-      statusType: 'approved'
+      status: 'Scheduled',
+      statusType: 'scheduled'
     },
     {
       poNo: 'ARMS/PO/26-07-085',
@@ -20,8 +21,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       poDate: '22-Jul-26',
       deliveryDate: '27-Jul-26',
       amount: '₹28,75,600',
-      status: 'Approved',
-      statusType: 'approved'
+      status: 'On The Way',
+      statusType: 'ontheway'
     },
     {
       poNo: 'ARMS/PO/26-07-084',
@@ -38,8 +39,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       poDate: '20-Jul-26',
       deliveryDate: '25-Jul-26',
       amount: '₹88,90,400',
-      status: 'Approved',
-      statusType: 'approved'
+      status: 'Scheduled',
+      statusType: 'scheduled'
     },
     {
       poNo: 'ARMS/PO/26-07-082',
@@ -47,8 +48,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
       poDate: '19-Jul-26',
       deliveryDate: '24-Jul-26',
       amount: '₹64,15,000',
-      status: 'Pending',
-      statusType: 'pending'
+      status: 'On The Way',
+      statusType: 'ontheway'
     }
   ];
 
@@ -71,165 +72,81 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
   };
 
   const renderStatusBadge = (type, label) => {
-    let bg = '';
-    let text = '';
-    let border = '';
-    let Icon = null;
-
-    const normalizedType = type === 'shipped' || type === 'billed' || type === 'in-progress' ? 'in-progress' : 
-                           type === 'approved' || type === 'open' ? 'approved' : 'pending';
-
-    if (normalizedType === 'approved') {
-      bg = '#f0fdf4';
-      text = '#15803d';
-      border = '1px solid #bbf7d0';
-      Icon = Check;
-    } else if (type === 'in-progress') {
-      bg = '#eff6ff';
-      text = '#1d4ed8';
-      border = '1px solid #bfdbfe';
-      Icon = Loader2;
-    } else { // pending
-      bg = '#fffbeb';
-      text = '#b45309';
-      border = '1px solid #fde68a';
-      Icon = Hourglass;
-    }
-
-    return (
-      <span 
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '4px 10px',
-          borderRadius: '12px',
-          backgroundColor: bg,
-          color: text,
-          border: border,
-          fontSize: '11px',
-          fontWeight: '600'
-        }}
-      >
-        {Icon && (
-          <Icon 
-            style={{ 
-              width: '10px', 
-              height: '10px', 
-              animation: type === 'in-progress' ? 'spin 2s linear infinite' : 'none' 
-            }} 
-          />
-        )}
-        {label}
-      </span>
-    );
+    return <StatusBadge status={label || type} size="sm" />;
   };
 
   return (
-    <div className="section-card span-2" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignSelf: 'flex-start' }}>
-      {/* Title Header */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          padding: '16px 24px 12px 24px' 
-        }}
-      >
-        <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+    <div 
+      style={{ 
+        backgroundColor: '#FFFFFF',
+        borderRadius: '12px',
+        border: '1px solid #E2E8F0',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Title Header Matching User Directive */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontSize: '12px', fontWeight: '800', margin: 0, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Recent Purchase Orders
-        </span>
-        <a 
-          href="#" 
-          style={{ 
-            fontSize: '12px', 
-            fontWeight: 'bold', 
-            color: 'var(--color-primary-blue)', 
-            textDecoration: 'none' 
-          }}
-        >
-          View All
-        </a>
+        </h3>
       </div>
 
-      {/* Table Container */}
-      <div className="table-responsive" style={{ border: 'none', borderRadius: 0, margin: 0, flex: 1 }}>
-        <table className="ds-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse' }}>
+      {/* Inner Rounded Table Box */}
+      <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ width: '40px', textAlign: 'center' }}>
-                <input 
-                  type="checkbox" 
-                  onChange={handleSelectAll}
-                  checked={!isLoading && purchaseOrders.length > 0 && purchaseOrders.every(po => selectedPOs.includes(po.poNo))}
-                  disabled={isLoading}
-                />
+            <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+              <th style={{ padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  PO No. <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
+                </div>
               </th>
-              <th>PO No.</th>
-              <th>Vendor</th>
-              <th>PO Date</th>
-              <th>Delivery Date</th>
-              <th>Amount</th>
-              <th>Status</th>
+              <th style={{ padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Vendor</th>
+              <th style={{ padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px', textAlign: 'right' }}>Amount</th>
+              <th style={{ padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Delivery Date</th>
+              <th style={{ padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px', textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #f1f5f9' }}>
-                  <td style={{ textAlign: 'center' }}>
-                    <input type="checkbox" defaultChecked={false} disabled />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '14px' }} />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '14px' }} />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '14px' }} />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '14px' }} />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '50%', height: '14px' }} />
-                  </td>
-                  <td>
-                    <div className="skeleton-shimmer skeleton-text" style={{ width: '60px', height: '20px', borderRadius: '12px' }} />
-                  </td>
+                <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
+                  <td style={{ padding: '8px 12px' }}><div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '12px' }} /></td>
+                  <td style={{ padding: '8px 12px' }}><div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '12px' }} /></td>
+                  <td style={{ padding: '8px 12px' }}><div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '12px' }} /></td>
+                  <td style={{ padding: '8px 12px' }}><div className="skeleton-shimmer skeleton-text" style={{ width: '60%', height: '12px' }} /></td>
+                  <td style={{ padding: '8px 12px' }}><div className="skeleton-shimmer skeleton-text" style={{ width: '60px', height: '16px', borderRadius: '8px' }} /></td>
                 </tr>
               ))
             ) : (
               purchaseOrders.map((po, idx) => {
-                const isChecked = selectedPOs.includes(po.poNo);
                 return (
                   <tr 
                     key={idx} 
                     style={{ 
-                      borderBottom: idx === purchaseOrders.length - 1 ? 'none' : '1px solid #f1f5f9',
-                      transition: 'background-color 0.2s',
-                      backgroundColor: isChecked ? '#f8fafc' : 'transparent'
+                      borderBottom: idx === purchaseOrders.length - 1 ? 'none' : '1px solid #F1F5F9',
+                      transition: 'background-color 0.15s ease'
                     }}
-                    className="table-row-hover"
                   >
-                    <td style={{ textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={isChecked}
-                        onChange={() => handleSelectRow(po.poNo)}
-                      />
+                    <td style={{ padding: '8px 12px', color: '#64748B', fontWeight: '600' }}>
+                      {po.poNo}
                     </td>
-                    <td>
-                      <a href="#" style={{ fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}>
-                        {po.poNo}
-                      </a>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A' }}>
+                      {po.vendor}
                     </td>
-                    <td style={{ fontWeight: '500', color: '#1e293b' }}>{po.vendor}</td>
-                    <td style={{ color: '#64748b' }}>{po.poDate}</td>
-                    <td style={{ color: '#64748b' }}>{po.deliveryDate}</td>
-                    <td style={{ fontWeight: '600', color: '#1e293b' }}>{po.amount}</td>
-                    <td>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A', textAlign: 'right' }}>
+                      {po.amount}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: '#64748B' }}>
+                      {po.deliveryDate}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                       {renderStatusBadge(po.statusType, po.status)}
                     </td>
                   </tr>
@@ -242,4 +159,3 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
     </div>
   );
 }
-

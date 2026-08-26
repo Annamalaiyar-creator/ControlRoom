@@ -1,0 +1,309 @@
+import React from 'react';
+
+/**
+ * Format string to Title Case (First letter capitalized, remaining lowercase)
+ * e.g., "COMPLETED" -> "Completed", "IN PROGRESS" -> "In Progress", "PASSED WITH DEFECTS" -> "Passed With Defects"
+ */
+export function formatTitleCase(text) {
+  if (!text) return '';
+  const str = String(text).trim();
+
+  // Special overrides for standard acronyms
+  if (str.toUpperCase() === 'OPEN') return 'Open';
+  if (str.toUpperCase() === 'CLOSED') return 'Closed';
+  if (str.toUpperCase() === 'EXCEL (.XLSX)') return 'Excel (.xlsx)';
+  if (str.toUpperCase() === 'PDF (.PDF)') return 'PDF (.pdf)';
+  if (str.toUpperCase() === 'GRADE A+') return 'Grade A+';
+  if (str.toUpperCase() === 'GRADE A') return 'Grade A';
+
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (!word) return '';
+      if (word.startsWith('(')) {
+        return '(' + word.charAt(1).toUpperCase() + word.slice(2);
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+/**
+ * Standardized Status Icons:
+ * - Pending / Warning / Reorder Warning -> AlertTriangle
+ * - In Progress / Running / On The Way / Processing -> Dashed circle
+ * - Submitted / Sent / Dispatched -> Paper plane (Send)
+ * - In Review / Inspection -> Search
+ * - Success / Approved / Completed / Active / Closed / Sufficient / Resolved -> CheckCircle2
+ * - Failed / Rejected / Overdue / Cancelled / Maintenance / Out Of Stock -> XCircle
+ * - Expired / Draft / Inactive -> Clock
+ */
+
+const IconPending = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const IconInProgress = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeDasharray="3 3" strokeLinecap="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9"/>
+  </svg>
+);
+
+const IconSubmitted = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(-25deg)', transformOrigin: 'center', flexShrink: 0 }}>
+    <path d="m22 2-7 20-4-9-9-4Z"/>
+    <path d="M22 2 11 13"/>
+  </svg>
+);
+
+const IconInReview = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="11" cy="11" r="8"/>
+    <path d="m21 21-4.3-4.3"/>
+  </svg>
+);
+
+const IconSuccess = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9"/>
+    <path d="m9 12 2 2 4-4"/>
+  </svg>
+);
+
+const IconFailed = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9"/>
+    <path d="m15 9-6 6"/>
+    <path d="m9 9 6 6"/>
+  </svg>
+);
+
+const IconExpired = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+
+export function getStatusStyleConfig(statusOrType, customLabel) {
+  const raw = String(statusOrType || customLabel || '').trim().toLowerCase();
+
+  // 1. Pending / Warning (Soft Orange)
+  if (
+    raw === 'pending' || 
+    raw === 'draft / pending approval' || 
+    raw === 'waiting for approval' || 
+    raw === 'pending approval' ||
+    raw === 'pending review' ||
+    raw === 'warning' ||
+    raw === 'reorder warning' ||
+    raw.includes('pending')
+  ) {
+    return {
+      label: customLabel || 'Pending',
+      bg: '#fff7ed',
+      color: '#c2410c',
+      border: '1px solid #fdba74',
+      Icon: IconPending
+    };
+  }
+
+  // 2. In Progress / Running / On The Way (Soft Blue)
+  if (
+    raw === 'in progress' || 
+    raw === 'in_progress' || 
+    raw === 'ontheway' || 
+    raw === 'on the way' || 
+    raw === 'in transit' || 
+    raw === 'in procurement' || 
+    raw === 'processing' ||
+    raw === 'running' ||
+    raw === 'planned' ||
+    raw.includes('partially')
+  ) {
+    return {
+      label: customLabel || (raw.includes('way') ? 'On The Way' : (raw.includes('partially') ? 'Partially Received' : 'In Progress')),
+      bg: '#eff6ff',
+      color: '#1d4ed8',
+      border: '1px solid #bfdbfe',
+      Icon: IconInProgress
+    };
+  }
+
+  // 3. Submitted / Sent / Dispatched (Soft Purple)
+  if (
+    raw === 'submitted' || 
+    raw === 'sent' || 
+    raw === 'dispatched'
+  ) {
+    return {
+      label: customLabel || 'Submitted',
+      bg: '#faf5ff',
+      color: '#7e22ce',
+      border: '1px solid #e9d5ff',
+      Icon: IconSubmitted
+    };
+  }
+
+  // 4. In Review / Inspection Hold / Passed With Defects (Soft Yellow)
+  if (
+    raw === 'in review' || 
+    raw === 'in_review' || 
+    raw === 'review' || 
+    raw === 'inspection hold' ||
+    raw === 'passed with defect' ||
+    raw === 'passed with defects' ||
+    raw === 'idle' ||
+    raw.includes('review')
+  ) {
+    return {
+      label: customLabel || (raw.includes('defect') ? 'Passed With Defects' : 'In Review'),
+      bg: '#fef9c3',
+      color: '#a16207',
+      border: '1px solid #fde047',
+      Icon: IconInReview
+    };
+  }
+
+  // 5. Completed / Approved / Success / Scheduled / Closed / Active / Sufficient / Resolved / In Stock (Soft Green)
+  if (
+    raw === 'completed' || 
+    raw === 'approved' || 
+    raw === 'success' || 
+    raw === 'open' || 
+    raw === 'scheduled' || 
+    raw === 'closed' || 
+    raw === 'sufficient' ||
+    raw === 'resolved' ||
+    raw === 'target met' ||
+    raw === 'target exceeded' ||
+    raw === 'in stock' ||
+    raw === 'material ready' ||
+    raw.includes('closed') || 
+    raw.includes('fully') ||
+    raw === 'active' ||
+    raw === 'passed' ||
+    raw === 'paid' ||
+    raw === 'ready for payment' ||
+    raw === '3-way match ok'
+  ) {
+    let display = customLabel || 'Completed';
+    if (!customLabel) {
+      if (raw === 'approved') display = 'Approved';
+      else if (raw === 'scheduled') display = 'Scheduled';
+      else if (raw.includes('closed')) display = 'Closed';
+      else if (raw === 'open') display = 'Open';
+      else if (raw === 'completed') display = 'Completed';
+    }
+    return {
+      label: display,
+      bg: '#f0fdf4',
+      color: '#15803d',
+      border: '1px solid #bbf7d0',
+      Icon: IconSuccess
+    };
+  }
+
+  // 6. Failed / Rejected / Overdue / Cancelled / Shortage / Maintenance / Out of Stock (Soft Red)
+  if (
+    raw === 'failed' || 
+    raw === 'rejected' || 
+    raw === 'overdue' || 
+    raw === 'cancelled' || 
+    raw === 'canceled' ||
+    raw === 'blacklisted' ||
+    raw === 'shortage detected' ||
+    raw === 'critical shortage' ||
+    raw === 'out of stock' ||
+    raw === 'maintenance' ||
+    raw === 'on hold'
+  ) {
+    let display = customLabel || 'Failed';
+    if (!customLabel) {
+      if (raw === 'rejected') display = 'Rejected';
+      else if (raw === 'overdue') display = 'Overdue';
+    }
+    return {
+      label: display,
+      bg: '#fee2e2',
+      color: '#dc2626',
+      border: '1px solid #fca5a5',
+      Icon: IconFailed
+    };
+  }
+
+  // 7. Expired / Draft / Inactive / Ready to Start (Soft Grey)
+  if (
+    raw === 'expired' || 
+    raw === 'draft' || 
+    raw === 'inactive' || 
+    raw === 'archived' ||
+    raw === 'ready to start'
+  ) {
+    return {
+      label: customLabel || (raw === 'draft' ? 'Draft' : 'Expired'),
+      bg: '#f1f5f9',
+      color: '#475569',
+      border: '1px solid #cbd5e1',
+      Icon: IconExpired
+    };
+  }
+
+  // Default Fallback
+  return {
+    label: customLabel || statusOrType || 'Pending',
+    bg: '#fff7ed',
+    color: '#c2410c',
+    border: '1px solid #fdba74',
+    Icon: IconPending
+  };
+}
+
+export default function StatusBadge({ status, type, label, bg, color, border, style = {}, size = 'md' }) {
+  const config = getStatusStyleConfig(type || status, label || status);
+  const { Icon } = config;
+
+  const isSmall = size === 'sm';
+  const padding = isSmall ? '4px 10px' : '5px 12px';
+  const fontSize = isSmall ? '11px' : '12px';
+  const iconSize = isSmall ? 13 : 14;
+
+  // Prioritize standardized config colors so statuses of the same name (e.g. "Completed") always share the exact same color system-wide
+  const finalBg = config.bg;
+  const finalColor = config.color;
+  const finalBorder = config.border;
+
+  const rawLabel = label || config.label || status || '';
+  const displayLabel = formatTitleCase(rawLabel);
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: isSmall ? '5px' : '6px',
+        padding: padding,
+        borderRadius: '12px',
+        backgroundColor: finalBg,
+        color: finalColor,
+        border: finalBorder,
+        fontSize: fontSize,
+        fontWeight: '700',
+        letterSpacing: '0.1px',
+        whiteSpace: 'nowrap',
+        userSelect: 'none',
+        lineHeight: 1.2,
+        ...style
+      }}
+    >
+      <Icon size={iconSize} />
+      <span>{displayLabel}</span>
+    </span>
+  );
+}

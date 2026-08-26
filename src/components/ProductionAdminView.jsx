@@ -3,10 +3,16 @@ import {
   ClipboardList, TrendingUp, Percent, CheckCircle2, XCircle, Clock, Cpu,
   Calendar, Filter, AlertTriangle, AlertCircle, Info, ShieldCheck, Factory,
   Users, Layers, Award, BarChart2, Package, ArrowUpRight, ArrowDownRight, Settings,
-  MoreHorizontal, Plus, RefreshCw, Check
+  MoreHorizontal, Plus, RefreshCw, Check, Maximize2, Sparkles, SlidersHorizontal, ArrowUpDown, Hourglass,
+  Truck, FileText, IndianRupee
 } from 'lucide-react';
+import POStatusOverview from './POStatusOverview';
+import DailyProductionTrendChart from './DailyProductionTrendChart';
+import StatusBadge from './StatusBadge';
 
-export default function ProductionAdminView() {
+export default function ProductionAdminView({ activeTab, userRole }) {
+  const isDispatchView = userRole === 'Dispatch Head' || activeTab === 'Dispatch Dashboard';
+  const isFloorView = userRole === 'Floor Employee' || userRole === 'Machine Operator' || activeTab === 'Floor Employee' || activeTab === 'Operator Workspace';
   const [selectedMonth, setSelectedMonth] = useState('07');
   const [selectedYear, setSelectedYear] = useState('2026');
   const [trendFilter, setTrendFilter] = useState('Daily');
@@ -16,6 +22,21 @@ export default function ProductionAdminView() {
   const [workOrders, setWorkOrders] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('controlroom_prod_dismissed_alerts') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleDismissAlert = (id) => {
+    const updated = [...dismissedAlerts, id];
+    setDismissedAlerts(updated);
+    try {
+      localStorage.setItem('controlroom_prod_dismissed_alerts', JSON.stringify(updated));
+    } catch (e) {}
+  };
   
   // New Work Order Form State
   const [newWO, setNewWO] = useState({
@@ -72,13 +93,40 @@ export default function ProductionAdminView() {
   const qualityDonutRef = useRef(null);
   const containerRef = useRef(null);
 
-  // 1. Production Status Donut Canvas (Exact Procurement Donut Color Palette)
+  // Helper for drawing rounded-corner annular sectors matching reference image
+  const drawAnnularSector = (ctx, cx, cy, innerR, outerR, startAngle, endAngle, cornerRadius, color) => {
+    const gap = 0.045; // Clean radial gap between sectors
+    const a1 = startAngle + gap / 2;
+    const a2 = endAngle - gap / 2;
+    if (a2 <= a1 + 0.01) return;
+
+    ctx.save();
+    ctx.beginPath();
+    // Outer arc
+    ctx.arc(cx, cy, outerR, a1, a2, false);
+    // Inner arc in reverse
+    ctx.arc(cx, cy, innerR, a2, a1, true);
+    ctx.closePath();
+
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Round corner join effect matching reference image rounded sector corners
+    ctx.lineWidth = cornerRadius;
+    ctx.strokeStyle = color;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  // 1. Production Status Donut Canvas (Exact Reference Donut System with Annular Sectors & Rounded Sector Corners)
   const drawStatusDonut = () => {
     const canvas = statusDonutRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const size = 160;
+    const size = 190;
 
     canvas.width = size * dpr;
     canvas.height = size * dpr;
@@ -90,36 +138,31 @@ export default function ProductionAdminView() {
 
     const x = size / 2;
     const y = size / 2;
-    const radius = 64;
-    const thickness = 14;
+    const outerRadius = 82;
+    const innerRadius = 58;
+    const cornerRadius = 4;
 
-    // Background track
-    ctx.beginPath();
-    ctx.arc(x, y, radius - (thickness / 2), 0, 2 * Math.PI);
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = thickness;
-    ctx.stroke();
-
+    // Proportional percentages for Work Order status distribution
     const segments = [
-      { color: '#0284c7', value: 142 / 5280 },  // Planned (#0284c7 - Cyan)
-      { color: '#16a34a', value: 32 / 5280 },   // Approved / On Hold (#16a34a - Green)
-      { color: '#ea580c', value: 342 / 5280 },  // In Progress (#ea580c - Orange)
-      { color: '#2563eb', value: 4746 / 5280 }, // Completed (#2563eb - Blue)
-      { color: '#dc2626', value: 18 / 5280 }    // Delayed (#dc2626 - Red)
+      { color: '#22C55E', pct: 0.52 }, // Completed (#22C55E - Green)
+      { color: '#0084FF', pct: 0.20 }, // In Progress (#0084FF - Blue)
+      { color: '#06B6D4', pct: 0.12 }, // Planned (#06B6D4 - Cyan)
+      { color: '#38BDF8', pct: 0.09 }, // Approved (#38BDF8 - Sky Blue)
+      { color: '#F43F5E', pct: 0.07 }  // Delayed (#F43F5E - Red)
     ];
 
-    let startAngle = -Math.PI / 2;
+    let currentAngle = -Math.PI / 2;
 
     segments.forEach(seg => {
-      if (seg.value <= 0) return;
-      const angle = seg.value * 2 * Math.PI;
-      ctx.beginPath();
-      ctx.arc(x, y, radius - (thickness / 2), startAngle, startAngle + angle, false);
-      ctx.strokeStyle = seg.color;
-      ctx.lineWidth = thickness;
-      ctx.lineCap = 'butt';
-      ctx.stroke();
-      startAngle += angle;
+      if (seg.pct <= 0) return;
+      
+      const arcSpan = seg.pct * 2 * Math.PI;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + arcSpan;
+
+      drawAnnularSector(ctx, x, y, innerRadius, outerRadius, startAngle, endAngle, cornerRadius, seg.color);
+
+      currentAngle += arcSpan;
     });
   };
 
@@ -391,169 +434,291 @@ export default function ProductionAdminView() {
   return (
     <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '4px' }}>
       
-      {/* HEADER FILTER & ZOHO PRODUCTION SYNC BAR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '12px 18px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <Calendar style={{ width: '16px', height: '16px', color: '#2563EB', flexShrink: 0 }} />
-          <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>Production Control Room Dashboard</span>
-          <span style={{ fontSize: '11px', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '3px 10px', borderRadius: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #BBF7D0', fontFamily: "'DM Sans', sans-serif" }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }}></span>
-            Zoho Inventory Work Orders Synced
-          </span>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            style={{
-              backgroundColor: '#2563EB',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontFamily: "'DM Sans', sans-serif",
-              boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
-            }}
-          >
-            <Plus style={{ width: '14px', height: '14px' }} />
-            Create Work Order
-          </button>
 
-          <button
-            onClick={fetchWorkOrders}
-            style={{
-              backgroundColor: '#F8FAFC',
-              color: '#475569',
-              border: '1px solid #CBD5E1',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '12px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontFamily: "'DM Sans', sans-serif"
-            }}
-          >
-            <RefreshCw style={{ width: '13px', height: '13px', animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
-            Sync
-          </button>
+      {/* ROW 1: KPI SUMMARY CARDS (5 CARDS FOR DISPATCH / 6 CARDS FOR FLOOR & PRODUCTION) */}
+      <div style={{ display: 'grid', gridTemplateColumns: isDispatchView ? 'repeat(5, minmax(0, 1fr))' : 'repeat(6, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+        {(isFloorView ? [
+          {
+            title: 'SHIFT TARGET QTY',
+            value: '1,200',
+            trend: 'Target for Shift A',
+            trendUp: true,
+            icon: Factory,
+            iconColor: '#FFFFFF',
+            iconBg: '#0284C7',
+            bottomPrefix: 'Shift A Target',
+            bottomHighlight: ''
+          },
+          {
+            title: 'UNITS COMPLETED TODAY',
+            value: '942',
+            trend: '78.5% of Shift Target',
+            trendUp: true,
+            icon: CheckCircle2,
+            iconColor: '#FFFFFF',
+            iconBg: '#15803D',
+            bottomPrefix: 'Shift A Actual',
+            bottomHighlight: ''
+          },
+          {
+            title: 'SHIFT EFFICIENCY %',
+            value: '94.2%',
+            trend: '↑ 2.1% vs Yesterday',
+            trendUp: true,
+            icon: TrendingUp,
+            iconColor: '#FFFFFF',
+            iconBg: '#6B21A8',
+            bottomPrefix: 'Operator OEE',
+            bottomHighlight: ''
+          },
+          {
+            title: 'CURRENT LINE SPEED',
+            value: '42 m/min',
+            trend: 'Optimal Speed',
+            trendUp: true,
+            icon: Cpu,
+            iconColor: '#FFFFFF',
+            iconBg: '#0E7490',
+            bottomPrefix: 'CNC Line 1',
+            bottomHighlight: ''
+          },
+          {
+            title: 'REJECTED UNITS',
+            value: '12',
+            trend: '1.2% Rejection Rate',
+            trendUp: false,
+            icon: AlertCircle,
+            iconColor: '#FFFFFF',
+            iconBg: '#DC2626',
+            bottomPrefix: 'Pass QA Check',
+            bottomHighlight: ''
+          },
+          {
+            title: 'ACTIVE MACHINE',
+            value: 'CNC Line 01',
+            trend: 'Running Smoothly',
+            trendUp: true,
+            icon: Settings,
+            iconColor: '#FFFFFF',
+            iconBg: '#D97706',
+            bottomPrefix: 'Status: RUNNING',
+            bottomHighlight: ''
+          }
+        ] : isDispatchView ? [
+          {
+            title: 'DISPATCHED TODAY',
+            value: '28',
+            trend: '12.4% vs Last Month',
+            trendUp: true,
+            icon: Truck,
+            iconColor: '#FFFFFF',
+            iconBg: '#0284C7',
+            bottomPrefix: 'Till 09:30 AM',
+            bottomHighlight: ''
+          },
+          {
+            title: 'DISPATCHED (MTD)',
+            value: '352',
+            trend: '12.6% vs Last Month',
+            trendUp: true,
+            icon: Package,
+            iconColor: '#FFFFFF',
+            iconBg: '#6B21A8',
+            bottomPrefix: 'This Month',
+            bottomHighlight: ''
+          },
+          {
+            title: 'ON TIME DISPATCH %',
+            value: '96.4%',
+            trend: '4.2% vs Last Month',
+            trendUp: true,
+            icon: CheckCircle2,
+            iconColor: '#FFFFFF',
+            iconBg: '#0D9488',
+            bottomPrefix: 'This Month',
+            bottomHighlight: ''
+          },
+          {
+            title: 'DISPATCH PENDING',
+            value: '14',
+            trend: '2 vs Last Month',
+            trendUp: false,
+            icon: Clock,
+            iconColor: '#FFFFFF',
+            iconBg: '#EA580C',
+            bottomPrefix: 'This Month',
+            bottomHighlight: ''
+          },
+          {
+            title: 'DISPATCH VALUE (MTD)',
+            value: '₹ 3.26 Cr',
+            trend: '14.8% vs Last Month',
+            trendUp: true,
+            icon: IndianRupee,
+            iconColor: '#FFFFFF',
+            iconBg: '#A21CAF',
+            bottomPrefix: 'This Month',
+            bottomHighlight: ''
+          }
+        ] : [
+          {
+            title: 'TOTAL PLAN (NOS)',
+            value: '5,280',
+            trend: '10.4%',
+            trendUp: true,
+            icon: ClipboardList,
+            iconColor: '#16A34A',
+            iconBg: '#F0FDF4',
+            bottomPrefix: 'Monthly target set at ',
+            bottomHighlight: '5,280 NOS'
+          },
+          {
+            title: 'TOTAL PRODUCTION',
+            value: '4,862',
+            trend: '11.2%',
+            trendUp: true,
+            icon: TrendingUp,
+            iconColor: '#0284C7',
+            iconBg: '#F0F9FF',
+            bottomPrefix: 'This month, completed ',
+            bottomHighlight: '4,862 units'
+          },
+          {
+            title: 'PLAN ACHIEVEMENT',
+            value: '92.1%',
+            trend: '2.3%',
+            trendUp: true,
+            icon: Percent,
+            iconColor: '#8B5CF6',
+            iconBg: '#F3E8FF',
+            bottomPrefix: 'On track for target, ',
+            bottomHighlight: '92.1% achieved'
+          },
+          {
+            title: 'GOOD PRODUCTION',
+            value: '4,746',
+            trend: '10.8%',
+            trendUp: true,
+            icon: CheckCircle2,
+            iconColor: '#059669',
+            iconBg: '#ECFDF5',
+            bottomPrefix: 'Quality yield rate ',
+            bottomHighlight: '97.6% passed'
+          },
+          {
+            title: 'REJECTION (NOS)',
+            value: '116',
+            trend: '1.6%',
+            trendUp: true,
+            icon: XCircle,
+            iconColor: '#DC2626',
+            iconBg: '#FEF2F2',
+            bottomPrefix: 'Scrap reduction down by ',
+            bottomHighlight: '1.6%'
+          },
+          {
+            title: 'DOWNTIME (HRS)',
+            value: '31.6 Hrs',
+            trend: '8.5%',
+            trendUp: true,
+            icon: Clock,
+            iconColor: '#D97706',
+            iconBg: '#FFF7ED',
+            bottomPrefix: 'Breakdown time reduced by ',
+            bottomHighlight: '8.5%'
+          }
+        ]).map((kpi, kIdx) => {
+          const IconComp = kpi.icon;
+          return (
+            <div 
+              key={kIdx}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1px solid #EAEFEF',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '16px',
+                boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
+                transition: 'all 0.2s ease',
+                minWidth: 0,
+                boxSizing: 'border-box'
+              }}
+            >
+              {/* Top Main Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                <span 
+                  style={{ 
+                    fontSize: '11.5px', 
+                    fontWeight: '800', 
+                    color: '#64748B',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  {kpi.title}
+                </span>
 
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            style={{ padding: '4px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: '600', color: '#1E293B', backgroundColor: '#F8FAFC', cursor: 'pointer', outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-          >
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="06">June</option>
-          </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px', lineHeight: '1.1' }}>
+                    {kpi.value}
+                  </span>
+                  
+                  <span 
+                    style={{ 
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      color: kpi.trendUp ? '#059669' : '#DC2626',
+                      backgroundColor: kpi.trendUp ? '#ECFDF5' : '#FEF2F2',
+                      border: kpi.trendUp ? '1px solid #A7F3D0' : '1px solid #FECACA',
+                      padding: '2px 7.5px',
+                      borderRadius: '8px',
+                      lineHeight: '1.2'
+                    }}
+                  >
+                    {kpi.trendUp ? (
+                      <ArrowUpRight style={{ width: '13px', height: '13px' }} />
+                    ) : (
+                      <ArrowDownRight style={{ width: '13px', height: '13px' }} />
+                    )}
+                    {kpi.trend}
+                  </span>
+                </div>
+              </div>
 
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            style={{ padding: '4px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: '600', color: '#1E293B', backgroundColor: '#F8FAFC', cursor: 'pointer', outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-          >
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-          </select>
-        </div>
-      </div>
-
-      {/* ROW 1: 6 KPI SUMMARY CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
-        
-        {/* KPI 1: TOTAL PLAN */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <ClipboardList style={{ width: '13px', height: '13px' }} />
+              {/* Bottom Sub-Card Box */}
+              <div 
+                style={{ 
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #F1F5F9',
+                  borderRadius: '12px',
+                  padding: '9px 12px',
+                  fontSize: '11.5px',
+                  fontWeight: '500',
+                  color: '#64748B',
+                  lineHeight: '1.4',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                <span>{kpi.bottomPrefix}</span>
+                <span style={{ color: kpi.trendUp ? '#059669' : '#DC2626', fontWeight: '800' }}>
+                  {kpi.bottomHighlight}
+                </span>
+              </div>
             </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>TOTAL PLAN (NOS)</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>5,280</strong>
-          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▲ 10.4% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
-        {/* KPI 2: TOTAL PRODUCTION */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <TrendingUp style={{ width: '13px', height: '13px' }} />
-            </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>TOTAL PRODUCTION</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>4,862</strong>
-          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▲ 11.2% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
-        {/* KPI 3: PLAN ACHIEVEMENT */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Percent style={{ width: '13px', height: '13px' }} />
-            </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>PLAN ACHIEVEMENT</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>92.1%</strong>
-          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▲ 2.3% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
-        {/* KPI 4: GOOD PRODUCTION */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#FFEDD5', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <CheckCircle2 style={{ width: '13px', height: '13px' }} />
-            </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>GOOD PRODUCTION</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>4,746</strong>
-          <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▲ 10.8% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
-        {/* KPI 5: REJECTION */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <XCircle style={{ width: '13px', height: '13px' }} />
-            </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>REJECTION (NOS)</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>116</strong>
-          <span style={{ fontSize: '10px', color: '#DC2626', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▼ 1.6% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
-        {/* KPI 6: DOWNTIME */}
-        <div className="section-card" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Clock style={{ width: '13px', height: '13px' }} />
-            </div>
-            <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.3px', fontFamily: "'DM Sans', sans-serif" }}>DOWNTIME (HRS)</span>
-          </div>
-          <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '800', marginTop: '2px', fontFamily: "'DM Sans', sans-serif" }}>31.6</strong>
-          <span style={{ fontSize: '10px', color: '#DC2626', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px', fontFamily: "'DM Sans', sans-serif" }}>
-            ▼ 8.5% <span style={{ color: '#94A3B8', fontWeight: '500' }}>vs Last Month</span>
-          </span>
-        </div>
-
+          );
+        })}
       </div>
 
       {/* 2 CONTINUOUS FLEX COLUMNS LAYOUT (ORIGINAL SCRIPT DESIGN) */}
@@ -562,362 +727,219 @@ export default function ProductionAdminView() {
         {/* ==================== LEFT CONTINUOUS FLEX COLUMN ==================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
           
-          {/* 1. PRODUCTION STATUS BREAKDOWN */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', minWidth: 0, boxSizing: 'border-box' }}>
-            <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', letterSpacing: '0.5px', textTransform: 'uppercase', fontFamily: "'DM Sans', sans-serif" }}>
-                PRODUCTION STATUS BREAKDOWN
+          {/* 1. STATUS BREAKDOWN WITH MASTER PIE CHART COMPONENT */}
+          <POStatusOverview 
+            title={isFloorView ? "My Assigned Work Orders" : isDispatchView ? "Dispatch Orders by Status" : "Work Orders by Status"} 
+            totalCount={isFloorView ? "14" : isDispatchView ? "64" : "5,280"}
+            totalLabel={isFloorView ? "ASSIGNED WOs" : isDispatchView ? "TOTAL ORDERS" : "TOTAL ORDERS"}
+            items={isFloorView ? [
+              { name: 'In Production', count: '8 WOs', color: '#0284C7', pct: 0.571 },
+              { name: 'Completed Today', count: '4 WOs', color: '#16A34A', pct: 0.286 },
+              { name: 'Pending Material', count: '1 WO', color: '#EA580C', pct: 0.071 },
+              { name: 'QA Inspection', count: '1 WO', color: '#8B5CF6', pct: 0.071 }
+            ] : isDispatchView ? [
+              { name: 'Dispatched', count: '44', color: '#22C55E', pct: 0.688 },
+              { name: 'In Transit', count: '18', color: '#0284C7', pct: 0.281 },
+              { name: 'Ready for Dispatch', count: '6', color: '#EAB308', pct: 0.094 },
+              { name: 'Pending (Not Ready)', count: '8', color: '#EC4899', pct: 0.125 }
+            ] : [
+              { name: 'Completed', count: '4,746', color: '#22C55E', pct: 0.68 },
+              { name: 'In Progress', count: '342', color: '#0084FF', pct: 0.18 },
+              { name: 'Planned', count: '142', color: '#06B6D4', pct: 0.09 },
+              { name: 'Approved', count: '50', color: '#38BDF8', pct: 0.05 }
+            ]}
+          />
+
+          {/* 2. DAILY DISPATCH / PRODUCTION TREND WITH CORAL ORANGE BAR DESIGN */}
+          <DailyProductionTrendChart 
+            title={isDispatchView ? "Daily Dispatch Volume & On-Time %" : "Workflow Runs Over Time"} 
+            mainValue={isDispatchView ? "352" : "6,324"} 
+          />
+
+          {/* 3. DISPATCH / PRODUCTION / MY MACHINE PRODUCTION */}
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {isFloorView ? 'My Machine Output (CNC Line 01)' : isDispatchView ? 'Dispatch by Product / Profile (MTD)' : 'Production by Product / Profile'}
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0', position: 'relative' }}>
-              <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-                <canvas ref={statusDonutRef}></canvas>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                  <span style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', lineHeight: '1', fontFamily: "'DM Sans', sans-serif" }}>5,280</span>
-                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '800', letterSpacing: '0.5px', marginTop: '4px', textTransform: 'uppercase', textAlign: 'center', fontFamily: "'DM Sans', sans-serif" }}>TOTAL PLAN</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', width: '100%' }}>
-              {[
-                { name: 'Planned', count: '142', color: '#0284c7' },
-                { name: 'Approved', count: '32', color: '#16a34a' },
-                { name: 'In Progress', count: '342', color: '#ea580c' },
-                { name: 'Completed', count: '4,746', color: '#2563eb' },
-                { name: 'Delayed', count: '18', color: '#dc2626' }
-              ].map((pill, idx) => (
-                <div key={idx} style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: pill.color, flexShrink: 0 }}></span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'DM Sans', sans-serif" }}>{pill.name}</span>
-                  </div>
-                  <strong style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>{pill.count} Nos</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. DAILY PRODUCTION TREND */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'hidden', minWidth: 0, boxSizing: 'border-box' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-                DAILY PRODUCTION TREND <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(NOS)</span>
-              </span>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F1F5F9', padding: '2px', borderRadius: '6px' }}>
-                {['Daily', 'Weekly', 'Monthly'].map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setTrendFilter(f)}
-                    style={{
-                      padding: '3px 10px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      fontFamily: "'DM Sans', sans-serif",
-                      backgroundColor: trendFilter === f ? '#FFFFFF' : 'transparent',
-                      color: trendFilter === f ? '#1E3A8A' : '#64748B',
-                      boxShadow: trendFilter === f ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ height: '185px', width: '100%', position: 'relative' }}>
-              <canvas 
-                ref={trendComboRef} 
-                onMouseMove={handleTrendMouseMove}
-                onMouseLeave={() => setActiveTrendIndex(6)}
-                style={{ cursor: 'pointer' }}
-              ></canvas>
-            </div>
-          </div>
-
-          {/* 3. PRODUCTION BY PRODUCT / PROFILE */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-              PRODUCTION BY PRODUCT / PROFILE <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
-            </span>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>
-              <thead>
-                <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Product / Profile</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Planned</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Actual</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Achievement %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'Mini Rail 100 mm', plan: '1,500', act: '1,402', pct: 93.5 },
-                  { name: 'Mini Rail 60 mm', plan: '1,200', act: '1,102', pct: 91.8 },
-                  { name: 'Long Rail 3000 mm', plan: '600', act: '538', pct: 89.7 },
-                  { name: 'Mid Clamp 35 mm', plan: '1,300', act: '1,210', pct: 93.1 },
-                  { name: 'End Clamp 35 mm', plan: '400', act: '362', pct: 90.5 },
-                  { name: 'Other Accessories', plan: '280', act: '248', pct: 88.6 }
-                ].map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '8px 10px', color: '#334155', fontWeight: '600', whiteSpace: 'nowrap' }}>{row.name}</td>
-                    <td style={{ padding: '8px 10px', color: '#0F172A', whiteSpace: 'nowrap' }}>{row.plan}</td>
-                    <td style={{ padding: '8px 10px', color: '#0F172A', fontWeight: '700', whiteSpace: 'nowrap' }}>{row.act}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '80px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${row.pct}%`, height: '100%', backgroundColor: '#2563eb' }}></div>
-                        </div>
-                        <strong style={{ fontSize: '11px', color: '#2563eb' }}>{row.pct}%</strong>
+            <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Product / Profile <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                       </div>
-                    </td>
+                    </th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isFloorView ? 'Shift Target' : isDispatchView ? 'Orders' : 'Planned'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isFloorView ? 'Completed' : isDispatchView ? 'Dispatched Qty' : 'Actual'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'On Time %' : 'Achievement %'}</th>
                   </tr>
-                ))}
-                <tr style={{ fontWeight: '800', color: '#0F172A', borderTop: '1px solid #CBD5E1', backgroundColor: '#F8FAFC' }}>
-                  <td style={{ padding: '8px 10px' }}>Total</td>
-                  <td style={{ padding: '8px 10px' }}>5,280</td>
-                  <td style={{ padding: '8px 10px' }}>4,862</td>
-                  <td style={{ padding: '8px 10px', color: '#2563eb' }}>92.1%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* 4. DOWNTIME ANALYSIS */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-              DOWNTIME ANALYSIS <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
-            </span>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>
-              <thead>
-                <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Reason</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Hours</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>% of Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { reason: 'Machine Breakdown', hrs: '12.6', pct: 39.9 },
-                  { reason: 'Material Not Ready', hrs: '7.8', pct: 24.7 },
-                  { reason: 'Tool Change / Setup', hrs: '5.4', pct: 17.1 },
-                  { reason: 'Power Failure', hrs: '3.2', pct: 10.1 },
-                  { reason: 'Other Reasons', hrs: '2.6', pct: 8.2 }
-                ].map((dt, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '8px 10px', color: '#334155', fontWeight: '600', whiteSpace: 'nowrap' }}>{dt.reason}</td>
-                    <td style={{ padding: '8px 10px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap' }}>{dt.hrs}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '90px', height: '6px', backgroundColor: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${dt.pct}%`, height: '100%', backgroundColor: '#7e22ce' }}></div>
+                </thead>
+                <tbody>
+                  {(isFloorView ? [
+                    { name: 'Mini Rail 100 mm', plan: '600 Nos', act: '542 Nos', pct: 90.3 },
+                    { name: 'Mini Rail 60 mm', plan: '400 Nos', act: '320 Nos', pct: 80.0 },
+                    { name: 'Long Rail 3000 mm', plan: '200 Nos', act: '80 Nos', pct: 40.0 }
+                  ] : isDispatchView ? [
+                    { name: 'Mini Rail 100 mm', plan: '18', act: '12,450 Nos', pct: 97.2 },
+                    { name: 'Mini Rail 60 mm', plan: '12', act: '8,300 Nos', pct: 96.1 },
+                    { name: 'Long Rail 3000 mm', plan: '8', act: '5,200 Nos', pct: 95.0 },
+                    { name: 'Mid Clamp 35 mm', plan: '11', act: '22,600 Nos', pct: 94.5 },
+                    { name: 'End Clamp 35 mm', plan: '6', act: '8,900 Nos', pct: 100 },
+                    { name: 'Other Accessories', plan: '9', act: '6,420 Nos', pct: 96.0 }
+                  ] : [
+                    { name: 'Mini Rail 100 mm', plan: '1,500', act: '1,402', pct: 93.5 },
+                    { name: 'Mini Rail 60 mm', plan: '1,200', act: '1,102', pct: 91.8 },
+                    { name: 'Long Rail 3000 mm', plan: '600', act: '538', pct: 89.7 },
+                    { name: 'Mid Clamp 35 mm', plan: '1,300', act: '1,210', pct: 93.1 },
+                    { name: 'End Clamp 35 mm', plan: '400', act: '362', pct: 90.5 },
+                    { name: 'Other Accessories', plan: '280', act: '248', pct: 88.6 }
+                  ]).map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{row.name}</td>
+                      <td style={{ padding: '7px 10px', color: '#64748B' }}>{row.plan}</td>
+                      <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{row.act}</td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ width: '60px', height: '5px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${row.pct}%`, height: '100%', backgroundColor: '#0284C7' }}></div>
+                          </div>
+                          <strong style={{ fontSize: '10.5px', color: '#0284C7', fontWeight: '800' }}>{row.pct}%</strong>
                         </div>
-                        <strong style={{ color: '#7e22ce', fontSize: '11px' }}>{dt.pct}%</strong>
-                      </div>
-                    </td>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr style={{ fontWeight: '800', color: '#0F172A', borderTop: '1px solid #CBD5E1', backgroundColor: '#F8FAFC' }}>
+                    <td style={{ padding: '7px 10px' }}>Total Shift Output</td>
+                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '1,200 Nos' : isDispatchView ? '64' : '5,280'}</td>
+                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '942 Nos' : isDispatchView ? '63,870' : '4,862'}</td>
+                    <td style={{ padding: '7px 10px', color: '#0284C7' }}>{isFloorView ? '78.5%' : isDispatchView ? '96.4%' : '92.1%'}</td>
                   </tr>
-                ))}
-                <tr style={{ fontWeight: '800', color: '#0F172A', borderTop: '1px solid #CBD5E1', backgroundColor: '#F8FAFC' }}>
-                  <td style={{ padding: '8px 10px' }}>Total</td>
-                  <td style={{ padding: '8px 10px' }}>31.6</td>
-                  <td style={{ padding: '8px 10px', color: '#7e22ce' }}>100%</td>
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* 5. QUALITY REJECTION BREAKDOWN */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', minWidth: 0, boxSizing: 'border-box' }}>
-            <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', letterSpacing: '0.5px', textTransform: 'uppercase', fontFamily: "'DM Sans', sans-serif" }}>
-                QUALITY REJECTION BREAKDOWN
+          {/* 4. DISPATCH DELAY REASONS / DOWNTIME ANALYSIS */}
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {isFloorView ? 'My Shift Downtime Log' : isDispatchView ? 'Dispatch Delay Analysis' : 'Downtime Analysis'}
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0', position: 'relative' }}>
-              <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-                <canvas ref={qualityDonutRef}></canvas>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                  <span style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', lineHeight: '1', fontFamily: "'DM Sans', sans-serif" }}>116</span>
-                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '800', letterSpacing: '0.5px', marginTop: '4px', textTransform: 'uppercase', textAlign: 'center', fontFamily: "'DM Sans', sans-serif" }}>TOTAL REJECTS</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', width: '100%' }}>
-              {[
-                { name: 'Dim. Out', count: '54', color: '#0284c7' },
-                { name: 'Scratch', count: '28', color: '#16a34a' },
-                { name: 'Bent', count: '18', color: '#ea580c' },
-                { name: 'Offset', count: '10', color: '#2563eb' },
-                { name: 'Others', count: '6', color: '#dc2626' }
-              ].map((pill, idx) => (
-                <div key={idx} style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: pill.color, flexShrink: 0 }}></span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'DM Sans', sans-serif" }}>{pill.name}</span>
-                  </div>
-                  <strong style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>{pill.count} Nos</strong>
-                </div>
-              ))}
+            <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Reason <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
+                      </div>
+                    </th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isFloorView ? 'Duration' : isDispatchView ? 'Delayed Orders' : 'Hours'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>% of Shift</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(isFloorView ? [
+                    { reason: 'Tool Change / Setup', hrs: '25 Mins', pct: 5.2 },
+                    { reason: 'Material Coil Change', hrs: '15 Mins', pct: 3.1 },
+                    { reason: 'Minor Jam / Sensor Check', hrs: '10 Mins', pct: 2.0 }
+                  ] : isDispatchView ? [
+                    { reason: 'Material Not Ready from Production', hrs: '6 Orders', pct: 42.8 },
+                    { reason: 'Vehicle / Transporter Delay', hrs: '4 Orders', pct: 28.5 },
+                    { reason: 'Packing / Labeling Pending', hrs: '2 Orders', pct: 14.3 },
+                    { reason: 'Customer Payment / Hold', hrs: '1 Order', pct: 7.2 },
+                    { reason: 'Documentation / E-Way Bill Hold', hrs: '1 Order', pct: 7.2 }
+                  ] : [
+                    { reason: 'Machine Breakdown', hrs: '12.6 hrs', pct: 39.9 },
+                    { reason: 'Material Not Ready', hrs: '7.8 hrs', pct: 24.7 },
+                    { reason: 'Tool Change / Setup', hrs: '5.4 hrs', pct: 17.1 },
+                    { reason: 'Quality Check / Rejection', hrs: '3.2 hrs', pct: 10.1 },
+                    { reason: 'Operator Absence', hrs: '2.6 hrs', pct: 8.2 }
+                  ]).map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === (isFloorView ? 2 : 4) ? 'none' : '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{row.reason}</td>
+                      <td style={{ padding: '7px 10px', color: '#DC2626', fontWeight: '800' }}>{row.hrs}</td>
+                      <td style={{ padding: '7px 10px', color: '#64748B', fontWeight: '600' }}>{row.pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          {/* 5. VEHICLE UTILIZATION / QUALITY REJECTION BREAKDOWN */}
+          <POStatusOverview 
+            title={isDispatchView ? "Vehicle Fleet Status Breakdown" : "Quality Rejection Breakdown"}
+            totalCount={isDispatchView ? "32" : "116"}
+            totalLabel={isDispatchView ? "TOTAL VEHICLES" : "TOTAL REJECTS"}
+            items={isDispatchView ? [
+              { name: 'Loaded & Dispatched', count: '18 Vehicles', color: '#15803D', pct: 0.563 },
+              { name: 'In Transit', count: '6 Vehicles', color: '#0284C7', pct: 0.187 },
+              { name: 'Loading at Yard', count: '4 Vehicles', color: '#EAB308', pct: 0.125 },
+              { name: 'Waiting for Loading', count: '4 Vehicles', color: '#EC4899', pct: 0.125 }
+            ] : [
+              { name: 'Dim. Out', count: '54 Nos', color: '#0284C7', pct: 0.465 },
+              { name: 'Scratch', count: '28 Nos', color: '#16A34A', pct: 0.241 },
+              { name: 'Bent', count: '18 Nos', color: '#EA580C', pct: 0.155 },
+              { name: 'Offset', count: '10 Nos', color: '#2563EB', pct: 0.086 },
+              { name: 'Others', count: '6 Nos', color: '#DC2626', pct: 0.053 }
+            ]}
+          />
 
         </div>
 
         {/* ==================== RIGHT CONTINUOUS FLEX COLUMN ==================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
           
-          {/* 1. TOP 5 DELAYED PRODUCTION ORDERS */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
+          {/* 1. TOP 5 DELAYED PRODUCTION ORDERS / DISPATCH ORDERS */}
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-                TOP 5 DELAYED PRODUCTION ORDERS
-              </span>
-              <span style={{ fontSize: '10.5px', color: '#2563EB', fontWeight: '700', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '10px' }}>
-                Synced with Zoho
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {isDispatchView ? 'Top 5 Delayed Dispatch Orders' : 'Top 5 Delayed Production Orders'}
+                </span>
+                <span style={{ fontSize: '9.5px', color: '#2563EB', fontWeight: '700', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '8px' }}>
+                  Synced with Zoho
+                </span>
+              </div>
             </div>
 
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', textAlign: 'left', minWidth: '460px', fontFamily: "'DM Sans', sans-serif" }}>
+            <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Order No.</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Product / Profile</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Planned</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Completed</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Delay</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Reason</th>
-                    <th style={{ padding: '7px 8px', fontWeight: '700', whiteSpace: 'nowrap' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayOrders.map((ord, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '7px 8px', fontWeight: '700', color: '#1E293B', whiteSpace: 'nowrap' }}>{ord.workOrderNo}</td>
-                      <td style={{ padding: '7px 8px', color: '#334155', whiteSpace: 'nowrap' }}>{ord.productName}</td>
-                      <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>{ord.plannedQty}</td>
-                      <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>{ord.completedQty}</td>
-                      <td style={{ padding: '7px 8px', fontWeight: '700', color: ord.status === 'Overdue' ? '#DC2626' : '#D97706', whiteSpace: 'nowrap' }}>{ord.delayDays || '1 Day'}</td>
-                      <td style={{ padding: '7px 8px', color: '#475569', whiteSpace: 'nowrap' }}>{ord.delayReason}</td>
-                      <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>
-                        <span style={{ 
-                          backgroundColor: ord.status === 'Overdue' ? '#FEF2F2' : '#FEF3C7', 
-                          color: ord.status === 'Overdue' ? '#DC2626' : '#D97706', 
-                          padding: '3px 8px', 
-                          borderRadius: '4px', 
-                          fontWeight: '700', 
-                          fontSize: '10px' 
-                        }}>
-                          {ord.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 2. MACHINE PERFORMANCE */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-              MACHINE PERFORMANCE <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
-            </span>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>
-              <thead>
-                <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Machine / Line</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Planned</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Actual</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Utilization</th>
-                  <th style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'CNC Cutting Machine', plan: '1,200', act: '1,102', util: 82, pct: '85.1%', dot: '#16a34a' },
-                  { name: 'Punching Machine - 1', plan: '1,000', act: '912', util: 76, pct: '83.4%', dot: '#16a34a' },
-                  { name: 'Punching Machine - 2', plan: '800', act: '678', util: 74, pct: '79.6%', dot: '#16a34a' },
-                  { name: 'Drilling Machine', plan: '600', act: '546', util: 81, pct: '86.3%', dot: '#16a34a' },
-                  { name: 'Tapping Machine', plan: '400', act: '322', util: 70, pct: '72.4%', dot: '#eab308' },
-                  { name: 'Roll Forming Line', plan: '1,280', act: '1,302', util: 79, pct: '89.7%', dot: '#16a34a' }
-                ].map((m, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '8px 10px', color: '#334155', fontWeight: '600', whiteSpace: 'nowrap' }}>{m.name}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{m.plan}</td>
-                    <td style={{ padding: '8px 10px', fontWeight: '700', whiteSpace: 'nowrap' }}>{m.act}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '50px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${m.util}%`, height: '100%', backgroundColor: '#2563eb' }}></div>
-                        </div>
-                        <span style={{ fontSize: '11px', fontWeight: '700' }}>{m.util}%</span>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Order No. <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                       </div>
-                    </td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#0F172A' }}>
-                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: m.dot }}></span>
-                        {m.pct}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 3. MACHINE OPERATOR PERFORMANCE */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-              MACHINE OPERATOR PERFORMANCE <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
-            </span>
-
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', textAlign: 'left', minWidth: '500px', fontFamily: "'DM Sans', sans-serif" }}>
-                <thead>
-                  <tr style={{ color: '#64748B', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Operator</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Machine</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Plan</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Act</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Eff.</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Qual.</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Att.</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '800', whiteSpace: 'nowrap' }}>Overall</th>
-                    <th style={{ padding: '7px 6px', fontWeight: '700', whiteSpace: 'nowrap' }}>Grade</th>
+                    </th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'Customer / Destination' : 'Product / Profile'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'Dispatch Qty' : 'Planned'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Delay</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { name: 'R. Karthik', machine: 'CNC Cutting', plan: 580, act: 546, eff: '94.1%', qual: '98.2%', att: '96%', score: '95.2%', grade: 'A+', color: '#16a34a' },
-                    { name: 'M. Arul', machine: 'Punching - 1', plan: 500, act: 462, eff: '92.4%', qual: '96.8%', att: '94%', score: '93.1%', grade: 'A', color: '#16a34a' },
-                    { name: 'S. Praveen', machine: 'Punching - 2', plan: 400, act: 352, eff: '88.0%', qual: '95.0%', att: '93%', score: '89.3%', grade: 'B+', color: '#eab308' },
-                    { name: 'K. Manoj', machine: 'Drilling', plan: 300, act: 282, eff: '94.0%', qual: '97.1%', att: '96%', score: '94.7%', grade: 'A', color: '#16a34a' },
-                    { name: 'P. Kumar', machine: 'Tapping', plan: 200, act: 168, eff: '84.0%', qual: '94.2%', att: '92%', score: '86.2%', grade: 'B', color: '#eab308' },
-                    { name: 'V. Senthil', machine: 'Roll Forming', plan: 640, act: 612, eff: '95.6%', qual: '97.8%', att: '97%', score: '96.8%', grade: 'A+', color: '#16a34a' }
-                  ].map((op, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '7px 6px', fontWeight: '700', color: '#1E293B', whiteSpace: 'nowrap' }}>{op.name}</td>
-                      <td style={{ padding: '7px 6px', color: '#475569', whiteSpace: 'nowrap' }}>{op.machine}</td>
-                      <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>{op.plan}</td>
-                      <td style={{ padding: '7px 6px', fontWeight: '600', whiteSpace: 'nowrap' }}>{op.act}</td>
-                      <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>{op.eff}</td>
-                      <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>{op.qual}</td>
-                      <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>{op.att}</td>
-                      <td style={{ padding: '7px 6px', fontWeight: '800', color: '#0F172A', whiteSpace: 'nowrap' }}>{op.score}</td>
-                      <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>
-                        <span style={{ backgroundColor: op.color, color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '800', fontSize: '10px' }}>
-                          {op.grade}
-                        </span>
+                  {(isDispatchView ? [
+                    { workOrderNo: 'VRM26/07/118', productName: 'ABC Solar Pvt Ltd', plannedQty: '500 Nos', delayDays: '2 Days', status: 'Overdue' },
+                    { workOrderNo: 'VRM26/07/101', productName: 'Sun Power EPC', plannedQty: '200 Nos', delayDays: '2 Days', status: 'Overdue' },
+                    { workOrderNo: 'VRM26/07/089', productName: 'Green Infra Ltd', plannedQty: '1500 Nos', delayDays: '1 Day', status: 'Pending' },
+                    { workOrderNo: 'VRM26/07/074', productName: 'Bright Energy', plannedQty: '400 Nos', delayDays: '1 Day', status: 'Pending' },
+                    { workOrderNo: 'VRM26/07/061', productName: 'Voltix Solutions', plannedQty: '300 Nos', delayDays: '1 Day', status: 'Pending' }
+                  ] : displayOrders).map((ord, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 4 : displayOrders.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '7px 10px', color: '#64748B', fontWeight: '600' }}>{ord.workOrderNo}</td>
+                      <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{ord.productName}</td>
+                      <td style={{ padding: '7px 10px', color: '#64748B' }}>{ord.plannedQty}</td>
+                      <td style={{ padding: '7px 10px', fontWeight: '800', color: ord.status === 'Overdue' ? '#DC2626' : '#D97706' }}>{ord.delayDays || '1 Day'}</td>
+                      <td style={{ padding: '7px 10px' }}>
+                        <StatusBadge status={ord.status} size="sm" />
                       </td>
                     </tr>
                   ))}
@@ -926,58 +948,257 @@ export default function ProductionAdminView() {
             </div>
           </div>
 
-          {/* 4. OEE ANALYSIS */}
-          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-              OEE ANALYSIS <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
-            </span>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '8px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
-                  90.2%
-                </div>
-                <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>AVAILABILITY</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
-                  88.7%
-                </div>
-                <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>PERFORMANCE</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
-                  90.1%
-                </div>
-                <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>QUALITY</span>
-              </div>
-
-              <span style={{ fontSize: '18px', fontWeight: '800', color: '#64748B' }}>=</span>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px', color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif" }}>
-                  86.3%
-                </div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: '#1e3a8a', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>OEE</span>
-              </div>
+          {/* 2. VEHICLES IN TRANSIT / MACHINE PERFORMANCE */}
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {isDispatchView ? 'Vehicles in Transit' : 'Machine Performance'}
+              </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontFamily: "'DM Sans', sans-serif" }}>
-              <div><span style={{ color: '#64748B' }}>Planned Time:</span> <strong>744.0 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Ideal Cycle Time:</span> <strong>744.0 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Total Output:</span> <strong>4,862 Nos</strong></div>
-
-              <div><span style={{ color: '#64748B' }}>Run Time:</span> <strong>671.5 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Actual Cycle Time:</span> <strong>838.2 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Good Output:</span> <strong>4,746 Nos</strong></div>
-
-              <div><span style={{ color: '#64748B' }}>Downtime:</span> <strong style={{ color: '#DC2626' }}>72.5 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Performance Loss:</span> <strong style={{ color: '#D97706' }}>94.2 Hrs</strong></div>
-              <div><span style={{ color: '#64748B' }}>Rejects:</span> <strong style={{ color: '#DC2626' }}>116 Nos</strong></div>
+            <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {isDispatchView ? 'Vehicle / Transporter' : 'Machine / Line'} <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
+                      </div>
+                    </th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'Order No' : 'Planned'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'Dispatched' : 'Actual'}</th>
+                    <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{isDispatchView ? 'ETA' : 'Utilization'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(isDispatchView ? [
+                    { name: 'TN 09 AB 1234 (SRS Logistics)', plan: 'VRM/26/07/101', act: '23-Jul-2026', util: 92, label: '24-Jul-2026' },
+                    { name: 'TN 37 CD 5678 (VRM Transport)', plan: 'VRM/26/07/089', act: '23-Jul-2026', util: 88, label: '24-Jul-2026' },
+                    { name: 'KA 01 EF 9012 (Safe Way)', plan: 'VRM/26/07/074', act: '23-Jul-2026', util: 95, label: '24-Jul-2026' },
+                    { name: 'AP 39 GH 3456 (SST Transport)', plan: 'VRM/26/07/061', act: '23-Jul-2026', util: 84, label: '24-Jul-2026' },
+                    { name: 'TN 88 U 7890 (Speed Cargo)', plan: 'VRM/26/07/090', act: '23-Jul-2026', util: 90, label: '25-Jul-2026' }
+                  ] : [
+                    { name: 'CNC Cutting Machine', plan: '1,200', act: '1,102', util: 82 },
+                    { name: 'Punching Machine - 1', plan: '1,000', act: '912', util: 76 },
+                    { name: 'Punching Machine - 2', plan: '800', act: '678', util: 74 },
+                    { name: 'Drilling Machine', plan: '600', act: '546', util: 81 },
+                    { name: 'Tapping Machine', plan: '400', act: '322', util: 70 },
+                    { name: 'Roll Forming Line', plan: '1,280', act: '1,302', util: 79 }
+                  ]).map((m, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 4 : 5) ? 'none' : '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{m.name}</td>
+                      <td style={{ padding: '7px 10px', color: '#64748B' }}>{m.plan}</td>
+                      <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{m.act}</td>
+                      <td style={{ padding: '7px 10px' }}>
+                        {isDispatchView ? (
+                          <span style={{ fontSize: '9.5px', fontWeight: '800', color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px' }}>
+                            {m.label}
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '60px', height: '5px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${m.util}%`, height: '100%', backgroundColor: '#2563EB' }}></div>
+                            </div>
+                            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0F172A' }}>{m.util}%</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          {/* 3. DOCUMENT CHECKLIST & INVOICES PENDING / MACHINE OPERATOR PERFORMANCE */}
+          {isDispatchView ? (
+            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Document Checklist (Today)
+                </span>
+              </div>
+
+              <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Document Name</th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Required</th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Completed</th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: 'Tax Invoices', req: 28, comp: 27, pend: '1 Pending', color: '#DC2626' },
+                      { name: 'E-Way Bills', req: 28, comp: 28, pend: 'Done', color: '#16A34A' },
+                      { name: 'LR / Delivery Challans', req: 28, comp: 28, pend: 'Done', color: '#16A34A' },
+                      { name: 'Packing Lists', req: 28, comp: 27, pend: '1 Pending', color: '#DC2626' },
+                      { name: 'Test Certificates (TC)', req: 12, comp: 10, pend: '2 Pending', color: '#D97706' }
+                    ].map((doc, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{doc.name}</td>
+                        <td style={{ padding: '7px 10px', color: '#64748B' }}>{doc.req}</td>
+                        <td style={{ padding: '7px 10px', fontWeight: '700', color: '#16A34A' }}>{doc.comp}</td>
+                        <td style={{ padding: '7px 10px' }}>
+                          <span style={{ color: doc.color, fontWeight: '800', fontSize: '10px' }}>
+                            {doc.pend}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Machine Operator Performance
+                </span>
+              </div>
+
+              <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          Operator <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
+                        </div>
+                      </th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Machine</th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Efficiency</th>
+                      <th style={{ padding: '7px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: 'R. Karthik', machine: 'CNC Cutting', eff: '94.1%', grade: 'A+', color: '#16A34A' },
+                      { name: 'M. Arul', machine: 'Punching - 1', eff: '92.4%', grade: 'A', color: '#16A34A' },
+                      { name: 'S. Praveen', machine: 'Punching - 2', eff: '88.0%', grade: 'B+', color: '#EAB308' },
+                      { name: 'K. Manoj', machine: 'Drilling', eff: '94.0%', grade: 'A', color: '#16A34A' },
+                      { name: 'P. Kumar', machine: 'Tapping', eff: '84.0%', grade: 'B', color: '#EAB308' },
+                      { name: 'V. Senthil', machine: 'Roll Forming', eff: '95.6%', grade: 'A+', color: '#16A34A' }
+                    ].map((op, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx === 5 ? 'none' : '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{op.name}</td>
+                        <td style={{ padding: '7px 10px', color: '#64748B' }}>{op.machine}</td>
+                        <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{op.eff}</td>
+                        <td style={{ padding: '7px 10px' }}>
+                          <span style={{ backgroundColor: op.color, color: 'white', padding: '2px 7px', borderRadius: '8px', fontWeight: '800', fontSize: '10px' }}>
+                            {op.grade}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 4. FLEET SLA COMPLIANCE / OEE ANALYSIS */}
+          {isDispatchView ? (
+            <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                DISPATCH PERFORMANCE METRICS <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
+              </span>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Avg Loading</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={14} /></div>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>52 Mins</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↓ 8 Mins</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Avg Waiting</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Hourglass size={14} /></div>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>41 Mins</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 10 Mins</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Right First Time</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={14} /></div>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>99.0%</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 1.2%</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Documentation</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={14} /></div>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>98.5%</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↑ 1.0%</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '9px', color: '#64748B', fontWeight: '700' }}>Complaints</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertCircle size={14} /></div>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>2</strong>
+                  <span style={{ fontSize: '8px', color: '#16A34A', fontWeight: 'bold' }}>↓ 1</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontFamily: "'DM Sans', sans-serif" }}>
+                <div><span style={{ color: '#64748B' }}>Total Dispatches:</span> <strong>352 Orders</strong></div>
+                <div><span style={{ color: '#64748B' }}>On-Time Dispatches:</span> <strong style={{ color: '#16A34A' }}>339 Orders</strong></div>
+                <div><span style={{ color: '#64748B' }}>Delayed Dispatches:</span> <strong style={{ color: '#DC2626' }}>13 Orders</strong></div>
+              </div>
+            </div>
+          ) : (
+            <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, boxSizing: 'border-box' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                OEE ANALYSIS <span style={{ color: '#64748B', fontWeight: '600', fontSize: '11px' }}>(THIS MONTH)</span>
+              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
+                    90.2%
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>AVAILABILITY</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
+                    88.7%
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>PERFORMANCE</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '4px solid #0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
+                    90.1%
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>QUALITY</span>
+                </div>
+
+                <span style={{ fontSize: '18px', fontWeight: '800', color: '#64748B' }}>=</span>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px', color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif" }}>
+                    86.3%
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#1e3a8a', marginTop: '4px', fontFamily: "'DM Sans', sans-serif" }}>OEE</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '11px', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontFamily: "'DM Sans', sans-serif" }}>
+                <div><span style={{ color: '#64748B' }}>Planned Time:</span> <strong>744.0 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Ideal Cycle Time:</span> <strong>744.0 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Total Output:</span> <strong>4,862 Nos</strong></div>
+
+                <div><span style={{ color: '#64748B' }}>Run Time:</span> <strong>671.5 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Actual Cycle Time:</span> <strong>838.2 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Good Output:</span> <strong>4,746 Nos</strong></div>
+
+                <div><span style={{ color: '#64748B' }}>Downtime:</span> <strong style={{ color: '#DC2626' }}>72.5 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Performance Loss:</span> <strong style={{ color: '#D97706' }}>94.2 Hrs</strong></div>
+                <div><span style={{ color: '#64748B' }}>Rejects:</span> <strong style={{ color: '#DC2626' }}>116 Nos</strong></div>
+              </div>
+            </div>
+          )}
 
           {/* 5. SHIFT WISE PRODUCTION */}
           <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1009,7 +1230,7 @@ export default function ProductionAdminView() {
 
           {/* 6. TODAY'S SNAPSHOT */}
           <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, boxSizing: 'border-box' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               TODAY'S SNAPSHOT
             </span>
 
@@ -1047,87 +1268,117 @@ export default function ProductionAdminView() {
           </div>
 
           {/* 7. CRITICAL KEY ALERTS (PLACED AT THE VERY BOTTOM OF THE DASHBOARD!) */}
-          <div className="section-card" style={{ padding: '18px 20px', backgroundColor: '#FFFFFF', border: '1px solid #FECACA', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0, boxSizing: 'border-box' }}>
-            
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #FEE2E2', paddingBottom: '12px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#DC2626', display: 'inline-block' }}></span>
-                <span style={{ fontSize: '13px', fontWeight: '800', color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: "'DM Sans', sans-serif" }}>
-                  CRITICAL KEY ALERTS
+                <span style={{ position: 'relative', display: 'flex', height: '10px', width: '10px' }}>
+                  <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '50%', backgroundColor: '#EF4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }}></span>
+                  <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '10px', width: '10px', backgroundColor: '#DC2626' }}></span>
                 </span>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CRITICAL KEY ALERTS</span>
               </div>
-              <span style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', fontFamily: "'DM Sans', sans-serif" }}>
-                4 ACTIVE NOTIFICATIONS
-              </span>
+              {dismissedAlerts.length < 3 && localStorage.getItem('controlroom_notifications_read') !== 'true' ? (
+                <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '3px 10px', borderRadius: '12px', border: '1px solid #FEE2E2' }}>
+                  {3 - dismissedAlerts.length} ACTIVE NOTIFICATIONS
+                </span>
+              ) : (
+                <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#059669', backgroundColor: '#ECFDF5', padding: '3px 10px', borderRadius: '12px', border: '1px solid #A7F3D0' }}>
+                  ALL READ & DISMISSED
+                </span>
+              )}
             </div>
 
-            {/* Alert List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
               
-              {/* Alert 1 */}
-              <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#DC2626', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-                    !
+              {/* ALERT 1 */}
+              {!dismissedAlerts.includes(1) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
+                <div style={{ position: 'relative', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#0284C7', color: '#FFFFFF', padding: '2px 12px', borderRadius: '12px', fontSize: '10.5px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)' }}>
+                    <Hourglass style={{ width: '11px', height: '11px' }} /> Pending
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#991B1B', fontFamily: "'DM Sans', sans-serif" }}>18 Production Orders are Overdue</span>
-                    <span style={{ fontSize: '11px', color: '#7F1D1D', fontFamily: "'DM Sans', sans-serif" }}>Immediate floor supervisor follow-up required</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #BAE6FD', backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
+                      <Hourglass style={{ width: '22px', height: '22px', color: '#0284C7' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>5 Quality Rejection Certificates Pending</span>
+                      <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>Your data is being processed. Awaiting QC lab verification certificate sign-off.</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
+                      Inspect QC
+                    </button>
+                    <button 
+                      onClick={() => handleDismissAlert(1)}
+                      style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
-                <button style={{ backgroundColor: '#DC2626', color: '#FFFFFF', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '12px', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
-                  Review Orders
-                </button>
-              </div>
+              )}
 
-              {/* Alert 2 */}
-              <div style={{ backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', borderLeft: '4px solid #EA580C', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#EA580C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', flexShrink: 0 }}>
-                    ▲
+              {/* ALERT 2 */}
+              {!dismissedAlerts.includes(2) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
+                <div style={{ position: 'relative', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#F59E0B', color: '#FFFFFF', padding: '2px 12px', borderRadius: '12px', fontSize: '10.5px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.25)' }}>
+                    <AlertTriangle style={{ width: '11px', height: '11px' }} /> Warning
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#9A3412', fontFamily: "'DM Sans', sans-serif" }}>Material Shortage for Mini Rail 100mm</span>
-                    <span style={{ fontSize: '11px', color: '#C2410C', fontFamily: "'DM Sans', sans-serif" }}>Raw aluminum coil stock below critical safety threshold</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #FDE68A', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
+                      <AlertTriangle style={{ width: '22px', height: '22px', color: '#D97706' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>Incomplete Setup & Material Shortage</span>
+                      <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>Raw aluminum coil stock below critical safety threshold. Some fields are missing.</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
+                      Issue Material
+                    </button>
+                    <button 
+                      onClick={() => handleDismissAlert(2)}
+                      style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
-                <button style={{ backgroundColor: '#EA580C', color: '#FFFFFF', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '12px', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
-                  Issue Material
-                </button>
-              </div>
+              )}
 
-              {/* Alert 3 */}
-              <div style={{ backgroundColor: '#FEFCE8', border: '1px solid #FEF08A', borderLeft: '4px solid #D97706', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#D97706', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px', flexShrink: 0 }}>
-                    i
+              {/* ALERT 3 */}
+              {!dismissedAlerts.includes(3) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
+                <div style={{ position: 'relative', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #CBD5E1', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
+                      <Clock style={{ width: '22px', height: '22px', color: '#475569' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>Update Made by "Xchyler"</span>
+                      <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>A change was made to "BO-T" file & 18 Production Orders.</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#854D0E', fontFamily: "'DM Sans', sans-serif" }}>5 Quality Rejection Certificates Pending</span>
-                    <span style={{ fontSize: '11px', color: '#A16207', fontFamily: "'DM Sans', sans-serif" }}>Awaiting QC lab verification certificate sign-off</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
+                      View Changes
+                    </button>
+                    <button 
+                      onClick={() => handleDismissAlert(3)}
+                      style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
-                <button style={{ backgroundColor: '#D97706', color: '#FFFFFF', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '12px', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
-                  Inspect QC
-                </button>
-              </div>
+              )}
 
-              {/* Alert 4 */}
-              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderLeft: '4px solid #16A34A', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#16A34A', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', flexShrink: 0 }}>
-                    ✓
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#166534', fontFamily: "'DM Sans', sans-serif" }}>OEE Target Exceeded (86.3%)</span>
-                    <span style={{ fontSize: '11px', color: '#15803D', fontFamily: "'DM Sans', sans-serif" }}>Weekly plant efficiency target achieved (+3.4%)</span>
-                  </div>
+              {(dismissedAlerts.length >= 3 || localStorage.getItem('controlroom_notifications_read') === 'true') && (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: '600' }}>
+                  All notifications have been marked read and dismissed.
                 </div>
-                <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '6px 16px', borderRadius: '16px', fontWeight: '700', fontSize: '12px', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
-                  Verified
-                </span>
-              </div>
+              )}
 
             </div>
           </div>

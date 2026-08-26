@@ -1,102 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Boxes, LayoutDashboard, 
-  ShoppingCart, FileText, Users, FileQuestion, PackageCheck, 
+  ShoppingCart, FileText, Users, PackageCheck, 
   Receipt, Wallet, Award, PieChart, AlertTriangle, 
   GitCompare, FileBarChart, TrendingUp, UserCheck, 
-  Settings, GitBranch, ChevronDown, ChevronLeft, ChevronRight, Upload, CheckCircle
+  Settings, GitBranch, ChevronDown, ChevronLeft, ChevronRight,
+  Search, HelpCircle, MessageSquare, Rocket, Sparkles, ChevronUp
 } from 'lucide-react';
 
 export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, userRole = 'Procurement Head' }) {
-  // Original 100% untouched Procurement Groups
-  const procurementGroups = [
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredItem, setHoveredItem] = useState(null);
+  const [hoveredItemPos, setHoveredItemPos] = useState(null);
+
+  // Categorized Menu Sections Structure matching exact design layout
+  const procurementSections = [
     {
-      title: 'Purchasing',
-      icon: ShoppingCart,
+      category: 'MAIN MENU',
       items: [
-        { label: 'Purchase Orders', icon: ShoppingCart },
-        { label: 'Goods Receipt Note', icon: PackageCheck }
+        { label: 'Dashboard', icon: LayoutDashboard },
+        { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
+        { label: 'Items Directory', icon: Boxes },
+        { label: 'Proforma Invoice', icon: FileText }
       ]
     },
     {
-      title: 'Vendors',
-      icon: Users,
+      category: 'TOOLS & OPERATIONS',
       items: [
         { label: 'Vendor Management', icon: Users },
-        { label: 'Vendor Performance', icon: Award }
-      ]
-    },
-    {
-      title: 'Receiving & Inventory',
-      icon: Boxes,
-      items: [
-        { label: 'Material Reorder', icon: AlertTriangle },
-        { label: 'Stock Status', icon: Boxes },
+        { label: 'Vendor Performance', icon: Award },
+        { label: 'Material Calculation Engine', icon: GitCompare },
+        { label: 'Material Reorder', icon: AlertTriangle, badge: '3' },
         { label: 'Price Comparison', icon: GitCompare },
-        { label: 'Items Directory', icon: Boxes }
-      ]
-    },
-    {
-      title: 'Invoicing & Payments',
-      icon: Receipt,
-      items: [
-        { label: 'Proforma Invoice', icon: FileText },
-        { label: 'Invoice Management', icon: Receipt },
         { label: 'Payments', icon: Wallet }
       ]
     },
     {
-      title: 'Analytics & Reports',
-      icon: PieChart,
+      category: 'WORKSPACE & REPORTS',
       items: [
         { label: 'Spend Analytics', icon: PieChart },
         { label: 'Procurement Reports', icon: FileBarChart },
         { label: 'Spend Reports', icon: TrendingUp },
         { label: 'Supplier Reports', icon: UserCheck }
       ]
-    },
-    {
-      title: 'Settings',
-      icon: Settings,
-      items: [
-        { label: 'Procurement Settings', icon: Settings },
-        { label: 'Approval Workflows', icon: GitBranch },
-        { label: 'Zoho Integration', icon: GitBranch }
-      ]
     }
   ];
 
-  // Original 100% untouched Production Groups
-  const productionGroups = [
+  const productionSections = [
     {
-      title: 'Plant Operations',
-      icon: Boxes,
+      category: 'MAIN MENU',
       items: [
-        { label: 'Work Orders', icon: Boxes },
-        { label: 'Planning & Scheduling', icon: FileText },
-        { label: 'Production Monitoring', icon: TrendingUp }
+        { label: 'Dashboard', icon: LayoutDashboard },
+        { label: 'Work Orders', icon: Boxes, badge: '8' },
+        { label: 'BOM Orders', icon: GitBranch, badge: '5' },
+        { label: 'Inventory (Raw Material)', icon: Boxes }
       ]
     },
     {
-      title: 'Quality & Maintenance',
-      icon: Settings,
+      category: 'TOOLS & OPERATIONS',
       items: [
+        { label: 'Planning & Scheduling', icon: FileText },
+        { label: 'Production Monitoring', icon: TrendingUp },
         { label: 'Quality Control', icon: UserCheck },
         { label: 'Machine Maintenance', icon: Settings }
       ]
     },
     {
-      title: 'Inventory & Routing',
-      icon: Boxes,
-      items: [
-        { label: 'Inventory (Raw Material)', icon: Boxes },
-        { label: 'BOM / Routing', icon: GitBranch },
-        { label: 'Material Calculation Engine', icon: GitCompare }
-      ]
-    },
-    {
-      title: 'Analytics & Reports',
-      icon: PieChart,
+      category: 'WORKSPACE & REPORTS',
       items: [
         { label: 'Production Reports', icon: FileBarChart },
         { label: 'Efficiency Reports', icon: TrendingUp },
@@ -105,379 +75,544 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     }
   ];
 
-  // Specific filtered groups for each role
-  const getGroupsForRole = (role) => {
+  // Specific filtered sections for each role
+  const getSectionsForRole = (role) => {
+    let sections = [];
+
     if (role === 'Production Head' || role === 'Production Admin') {
-      return productionGroups;
-    }
-    if (role === 'Dispatch Head') {
-      return [
-        { title: 'Dispatch & Logistics', icon: Boxes, items: [{ label: 'Dispatch Orders', icon: Boxes }, { label: 'Goods Receipt Note', icon: PackageCheck }, { label: 'Stock Status', icon: Boxes }] },
-        { title: 'Reports', icon: FileBarChart, items: [{ label: 'Production Reports', icon: FileBarChart }] }
+      sections = [...productionSections];
+    } else if (role === 'Dispatch Head') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dispatch Dashboard', icon: LayoutDashboard },
+            { label: 'Dispatch Orders', icon: Boxes, badge: '4' },
+            { label: 'Stock Status', icon: Boxes }
+          ]
+        },
+        {
+          category: 'WORKSPACE & REPORTS',
+          items: [
+            { label: 'Production Reports', icon: FileBarChart }
+          ]
+        }
       ];
-    }
-    if (role === 'Floor Supervisor') {
-      return [
-        { title: 'Shop Floor Execution', icon: Boxes, items: [{ label: 'Work Orders', icon: Boxes }, { label: 'Planning & Scheduling', icon: FileText }, { label: 'Production Monitoring', icon: TrendingUp }] },
-        { title: 'Maintenance & Incidents', icon: Settings, items: [{ label: 'Downtime Analytics', icon: PieChart }, { label: 'Machine Maintenance', icon: Settings }] }
+    } else if (role === 'Floor Supervisor') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Work Orders', icon: Boxes, badge: '6' },
+            { label: 'Planning & Scheduling', icon: FileText },
+            { label: 'Production Monitoring', icon: TrendingUp }
+          ]
+        },
+        {
+          category: 'TOOLS & OPERATIONS',
+          items: [
+            { label: 'Downtime Analytics', icon: PieChart },
+            { label: 'Machine Maintenance', icon: Settings }
+          ]
+        }
       ];
-    }
-    if (role === 'Floor Employee') {
-      return [
-        { title: 'Shop Floor Line', icon: Boxes, items: [{ label: 'Production Monitoring', icon: TrendingUp }, { label: 'Work Orders', icon: Boxes }, { label: 'Downtime Analytics', icon: PieChart }] }
+    } else if (role === 'Floor Employee') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Production Monitoring', icon: TrendingUp },
+            { label: 'Work Orders', icon: Boxes }
+          ]
+        }
       ];
-    }
-    if (role === 'Accounts Head' || role === 'Accounts Executive') {
-      return [
-        { title: 'Invoicing & Payments', icon: Receipt, items: [{ label: 'Accounts Verification', icon: CheckCircle }, { label: 'Proforma Invoice', icon: FileText }, { label: 'Payments', icon: Wallet }] },
-        { title: 'Financial Analytics', icon: PieChart, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Spend Reports', icon: TrendingUp }] }
+    } else if (role === 'Accounts Head' || role === 'Accounts Executive') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Accounts Verification', icon: CheckCircle },
+            { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Payments', icon: Wallet }
+          ]
+        },
+        {
+          category: 'WORKSPACE & REPORTS',
+          items: [
+            { label: 'Spend Analytics', icon: PieChart },
+            { label: 'Spend Reports', icon: TrendingUp }
+          ]
+        }
       ];
-    }
-    if (role === 'Sales Head' || role === 'Sales Executive') {
-      return [
-        { title: 'Sales & Orders', icon: ShoppingCart, items: [{ label: 'Proforma Invoice', icon: FileText }, { label: 'BOM', icon: GitBranch }, { label: 'Customer Management', icon: UserCheck }, { label: 'Stock Status', icon: Boxes }] }
+    } else if (role === 'Sales Head' || role === 'Sales Executive') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Proforma Invoice', icon: FileText },
+            { label: 'BOM Orders', icon: GitBranch },
+            { label: 'Customer Management', icon: UserCheck },
+            { label: 'Stock Status', icon: Boxes }
+          ]
+        }
       ];
-    }
-    if (role === 'Design Engineer' || role === 'Design Executive') {
-      return [
-        { title: 'Engineering & BOM', icon: GitBranch, items: [{ label: 'BOM / Routing', icon: GitBranch }, { label: 'Material Calculation Engine', icon: GitCompare }] }
+    } else if (role === 'Design Engineer' || role === 'Design Executive') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'BOM Orders', icon: GitBranch },
+            { label: 'Material Calculation Engine', icon: GitCompare }
+          ]
+        }
       ];
-    }
-    if (role === 'Invoice Executive') {
-      return [
-        { title: 'Invoicing & Payments', icon: Receipt, items: [{ label: 'Invoice Management', icon: Receipt }, { label: 'Proforma Invoice', icon: FileText }, { label: 'Payments', icon: Wallet }] },
-        { title: 'Financial Analytics', icon: PieChart, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Spend Reports', icon: TrendingUp }] }
+    } else if (role === 'Invoice Executive') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Invoice Management', icon: Receipt },
+            { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Payments', icon: Wallet }
+          ]
+        },
+        {
+          category: 'WORKSPACE & REPORTS',
+          items: [
+            { label: 'Spend Analytics', icon: PieChart },
+            { label: 'Spend Reports', icon: TrendingUp }
+          ]
+        }
       ];
-    }
-    if (role === 'BOM Executive') {
-      return [
-        { title: 'Sales & Engineering BOM', icon: GitBranch, items: [{ label: 'BOM', icon: GitBranch }, { label: 'BOM / Routing', icon: GitBranch }, { label: 'Customer Management', icon: UserCheck }, { label: 'Material Calculation Engine', icon: GitCompare }] }
+    } else if (role === 'BOM Executive') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'BOM Orders', icon: GitBranch },
+            { label: 'Customer Management', icon: UserCheck },
+            { label: 'Material Calculation Engine', icon: GitCompare }
+          ]
+        }
       ];
-    }
-    if (role === 'CEO') {
-      return [
-        { title: 'Executive Summary', icon: LayoutDashboard, items: [{ label: 'Spend Analytics', icon: PieChart }, { label: 'Production Reports', icon: FileBarChart }, { label: 'Work Orders', icon: Boxes }, { label: 'Purchase Orders', icon: ShoppingCart }] },
-        { title: 'Financials', icon: Receipt, items: [{ label: 'Proforma Invoice', icon: FileText }, { label: 'Spend Reports', icon: TrendingUp }] }
+    } else if (role === 'CEO') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Work Orders', icon: Boxes, badge: '8' },
+            { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
+            { label: 'Proforma Invoice', icon: FileText }
+          ]
+        },
+        {
+          category: 'WORKSPACE & REPORTS',
+          items: [
+            { label: 'Spend Analytics', icon: PieChart },
+            { label: 'Production Reports', icon: FileBarChart },
+            { label: 'Spend Reports', icon: TrendingUp }
+          ]
+        }
       ];
+    } else {
+      sections = [...procurementSections];
     }
-    return procurementGroups;
+
+    // Always ensure Zoho Integration is listed under SYSTEM & CONFIG
+    const hasZoho = sections.some(s => s.items && s.items.some(i => i.label === 'Zoho Integration'));
+    if (!hasZoho) {
+      sections.push({
+        category: 'SYSTEM & CONFIG',
+        items: [
+          { label: 'Zoho Integration', icon: GitBranch }
+        ]
+      });
+    }
+
+    return sections;
   };
 
-  const groups = getGroupsForRole(userRole);
+  const sections = getSectionsForRole(userRole);
 
-  // Map performa/proforma variant
   const normalizeTab = (tab) => {
     return tab === 'Performa Invoice' ? 'Proforma Invoice' : tab;
   };
 
-  // Find index of the group that contains the active tab
-  const getActiveGroupIndex = (tab) => {
-    const norm = normalizeTab(tab);
-    return groups.findIndex(group => 
-      group.items.some(item => item.label === norm)
-    );
+  const getBadgeStyle = (label) => {
+    if (label === 'Purchase Orders') {
+      return {
+        backgroundColor: '#EEF2FF',
+        color: '#4F46E5',
+        border: '1px solid #C7D2FE'
+      };
+    }
+    if (label === 'Work Orders') {
+      return {
+        backgroundColor: '#ECFDF5',
+        color: '#059669',
+        border: '1px solid #A7F3D0'
+      };
+    }
+    if (label === 'BOM Orders') {
+      return {
+        backgroundColor: '#F3E8FF',
+        color: '#7C3AED',
+        border: '1px solid #DDD6FE'
+      };
+    }
+    if (label === 'Material Reorder') {
+      return {
+        backgroundColor: '#FEF3C7',
+        color: '#D97706',
+        border: '1px solid #FDE68A'
+      };
+    }
+    if (label === 'Dispatch Orders') {
+      return {
+        backgroundColor: '#E0F2FE',
+        color: '#0284C7',
+        border: '1px solid #BAE6FD'
+      };
+    }
+    return {
+      backgroundColor: '#F1F5F9',
+      color: '#475569',
+      border: '1px solid #E2E8F0'
+    };
   };
 
-  // State to track which group is expanded
-  const [expandedGroup, setExpandedGroup] = useState(() => {
-    const activeIdx = getActiveGroupIndex(activeTab);
-    return activeIdx !== -1 ? activeIdx : null;
-  });
-
-  // Hover state for collapsed sidebar submenus
-  const [hoveredGroup, setHoveredGroup] = useState(null);
-
-  // Keep expanded group in sync with active tab changes
-  useEffect(() => {
-    const activeIdx = getActiveGroupIndex(activeTab);
-    if (activeIdx !== -1) {
-      setExpandedGroup(activeIdx);
-    }
-  }, [activeTab]);
-
-  // Reset hover state when active tab or collapsed state changes to clean up tooltips
-  useEffect(() => {
-    setHoveredGroup(null);
-  }, [activeTab, collapsed]);
-
-  const handleGroupClick = (index) => {
-    if (collapsed) {
-      onToggle();
-      setExpandedGroup(index);
-    } else {
-      setExpandedGroup(prev => prev === index ? null : index);
-    }
-  };
+  // Filter sections by search query
+  const filteredSections = sections.map(sec => ({
+    ...sec,
+    items: sec.items.filter(item => 
+      !searchQuery || item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(sec => sec.items.length > 0);
 
   return (
     <aside 
       className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}
       style={{
-        height: 'auto',
-        minHeight: '100vh',
-        padding: collapsed ? 'var(--spacing-16) var(--spacing-8)' : 'var(--spacing-16)',
+        width: collapsed ? '78px' : '260px',
+        background: 'linear-gradient(180deg, #E4F1F6 0%, #EEF7FA 45%, #E3F0F5 100%)',
+        borderRight: '1px solid #D2E4EC',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'var(--spacing-16)',
-        overflowY: 'visible',
-        backgroundColor: '#F8F9FA',
-        borderRight: '1px solid var(--color-border)',
-        position: 'relative'
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        flexShrink: 0,
+        padding: collapsed ? '16px 8px' : '16px 14px',
+        boxSizing: 'border-box',
+        transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1), padding 0.25s ease',
+        fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif"
       }}
     >
-      {/* Floating Toggle Arrow Button on Right Border */}
+
+      {/* 1. TOP HEADER BRAND CARD */}
       <div 
-        onClick={onToggle}
+        onClick={collapsed ? onToggle : undefined}
         style={{
-          position: 'absolute',
-          top: '32px',
-          right: '-12px',
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid var(--color-border)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.9)',
+          padding: collapsed ? '8px' : '10px 12px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 101,
-          transition: 'transform 0.2s'
+          justifyContent: collapsed ? 'center' : 'space-between',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+          marginBottom: '14px',
+          position: 'relative',
+          cursor: collapsed ? 'pointer' : 'default'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        title={collapsed ? "Click to expand sidebar" : undefined}
       >
-        {collapsed ? (
-          <ChevronRight style={{ width: '12px', height: '12px', color: '#64748B' }} />
-        ) : (
-          <ChevronLeft style={{ width: '12px', height: '12px', color: '#64748B' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          {/* Dark Hexagon Logo Box matching image */}
+          <div style={{
+            width: '38px',
+            height: '38px',
+            backgroundColor: '#0F172A',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: '#FFFFFF',
+            fontWeight: '900',
+            fontSize: '17px',
+            letterSpacing: '-0.5px',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)'
+          }}>
+            w.
+          </div>
+
+          {!collapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+              <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.2', letterSpacing: '-0.3px' }}>
+                ControlRoom Inc.
+              </span>
+              <span style={{ fontSize: '11.5px', fontWeight: '500', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                Enterprise Edition
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Collapse toggle button « */}
+        {!collapsed && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '8px',
+              border: '1px solid rgba(203, 213, 225, 0.8)',
+              backgroundColor: '#FFFFFF',
+              color: '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontSize: '13px',
+              fontWeight: '900',
+              lineHeight: 1,
+              transition: 'all 0.15s ease',
+              marginLeft: '8px'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#EFF6FF'; e.currentTarget.style.color = '#2563EB'; e.currentTarget.style.borderColor = '#BFDBFE'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = 'rgba(203, 213, 225, 0.8)'; }}
+            title="Collapse Sidebar"
+          >
+            «
+          </button>
         )}
       </div>
 
-      {/* Logo Header: Black pill with white dot */}
-      <div className="sidebar-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: collapsed ? '0' : '4px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
+      {/* 2. SEARCH BAR INPUT WITH ⌘K BADGE */}
+      {!collapsed ? (
         <div style={{
-          width: '42px',
-          height: '42px',
-          backgroundColor: '#000000',
-          borderRadius: '12px',
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255, 255, 255, 0.9)',
+          borderRadius: '14px',
+          height: '38px',
+          padding: '0 10px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0
+          gap: '8px',
+          marginBottom: '14px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
         }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            border: '3px solid #ffffff',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <div style={{
-              width: '4px',
-              height: '4px',
-              backgroundColor: '#ffffff',
-              borderRadius: '50%'
-            }} />
+          <Search style={{ width: '15px', height: '15px', color: '#64748B', flexShrink: 0 }} />
+          <input 
+            type="text" 
+            placeholder="Search" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              outline: 'none',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#0F172A',
+              width: '100%',
+              fontFamily: 'inherit'
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #CBD5E1', borderRadius: '5px', padding: '1px 5px' }}>⌘</span>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #CBD5E1', borderRadius: '5px', padding: '1px 5px' }}>K</span>
           </div>
         </div>
-        {!collapsed && (
-          <span className="logo-text" style={{ fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
-            ControlRoom
-          </span>
-        )}
-      </div>
-
-      <br />
-
-      {/* Navigation Links */}
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)', flex: 1, minHeight: 0 }}>
-        
-        {/* Dashboard (direct link) */}
+      ) : (
         <div 
-          className={`nav-item ${activeTab === 'Dashboard' ? 'active' : ''}`}
-          onClick={() => onChangeTab('Dashboard')}
-          style={{ 
-            height: '44px', 
-            padding: collapsed ? '0' : '0 var(--spacing-12)', 
-            cursor: 'pointer',
+          onClick={onToggle}
+          style={{
+            height: '38px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: collapsed ? '0' : 'var(--spacing-12)',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: '600',
-            backgroundColor: activeTab === 'Dashboard' ? '#FFFFFF' : 'transparent',
-            boxShadow: activeTab === 'Dashboard' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-            color: activeTab === 'Dashboard' ? '#1E293B' : '#64748B'
+            justifyContent: 'center',
+            cursor: 'pointer',
+            marginBottom: '14px'
           }}
+          title="Search"
         >
-          <LayoutDashboard style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-          {!collapsed && <span>Dashboard</span>}
+          <Search style={{ width: '15px', height: '15px', color: '#64748B' }} />
         </div>
+      )}
 
-        {/* Accordion / Dropdown groups */}
-        {groups.map((group, idx) => {
-          const GroupIcon = group.icon;
-          const isExpanded = expandedGroup === idx;
-          const isChildActive = group.items.some(item => 
-            normalizeTab(item.label) === normalizeTab(activeTab)
-          );
-          const isParentActive = collapsed ? isChildActive : (isChildActive && !isExpanded);
+      {/* 3. SCROLLABLE NAVIGATION LIST */}
+      <div 
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          paddingRight: '2px'
+        }}
+      >
+        {filteredSections.map((sec, sIdx) => (
+          <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {/* Category Header */}
+            {!collapsed && (
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#64748B',
+                letterSpacing: '0.04em',
+                padding: '4px 8px 2px 8px',
+                textTransform: 'none'
+              }}>
+                {sec.category}
+              </span>
+            )}
 
-          return (
-            <div 
-              key={idx} 
-              style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '2px' }}
-              onMouseEnter={() => collapsed && setHoveredGroup(idx)}
-              onMouseLeave={() => collapsed && setHoveredGroup(null)}
-            >
-              {/* Group Parent Item */}
-              <div 
-                className={`nav-item ${isParentActive ? 'active' : ''}`}
-                onClick={() => handleGroupClick(idx)}
-                style={{ 
-                  height: '44px', 
-                  padding: collapsed ? '0' : '0 var(--spacing-12)', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: collapsed ? 'center' : 'space-between',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: isParentActive ? '#1E293B' : '#64748B',
-                  backgroundColor: isParentActive ? '#FFFFFF' : 'transparent',
-                  boxShadow: isParentActive ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: collapsed ? '0' : 'var(--spacing-12)',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  width: collapsed ? '100%' : 'auto'
-                }}>
-                  <GroupIcon style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-                  {!collapsed && <span>{group.title}</span>}
-                </div>
-                {!collapsed && (
-                  <ChevronDown 
-                    style={{ 
-                      width: '14px', 
-                      height: '14px', 
-                      transition: 'transform 0.2s ease', 
-                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(-90deg)',
-                      color: 'var(--color-text-secondary)'
-                    }} 
-                  />
-                )}
-              </div>
+            {/* Nav Items */}
+            {sec.items.map((item, iIdx) => {
+              const ItemIcon = item.icon;
+              const isActive = normalizeTab(item.label) === normalizeTab(activeTab);
 
-              {/* Collapsed Tooltip (Only shows when collapsed and hovered) */}
-              {collapsed && hoveredGroup === idx && (
+              return (
                 <div 
+                  key={iIdx}
+                  title={collapsed ? item.label : undefined}
+                  onClick={() => {
+                    const targetTab = item.label === 'Proforma Invoice' ? 'Performa Invoice' : item.label;
+                    onChangeTab(targetTab);
+                  }}
+                  onMouseEnter={(e) => {
+                    setHoveredItem(item.label);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredItemPos({ label: item.label, top: rect.top + (rect.height / 2) });
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredItem(null);
+                    setHoveredItemPos(null);
+                  }}
                   style={{
-                    position: 'absolute',
-                    left: '64px',
-                    top: '8px',
-                    backgroundColor: '#1E293B',
-                    color: '#FFFFFF',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    padding: '6px 12px',
-                    whiteSpace: 'nowrap',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    zIndex: 200,
-                    pointerEvents: 'none'
+                    height: '40px',
+                    borderRadius: '20px',
+                    padding: collapsed ? '0' : '0 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'space-between',
+                    cursor: 'pointer',
+                    backgroundColor: isActive ? '#FFFFFF' : hoveredItem === item.label ? 'rgba(255, 255, 255, 0.55)' : 'transparent',
+                    border: isActive ? '1px solid rgba(255, 255, 255, 0.9)' : '1px solid transparent',
+                    boxShadow: isActive ? '0 4px 14px rgba(15, 23, 42, 0.06)' : 'none',
+                    transition: 'all 0.15s ease',
+                    position: 'relative'
                   }}
                 >
-                  {group.title}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? '0' : '10px', minWidth: 0 }}>
+                    <ItemIcon style={{ 
+                      width: '16px', 
+                      height: '16px', 
+                      color: isActive ? '#0F172A' : '#475569', 
+                      flexShrink: 0 
+                    }} />
+                    {!collapsed && (
+                      <span style={{
+                        fontSize: '13.5px',
+                        fontWeight: isActive ? '800' : '600',
+                        color: isActive ? '#0F172A' : '#334155',
+                        letterSpacing: '-0.015em',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {item.label}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badge pill in Expanded & Collapsed mode (Dark Slate Circle Badge matching reference image) */}
+                  {item.badge && (
+                    <span style={{
+                      fontSize: collapsed ? '9.5px' : '11px',
+                      fontWeight: '800',
+                      borderRadius: collapsed ? '6px' : '10px',
+                      padding: collapsed ? '1px 4.5px' : '2px 8px',
+                      lineHeight: '1.2',
+                      minWidth: collapsed ? '16px' : '20px',
+                      textAlign: 'center',
+                      backgroundColor: '#0F172A',
+                      color: '#FFFFFF',
+                      boxShadow: '0 2px 4px rgba(15, 23, 42, 0.15)',
+                      position: collapsed ? 'absolute' : 'static',
+                      top: collapsed ? '4px' : 'auto',
+                      right: collapsed ? '6px' : 'auto',
+                      zIndex: collapsed ? 2 : 1
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
-              )}
+              );
+            })}
 
-              {/* Group Child Items (Expanded mode) */}
-              <div 
-                style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out',
-                  maxHeight: (isExpanded && !collapsed) ? `${group.items.length * 42}px` : '0px',
-                  opacity: (isExpanded && !collapsed) ? 1 : 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px',
-                  paddingLeft: collapsed ? '0' : '28px',
-                  marginTop: '2px'
-                }}
-              >
-                {/* Vertical Connector Line */}
-                {!collapsed && isExpanded && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '16px',
-                    top: '0',
-                    bottom: '18px',
-                    width: '1px',
-                    backgroundColor: '#E2E8F0'
-                  }} />
-                )}
+            {/* Section Divider Line */}
+            {sIdx < filteredSections.length - 1 && (
+              <div style={{ height: '1px', backgroundColor: 'rgba(203, 213, 225, 0.4)', margin: '6px 0' }} />
+            )}
+          </div>
+        ))}
 
-                {group.items.map((subItem, sIdx) => {
-                  const SubIcon = subItem.icon;
-                  const isSubActive = normalizeTab(subItem.label) === normalizeTab(activeTab);
 
-                  return (
-                    <div 
-                      key={sIdx}
-                      className={`nav-item ${isSubActive ? 'active' : ''}`}
-                      onClick={() => {
-                        const targetTab = subItem.label === 'Proforma Invoice' ? 'Performa Invoice' : subItem.label;
-                        onChangeTab(targetTab);
-                      }}
-                      style={{ 
-                        position: 'relative',
-                        height: '38px', 
-                        padding: collapsed ? '0' : '0 var(--spacing-12)', 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: collapsed ? 'center' : 'flex-start',
-                        gap: collapsed ? '0' : 'var(--spacing-8)',
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        fontWeight: isSubActive ? '600' : '500',
-                        color: isSubActive ? '#1E293B' : '#64748B',
-                        backgroundColor: isSubActive ? '#FFFFFF' : 'transparent',
-                        boxShadow: isSubActive ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-                      }}
-                    >
-                      {/* Horizontal Tick Connection */}
-                      {!collapsed && (
-                        <div style={{
-                          position: 'absolute',
-                          left: '-12px',
-                          top: '50%',
-                          width: '8px',
-                          height: '1px',
-                          backgroundColor: '#E2E8F0'
-                        }} />
-                      )}
-                      <SubIcon style={{ width: '14px', height: '14px', flexShrink: 0 }} />
-                      {!collapsed && <span>{subItem.label}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </nav>
+      </div>
+
+
+
+      {/* FLOATING FIXED TOOLTIP PORTAL IN COLLAPSED MODE */}
+      {collapsed && hoveredItemPos && (
+        <div style={{
+          position: 'fixed',
+          left: '86px',
+          top: `${hoveredItemPos.top}px`,
+          transform: 'translateY(-50%)',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          borderRadius: '8px',
+          padding: '6px 12px',
+          fontSize: '12.5px',
+          fontWeight: '700',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)',
+          zIndex: 999999,
+          pointerEvents: 'none',
+          letterSpacing: '-0.1px'
+        }}>
+          {hoveredItemPos.label}
+          {/* Arrow Indicator */}
+          <div style={{
+            position: 'absolute',
+            left: '-4px',
+            top: '50%',
+            transform: 'translateY(-50%) rotate(45deg)',
+            width: '8px',
+            height: '8px',
+            backgroundColor: '#0F172A'
+          }} />
+        </div>
+      )}
 
     </aside>
   );
