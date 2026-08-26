@@ -25,58 +25,58 @@ export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = f
   const kpis = [
     {
       title: 'TOTAL PO VALUE',
-      value: hasRealData ? `₹${realTotalValue.toLocaleString('en-IN')}` : '₹ 4.28 Cr',
-      trend: '16.2%',
+      value: hasRealData ? `₹${realTotalValue.toLocaleString('en-IN')}` : '₹ 0',
+      trend: '0%',
       trendUp: true,
       icon: Wallet,
       iconColor: '#F97316',
       iconBg: '#FFF7ED',
       bottomPrefix: 'This month, generated extra ',
-      bottomHighlight: '₹ 4.2 Lakhs'
+      bottomHighlight: '₹ 0'
     },
     {
       title: 'TOTAL PO QTY (MT/NOS)',
-      value: '1,256',
-      trend: '12.8%',
+      value: hasRealData ? `${realIssued}` : '0',
+      trend: '0%',
       trendUp: true,
       icon: Package,
       iconColor: '#0284C7',
       iconBg: '#F0F9FF',
       bottomPrefix: 'This month, dispatched ',
-      bottomHighlight: '+142 MT'
+      bottomHighlight: '0 MT'
     },
     {
       title: 'POS RAISED (THIS MONTH)',
-      value: hasRealData ? `${realIssued}` : '86',
-      trend: '10.3%',
+      value: hasRealData ? `${realIssued}` : '0',
+      trend: '0%',
       trendUp: true,
       icon: FileCheck,
       iconColor: '#0E7490',
       iconBg: '#ECFEFF',
       bottomPrefix: 'This month, issued ',
-      bottomHighlight: '86 new POs'
+      bottomHighlight: '0 new POs'
     },
     {
       title: 'POS RECEIVED (THIS MONTH)',
-      value: hasRealData ? `${realCompleted}` : '72',
-      trend: '14.1%',
+      value: hasRealData ? `${realCompleted}` : '0',
+      trend: '0%',
       trendUp: true,
       icon: Truck,
       iconColor: '#16A34A',
       iconBg: '#F0FDF4',
       bottomPrefix: 'This month, completed ',
-      bottomHighlight: '72 orders'
+      bottomHighlight: '0 orders'
     },
     {
       title: 'OVERDUE POS',
-      value: hasRealData ? `${realPending}` : '14',
-      trend: '3',
+      value: hasRealData ? `${realPending}` : '0',
+      trend: '0',
       trendUp: false,
       icon: AlertTriangle,
       iconColor: '#DC2626',
       iconBg: '#FEF2F2',
       bottomPrefix: 'Requires attention, ',
-      bottomHighlight: '14 pending POs'
+      bottomHighlight: '0 pending POs'
     }
   ];
 

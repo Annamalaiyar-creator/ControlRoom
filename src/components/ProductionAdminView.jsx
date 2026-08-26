@@ -9,6 +9,7 @@ import {
 import POStatusOverview from './POStatusOverview';
 import DailyProductionTrendChart from './DailyProductionTrendChart';
 import StatusBadge from './StatusBadge';
+import { prodModuleEngine } from '../utils/productionModuleEngine';
 
 export default function ProductionAdminView({ activeTab, userRole }) {
   const isDispatchView = userRole === 'Dispatch Head' || activeTab === 'Dispatch Dashboard';
@@ -66,9 +67,16 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     }
   };
 
+  const [, setEngineTick] = useState(0);
+
   useEffect(() => {
-    fetchWorkOrders();
+    const unsubscribe = prodModuleEngine.subscribe(() => {
+      setEngineTick(t => t + 1);
+    });
+    return () => unsubscribe();
   }, []);
+
+  const realEngineWOs = prodModuleEngine.getWorkOrders();
 
   const handleCreateWorkOrder = async (e) => {
     e.preventDefault();
@@ -422,14 +430,23 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     };
   }, [activeTrendIndex, trendFilter]);
 
-  // Display orders from live fetch or fallback
-  const displayOrders = workOrders.length > 0 ? workOrders.slice(0, 5) : [
-    { workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: '2 Days', delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626' },
-    { workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: '2 Days', delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626' },
-    { workOrderNo: 'VRM26/07/089', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: '1 Day', delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706' },
-    { workOrderNo: 'VRM26/07/074', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: '1 Day', delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706' },
-    { workOrderNo: 'VRM26/07/061', productName: 'End Clamp 35 mm', plannedQty: 300, completedQty: 210, delayDays: '1 Day', delayReason: 'Inspection Hold', status: 'Pending', statusColor: '#D97706' }
-  ];
+  // Display orders dynamically from real prodModuleEngine store
+  const displayOrders = realEngineWOs.map(wo => {
+    let stColor = '#2563EB';
+    if (wo.status === 'COMPLETED_PENDING_VERIFICATION') stColor = '#0E7490';
+    if (wo.status === 'APPROVED_CLOSED') stColor = '#16A34A';
+    if (wo.status === 'PENDING_MATERIAL') stColor = '#D97706';
+    return {
+      workOrderNo: wo.id,
+      productName: wo.finishedProductName,
+      plannedQty: wo.targetQty,
+      completedQty: wo.actualGoodOutput || 0,
+      delayDays: 'On Time',
+      delayReason: wo.instructions || 'Standard Production',
+      status: (wo.status || 'PLANNED').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
+      statusColor: stColor
+    };
+  });
 
   return (
     <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '4px' }}>
@@ -730,23 +747,33 @@ export default function ProductionAdminView({ activeTab, userRole }) {
           {/* 1. STATUS BREAKDOWN WITH MASTER PIE CHART COMPONENT */}
           <POStatusOverview 
             title={isFloorView ? "My Assigned Work Orders" : isDispatchView ? "Dispatch Orders by Status" : "Work Orders by Status"} 
-            totalCount={isFloorView ? "14" : isDispatchView ? "64" : "5,280"}
+            totalCount={String(realEngineWOs.length)}
             totalLabel={isFloorView ? "ASSIGNED WOs" : isDispatchView ? "TOTAL ORDERS" : "TOTAL ORDERS"}
-            items={isFloorView ? [
-              { name: 'In Production', count: '8 WOs', color: '#0284C7', pct: 0.571 },
-              { name: 'Completed Today', count: '4 WOs', color: '#16A34A', pct: 0.286 },
-              { name: 'Pending Material', count: '1 WO', color: '#EA580C', pct: 0.071 },
-              { name: 'QA Inspection', count: '1 WO', color: '#8B5CF6', pct: 0.071 }
-            ] : isDispatchView ? [
-              { name: 'Dispatched', count: '44', color: '#22C55E', pct: 0.688 },
-              { name: 'In Transit', count: '18', color: '#0284C7', pct: 0.281 },
-              { name: 'Ready for Dispatch', count: '6', color: '#EAB308', pct: 0.094 },
-              { name: 'Pending (Not Ready)', count: '8', color: '#EC4899', pct: 0.125 }
-            ] : [
-              { name: 'Completed', count: '4,746', color: '#22C55E', pct: 0.68 },
-              { name: 'In Progress', count: '342', color: '#0084FF', pct: 0.18 },
-              { name: 'Planned', count: '142', color: '#06B6D4', pct: 0.09 },
-              { name: 'Approved', count: '50', color: '#38BDF8', pct: 0.05 }
+            items={[
+              { 
+                name: 'In Production', 
+                count: `${realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length} WOs`, 
+                color: '#0284C7', 
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'IN_PROGRESS' || w.status === 'ACCEPTED').length / realEngineWOs.length) : 0 
+              },
+              { 
+                name: 'Completed & Approved', 
+                count: `${realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length} WOs`, 
+                color: '#16A34A', 
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'APPROVED_CLOSED').length / realEngineWOs.length) : 0 
+              },
+              { 
+                name: 'Pending Verification', 
+                count: `${realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length} WOs`, 
+                color: '#0E7490', 
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'COMPLETED_PENDING_VERIFICATION').length / realEngineWOs.length) : 0 
+              },
+              { 
+                name: 'Draft / Pending Material', 
+                count: `${realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length} WOs`, 
+                color: '#EA580C', 
+                pct: realEngineWOs.length ? (realEngineWOs.filter(w => w.status === 'PENDING_MATERIAL' || w.status === 'DRAFT' || w.status === 'MATERIAL_RESERVED').length / realEngineWOs.length) : 0 
+              }
             ]}
           />
 
