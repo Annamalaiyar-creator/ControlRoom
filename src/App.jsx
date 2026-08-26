@@ -18,12 +18,19 @@ import CreateWorkOrderPage from './components/CreateWorkOrderPage';
 
 import ProductionAdminView from './components/ProductionAdminView';
 import LoginScreen from './components/LoginScreen';
+import DeveloperPortalView from './components/DeveloperPortalView';
+import NotificationToast from './components/NotificationToast';
 import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt } from 'lucide-react';
 import { useEffect } from 'react';
 
 function App() {
   // Default sidebar collapsed to TRUE (closed/inside by default on loading)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [toastAlert, setToastAlert] = useState(null);
+
+  const showCustomAlert = (msg, title, type = 'info') => {
+    setToastAlert({ message: msg, title, type });
+  };
 
   // Authentication & Role State (Always requires Login on fresh visit)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -104,6 +111,25 @@ function App() {
 
   if (!isAuthenticated) {
     return <LoginScreen onLoginSuccess={(role) => handleRoleSwitch(role)} />;
+  }
+
+  // Developer / Technical Admin Portal Dedicated Fullscreen Console
+  if (userRole === 'Technical Administrator' || activeTab === 'Developer Console' || activeTab === 'Developer Portal') {
+    return (
+      <>
+        <DeveloperPortalView 
+          userRole={userRole} 
+          onSignOut={handleSignOut} 
+          showCustomAlert={showCustomAlert} 
+        />
+        {toastAlert && (
+          <NotificationToast 
+            alert={toastAlert} 
+            onClose={() => setToastAlert(null)} 
+          />
+        )}
+      </>
+    );
   }
 
   return (

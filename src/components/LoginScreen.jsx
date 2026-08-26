@@ -26,6 +26,16 @@ import {
 
 export const USER_ROLES_CONFIG = [
   {
+    role: 'Technical Administrator',
+    category: 'System Engineering',
+    user: 'dev@vrm.com',
+    pass: 'dev123',
+    name: 'Lead Developer & Tech Admin',
+    icon: Asterisk,
+    color: '#0284c7',
+    desc: 'Full system engineering, server infrastructure, API monitoring & database administration.'
+  },
+  {
     role: 'CEO',
     category: 'Executive Leadership',
     user: 'ceo@vrm.com',
