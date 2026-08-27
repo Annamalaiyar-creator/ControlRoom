@@ -19649,7 +19649,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </h3>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                         Mode of Transport <span style={{ color: '#EF4444' }}>*</span>
@@ -19676,39 +19676,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                        Transporter / Carrier Name
+                        Transport Name
                       </label>
                       <input
                         type="text"
                         value={newBomTransporterName}
                         onChange={(e) => setNewBomTransporterName(e.target.value)}
-                        placeholder="e.g. VRL Logistics / TCI Freight"
-                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                        Vehicle Number (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={newBomVehicleNo}
-                        onChange={(e) => setNewBomVehicleNo(e.target.value)}
-                        placeholder="e.g. TN-09-AB-1234"
-                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                        LR / Docket No (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={newBomLrNo}
-                        onChange={(e) => setNewBomLrNo(e.target.value)}
-                        placeholder="e.g. LR-98421 / Waybill #"
+                        placeholder="e.g. VRL Logistics / TCI Freight / Local Transport"
                         style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
                       />
                     </div>
