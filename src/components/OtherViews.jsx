@@ -845,6 +845,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           fetch('/api/zoho/purchaseorders')
             .then(res => res.json())
             .then(d => { if (Array.isArray(d)) setLivePOs(d); });
+
+          fetch('/api/zoho/items')
+            .then(res => res.json())
+            .then(items => { if (Array.isArray(items)) setItemsList(items); });
         }
         setShowCreateGRN(false);
         resetCreateGRNForm();
@@ -945,6 +949,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         fetch('/api/zoho/purchaseorders')
           .then(res => res.json())
           .then(d => { if (Array.isArray(d)) setLivePOs(d); });
+
+        fetch('/api/zoho/items')
+          .then(res => res.json())
+          .then(items => { if (Array.isArray(items)) setItemsList(items); });
 
         setShowCreateGRN(false);
         resetCreateGRNForm();

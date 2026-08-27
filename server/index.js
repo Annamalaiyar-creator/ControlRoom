@@ -2644,6 +2644,47 @@ app.post('/api/grns', async (req, res) => {
     console.error('Failed to update PO status in po_store:', err);
   }
 
+  // Auto-update central item stock in item_store.json upon GRN receipt
+  try {
+    const localItems = loadLocalItems();
+    if (Array.isArray(localItems) && localItems.length > 0) {
+      let itemsUpdated = false;
+      const updatedItems = localItems.map(item => {
+        const itemNameClean = String(item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const itemCodeClean = String(item.code || item.sku || item.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        let addedQty = 0;
+        (newGRN.items || []).forEach(grnItem => {
+          const grnItemNameClean = String(grnItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const grnItemCodeClean = String(grnItem.code || grnItem.sku || grnItem.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          
+          const isNameMatch = itemNameClean && grnItemNameClean && (itemNameClean === grnItemNameClean || itemNameClean.includes(grnItemNameClean) || grnItemNameClean.includes(itemNameClean));
+          const isCodeMatch = itemCodeClean && grnItemCodeClean && (itemCodeClean === grnItemCodeClean || itemCodeClean.includes(grnItemCodeClean) || grnItemCodeClean.includes(itemCodeClean));
+
+          if (isNameMatch || isCodeMatch) {
+            const qty = Number(grnItem.accepted !== undefined ? grnItem.accepted : (grnItem.now || 0));
+            if (qty > 0) addedQty += qty;
+          }
+        });
+
+        if (addedQty > 0) {
+          itemsUpdated = true;
+          const currentStock = Number(item.stock || 0);
+          const newStock = currentStock + addedQty;
+          console.log(`[INVENTORY STOCK UPDATE] Item: ${item.name} | Old Stock: ${currentStock} | Received: +${addedQty} | New Stock: ${newStock}`);
+          return { ...item, stock: newStock };
+        }
+        return item;
+      });
+
+      if (itemsUpdated) {
+        saveLocalItems(updatedItems);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to update inventory stock on GRN save:', err);
+  }
+
   res.json({ success: true, grn: newGRN });
 });
 
