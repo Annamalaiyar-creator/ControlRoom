@@ -19418,18 +19418,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
                             />
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '24%' }}>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '20%' }}>
                             Product / Item <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '18%' }}>Description</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '8%', textAlign: 'center' }}>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '14%' }}>Description</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>MM</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '9%' }}>UOM</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '7%', textAlign: 'center' }}>
                             Qty <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '11%' }}>Price (₹)</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '11%', textAlign: 'center' }}>GST Rate</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%', textAlign: 'right' }}>Taxable (₹)</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '12%', textAlign: 'right' }}>Total (₹)</th>
-                          <th style={{ padding: '12px 14px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '9%', textAlign: 'center' }}>GST Rate</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Taxable (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Total (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -19443,7 +19445,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const isChecked = selectedBomItemIndexes.includes(i);
                           return (
                             <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#EEF2FF' : 'transparent' }}>
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
@@ -19457,7 +19459,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="text"
                                   list={`product-list-${i}`}
@@ -19465,28 +19467,30 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   value={item.name}
                                   onChange={(e) => {
                                     const val = e.target.value;
-                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, name: val } : mat));
+                                    const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase());
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
+                                      ...mat,
+                                      name: val,
+                                      rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                      uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                      mm: matched ? (matched.sections || mat.mm) : mat.mm,
+                                      category: matched ? (matched.description || mat.category) : mat.category
+                                    } : mat));
                                   }}
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                                 />
                                 <datalist id={`product-list-${i}`}>
-                                  <option value="Mini Rail 100 mm" />
-                                  <option value="Long Rail 3000 mm" />
-                                  <option value="Short Rail 350 mm" />
-                                  <option value="Mid Clamp 35 mm" />
-                                  <option value="End Clamp 35 mm" />
-                                  <option value="L-Feet Fasteners" />
-                                  <option value="Tile Roof Hook SS304" />
-                                  <option value="C-Channel Post 3200 mm" />
-                                  <option value="Purlin 4200 mm" />
-                                  <option value="Raw Aluminum Coil 1.5mm" />
-                                  <option value="Structural Steel Beams" />
+                                  {(itemsList || []).map((prod, pidx) => (
+                                    <option key={pidx} value={prod.name}>
+                                      {prod.code ? `[${prod.code}] ${prod.name}` : prod.name}
+                                    </option>
+                                  ))}
                                 </datalist>
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="text"
-                                  placeholder="Enter description"
+                                  placeholder="Description"
                                   value={item.category || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
@@ -19495,7 +19499,75 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              {/* MM Heading Input (Both Dropdown & Typeable) */}
+                              <td style={{ padding: '12px 10px' }}>
+                                <input
+                                  type="text"
+                                  list={`mm-list-${i}`}
+                                  placeholder="MM / Size"
+                                  value={item.mm || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, mm: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                                />
+                                <datalist id={`mm-list-${i}`}>
+                                  <option value="100mm" />
+                                  <option value="125mm" />
+                                  <option value="120mm" />
+                                  <option value="300mm" />
+                                  <option value="500mm" />
+                                  <option value="650mm" />
+                                  <option value="900mm" />
+                                  <option value="1000mm" />
+                                  <option value="1200mm" />
+                                  <option value="1300mm" />
+                                  <option value="1500mm" />
+                                  <option value="1600mm" />
+                                  <option value="1800mm" />
+                                  <option value="2000mm" />
+                                  <option value="2400mm" />
+                                  <option value="2500mm" />
+                                  <option value="2950mm" />
+                                  <option value="3000mm" />
+                                  <option value="3350mm" />
+                                  <option value="3600mm" />
+                                  <option value="3900mm" />
+                                  <option value="4800mm" />
+                                  <option value="40*40*2" />
+                                  <option value="40*85mm" />
+                                  <option value="35mm" />
+                                  <option value="30mm" />
+                                  <option value="m8*30" />
+                                  <option value="m6*75" />
+                                </datalist>
+                              </td>
+                              {/* UOM Heading Input (Both Dropdown & Typeable) */}
+                              <td style={{ padding: '12px 10px' }}>
+                                <input
+                                  type="text"
+                                  list={`uom-list-${i}`}
+                                  placeholder="UOM"
+                                  value={item.uom || 'NOS'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
+                                />
+                                <datalist id={`uom-list-${i}`}>
+                                  <option value="NOS" />
+                                  <option value="SET" />
+                                  <option value="KG" />
+                                  <option value="MTR" />
+                                  <option value="PCS" />
+                                  <option value="BOX" />
+                                  <option value="PKT" />
+                                  <option value="PAIR" />
+                                </datalist>
+                              </td>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="number"
                                   value={item.qty}
@@ -19507,7 +19579,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="number"
                                   value={item.rate}
@@ -19519,7 +19591,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                                 <select
                                   value={item.gstRate || '18%'}
                                   onChange={(e) => {
@@ -19534,13 +19606,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <option value="0%">0% Exempt</option>
                                 </select>
                               </td>
-                              <td style={{ padding: '12px 14px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
+                              <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
                                 ₹{taxable.toFixed(2)}
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
+                              <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
                                 ₹{rowTot.toFixed(2)}
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                                 <button
                                   onClick={() => handleRemoveMaterialRow(i)}
                                   style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
