@@ -21217,71 +21217,45 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       </div>
                     </div>
 
-                    {/* Active Dispatch Items Card */}
+                    {/* Active Dispatch & Itemized Product Checklist */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                          Dispatch Packing Checklist
+                          Itemized Product & BOM Checklist
                         </h4>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer' }}>View All Items</span>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
+                          {(quickPreviewRecord.items || quickPreviewRecord.materials || []).length} Item(s)
+                        </span>
                       </div>
                       <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-                            #{quickPreviewRecord.code || 'DISP-001'} &nbsp; HDG Solar Mounting Structure Components
-                          </span>
-                          <span style={{ backgroundColor: '#0EA5E9', color: 'white', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '12px' }}>
-                            Packed
-                          </span>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '11.5px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                          <div>
-                            <span style={{ color: '#64748B', display: 'block' }}>Type</span>
-                            <strong style={{ color: '#0F172A' }}>Hot-Dip Galv</strong>
-                          </div>
-                          <div>
-                            <span style={{ color: '#64748B', display: 'block' }}>Priority</span>
-                            <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>• High</span>
-                          </div>
-                          <div>
-                            <span style={{ color: '#64748B', display: 'block' }}>Assigned to</span>
-                            <strong style={{ color: '#0F172A' }}>Dispatch Team</strong>
-                          </div>
-                          <div>
-                            <span style={{ color: '#64748B', display: 'block' }}>Dispatch Date</span>
-                            <strong style={{ color: '#0F172A' }}>26/08/2026</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Activity Timeline */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Dispatch Tracking Timeline</h4>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer' }}>View Details</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#10B981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
-                          <div>
-                            <strong style={{ color: '#0F172A' }}>Items packed and verified by Dispatch Head</strong>
-                            <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>Today - 04:30 PM</span>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#0284C7', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
-                          <div>
-                            <strong style={{ color: '#0F172A' }}>Notification broadcasted to Production & Accounts</strong>
-                            <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>Today - 02:15 PM</span>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#CBD5E1', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>•</div>
-                          <div>
-                            <strong style={{ color: '#0F172A' }}>Order issued to Dispatch from Production</strong>
-                            <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>Yesterday - 10:00 AM</span>
-                          </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                                <th style={{ padding: '8px 10px', width: '30px' }}>#</th>
+                                <th style={{ padding: '8px 10px' }}>Product Item</th>
+                                <th style={{ padding: '8px 10px' }}>MM</th>
+                                <th style={{ padding: '8px 10px', textAlign: 'center' }}>UOM</th>
+                                <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
+                                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {((quickPreviewRecord.items || quickPreviewRecord.materials || []).length > 0
+                                ? (quickPreviewRecord.items || quickPreviewRecord.materials)
+                                : [{ name: quickPreviewRecord.productName || quickPreviewRecord.c2 || 'BOM Material Kit', mm: 'Standard', uom: 'NOS', qty: 1, rate: parseFloat(quickPreviewRecord.grandTotal || quickPreviewRecord.value || 0) }]
+                              ).map((it, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                  <td style={{ padding: '8px 10px', color: '#94A3B8', fontWeight: '700' }}>{idx + 1}</td>
+                                  <td style={{ padding: '8px 10px', fontWeight: '700', color: '#0F172A' }}>{it.name || '—'}</td>
+                                  <td style={{ padding: '8px 10px', color: '#4338CA', fontWeight: '600' }}>{it.mm || '—'}</td>
+                                  <td style={{ padding: '8px 10px', textAlign: 'center', color: '#475569' }}>{it.uom || it.unit || 'NOS'}</td>
+                                  <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>{it.qty || 1}</td>
+                                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>₹ {Number(it.rate || 0).toLocaleString('en-IN')}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </div>
