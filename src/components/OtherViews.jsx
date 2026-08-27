@@ -21122,34 +21122,34 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                            {quickPreviewRecord.c2 || quickPreviewRecord.customerName || quickPreviewRecord.name || 'SunEdison Energy'}
+                            {quickPreviewRecord.customerName || quickPreviewRecord.companyName || quickPreviewRecord.c2 || quickPreviewRecord.name || 'Customer'}
                           </h3>
                           <span style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '12px' }}>
                             • {quickPreviewRecord.status || quickPreviewRecord.c4 || 'Active'}
                           </span>
                         </div>
                         <span style={{ fontSize: '12px', color: '#64748B' }}>
-                          Dispatch Order Code: <strong style={{ color: '#0E7490' }}>{quickPreviewRecord.code || quickPreviewRecord.id || quickPreviewRecord.bomCode || 'DISP-2026-001'}</strong>
+                          Ref Code: <strong style={{ color: '#0E7490' }}>{quickPreviewRecord.bomCode || quickPreviewRecord.code || quickPreviewRecord.id || '—'}</strong>
                         </span>
                       </div>
                     </div>
 
-                    {/* 4 Stat Cards Grid (DISPATCH CODE, PACKING STATUS, TOTAL ITEMS, TOTAL VALUE) */}
+                    {/* 4 Stat Cards Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                       <div>
                         <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                          {activeTab === 'Dispatch Orders' ? 'DISPATCH REF' : 'REF CODE'}
+                          REF CODE
                         </span>
                         <strong style={{ fontSize: '14px', color: '#0F172A', fontWeight: '800', lineHeight: '1.2' }}>
-                          {quickPreviewRecord.code || 'DISP-001'}
+                          {quickPreviewRecord.bomCode || quickPreviewRecord.code || '—'}
                         </strong>
                       </div>
                       <div>
                         <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                          {activeTab === 'Dispatch Orders' ? 'PACKING STATUS' : 'STATUS'}
+                          STATUS
                         </span>
                         <strong style={{ fontSize: '13px', color: '#0E7490', fontWeight: '800', lineHeight: '1.2' }}>
-                          {quickPreviewRecord.c4 || quickPreviewRecord.status || 'Ready'}
+                          {quickPreviewRecord.status || quickPreviewRecord.c4 || 'Pending'}
                         </strong>
                       </div>
                       <div>
@@ -21157,7 +21157,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           TOTAL ITEMS
                         </span>
                         <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', lineHeight: '1.2' }}>
-                          {(quickPreviewRecord.items || quickPreviewRecord.materials || []).length || 4}
+                          {(quickPreviewRecord.items || quickPreviewRecord.materials || []).length || 0}
                         </strong>
                       </div>
                       <div>
@@ -21165,24 +21165,24 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           ORDER VALUE
                         </span>
                         <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800', lineHeight: '1.2' }}>
-                          {quickPreviewRecord.c5 || quickPreviewRecord.value || '₹ 4,85,000'}
+                          {quickPreviewRecord.grandTotal ? `₹ ${Number(quickPreviewRecord.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (quickPreviewRecord.c5 || quickPreviewRecord.value || '—')}
                         </strong>
                       </div>
                     </div>
 
-                    {/* Dispatch & Customer Details Grid */}
+                    {/* Customer & Order Details Grid */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                       <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                        {activeTab === 'Dispatch Orders' ? 'Dispatch & Order Details' : 'Record Details'}
+                        Record Details
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px' }}>
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Customer Name</span>
-                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.c2 || quickPreviewRecord.customerName || 'SunEdison Energy Pvt Ltd'}</strong>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.customerName || quickPreviewRecord.companyName || quickPreviewRecord.c2 || '—'}</strong>
                         </div>
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Order Date</span>
-                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.c3 || quickPreviewRecord.date1 || '2026-08-25'}</strong>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.date || quickPreviewRecord.c3 || quickPreviewRecord.date1 || '—'}</strong>
                         </div>
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Mode of Transport</span>
@@ -21207,12 +21207,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Accounts Approval</span>
                           <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '10px', fontSize: '10.5px', fontWeight: '800' }}>
-                            • {quickPreviewRecord.c6 || 'Verified'}
+                            • {quickPreviewRecord.isAccountsDone ? 'Verified' : (quickPreviewRecord.status || 'Pending Verification')}
                           </span>
                         </div>
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Shipping Address</span>
-                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.shippingAddress || quickPreviewRecord.billingAddress || 'Plot 42, SIDCO Industrial Estate, Hosur, TN'}</strong>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.deliveryAddress || quickPreviewRecord.shippingAddress || quickPreviewRecord.billingAddress || '—'}</strong>
                         </div>
                       </div>
                     </div>
