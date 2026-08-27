@@ -15540,14 +15540,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
-                          {!isAlreadyForwarded && <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>✓</th>}
-                          <th style={{ padding: '12px 14px', width: '60px', textAlign: 'center' }}>#</th>
-                          <th style={{ padding: '12px 14px' }}>Product / Component Name</th>
-                          <th style={{ padding: '12px 14px' }}>Category / Specs</th>
-                          <th style={{ padding: '12px 14px', width: '100px', textAlign: 'center' }}>Qty</th>
-                          <th style={{ padding: '12px 14px', width: '120px', textAlign: 'right' }}>Rate (₹)</th>
-                          <th style={{ padding: '12px 14px', width: '130px', textAlign: 'right' }}>Total (₹)</th>
-                          {!isAlreadyForwarded && <th style={{ padding: '12px 14px', width: '60px', textAlign: 'center' }}>Action</th>}
+                          {!isAlreadyForwarded && <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>✓</th>}
+                          <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>#</th>
+                          <th style={{ padding: '12px 10px', width: '22%' }}>Product / Component Name</th>
+                          <th style={{ padding: '12px 10px', width: '15%' }}>Description</th>
+                          <th style={{ padding: '12px 10px', width: '10%' }}>MM</th>
+                          <th style={{ padding: '12px 10px', width: '8%', textAlign: 'center' }}>UOM</th>
+                          <th style={{ padding: '12px 10px', width: '8%', textAlign: 'center' }}>Qty</th>
+                          <th style={{ padding: '12px 10px', width: '11%', textAlign: 'right' }}>Rate (₹)</th>
+                          <th style={{ padding: '12px 10px', width: '12%', textAlign: 'right' }}>Total (₹)</th>
+                          {!isAlreadyForwarded && <th style={{ padding: '12px 10px', width: '50px', textAlign: 'center' }}>Action</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -15559,19 +15561,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           if (isAlreadyForwarded) {
                             return (
                               <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                <td style={{ padding: '14px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
-                                <td style={{ padding: '14px', fontWeight: '700', color: '#0F172A' }}>{item.name || '—'}</td>
-                                <td style={{ padding: '14px', color: '#64748B' }}>{item.category || item.specs || '—'}</td>
-                                <td style={{ padding: '14px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>{itemQty} Nos</td>
-                                <td style={{ padding: '14px', textAlign: 'right', color: '#334155' }}>₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td style={{ padding: '14px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
+                                <td style={{ padding: '12px 10px', fontWeight: '700', color: '#0F172A' }}>{item.name || '—'}</td>
+                                <td style={{ padding: '12px 10px', color: '#64748B' }}>{item.category || item.specs || '—'}</td>
+                                <td style={{ padding: '12px 10px', color: '#4338CA', fontWeight: '700' }}>{item.mm || '—'}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>{item.uom || item.unit || 'NOS'}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>{itemQty}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', color: '#334155' }}>₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                               </tr>
                             );
                           }
 
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: item.confirmed ? '#F0FDF4' : 'transparent' }}>
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
                                   checked={Boolean(item.confirmed)}
@@ -15583,8 +15587,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   style={{ width: '16px', height: '16px', accentColor: '#166534', cursor: 'pointer' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="text"
                                   placeholder="Product Name..."
@@ -15594,23 +15598,49 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, name: val } : it);
                                     setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                                   }}
-                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="text"
-                                  placeholder="Specification / Category..."
+                                  placeholder="Description..."
                                   value={item.category || item.specs || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, category: val, specs: val } : it);
                                     setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                                   }}
-                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="MM / Size"
+                                  value={item.mm || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, mm: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 10px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="UOM"
+                                  value={item.uom || item.unit || 'NOS'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, uom: val, unit: val } : it);
+                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                                  }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', fontWeight: '700', color: '#0F172A', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="number"
                                   min="1"
@@ -15620,10 +15650,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, qty: val } : it);
                                     setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                                   }}
-                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'center', color: '#0F172A', outline: 'none' }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', color: '#0F172A', outline: 'none' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td style={{ padding: '12px 10px' }}>
                                 <input
                                   type="number"
                                   min="0"
@@ -15633,10 +15663,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
                                     setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                                   }}
-                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'right', color: '#0F172A', outline: 'none' }}
+                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', textAlign: 'right', color: '#0F172A', outline: 'none' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
                                 ₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </td>
                               <td style={{ padding: '12px 14px', textAlign: 'center' }}>
