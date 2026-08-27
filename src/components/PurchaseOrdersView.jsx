@@ -2126,11 +2126,13 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                           <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '8px 12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <select
-                                  value={item.name}
+                                <input
+                                  type="text"
+                                  list={`po-item-datalist-${idx}`}
+                                  value={item.name || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
-                                    const found = zohoItems.find(zi => zi.name === val);
+                                    const found = zohoItems.find(zi => zi.name.toLowerCase() === val.toLowerCase());
                                     handleItemChange(idx, 'name', val);
                                     if (found) {
                                       handleItemChange(idx, 'rate', found.rate || 0);
@@ -2140,17 +2142,15 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                                       }
                                     }
                                   }}
+                                  placeholder="Type or select Item Name..."
                                   required
-                                  style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', color: '#334155', cursor: 'pointer', outline: 'none' }}
-                                >
-                                  <option value="" disabled>Select Zoho Item...</option>
-                                  {item.name && !zohoItems.some(zi => zi.name === item.name) && (
-                                    <option value={item.name}>{item.name}</option>
-                                  )}
+                                  style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', color: '#334155', outline: 'none' }}
+                                />
+                                <datalist id={`po-item-datalist-${idx}`}>
                                   {zohoItems.map((zi, zidx) => (
-                                    <option key={zidx} value={zi.name}>{zi.name}</option>
+                                    <option key={zidx} value={zi.name}>{zi.sku ? `[${zi.sku}] ${zi.name}` : zi.name}</option>
                                   ))}
-                                </select>
+                                </datalist>
                                 <input
                                   type="text"
                                   value={item.description || ''}

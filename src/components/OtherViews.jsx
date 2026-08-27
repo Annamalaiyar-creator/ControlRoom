@@ -5351,16 +5351,30 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A', minWidth: '280px', verticalAlign: 'top' }}>
                                   <input
                                     type="text"
+                                    list={`grn-item-datalist-${item.id}`}
                                     value={item.name}
                                     disabled={isViewOnlyMode}
-                                    placeholder="Enter Material / Item Name..."
+                                    placeholder="Type or select Item Name..."
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      const updated = grnItems.map(it => it.id === item.id ? { ...it, name: val } : it);
+                                      const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase());
+                                      const updated = grnItems.map(it => it.id === item.id ? {
+                                        ...it,
+                                        name: val,
+                                        uom: matched ? (matched.unit || matched.uom || it.uom) : it.uom,
+                                        desc: matched ? (matched.description || it.desc) : it.desc
+                                      } : it);
                                       setGrnItems(updated);
                                     }}
                                     style={{ width: '100%', height: '34px', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '0 10px', fontSize: '12px', fontWeight: '700', color: '#0F172A', backgroundColor: isViewOnlyMode ? '#F8FAFC' : '#FFFFFF' }}
                                   />
+                                  <datalist id={`grn-item-datalist-${item.id}`}>
+                                    {(itemsList || []).map((prod, pidx) => (
+                                      <option key={pidx} value={prod.name}>
+                                        {prod.code ? `[${prod.code}] ${prod.name}` : prod.name}
+                                      </option>
+                                    ))}
+                                  </datalist>
                                   <div style={{ marginTop: '6px' }}>
                                     <textarea
                                       value={item.desc || ''}
