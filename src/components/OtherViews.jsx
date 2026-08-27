@@ -8418,13 +8418,39 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </tr>
                 </thead>
                 <tbody>
-                  {stockRegistry.map((row, idx) => {
-                    let qtyColor = '#10B981'; // Green
-                    if (row.stock === '0' || row.stock === '120') {
-                      qtyColor = '#EF4444'; // Red
-                    } else if (row.stock === '850' || row.stock === '1,800' || row.stock === '160') {
-                      qtyColor = '#F59E0B'; // Orange
-                    }
+                  {(() => {
+                    const combinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
+                      const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
+                      const rateVal = Number(it.rate || it.price || 250);
+                      const totalVal = stockVal * rateVal;
+                      const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+
+                      let statusText = 'In Stock';
+                      if (stockVal === 0) statusText = 'Out of Stock';
+                      else if (stockVal <= minLvl) statusText = 'Low Stock';
+
+                      return {
+                        code: it.code || it.sku || it.itemId || 'VRM-ITEM',
+                        item: it.name,
+                        category: it.category || it.material || 'Raw Material',
+                        location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),
+                        stock: stockVal.toLocaleString('en-IN'),
+                        allocated: '0',
+                        incoming: '0',
+                        minLevel: minLvl.toLocaleString('en-IN'),
+                        val: `₹ ${totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                        status: statusText,
+                        rawStockNum: stockVal
+                      };
+                    }) : stockRegistry;
+
+                    return combinedList.map((row, idx) => {
+                      let qtyColor = '#10B981'; // Green
+                      if (row.rawStockNum === 0 || row.status === 'Out of Stock') {
+                        qtyColor = '#EF4444'; // Red
+                      } else if (row.status === 'Low Stock') {
+                        qtyColor = '#F59E0B'; // Orange
+                      }
 
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
@@ -8475,7 +8501,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         </td>
                       </tr>
                     );
-                  })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
