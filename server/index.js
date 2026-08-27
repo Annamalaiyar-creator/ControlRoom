@@ -28,6 +28,12 @@ let supabaseMemoryStore = {
 // Async background sync with Supabase
 const syncStoreWithSupabase = async (key, localData) => {
   try {
+    if (key === 'item_store' && Array.isArray(localData) && localData.length > 100) {
+      await supabase.from('controlroom_store').upsert({ key, data: localData, updated_at: new Date().toISOString() });
+      supabaseMemoryStore[key] = localData;
+      return localData;
+    }
+
     const { data, error } = await supabase
       .from('controlroom_store')
       .select('data')
@@ -35,6 +41,12 @@ const syncStoreWithSupabase = async (key, localData) => {
       .single();
 
     if (!error && data && data.data) {
+      // If remote Supabase item_store has fewer items than local disk, force upsert local disk items
+      if (key === 'item_store' && Array.isArray(localData) && localData.length > (data.data.length || 0)) {
+        await supabase.from('controlroom_store').upsert({ key, data: localData, updated_at: new Date().toISOString() });
+        supabaseMemoryStore[key] = localData;
+        return localData;
+      }
       supabaseMemoryStore[key] = data.data;
       return data.data;
     }
@@ -2895,30 +2907,26 @@ const fetchZohoItems = (accessToken) => {
 app.get('/api/zoho/items', async (req, res) => {
   const localItems = loadLocalItems();
 
-  if (!zohoSession.connected) {
-    return res.json(localItems);
-  }
-
   try {
-    const accessToken = await getZohoAccessToken();
-    const data = await fetchZohoItems(accessToken);
-    
-    if (data && data.items && Array.isArray(data.items)) {
-      const translated = data.items.map(item => ({
-        itemId: item.item_id,
-        name: item.name,
-        rate: item.rate,
-        sku: item.sku || '—',
-        status: item.status === 'active' ? 'Active' : 'Inactive',
-        description: item.description || '—',
-        unit: item.unit || 'NOS'
-      }));
+    if (zohoSession.connected) {
+      const accessToken = await getZohoAccessToken();
+      const data = await fetchZohoItems(accessToken);
+      
+      if (data && data.items && Array.isArray(data.items)) {
+        const translatedZoho = data.items.map(item => ({
+          itemId: item.item_id || item.id,
+          name: item.name,
+          rate: item.rate || 0,
+          sku: item.sku || '—',
+          status: item.status === 'active' ? 'Active' : 'Inactive',
+          description: item.description || '—',
+          unit: item.unit || 'NOS'
+        }));
 
-      // Persist & Cache newly fetched Zoho products automatically into local storage & Supabase
-      saveLocalItems(translated);
-
-      // Return live items list from Zoho Books
-      return res.json(translated);
+        const localSkus = new Set(localItems.map(i => String(i.sku || i.code || i.id).toLowerCase()));
+        const filteredZoho = translatedZoho.filter(z => !localSkus.has(String(z.sku || z.itemId).toLowerCase()));
+        return res.json([...localItems, ...filteredZoho]);
+      }
     }
   } catch (err) {
     console.error('Zoho items fetch notice:', err.message);
