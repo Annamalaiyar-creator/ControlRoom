@@ -12768,6 +12768,34 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             ];
 
             const [materials, setMaterials] = useState(() => {
+              if (itemsList && itemsList.length > 0) {
+                return itemsList.map(it => {
+                  const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
+                  const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+                  let statusText = 'In Stock';
+                  if (stockVal === 0) statusText = 'Out of Stock';
+                  else if (stockVal <= minLvl) statusText = 'Low Stock';
+
+                  return {
+                    code: it.code || it.sku || it.itemId || 'RM-VRM',
+                    name: it.name,
+                    cat: it.category || it.material || 'Aluminium',
+                    unit: it.unit || it.uom || 'Nos',
+                    stock: stockVal,
+                    minLevel: minLvl,
+                    status: statusText,
+                    store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
+                    hsn: '7604',
+                    lastUpdated: 'Live Store',
+                    reserved: 0,
+                    openingStock: stockVal,
+                    goodsReceived: 0,
+                    issuedProd: 0,
+                    matReturn: 0,
+                    stockAdj: 0
+                  };
+                });
+              }
               const engineItems = prodModuleEngine.getInventory().map(item => ({
                 code: item.code,
                 name: item.name,
@@ -12787,26 +12815,36 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             });
 
             useEffect(() => {
-              const unsubscribe = prodModuleEngine.subscribe(() => {
-                const updatedEngineItems = prodModuleEngine.getInventory().map(item => ({
-                  code: item.code,
-                  name: item.name,
-                  cat: item.category,
-                  unit: item.unit,
-                  stock: item.physicalStock,
-                  reserved: item.reservedStock,
-                  available: item.availableStock,
-                  issued: item.issuedStock,
-                  consumed: item.consumedStock,
-                  minLevel: item.safetyStock,
-                  status: item.physicalStock === 0 ? 'Out of Stock' : item.physicalStock <= item.safetyStock ? 'Low Stock' : 'In Stock',
-                  store: item.bayLocation,
-                  lastUpdated: 'Live Engine'
-                }));
-                setMaterials([...updatedEngineItems, ...initialMaterials]);
-              });
-              return () => unsubscribe();
-            }, []);
+              if (itemsList && itemsList.length > 0) {
+                const mappedMaster = itemsList.map(it => {
+                  const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
+                  const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+                  let statusText = 'In Stock';
+                  if (stockVal === 0) statusText = 'Out of Stock';
+                  else if (stockVal <= minLvl) statusText = 'Low Stock';
+
+                  return {
+                    code: it.code || it.sku || it.itemId || 'RM-VRM',
+                    name: it.name,
+                    cat: it.category || it.material || 'Aluminium',
+                    unit: it.unit || it.uom || 'Nos',
+                    stock: stockVal,
+                    minLevel: minLvl,
+                    status: statusText,
+                    store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
+                    hsn: '7604',
+                    lastUpdated: 'Live Store',
+                    reserved: 0,
+                    openingStock: stockVal,
+                    goodsReceived: 0,
+                    issuedProd: 0,
+                    matReturn: 0,
+                    stockAdj: 0
+                  };
+                });
+                setMaterials(mappedMaster);
+              }
+            }, [itemsList]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
             const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
             const [searchQuery, setSearchQuery] = useState('');
