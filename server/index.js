@@ -3243,35 +3243,44 @@ app.post('/api/zoho/items', async (req, res) => {
     productType: req.body.productType || 'goods'
   };
 
-  if (!zohoSession.connected) {
-    return res.json({ success: true, item: fallbackItem, message: 'Created locally in Control Room.' });
+  let itemToSave = fallbackItem;
+
+  if (zohoSession.connected) {
+    try {
+      const accessToken = await getZohoAccessToken();
+      const data = await createZohoItem(accessToken, req.body);
+      if (data.code === 0 && data.item) {
+        const created = data.item;
+        itemToSave = {
+          itemId: created.item_id,
+          name: created.name,
+          rate: created.rate || 0,
+          sku: created.sku || '—',
+          status: created.status === 'active' ? 'Active' : 'Inactive',
+          description: created.description || '—',
+          unit: created.unit || 'NOS',
+          purchaseRate: created.purchase_rate || 0,
+          purchaseDescription: created.purchase_description || '—',
+          productType: created.product_type || 'goods'
+        };
+      }
+    } catch (err) {
+      console.error('Zoho item creation notice:', err.message);
+    }
   }
 
+  // Persist newly created product into local item_store.json
   try {
-    const accessToken = await getZohoAccessToken();
-    const data = await createZohoItem(accessToken, req.body);
-    if (data.code === 0 && data.item) {
-      const created = data.item;
-      const formatted = {
-        itemId: created.item_id,
-        name: created.name,
-        rate: created.rate || 0,
-        sku: created.sku || '—',
-        status: created.status === 'active' ? 'Active' : 'Inactive',
-        description: created.description || '—',
-        unit: created.unit || 'NOS',
-        purchaseRate: created.purchase_rate || 0,
-        purchaseDescription: created.purchase_description || '—',
-        productType: created.product_type || 'goods'
-      };
-      res.json({ success: true, item: formatted, message: 'New product created successfully in Zoho Books!' });
-    } else {
-      res.json({ success: true, item: fallbackItem, message: data.message || 'Created locally in Control Room.' });
+    const localItems = loadLocalItems();
+    if (!localItems.some(i => String(i.itemId || i.id || i.sku).toLowerCase() === String(itemToSave.itemId || itemToSave.sku || itemToSave.name).toLowerCase())) {
+      localItems.unshift(itemToSave);
+      saveLocalItems(localItems);
     }
-  } catch (err) {
-    console.error(err);
-    res.json({ success: true, item: fallbackItem, message: 'Created locally in Control Room.' });
+  } catch (e) {
+    console.error('Failed to save newly created item to item_store:', e);
   }
+
+  res.json({ success: true, item: itemToSave, message: 'New product created successfully!' });
 });
 
 if (process.env.VERCEL !== '1') {
