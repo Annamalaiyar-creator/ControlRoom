@@ -304,12 +304,14 @@ class ProductionModuleEngine {
 
     // Standard raw material length is 2414 mm
     const rawLengthMm = 2414;
+    const bladeKerfMm = 3; // 3mm mandatory saw blade kerf width per cut stroke
 
-    // Calculate how many pieces fit in 1 length of 2414 mm based on user cut length
+    // Calculate how many pieces fit in 1 length of 2414 mm (accounting for 3mm kerf per cut)
     let piecesPerLength = recipe ? Number(recipe.expectedOutputQty) : 1;
     if (cutLenMm > 0) {
-      piecesPerLength = Math.floor(rawLengthMm / cutLenMm);
-      if (piecesPerLength < 1) piecesPerLength = 1; // Safety fallback
+      const effectiveCutLen = cutLenMm + bladeKerfMm;
+      piecesPerLength = Math.floor(rawLengthMm / effectiveCutLen);
+      if (piecesPerLength < 1) piecesPerLength = 1;
     }
 
     // Exact theoretical raw material length required
@@ -320,17 +322,22 @@ class ProductionModuleEngine {
     let isWholeUnitConstraint = physicalMatToIssue > exactRequiredMatQty;
     let expectedTheoreticalOutput = physicalMatToIssue * piecesPerLength;
 
-    // Wastage & Scrap Calculations
-    const usedLengthMmPerBar = cutLenMm > 0 ? (piecesPerLength * cutLenMm) : rawLengthMm;
-    const endOffcutScrapMmPerBar = cutLenMm > 0 ? (rawLengthMm - usedLengthMmPerBar) : 0;
+    // Wastage & Scrap Calculations (Product Length + Blade Kerf Loss)
+    const netProductMmPerBar = piecesPerLength * cutLenMm;
+    const kerfLossMmPerBar = piecesPerLength * bladeKerfMm;
+    const usedLengthMmPerBar = netProductMmPerBar + kerfLossMmPerBar;
+    const endOffcutScrapMmPerBar = Math.max(0, rawLengthMm - usedLengthMmPerBar);
+
     const totalIssuedMm = physicalMatToIssue * rawLengthMm;
-    const totalUtilizedMmForTarget = cutLenMm > 0 ? (Number(targetQty) * cutLenMm) : (exactRequiredMatQty * rawLengthMm);
-    const totalWastageMm = totalIssuedMm > 0 ? Math.max(0, totalIssuedMm - totalUtilizedMmForTarget) : 0;
+    const totalNetProductMm = (Number(targetQty) || 0) * cutLenMm;
+    const totalKerfLossMm = (Number(targetQty) || 0) * bladeKerfMm;
+    const totalUtilizedMmForTarget = totalNetProductMm + totalKerfLossMm;
+    const totalWastageMm = totalIssuedMm > 0 ? Math.max(0, totalIssuedMm - totalNetProductMm) : 0;
     const wastagePercent = totalIssuedMm > 0 ? Number(((totalWastageMm / totalIssuedMm) * 100).toFixed(2)) : 0;
 
     // Remainder Offcut Bar from Last Issued Unit
     const piecesInLastBar = (Number(targetQty) || 0) % piecesPerLength;
-    const usedMmInLastBar = piecesInLastBar > 0 ? (piecesInLastBar * cutLenMm) : 0;
+    const usedMmInLastBar = piecesInLastBar > 0 ? (piecesInLastBar * (cutLenMm + bladeKerfMm)) : 0;
     const remainderOffcutMm = piecesInLastBar > 0 ? Math.max(0, rawLengthMm - usedMmInLastBar) : 0;
     const remainderOffcutMeters = Number((remainderOffcutMm / 1000).toFixed(2));
 
@@ -346,6 +353,10 @@ class ProductionModuleEngine {
       },
       rawItem,
       cutLenMm,
+      bladeKerfMm,
+      netProductMmPerBar,
+      kerfLossMmPerBar,
+      totalKerfLossMm,
       targetQty: Number(targetQty) || 0,
       piecesPerLength,
       exactRequiredMatQty,

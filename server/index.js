@@ -4,6 +4,10 @@ import dotenv from 'dotenv';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
@@ -82,7 +86,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const loadCredentialsFromEnv = () => {
   const DEFAULT_ORG_ID = '60082137608';
@@ -355,18 +360,20 @@ const getGRNStorePath = () => {
 };
 
 const loadLocalGRNs = () => {
-  if (supabaseMemoryStore.grn_store && supabaseMemoryStore.grn_store.length > 0) {
-    return supabaseMemoryStore.grn_store;
-  }
   try {
     const storePath = getGRNStorePath();
     if (fs.existsSync(storePath)) {
       const data = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-      pushStoreToSupabase('grn_store', data);
-      return data;
+      if (Array.isArray(data) && data.length > 0) {
+        supabaseMemoryStore.grn_store = data;
+        return data;
+      }
     }
   } catch (err) {
     console.error('Error loading local GRNs:', err);
+  }
+  if (supabaseMemoryStore.grn_store && Array.isArray(supabaseMemoryStore.grn_store)) {
+    return supabaseMemoryStore.grn_store;
   }
   return [];
 };
@@ -616,7 +623,10 @@ app.get('/api/zoho/vendors', async (req, res) => {
         website: c.website || '—'
       }));
 
-      // Return exact live vendor list from Zoho Books
+      // Persist & Cache newly fetched Zoho vendors automatically into local storage & Supabase
+      saveLocalVendors(translated);
+
+      // Return live vendor list from Zoho Books
       return res.json(translated);
     }
   } catch (err) {
@@ -2904,7 +2914,10 @@ app.get('/api/zoho/items', async (req, res) => {
         unit: item.unit || 'NOS'
       }));
 
-      // Return exact live items list from Zoho Books
+      // Persist & Cache newly fetched Zoho products automatically into local storage & Supabase
+      saveLocalItems(translated);
+
+      // Return live items list from Zoho Books
       return res.json(translated);
     }
   } catch (err) {

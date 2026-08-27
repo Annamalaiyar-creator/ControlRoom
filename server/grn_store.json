@@ -1,5 +1,130 @@
 [
   {
+    "id": "GRN-1787815065382",
+    "grnNo": "GRN-2026-00110",
+    "poRef": "PO-00083",
+    "poNo": "PO-00083",
+    "poId": "PO-00083",
+    "vendor": "Apex Infra Systems",
+    "date": "27 Aug 2026",
+    "challanNo": "DC-12345",
+    "receivedQty": 100,
+    "acceptedQty": 100,
+    "rejectedQty": 0,
+    "receivedBy": "Arun",
+    "inspectorName": "—",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Mini Rail",
+        "sku": "SKU-101",
+        "desc": "—",
+        "uom": "PCS",
+        "ordered": 1500,
+        "prev": 100,
+        "remaining": 1400,
+        "now": 100,
+        "accepted": 100,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "documents": [],
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1787814077150",
+    "grnNo": "GRN-2026-00109",
+    "poRef": "PO-00083",
+    "poNo": "PO-00083",
+    "poId": "PO-00083",
+    "vendor": "Apex Infra Systems",
+    "date": "27 Aug 2026",
+    "challanNo": "12345",
+    "receivedQty": 100,
+    "acceptedQty": 100,
+    "rejectedQty": 0,
+    "receivedBy": "Annamalaiyar",
+    "inspectorName": "—",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Mini Rail",
+        "sku": "SKU-101",
+        "desc": "—",
+        "uom": "PCS",
+        "ordered": 1500,
+        "prev": 0,
+        "remaining": 1500,
+        "now": 100,
+        "accepted": 100,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "documents": [
+      {
+        "title": "Delivery Challan",
+        "filename": "DC_12345.pdf",
+        "size": "0.8 MB",
+        "url": ""
+      }
+    ],
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1787813855553",
+    "grnNo": "GRN-2026-00108",
+    "poRef": "PO-00081",
+    "poNo": "PO-00081",
+    "poId": "PO-00081",
+    "vendor": "Annamalaiyar",
+    "date": "27 Aug 2026",
+    "challanNo": "123456",
+    "receivedQty": 2000,
+    "acceptedQty": 2000,
+    "rejectedQty": 0,
+    "receivedBy": "Annamalaiyar",
+    "inspectorName": "—",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "name": "Mini Rail",
+        "sku": "SKU-101",
+        "desc": "",
+        "uom": "NOS",
+        "ordered": 2000,
+        "prev": 0,
+        "remaining": 2000,
+        "now": 2000,
+        "accepted": 2000,
+        "rejected": 0,
+        "reason": "—",
+        "batch": "LOT-2026-1",
+        "error": null
+      }
+    ],
+    "documents": [
+      {
+        "title": "Delivery Challan",
+        "filename": "DC_123456.pdf",
+        "size": "0.8 MB",
+        "url": ""
+      }
+    ],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
     "id": "GRN-1786429046285",
     "grnNo": "GRN-2026-00107",
     "poRef": "PO-00076",

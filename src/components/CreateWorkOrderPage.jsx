@@ -581,13 +581,92 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
               </div>
             </div>
 
-            {/* RECIPE BADGE BANNER */}
+            {/* RECIPE BADGE BANNER & AI PROFIT OPTIMIZER RECOMMENDATION */}
             {matCalc && (
-              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
-                <div style={{ fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
-                  <strong>Cut Yield Rule:</strong> 1 Raw Bar (2414 mm) ÷ {matCalc.cutLenMm || 400} mm Cut Length = <strong>{matCalc.piecesPerLength} Pieces per Raw Bar</strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
+                  <div style={{ fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
+                    <strong>Cut Yield Rule:</strong> 1 Raw Bar (2414 mm) ÷ {matCalc.cutLenMm || 400} mm Cut Length = <strong>{matCalc.piecesPerLength} Pieces per Raw Bar</strong>
+                  </div>
                 </div>
+
+                {/* AI PROFIT OPTIMIZATION & MANDATORY KERF LOSS RECOMMENDATION */}
+                {matCalc.isWholeUnitConstraint && matCalc.excessOutputPossible > 0 && (
+                  <div style={{
+                    backgroundColor: '#FEFCE8',
+                    border: '1.5px solid #FDE047',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    boxShadow: '0 2px 6px rgba(234, 179, 8, 0.12)'
+                  }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      backgroundColor: '#EAB308',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontWeight: '900'
+                    }}>
+                      💡
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#854D0E', letterSpacing: '0.2px' }}>
+                          PROFIT OPTIMIZATION & KERF LOSS GUIDANCE
+                        </span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FEF08A', color: '#713F12', padding: '2px 8px', borderRadius: '10px' }}>
+                          CUTTING LOSS & YIELD ADVICE
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#713F12', lineHeight: '1.45' }}>
+                        Issuing <strong>{matCalc.physicalMatToIssue} raw bars ({matCalc.physicalMatToIssue * 2414} mm total)</strong> for <strong>{targetQty} pieces</strong> of 400 mm cut length.
+                      </div>
+
+                      {/* Kerf & Scrap Breakdown */}
+                      <div style={{ fontSize: '11px', color: '#854D0E', backgroundColor: '#FEF9C3', padding: '8px 10px', borderRadius: '6px', border: '1px solid #FEF08A', lineHeight: '1.4' }}>
+                        • <strong>Mandatory Blade Kerf Loss:</strong> 3 mm per cut stroke ({matCalc.piecesPerLength} cuts × 3 mm = {matCalc.piecesPerLength * 3} mm kerf/bar).<br/>
+                        • <strong>Bar Yield:</strong> 2414 mm ÷ (400 mm + 3 mm kerf) = <strong>6 Pieces per Bar</strong> with 14 mm end clamp scrap.<br/>
+                        • <strong>Unutilized Issued Capacity:</strong> <strong>{matCalc.excessOutputPossible} pieces</strong> remaining in issued material.
+                      </div>
+
+                      {/* Actionable Solution to get full 400 mm pieces */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setTargetQty(String(matCalc.expectedTheoreticalOutput))}
+                          style={{
+                            backgroundColor: '#854D0E',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(133, 77, 14, 0.25)'
+                          }}
+                        >
+                          ⚡ Apply Max Profit Target: {matCalc.expectedTheoreticalOutput} Pieces
+                        </button>
+                        <span style={{ fontSize: '11px', color: '#854D0E', fontWeight: '700' }}>
+                          (Eliminates material waste & brings full {matCalc.expectedTheoreticalOutput} pcs of exact 400 mm!)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -691,19 +770,23 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                 </div>
 
                 {/* ESTIMATED WASTAGE & SCRAP BOX */}
-                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>ESTIMATED SCRAP & WASTAGE</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
                       {matCalc.wastagePercent}% SCRAP
                     </span>
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: '800', color: '#475569' }}>
-                    {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>end scrap/bar ({matCalc.totalWastageMeters}m total)</span>
+                    {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Bar-End Stub + 3 mm kerf/cut ({matCalc.totalWastageMm} mm total)</span>
                   </div>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Formula: 2414mm - ({matCalc.piecesPerLength} pcs × {matCalc.cutLenMm || 100}mm)
-                  </span>
+
+                  {/* Explicit 3mm Blade Kerf Loss Breakdown */}
+                  <div style={{ fontSize: '11px', color: '#475569', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div>• <strong>3 mm Saw Blade Kerf Loss:</strong> {matCalc.targetQty} cuts × 3 mm = <strong>{matCalc.totalKerfLossMm} mm total kerf loss</strong></div>
+                    <div>• <strong>Bar-End Stub:</strong> {matCalc.endOffcutScrapMmPerBar} mm per bar</div>
+                    <div>• <strong>Formula:</strong> 2414 mm - [{matCalc.piecesPerLength} pcs × ({matCalc.cutLenMm || 400} mm product + 3 mm kerf)] = {matCalc.endOffcutScrapMmPerBar} mm</div>
+                  </div>
                 </div>
 
                 {/* LEFTOVER MATERIAL HANDLING STRATEGY (OPTION 1 vs OPTION 2) */}
@@ -774,7 +857,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                         <div>
                           <div><strong>Method 2: Return Usable Offcut Bar</strong></div>
                           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 'normal', marginTop: '2px' }}>
-                            Cut target {matCalc.targetQty} pcs. Return remaining <strong>{matCalc.remainderOffcutMeters}m bar</strong> back to Raw Store as Usable Offcut.
+                            Cut target {matCalc.targetQty} pcs. Return remaining <strong>{matCalc.remainderOffcutMm || (matCalc.remainderOffcutMeters * 1000)} mm bar</strong> back to Raw Store as Usable Offcut.
                           </div>
                         </div>
                       </label>

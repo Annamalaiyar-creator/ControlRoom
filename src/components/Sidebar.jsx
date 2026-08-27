@@ -5,13 +5,35 @@ import {
   Receipt, Wallet, Award, PieChart, AlertTriangle, 
   GitCompare, FileBarChart, TrendingUp, UserCheck, 
   Settings, GitBranch, ChevronDown, ChevronLeft, ChevronRight,
-  Search, HelpCircle, MessageSquare, Rocket, Sparkles, ChevronUp
+  Search, HelpCircle, MessageSquare, Rocket, Sparkles, ChevronUp,
+  CheckCircle, ClipboardList, Truck, Warehouse, ShieldCheck, Activity, FileCheck,
+  Calendar, Wrench, Calculator, RefreshCw, Scale, Building2, BarChart3,
+  Zap, CreditCard, Layers
 } from 'lucide-react';
+import { prodModuleEngine } from '../utils/productionModuleEngine';
 
 export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, userRole = 'Procurement Head' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoveredItemPos, setHoveredItemPos] = useState(null);
+  const [, setEngineTick] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = prodModuleEngine.subscribe(() => {
+      setEngineTick(t => t + 1);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const realWOCount = prodModuleEngine.getWorkOrders().length;
+  const realBOMCount = (() => {
+    try {
+      const boms = JSON.parse(localStorage.getItem('controlroom_bom_store') || '[]');
+      return Array.isArray(boms) ? boms.length : 0;
+    } catch (e) {
+      return 0;
+    }
+  })();
 
   // Categorized Menu Sections Structure matching exact design layout
   const procurementSections = [
@@ -27,11 +49,12 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     {
       category: 'TOOLS & OPERATIONS',
       items: [
-        { label: 'Vendor Management', icon: Users },
+        { label: 'Goods Receipt Note', icon: FileCheck },
+        { label: 'Vendor Management', icon: Building2 },
         { label: 'Vendor Performance', icon: Award },
-        { label: 'Material Calculation Engine', icon: GitCompare },
-        { label: 'Material Reorder', icon: AlertTriangle, badge: '3' },
-        { label: 'Price Comparison', icon: GitCompare },
+        { label: 'Material Calculation Engine', icon: Calculator },
+        { label: 'Material Reorder', icon: RefreshCw, badge: '3' },
+        { label: 'Price Comparison', icon: Scale },
         { label: 'Payments', icon: Wallet }
       ]
     },
@@ -51,26 +74,26 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       category: 'MAIN MENU',
       items: [
         { label: 'Dashboard', icon: LayoutDashboard },
-        { label: 'Work Orders', icon: Boxes, badge: '8' },
-        { label: 'BOM Orders', icon: GitBranch, badge: '5' },
-        { label: 'Inventory (Raw Material)', icon: Boxes }
+        { label: 'Work Orders', icon: ClipboardList, badge: realWOCount > 0 ? String(realWOCount) : undefined },
+        { label: 'Dispatch Orders', icon: Truck },
+        { label: 'Inventory (Raw Material)', icon: Warehouse }
       ]
     },
     {
       category: 'TOOLS & OPERATIONS',
       items: [
-        { label: 'Planning & Scheduling', icon: FileText },
-        { label: 'Production Monitoring', icon: TrendingUp },
-        { label: 'Quality Control', icon: UserCheck },
-        { label: 'Machine Maintenance', icon: Settings }
+        { label: 'Planning & Scheduling', icon: Calendar },
+        { label: 'Production Monitoring', icon: Activity },
+        { label: 'Quality Control', icon: ShieldCheck },
+        { label: 'Machine Maintenance', icon: Wrench }
       ]
     },
     {
       category: 'WORKSPACE & REPORTS',
       items: [
-        { label: 'Production Reports', icon: FileBarChart },
-        { label: 'Efficiency Reports', icon: TrendingUp },
-        { label: 'Downtime Analytics', icon: PieChart }
+        { label: 'Production Reports', icon: BarChart3 },
+        { label: 'Efficiency Reports', icon: Zap },
+        { label: 'Downtime Analytics', icon: AlertTriangle }
       ]
     }
   ];
@@ -87,14 +110,14 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dispatch Dashboard', icon: LayoutDashboard },
-            { label: 'Dispatch Orders', icon: Boxes, badge: '4' },
-            { label: 'Stock Status', icon: Boxes }
+            { label: 'Dispatch Orders', icon: Truck, badge: '4' },
+            { label: 'Stock Status', icon: Layers }
           ]
         },
         {
           category: 'WORKSPACE & REPORTS',
           items: [
-            { label: 'Production Reports', icon: FileBarChart }
+            { label: 'Production Reports', icon: BarChart3 }
           ]
         }
       ];
@@ -104,16 +127,16 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Work Orders', icon: Boxes, badge: '6' },
-            { label: 'Planning & Scheduling', icon: FileText },
-            { label: 'Production Monitoring', icon: TrendingUp }
+            { label: 'Work Orders', icon: ClipboardList, badge: realWOCount > 0 ? String(realWOCount) : undefined },
+            { label: 'Planning & Scheduling', icon: Calendar },
+            { label: 'Production Monitoring', icon: Activity }
           ]
         },
         {
           category: 'TOOLS & OPERATIONS',
           items: [
-            { label: 'Downtime Analytics', icon: PieChart },
-            { label: 'Machine Maintenance', icon: Settings }
+            { label: 'Downtime Analytics', icon: AlertTriangle },
+            { label: 'Machine Maintenance', icon: Wrench }
           ]
         }
       ];
@@ -123,8 +146,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Production Monitoring', icon: TrendingUp },
-            { label: 'Work Orders', icon: Boxes }
+            { label: 'Production Monitoring', icon: Activity },
+            { label: 'Work Orders', icon: ClipboardList }
           ]
         }
       ];
@@ -155,8 +178,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'BOM Orders', icon: GitBranch },
-            { label: 'Customer Management', icon: UserCheck },
-            { label: 'Stock Status', icon: Boxes }
+            { label: 'Customer Management', icon: Users },
+            { label: 'Stock Status', icon: Layers }
           ]
         }
       ];
@@ -167,7 +190,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'BOM Orders', icon: GitBranch },
-            { label: 'Material Calculation Engine', icon: GitCompare }
+            { label: 'Material Calculation Engine', icon: Calculator }
           ]
         }
       ];
@@ -197,7 +220,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'BOM Orders', icon: GitBranch },
-            { label: 'Customer Management', icon: UserCheck },
+            { label: 'Customer Management', icon: Users },
             { label: 'Material Calculation Engine', icon: GitCompare }
           ]
         }

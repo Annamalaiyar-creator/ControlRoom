@@ -11,6 +11,7 @@ export default function DashboardFullReference({ userRole }) {
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthCode);
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
+  const [hoveredBarIdx, setHoveredBarIdx] = useState(null);
   const [poData, setPoData] = useState([]);
   const [grnData, setGrnData] = useState([]);
   const [approvalCounts, setApprovalCounts] = useState({ posPending: 0, grnsPending: 0, invoicesPending: 0 });
@@ -192,7 +193,7 @@ export default function DashboardFullReference({ userRole }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
       
       {/* ROW 1: KPI CARDS WITH NEW DESIGN LAYOUT */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
         {((userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? [
           {
             title: 'TOTAL INVOICED (MTD)',
@@ -555,7 +556,7 @@ export default function DashboardFullReference({ userRole }) {
       </div>
 
       {/* ROW 2: THREE COLUMNS IN FIRST LINE (INVOICE / PI / PO STATUS OVERVIEW, CATEGORY SHARE, PENDING ACTIONS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
         
         {/* CARD 1: INVOICE / PROFORMA / PO STATUS OVERVIEW */}
         <POStatusOverview 
@@ -581,66 +582,30 @@ export default function DashboardFullReference({ userRole }) {
         />
 
         {/* CARD 2: CATEGORY SHARE */}
-        <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'INVOICING BY PRODUCT PROFILE' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'SALES PRODUCT CATEGORY SHARE' : 'MATERIAL CATEGORY SPEND'}
-            </span>
-          </div>
-
-          {/* Top: Donut Chart */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4px 0' }}>
-            <div style={{ position: 'relative', width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="100" height="100" viewBox="0 0 36 36">
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" strokeWidth="4.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 15.9155 15.9155" fill="none" stroke="#2563EB" strokeWidth="4.5" strokeDasharray="43.5, 100" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 11.25 4.6" fill="none" stroke="#16A34A" strokeWidth="4.5" strokeDasharray="29.0, 100" strokeDashoffset="-43.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 10.3 6.1" fill="none" stroke="#CA8A04" strokeWidth="4.5" strokeDasharray="15.0, 100" strokeDashoffset="-72.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 3.0 0.4" fill="none" stroke="#9333EA" strokeWidth="4.5" strokeDasharray="7.5, 100" strokeDashoffset="-87.5" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 1.0 0.2" fill="none" stroke="#DC2626" strokeWidth="4.5" strokeDasharray="5.0, 100" strokeDashoffset="-95.0" />
-              </svg>
-              <div style={{ position: 'absolute', textAlign: 'center' }}>
-                <strong style={{ fontSize: '12px', color: '#0F172A', display: 'block' }}>
-                  {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? '₹ 3.84 Cr' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? '₹ 4.82 Cr' : `₹ ${totalValueCr} Cr`}
-                </strong>
-                <span style={{ fontSize: '8.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>
-                  {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Billed MTD' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Total Sales' : 'Total Spend'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom: Items auto-fitting */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
-            {((userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? [
-              { name: 'Mini Rail', val: '₹1.65 Cr', color: '#2563EB' },
-              { name: 'Long Rail', val: '₹1.15 Cr', color: '#16A34A' },
-              { name: 'Mid Clamp', val: '₹0.52 Cr', color: '#CA8A04' },
-              { name: 'End Clamp', val: '₹0.34 Cr', color: '#9333EA' },
-              { name: 'Accessories', val: '₹0.18 Cr', color: '#DC2626' }
-            ] : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? [
-              { name: 'Mini Rail', val: '₹2.10 Cr', color: '#2563EB' },
-              { name: 'Long Rail', val: '₹1.45 Cr', color: '#16A34A' },
-              { name: 'Mid Clamp', val: '₹0.68 Cr', color: '#CA8A04' },
-              { name: 'End Clamp', val: '₹0.38 Cr', color: '#9333EA' },
-              { name: 'Accessories', val: '₹0.21 Cr', color: '#DC2626' }
-            ] : [
-              { name: 'Alu Profiles', val: '₹1.86 Cr', color: '#2563EB' },
-              { name: 'HDG Steel', val: '₹1.24 Cr', color: '#16A34A' },
-              { name: 'Raw Mat.', val: '₹0.64 Cr', color: '#CA8A04' },
-              { name: 'Fasteners', val: '₹0.32 Cr', color: '#9333EA' },
-              { name: 'Others', val: '₹0.22 Cr', color: '#DC2626' }
-            ]).map((cat, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cat.color, flexShrink: 0 }}></span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#64748B', fontSize: '8.5px' }}>{cat.name}</span>
-                  <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '9.5px' }}>{cat.val}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <POStatusOverview 
+          title={(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'INVOICING BY PRODUCT PROFILE' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'SALES PRODUCT CATEGORY SHARE' : 'MATERIAL CATEGORY SPEND'}
+          totalCount={(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? '₹ 3.84 Cr' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? '₹ 4.82 Cr' : `₹ ${totalValueCr} Cr`}
+          totalLabel={(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'BILLED MTD' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'TOTAL SALES' : 'TOTAL SPEND'}
+          items={((userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? [
+            { name: 'Mini Rail Profiles', count: '₹ 1.65 Cr', color: '#2563EB', pct: 0.43 },
+            { name: 'Long Rail Profiles', count: '₹ 1.15 Cr', color: '#16A34A', pct: 0.30 },
+            { name: 'Mid Clamps', count: '₹ 0.52 Cr', color: '#CA8A04', pct: 0.14 },
+            { name: 'End Clamps', count: '₹ 0.34 Cr', color: '#9333EA', pct: 0.09 },
+            { name: 'Accessories', count: '₹ 0.18 Cr', color: '#DC2626', pct: 0.04 }
+          ] : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? [
+            { name: 'Mini Rail Profiles', count: '₹ 2.10 Cr', color: '#2563EB', pct: 0.44 },
+            { name: 'Long Rail Profiles', count: '₹ 1.45 Cr', color: '#16A34A', pct: 0.30 },
+            { name: 'Mid Clamps', count: '₹ 0.68 Cr', color: '#CA8A04', pct: 0.14 },
+            { name: 'End Clamps', count: '₹ 0.38 Cr', color: '#9333EA', pct: 0.08 },
+            { name: 'Accessories', count: '₹ 0.21 Cr', color: '#DC2626', pct: 0.04 }
+          ] : [
+            { name: 'Alu Profiles', count: '₹ 1.86 Cr', color: '#2563EB', pct: 0.435 },
+            { name: 'HDG Steel Structure', count: '₹ 1.24 Cr', color: '#16A34A', pct: 0.29 },
+            { name: 'Raw Material Stock', count: '₹ 0.64 Cr', color: '#CA8A04', pct: 0.15 },
+            { name: 'Fasteners & Bolts', count: '₹ 0.32 Cr', color: '#9333EA', pct: 0.075 },
+            { name: 'Others & Misc', count: '₹ 0.22 Cr', color: '#DC2626', pct: 0.05 }
+          ])}
+        />
 
         {/* CARD 3: INVOICE COMPLIANCE / CONVERSIONS / APPROVAL PENDING */}
         <div className="section-card" style={{ padding: '14px 14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
@@ -669,95 +634,192 @@ export default function DashboardFullReference({ userRole }) {
       </div>
 
       {/* ROW 3: INVOICING TREND (₹ Cr) & PAYMENT AGEING SUMMARY */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '12px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px', width: '100%', alignItems: 'start', boxSizing: 'border-box' }}>
         
         {/* INVOICING VALUE TREND */}
-        <div className="section-card" style={{ padding: '16px 18px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content', minWidth: 0, boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'MONTHLY BILLING & INVOICING TREND' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'MONTHLY SALES REVENUE TREND' : 'PO VALUE TREND & PO COUNT'}
-              </span>
-              <span style={{ fontSize: '11px', color: '#64748B' }}>
-                {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Zoho Books Billed Invoices & Collection Status' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Proforma Invoice Revenue & Deal Conversions' : 'Monthly Purchasing Volume Comparison (Zoho Books Synced)'}
-              </span>
-            </div>
+        <div className="section-card" style={{ padding: '24px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '24px', display: 'flex', flexDirection: 'column', minWidth: 0, boxSizing: 'border-box', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          
+          {/* Card Header matching Reference Image */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'MONTHLY BILLING & INVOICING TREND' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'MONTHLY SALES REVENUE TREND' : 'PO VALUE TREND & PO COUNT'}
+            </h3>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', fontWeight: '600' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1E3A8A' }}>
-                <span style={{ width: '12px', height: '12px', backgroundColor: '#2563EB', borderRadius: '3px' }}></span>
-                {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Billed (₹ Cr)' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Sales (₹ Cr)' : 'Spend (₹ Cr)'}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A' }}>
-                <span style={{ width: '12px', height: '3px', backgroundColor: '#16A34A', borderRadius: '2px' }}></span>
-                {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoices' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Deals Count' : 'PO Volume'}
-              </span>
+            {/* Pill Dropdown Selector */}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <select 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                style={{
+                  padding: '6px 28px 6px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #D1D5DB',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#4B5563',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  outline: 'none',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                }}
+              >
+                <option value="JAN">Jan</option>
+                <option value="FEB">Feb</option>
+                <option value="MAR">Mar</option>
+                <option value="APR">Apr</option>
+                <option value="MAY">May</option>
+                <option value="JUN">Jun</option>
+                <option value="JUL">Jul</option>
+              </select>
             </div>
           </div>
 
-          {/* Interactive Trend Chart Representation */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '210px', paddingTop: '24px', paddingBottom: '12px', borderBottom: '1px solid #CBD5E1', gap: '8px' }}>
-            {((userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? [
-              { month: 'Mar', valCr: '2.80', count: '118', code: 'MAR' },
-              { month: 'Apr', valCr: '3.10', count: '126', code: 'APR' },
-              { month: 'May', valCr: '3.42', count: '135', code: 'MAY' },
-              { month: 'Jun', valCr: '3.65', count: '148', code: 'JUN' },
-              { month: 'Jul', valCr: '3.84', count: '160', code: 'JUL' }
-            ] : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? [
-              { month: 'Mar', valCr: '3.12', count: '28', code: 'MAR' },
-              { month: 'Apr', valCr: '3.85', count: '32', code: 'APR' },
-              { month: 'May', valCr: '4.10', count: '36', code: 'MAY' },
-              { month: 'Jun', valCr: '4.45', count: '39', code: 'JUN' },
-              { month: 'Jul', valCr: '4.82', count: '42', code: 'JUL' }
-            ] : trendData).map((d, idx) => {
-              const isSelected = d.code === selectedMonth;
-              const barHeightPx = Math.max((parseFloat(d.valCr) / 5.0) * 135, 18);
+          {/* Chart Container with Y-Axis and Clean Vertical Pills */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch', height: '220px' }}>
+            
+            {/* Left Y-Axis Labels */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: '28px', color: '#9CA3AF', fontSize: '11px', fontWeight: '600', flexShrink: 0 }}>
+              <span>1.5k</span>
+              <span>1.25k</span>
+              <span>1k</span>
+              <span>750</span>
+              <span>500</span>
+              <span>250</span>
+              <span>0</span>
+            </div>
 
-              return (
-                <div
-                  key={idx}
-                  onClick={() => setSelectedMonth(d.code)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flex: 1,
-                    cursor: 'pointer',
-                    padding: '6px 4px',
-                    borderRadius: '8px',
-                    backgroundColor: isSelected ? '#EFF6FF' : 'transparent',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: isSelected ? '#2563EB' : '#0F172A', lineHeight: '1.2' }}>
-                      ₹{d.valCr} Cr
-                    </span>
-                    <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '600', marginTop: '2px' }}>
-                      {d.count} {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoices' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'PIs' : 'POs'}
-                    </span>
-                  </div>
+            {/* Bars Area with Y-Axis Light Reference Grid lines */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+              
+              {/* Background Reference Grid Lines */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', opacity: 0.35 }}>
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+                <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
+              </div>
 
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', height: '135px' }}>
+              {/* Bars Row */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', paddingBottom: '28px', gap: '8px', zIndex: 1 }}>
+                {[
+                  { month: 'Jan', valCr: '1.20', count: '45', code: 'JAN', pct: 0.32 },
+                  { month: 'Feb', valCr: '1.60', count: '52', code: 'FEB', pct: 0.42 },
+                  { month: 'Mar', valCr: '2.80', count: '118', code: 'MAR', pct: 0.56 },
+                  { month: 'Apr', valCr: '3.10', count: '126', code: 'APR', pct: 0.78 },
+                  { month: 'May', valCr: '3.42', count: '135', code: 'MAY', pct: 0.82 },
+                  { month: 'Jun', valCr: '3.65', count: '148', code: 'JUN', pct: 0.70 },
+                  { month: 'Jul', valCr: '3.84', count: '160', code: 'JUL', pct: 0.94 },
+                  { month: 'Aug', valCr: '3.90', count: '165', code: 'AUG', pct: 0.88 },
+                  { month: 'Sep', valCr: '4.15', count: '172', code: 'SEP', pct: 1.10 },
+                  { month: 'Oct', valCr: '4.50', count: '185', code: 'OCT', pct: 1.28 },
+                  { month: 'Nov', valCr: '4.20', count: '178', code: 'NOV', pct: 0.98 },
+                  { month: 'Dec', valCr: '4.40', count: '182', code: 'DEC', pct: 1.15 }
+                ].map((d, idx) => {
+                  const isSelected = d.code === selectedMonth;
+                  const isHovered = hoveredBarIdx === idx;
+                  const barHeightPct = Math.min(Math.max((d.pct / 1.35) * 100, 15), 100);
+
+                  return (
                     <div
+                      key={idx}
+                      onClick={() => setSelectedMonth(d.code)}
+                      onMouseEnter={() => setHoveredBarIdx(idx)}
+                      onMouseLeave={() => setHoveredBarIdx(null)}
                       style={{
-                        width: '28px',
-                        height: `${barHeightPx}px`,
-                        backgroundColor: isSelected ? '#2563EB' : '#93C5FD',
-                        borderRadius: '4px 4px 0 0',
-                        transition: 'all 0.3s ease',
-                        boxShadow: isSelected ? '0 4px 10px rgba(37, 99, 235, 0.3)' : 'none'
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        height: '100%',
+                        flex: 1,
+                        cursor: 'pointer',
+                        position: 'relative'
                       }}
-                    ></div>
-                  </div>
+                    >
+                      {/* Floating Tooltip Box on Hover */}
+                      {(isHovered || isSelected) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '-38px',
+                            backgroundColor: '#0F172A',
+                            color: '#FFFFFF',
+                            padding: '4px 8px',
+                            borderRadius: '8px',
+                            fontSize: '10.5px',
+                            fontWeight: '700',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '1px'
+                          }}
+                        >
+                          <span>₹ {d.valCr} Cr</span>
+                          <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: '600' }}>
+                            {d.count} {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoices' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'PIs' : 'POs'}
+                          </span>
+                          {/* Tooltip Downward Arrow Pointer */}
+                          <div 
+                            style={{
+                              position: 'absolute',
+                              bottom: '-4px',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: 0,
+                              height: 0,
+                              borderLeft: '4px solid transparent',
+                              borderRight: '4px solid transparent',
+                              borderTop: '4px solid #0F172A'
+                            }}
+                          />
+                        </div>
+                      )}
 
-                  <span style={{ fontSize: '11px', color: isSelected ? '#2563EB' : '#64748B', fontWeight: isSelected ? '700' : '600', marginTop: '2px' }}>
-                    {d.month}
-                  </span>
-                </div>
-              );
-            })}
+                      {/* Smooth Blue Rounded Bar (Reference Style) */}
+                      <div
+                        style={{
+                          width: '100%',
+                          maxWidth: '24px',
+                          height: `${barHeightPct}%`,
+                          backgroundColor: isHovered ? '#0284C7' : isSelected ? '#0070BA' : '#008CDD',
+                          borderRadius: '10px',
+                          transition: 'all 0.2s ease',
+                          transform: isHovered ? 'scaleY(1.04)' : 'scaleY(1)',
+                          transformOrigin: 'bottom',
+                          opacity: isHovered ? 1 : isSelected ? 0.95 : 0.85,
+                          boxShadow: isHovered ? '0 4px 12px rgba(2, 132, 199, 0.4)' : 'none'
+                        }}
+                      />
+
+                      {/* X-Axis Month Label below Bar */}
+                      <span 
+                        style={{ 
+                          position: 'absolute',
+                          bottom: '-24px',
+                          fontSize: '11px', 
+                          color: isHovered ? '#0284C7' : isSelected ? '#0070BA' : '#9CA3AF', 
+                          fontWeight: isHovered || isSelected ? '800' : '600'
+                        }}
+                      >
+                        {d.month}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Subtle Horizontal Accent Line (from reference) */}
+              <div style={{ height: '4px', backgroundColor: '#EBF2F7', borderRadius: '4px', width: '100%', marginTop: 'auto' }} />
+            </div>
+
           </div>
         </div>
 
@@ -820,7 +882,7 @@ export default function DashboardFullReference({ userRole }) {
       </div>
 
       {/* ROW 4: RECENT TAX INVOICES & OVERDUE INVOICES TABLE */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px', width: '100%', alignItems: 'start' }}>
         
         {/* RECENT TAX INVOICES */}
         <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -928,14 +990,14 @@ export default function DashboardFullReference({ userRole }) {
       </div>
 
       {/* ROW 5: TWO PANELS (TODAY'S SNAPSHOT & KEY ALERTS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px', width: '100%', alignItems: 'start' }}>
         
         {/* TODAY'S SNAPSHOT */}
         <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
             <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TODAY'S SNAPSHOT</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px' }}>
             {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? (
               <>
                 <div style={{ padding: '10px 6px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '68px', boxSizing: 'border-box' }}>

@@ -1,5 +1,49 @@
 [
   {
+    "id": "PO-00083",
+    "poNo": "PO-00083",
+    "vendor": "Apex Infra Systems",
+    "branch": "",
+    "contactPerson": "—",
+    "contactNo": "—",
+    "email": "—",
+    "gstNo": "—",
+    "deliveryType": "Organization",
+    "deliveryAddress": "Apex Infra Systems, Main Road, Industrial Estate, Tamil Nadu - 600028",
+    "billingAddress": "Apex Infra Systems, Main Road, Industrial Estate, Tamil Nadu - 600028",
+    "poDate": "2026-08-26",
+    "deliveryDate": "2026-08-12",
+    "paymentTerms": "Net 30 Days",
+    "purchaser": "Arun",
+    "shipmentPref": "Transport",
+    "currency": "INR - Indian Rupee",
+    "project": "",
+    "priority": "High",
+    "shippingCharges": 0,
+    "otherCharges": 0,
+    "discountPct": 0,
+    "notes": "",
+    "terms": "1. Material: Aluminium Profile as per approved drawing/specification.\n2. Quantity: As per Purchase Order.\n3. Quality: Material should be free from dents, scratches, bends, and manufacturing defects.\n4. Test Certificate: Material Test Certificate (MTC) to be provided along with the material.\n5. Delivery: Material to be supplied as per the delivery schedule mentioned in the PO.\n6. Packing: Proper packing to be ensured to avoid transit damage.\n7. Inspection: Material is subject to inspection and acceptance at our site.\n8. Payment Terms: 30 days credit from the date of material receipt and invoice submission.\n9. Taxes: GST shall be applicable as per government norms.\n10. Rejected or damaged material, if any, shall be replaced by the supplier at no additional cost.",
+    "approvalRequired": "No",
+    "approver": "Velmurugan Rathinam (CEO)",
+    "approvalPriority": "High",
+    "amount": "₹21,24,000.00",
+    "status": "OPEN / PARTIALLY RECEIVED",
+    "statusType": "partially_received",
+    "items": [
+      {
+        "name": "Mini Rail",
+        "account": "Raw Material",
+        "qty": 1500,
+        "unit": "PCS",
+        "rate": 1200,
+        "tax": 18,
+        "description": "—"
+      }
+    ],
+    "order_status": "received"
+  },
+  {
     "id": "PO-00082",
     "poNo": "PO-00082",
     "vendor": "Annamalaiyar",
@@ -71,8 +115,8 @@
     "approver": "",
     "approvalPriority": "",
     "amount": "₹ 59,000.00",
-    "status": "Draft",
-    "statusType": "draft",
+    "status": "CLOSED / FULLY RECEIVED",
+    "statusType": "closed",
     "items": [
       {
         "name": "Mini Rail",
@@ -80,7 +124,8 @@
         "rate": 2500,
         "tax": 18
       }
-    ]
+    ],
+    "order_status": "closed"
   },
   {
     "id": "PO-00057",
