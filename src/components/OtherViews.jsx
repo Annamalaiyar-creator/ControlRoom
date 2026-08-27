@@ -21185,13 +21185,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.c3 || quickPreviewRecord.date1 || '2026-08-25'}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Vehicle Number</span>
-                          <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.vehicleNo || 'TN 38 CB 4920'}</strong>
+                          <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Mode of Transport</span>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.transportMode || quickPreviewRecord.c4 || '—'}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>LR / Docket No.</span>
-                          <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.lrNumber || 'LR-8920194'}</strong>
+                          <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Transport Name</span>
+                          <strong style={{ color: '#0F172A' }}>{quickPreviewRecord.transporterName || quickPreviewRecord.c5 || '—'}</strong>
                         </div>
+                        {quickPreviewRecord.vehicleNo ? (
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Vehicle Number</span>
+                            <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.vehicleNo}</strong>
+                          </div>
+                        ) : null}
+                        {quickPreviewRecord.lrNo || quickPreviewRecord.lrNumber ? (
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>LR / Docket No.</span>
+                            <strong style={{ color: '#0284C7' }}>{quickPreviewRecord.lrNo || quickPreviewRecord.lrNumber}</strong>
+                          </div>
+                        ) : null}
                         <div>
                           <span style={{ color: '#64748B', display: 'block', marginBottom: '2px' }}>Accounts Approval</span>
                           <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '10px', fontSize: '10.5px', fontWeight: '800' }}>
