@@ -18920,17 +18920,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         Customer Name <span style={{ color: '#EF4444' }}>*</span>
                       </label>
                       <div style={{ width: '100%' }}>
-                        <select
+                        <input
+                          type="text"
+                          list="bom-customer-name-suggestions"
+                          placeholder="Type or select customer from list..."
                           value={newBomProductName}
                           onChange={(e) => {
                             const val = e.target.value;
                             setNewBomProductName(val);
-                            const chosen = customerList.find(c => c.code === val);
+                            const chosen = customerList.find(c => (c.code || '').toLowerCase() === val.toLowerCase() || (c.c2 || '').toLowerCase() === val.toLowerCase());
                             if (chosen) {
                               const dObj = chosen.deliveryAddressObj || {};
                               const dAddr = dObj.address || chosen.c7 || chosen.deliveryAddress || '';
 
-                              // Always keep Same as Billing unselected upon selecting a customer
                               setSameAsBilling(false);
                               setNewBomDeliveryProofDoc(null);
 
@@ -18939,22 +18941,18 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 setNewBomDeliveryCity(dObj.city || '');
                                 setNewBomDeliveryState(dObj.state || '');
                                 setNewBomDeliveryPincode(dObj.pincode || '');
-                              } else {
-                                // Keep delivery fields empty for real manual entry until user chooses Same as Billing
-                                setNewBomDeliveryStreet('');
-                                setNewBomDeliveryCity('');
-                                setNewBomDeliveryState('');
-                                setNewBomDeliveryPincode('');
                               }
                             }
                           }}
-                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: newBomProductName ? '#0F172A' : '#94A3B8', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
-                        >
-                          <option value="" disabled hidden>Select customer from list...</option>
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                        />
+                        <datalist id="bom-customer-name-suggestions">
                           {customerList.map((c, idx) => (
-                            <option key={idx} value={c.code} style={{ color: '#0F172A' }}>{c.code}</option>
+                            <option key={idx} value={c.code}>
+                              {c.c2 && c.c2 !== c.code ? `${c.code} (${c.c2})` : c.code}
+                            </option>
                           ))}
-                        </select>
+                        </datalist>
                       </div>
                     </div>
                     <button
