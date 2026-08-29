@@ -47,12 +47,13 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
   const isProdAdmin = userRole === 'Production Admin' || (userRole && userRole.includes('Production'));
   
-  // Filter notifications strictly based on active user login role
+  // Filter notifications based on active user login role (or show system-wide alerts)
   const roleNotifications = liveNotifications.filter(n => {
+    if (!n.role || n.role === 'System' || n.role === 'All') return true;
     if (isProdAdmin) {
-      return n.role === 'Production Admin';
+      return n.role === 'Production Admin' || n.role === 'Procurement Admin';
     } else {
-      return n.role === 'Procurement Admin';
+      return n.role === 'Procurement Admin' || n.role === 'Production Admin';
     }
   });
 

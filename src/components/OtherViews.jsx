@@ -12997,13 +12997,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('rm-') ||
                                  mCode.includes('coil');
 
+                const isFGItem = mCode.startsWith('fg-') || mCat.includes('finished') || mName.includes('mini rail');
+
                 if (isRawMaterialDirectory) {
                   // Raw Material Directory strictly shows ONLY Aluminum Length (2414 mm)
                   const isAluLength2414 = mCode.includes('rm-alu-2414') || (mName.includes('aluminum length') && mName.includes('2414'));
                   if (!isAluLength2414) return false;
                 } else {
-                  // Inventory Stores hides raw materials (e.g. Aluminum Length 2414 mm)
-                  if (mCode.includes('rm-alu-2414') || isRawMat) return false;
+                  // Inventory Stores shows Finished Goods (e.g. Mini Rail 300 mm) and hides raw material bars
+                  if (!isFGItem && (mCode.includes('rm-alu-2414') || isRawMat)) return false;
                 }
 
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
