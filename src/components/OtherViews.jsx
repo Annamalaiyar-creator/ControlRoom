@@ -12819,24 +12819,28 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
             const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
             const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
-            const vrmProductItems = (VRM_PRODUCTS || []).map(p => ({
-              code: p.code,
-              name: p.name,
-              cat: p.material || 'Solar Structure',
-              unit: p.uom || 'Nos',
-              stock: 1000,
-              minLevel: 200,
-              status: 'In Stock',
-              store: p.material === 'HDG' ? 'Main Store' : 'Store B',
-              hsn: '7308',
-              lastUpdated: 'VRM Catalog',
-              reserved: 0,
-              openingStock: 1000,
-              goodsReceived: 0,
-              issuedProd: 0,
-              matReturn: 0,
-              stockAdj: 0
-            }));
+            const vrmProductItems = (VRM_PRODUCTS || []).map(p => {
+              const isMainBranchTemplate = p.code === 'MR100N' || p.code === 'MR100O' || p.name?.toLowerCase().includes('mini rail');
+              const defaultStock = isMainBranchTemplate ? 0 : 1000;
+              return {
+                code: p.code,
+                name: p.name,
+                cat: p.material || 'Solar Structure',
+                unit: p.uom || 'Nos',
+                stock: defaultStock,
+                minLevel: 200,
+                status: defaultStock === 0 ? 'Out of Stock' : 'In Stock',
+                store: p.material === 'HDG' ? 'Main Store' : 'Store B',
+                hsn: '7308',
+                lastUpdated: 'VRM Catalog',
+                reserved: 0,
+                openingStock: defaultStock,
+                goodsReceived: 0,
+                issuedProd: 0,
+                matReturn: 0,
+                stockAdj: 0
+              };
+            });
 
             const getEngineAluStock = () => {
               const engineInv = prodModuleEngine.getInventory();
