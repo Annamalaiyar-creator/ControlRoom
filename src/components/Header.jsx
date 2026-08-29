@@ -411,30 +411,6 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
               </div>
 
               <div style={{ borderTop: '1px solid #F1F5F9', marginTop: '4px', paddingTop: '4px' }}>
-                <button
-                  onClick={() => {
-                    setShowRoleMenu(false);
-                    onSwitchRole && onSwitchRole('Technical Administrator');
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#F0F9FF',
-                    color: '#0284C7',
-                    fontSize: '12.5px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    marginBottom: '4px'
-                  }}
-                >
-                  <Code style={{ width: '15px', height: '15px' }} />
-                  Developer Console
-                </button>
 
                 <button
                   onClick={() => {

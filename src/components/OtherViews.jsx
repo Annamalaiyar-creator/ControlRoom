@@ -1420,14 +1420,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   const [selectedItemWarehouse, setSelectedItemWarehouse] = useState('All Warehouses');
   const [selectedItemCategory, setSelectedItemCategory] = useState('All Categories');
   const [selectedItemStatus, setSelectedItemStatus] = useState('All Status');
+  const [itemsLoading, setItemsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchZohoItems = async () => {
       try {
+        setItemsLoading(true);
         const response = await fetch('/api/zoho/items');
         if (response.ok) {
           const zohoItems = await response.json();
-          if (Array.isArray(zohoItems) && zohoItems.length > 0) {
+          if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
             setItemsList(prev => {
               const itemMap = new Map();
               (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
@@ -1441,9 +1444,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         }
       } catch (err) {
         console.error("Error fetching Zoho Items:", err);
+      } finally {
+        if (isMounted) setItemsLoading(false);
       }
     };
     fetchZohoItems();
+    return () => { isMounted = false; };
   }, [activeTab]);
 
   const handleCreateProductInZoho = async () => {
@@ -10113,7 +10119,39 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       </tr>
                     </thead>
                     <tbody>
-                      {(() => {
+                      {itemsLoading ? (
+                        Array.from({ length: 6 }).map((_, sIdx) => (
+                          <tr key={`item-skel-${sIdx}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <div className="skeleton-shimmer" style={{ width: '16px', height: '16px', borderRadius: '4px', margin: '0 auto' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '75%', height: '14px' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '60px', height: '14px', borderRadius: '6px' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '14px' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '50px', height: '14px' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '65px', height: '18px', borderRadius: '12px', margin: '0 auto' }} />
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '8px', margin: '0 auto' }} />
+                            </td>
+                          </tr>
+                        ))
+                      ) : (() => {
                         const query = itemSearchQuery.toLowerCase().trim();
                         const filtered = itemsList.filter(item => {
                           if (query) {
@@ -12922,7 +12960,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('coil');
 
                 if (isRawMaterialDirectory) {
-                  if (!isRawMat) return false;
+                  // Raw Material Directory strictly shows ONLY Aluminum Length (2414 mm)
+                  const isAluLength2414 = mCode.includes('rm-alu-2414') || (mName.includes('aluminum length') && mName.includes('2414'));
+                  if (!isAluLength2414) return false;
+                } else {
+                  // Inventory Stores hides raw materials (e.g. Aluminum Length 2414 mm)
+                  if (mCode.includes('rm-alu-2414') || isRawMat) return false;
                 }
 
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());

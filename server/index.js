@@ -797,7 +797,7 @@ app.delete('/api/zoho/vendors/:id', async (req, res) => {
   });
   saveLocalVendors(updatedVendors);
 
-  // 2. Delete in Zoho Books if connected
+  // 2. Delete in Zoho Books if connecte
   if (zohoSession.connected) {
     try {
       const accessToken = await getZohoAccessToken();
