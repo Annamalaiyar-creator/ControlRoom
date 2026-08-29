@@ -12838,13 +12838,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               stockAdj: 0
             }));
 
+            const getEngineAluStock = () => {
+              const engineInv = prodModuleEngine.getInventory();
+              const aluItem = (engineInv || []).find(i => i.code === 'ALU-LEN-2414MM');
+              return aluItem ? Number(aluItem.physicalStock) : 100;
+            };
+
             const initialMaterials = [
-              { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
+              { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: getEngineAluStock(), lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: getEngineAluStock(), goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
               ...vrmProductItems
             ];
 
             const [materials, setMaterials] = useState(() => {
-              const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
+              const currentEngineStock = getEngineAluStock();
+              const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngineStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngineStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
               const matMap = new Map();
               matMap.set('RM-ALU-2414', defaultAluLength);
               (initialMaterials || []).forEach(m => matMap.set(m.code, m));
@@ -12884,7 +12891,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               const syncEngineInventory = () => {
                 const engineInv = prodModuleEngine.getInventory();
                 const matMap = new Map();
-                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
+                const currentEngStock = getEngineAluStock();
+                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                 matMap.set('RM-ALU-2414', defaultAluLength);
                 (initialMaterials || []).forEach(m => matMap.set(m.code, m));
 
