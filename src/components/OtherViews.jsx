@@ -12927,11 +12927,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('coil');
 
                 if (isRawMaterialDirectory) {
-                  // Raw Material Directory MUST ONLY contain Raw Materials
+                  // Raw Material Directory shows Raw Material items
                   if (!isRawMat) return false;
-                } else {
-                  // Inventory Stores MUST ONLY contain Finished Goods (manufactured products)
-                  if (isRawMat) return false;
                 }
 
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
