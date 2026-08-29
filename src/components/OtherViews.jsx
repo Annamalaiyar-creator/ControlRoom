@@ -12991,27 +12991,33 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
               
-              // Compute aggregated sub-branch stock for main parent products (e.g., MR100N)
-              const subStockTotalsMap = new Map();
+              // Compute aggregated sub-branch stock & min. level for main parent products (e.g., MR100N)
+              const subTotalsMap = new Map();
               materials.forEach(m => {
                 if (m.parentCode) {
                   const pCode = m.parentCode;
-                  const currentSubTotal = subStockTotalsMap.get(pCode) || 0;
-                  subStockTotalsMap.set(pCode, currentSubTotal + Number(m.stock || 0));
+                  const current = subTotalsMap.get(pCode) || { stock: 0, minLevel: 0 };
+                  subTotalsMap.set(pCode, {
+                    stock: current.stock + Number(m.stock || 0),
+                    minLevel: current.minLevel + Number(m.minLevel || 0)
+                  });
                 }
               });
 
               const preparedList = materials.map(m => {
-                // If it's a main branch parent product that has sub-branches, display total accumulated sub-branch physical stock
-                if (!m.parentCode && subStockTotalsMap.has(m.code)) {
-                  const aggregatedTotalStock = subStockTotalsMap.get(m.code);
+                // If it's a main branch parent product that has sub-branches, display total accumulated sub-branch physical stock & min. level
+                if (!m.parentCode && subTotalsMap.has(m.code)) {
+                  const subTotals = subTotalsMap.get(m.code);
+                  const aggregatedTotalStock = subTotals.stock;
+                  const aggregatedMinLevel = subTotals.minLevel || m.minLevel || 50;
                   let calcStatus = 'In Stock';
                   if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
-                  else if (aggregatedTotalStock <= (m.minLevel || 50)) calcStatus = 'Low Stock';
+                  else if (aggregatedTotalStock <= aggregatedMinLevel) calcStatus = 'Low Stock';
 
                   return {
                     ...m,
                     stock: aggregatedTotalStock,
+                    minLevel: aggregatedMinLevel,
                     status: calcStatus,
                     hasSubBranches: true
                   };
