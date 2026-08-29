@@ -12873,13 +12873,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 });
                 setMaterials(prev => {
                   const matMap = new Map();
+                  matMap.set('RM-ALU-2414', defaultAluLength);
+                  (initialMaterials || []).forEach(m => matMap.set(m.code, m));
                   (prev || []).forEach(m => matMap.set(m.code, m));
                   mappedMaster.forEach(m => {
                     matMap.set(m.code, { ...matMap.get(m.code), ...m });
                   });
-                  if (!matMap.has('RM-ALU-2414')) {
-                    matMap.set('RM-ALU-2414', defaultAluLength);
-                  }
                   return Array.from(matMap.values());
                 });
               }
