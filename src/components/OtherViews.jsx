@@ -1428,7 +1428,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         if (response.ok) {
           const zohoItems = await response.json();
           if (Array.isArray(zohoItems) && zohoItems.length > 0) {
-            setItemsList(zohoItems);
+            setItemsList(prev => {
+              const itemMap = new Map();
+              (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
+              zohoItems.forEach(it => {
+                const key = it.code || it.sku || it.itemId || it.id || it.name;
+                if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
+              });
+              return Array.from(itemMap.values());
+            });
           }
         }
       } catch (err) {
