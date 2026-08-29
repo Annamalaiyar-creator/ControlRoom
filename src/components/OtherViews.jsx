@@ -12881,45 +12881,77 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             });
 
             useEffect(() => {
-              if (itemsList && itemsList.length > 0) {
-                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
-                const mappedMaster = itemsList.map(it => {
-                  const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
-                  const minLvl = Number(it.reorderLevel || it.minLevel || 50);
-                  let statusText = 'In Stock';
-                  if (stockVal === 0) statusText = 'Out of Stock';
-                  else if (stockVal <= minLvl) statusText = 'Low Stock';
-
-                  return {
-                    code: it.code || it.sku || it.itemId || 'RM-VRM',
-                    name: it.name,
-                    cat: it.category || it.material || 'Aluminium',
-                    unit: it.unit || it.uom || 'Nos',
-                    stock: stockVal,
-                    minLevel: minLvl,
-                    status: statusText,
-                    store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
-                    hsn: '7604',
-                    lastUpdated: 'Live Store',
-                    reserved: 0,
-                    openingStock: stockVal,
-                    goodsReceived: 0,
-                    issuedProd: 0,
-                    matReturn: 0,
-                    stockAdj: 0
-                  };
-                });
+              const syncEngineInventory = () => {
+                const engineInv = prodModuleEngine.getInventory();
                 setMaterials(prev => {
                   const matMap = new Map();
+                  const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                   matMap.set('RM-ALU-2414', defaultAluLength);
                   (initialMaterials || []).forEach(m => matMap.set(m.code, m));
                   (prev || []).forEach(m => matMap.set(m.code, m));
-                  mappedMaster.forEach(m => {
-                    matMap.set(m.code, { ...matMap.get(m.code), ...m });
+
+                  // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
+                  (engineInv || []).forEach(item => {
+                    const existing = matMap.get(item.code) || {};
+                    const stockVal = Number(item.physicalStock !== undefined ? item.physicalStock : (existing.stock || 0));
+                    const minLvl = Number(item.safetyStock || existing.minLevel || 50);
+                    let statusText = 'In Stock';
+                    if (stockVal === 0) statusText = 'Out of Stock';
+                    else if (stockVal <= minLvl) statusText = 'Low Stock';
+
+                    matMap.set(item.code, {
+                      ...existing,
+                      code: item.code,
+                      name: item.name || existing.name,
+                      cat: item.category || existing.cat || 'Finished Goods',
+                      unit: item.unit || existing.unit || 'Nos',
+                      stock: stockVal,
+                      minLevel: minLvl,
+                      status: statusText,
+                      store: item.bayLocation || existing.store || 'Main Store',
+                      lastUpdated: 'Live Engine'
+                    });
                   });
+
+                  if (itemsList && itemsList.length > 0) {
+                    itemsList.forEach(it => {
+                      const key = it.code || it.sku || it.itemId || 'RM-VRM';
+                      const existing = matMap.get(key);
+                      const stockVal = Number(existing ? existing.stock : (it.stock !== undefined ? it.stock : (it.openingStock || 0)));
+                      const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+                      let statusText = 'In Stock';
+                      if (stockVal === 0) statusText = 'Out of Stock';
+                      else if (stockVal <= minLvl) statusText = 'Low Stock';
+
+                      matMap.set(key, {
+                        code: key,
+                        name: it.name,
+                        cat: it.category || it.material || 'Aluminium',
+                        unit: it.unit || it.uom || 'Nos',
+                        stock: stockVal,
+                        minLevel: minLvl,
+                        status: statusText,
+                        store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
+                        hsn: '7604',
+                        lastUpdated: 'Live Store',
+                        reserved: 0,
+                        openingStock: stockVal,
+                        goodsReceived: 0,
+                        issuedProd: 0,
+                        matReturn: 0,
+                        stockAdj: 0
+                      });
+                    });
+                  }
                   return Array.from(matMap.values());
                 });
-              }
+              };
+
+              syncEngineInventory();
+              const unsubscribe = prodModuleEngine.subscribe(() => {
+                syncEngineInventory();
+              });
+              return () => unsubscribe();
             }, [itemsList]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
             const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
