@@ -12903,7 +12903,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
 
-            // Filter logic: Strict separation between Raw Material Directory (Raw Materials) and Inventory Stores (Finished Goods)
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
               return materials.filter(m => {
@@ -12911,7 +12910,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const mCode = (m.code || '').toLowerCase();
                 const mCat = (m.cat || m.category || '').toLowerCase();
                 
-                // Identify if item is a Raw Material vs Finished Goods
                 const isRawMat = mCat.includes('raw') || 
                                  mCat.includes('coil') || 
                                  mCat.includes('extrusion') || 
@@ -12925,7 +12923,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('coil');
 
                 if (isRawMaterialDirectory) {
-                  // Raw Material Directory shows Raw Material items
                   if (!isRawMat) return false;
                 }
 
