@@ -12848,7 +12848,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             useEffect(() => {
               if (itemsList && itemsList.length > 0) {
-                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
+                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                 const mappedMaster = itemsList.map(it => {
                   const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
@@ -12876,11 +12876,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   };
                 });
                 setMaterials(prev => {
-                  if (!prev || prev.length === 0) return [defaultAluLength, ...mappedMaster];
-                  const existingCodes = new Set(mappedMaster.map(m => m.code));
-                  const localAdditions = prev.filter(m => !existingCodes.has(m.code));
-                  const hasAlu = localAdditions.some(m => m.code === 'RM-ALU-2414' || (m.name || '').toLowerCase().includes('aluminum length'));
-                  return hasAlu ? [...localAdditions, ...mappedMaster] : [defaultAluLength, ...localAdditions, ...mappedMaster];
+                  const matMap = new Map();
+                  (prev || []).forEach(m => matMap.set(m.code, m));
+                  mappedMaster.forEach(m => {
+                    matMap.set(m.code, { ...matMap.get(m.code), ...m });
+                  });
+                  if (!matMap.has('RM-ALU-2414')) {
+                    matMap.set('RM-ALU-2414', defaultAluLength);
+                  }
+                  return Array.from(matMap.values());
                 });
               }
             }, [itemsList]);
