@@ -12892,19 +12892,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
                   (engineInv || []).forEach(item => {
-                    const existing = matMap.get(item.code) || {};
+                    const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
+                    const existing = matMap.get(mappedCode) || matMap.get('RM-ALU-2414') || {};
                     const stockVal = Number(item.physicalStock !== undefined ? item.physicalStock : (existing.stock || 0));
                     const minLvl = Number(item.safetyStock || existing.minLevel || 50);
                     let statusText = 'In Stock';
                     if (stockVal === 0) statusText = 'Out of Stock';
                     else if (stockVal <= minLvl) statusText = 'Low Stock';
 
-                    matMap.set(item.code, {
+                    matMap.set(mappedCode, {
                       ...existing,
-                      code: item.code,
+                      code: mappedCode,
                       name: item.name || existing.name,
-                      cat: item.category || existing.cat || 'Finished Goods',
-                      unit: item.unit || existing.unit || 'Nos',
+                      cat: item.category || existing.cat || 'Aluminium',
+                      unit: item.unit || existing.unit || 'Length',
                       stock: stockVal,
                       minLevel: minLvl,
                       status: statusText,
