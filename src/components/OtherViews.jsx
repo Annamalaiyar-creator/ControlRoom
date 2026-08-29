@@ -13030,6 +13030,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const mCode = (m.code || '').toLowerCase();
                 const mCat = (m.cat || m.category || '').toLowerCase();
                 
+                // Exclude standalone parent MR100 / MR100N / MR100O entry without sub-branch context as requested
+                if (!m.parentCode && (mCode === 'mr100' || mCode === 'mr100n' || mCode === 'mr100o')) {
+                  return false;
+                }
+
                 const isRawMat = mCat.includes('raw') || 
                                  mCat.includes('coil') || 
                                  mCat.includes('extrusion') || 
