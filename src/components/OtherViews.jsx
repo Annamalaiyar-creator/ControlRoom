@@ -12806,17 +12806,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             ];
 
             const [materials, setMaterials] = useState(() => {
-              const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
+              const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
+              const matMap = new Map();
+              matMap.set('RM-ALU-2414', defaultAluLength);
+              (initialMaterials || []).forEach(m => matMap.set(m.code, m));
               if (itemsList && itemsList.length > 0) {
-                const listMapped = itemsList.map(it => {
+                itemsList.forEach(it => {
+                  const key = it.code || it.sku || it.itemId || 'RM-VRM';
                   const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
                   else if (stockVal <= minLvl) statusText = 'Low Stock';
 
-                  return {
-                    code: it.code || it.sku || it.itemId || 'RM-VRM',
+                  matMap.set(key, {
+                    code: key,
                     name: it.name,
                     cat: it.category || it.material || 'Aluminium',
                     unit: it.unit || it.uom || 'Nos',
@@ -12832,26 +12836,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     issuedProd: 0,
                     matReturn: 0,
                     stockAdj: 0
-                  };
+                  });
                 });
-                return [defaultAluLength, ...listMapped];
               }
-              const engineItems = prodModuleEngine.getInventory().map(item => ({
-                code: item.code,
-                name: item.name,
-                cat: item.category,
-                unit: item.unit,
-                stock: item.physicalStock,
-                reserved: item.reservedStock,
-                available: item.availableStock,
-                issued: item.issuedStock,
-                consumed: item.consumedStock,
-                minLevel: item.safetyStock,
-                status: item.physicalStock === 0 ? 'Out of Stock' : item.physicalStock <= item.safetyStock ? 'Low Stock' : 'In Stock',
-                store: item.bayLocation,
-                lastUpdated: 'Live Engine'
-              }));
-              return [defaultAluLength, ...engineItems, ...initialMaterials];
+              return Array.from(matMap.values());
             });
 
             useEffect(() => {
