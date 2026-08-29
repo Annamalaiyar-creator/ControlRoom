@@ -144,11 +144,17 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
     }
 
     try {
+      const cutLenVal = cutLength ? parseFloat(String(cutLength).replace(/[^\d.]/g, '')) : 300;
+      const fgProductCode = selectedProductCode === 'MR100' && cutLenVal !== 100 
+        ? `FG-MR-${cutLenVal}MM` 
+        : selectedProductCode;
+      
       const newWO = prodModuleEngine.createWorkOrder({
         id: woNumber,
         date: woDate,
         productionHead: 'Senthil Kumar (Production Head)',
-        finishedProductCode: selectedProductCode,
+        finishedProductCode: fgProductCode,
+        finishedProductName: `Mini Rail ${cutLenVal} mm`,
         targetQty: Number(targetQty),
         cutLength: cutLength,
         productItems: productItems,

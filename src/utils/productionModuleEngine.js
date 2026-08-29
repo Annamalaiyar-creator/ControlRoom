@@ -786,7 +786,6 @@ class ProductionModuleEngine {
     }
 
     const rawItem = this.inventory.find(i => i.code === wo.rawMaterialCode);
-    const fgItem = this.inventory.find(i => i.code === wo.finishedProductCode);
 
     if (!rawItem) throw new Error('Raw material item not found');
 
@@ -815,18 +814,35 @@ class ProductionModuleEngine {
     });
 
     // 2. Finished Goods Stock Addition (Only Good Output)
+    // Standardize Finished Goods Code & Name based on cut length (e.g. Cut 300mm -> FG-MR-300MM / Mini Rail 300 mm)
+    const cutLen = wo.cutLengthMm || 300;
+    const targetFgCode = wo.finishedProductCode && wo.finishedProductCode.startsWith('FG-') 
+      ? wo.finishedProductCode 
+      : (wo.finishedProductCode === 'MR100' && cutLen !== 100 
+          ? `FG-MR-${cutLen}MM` 
+          : (wo.finishedProductCode || `FG-MR-${cutLen}MM`));
+    
+    const targetFgName = wo.finishedProductName && !wo.finishedProductName.includes('100 mm') 
+      ? wo.finishedProductName 
+      : `Mini Rail ${cutLen} mm`;
+
+    let fgItem = this.inventory.find(i => 
+      i.code.toUpperCase() === targetFgCode.toUpperCase() || 
+      (i.name && i.name.toLowerCase() === targetFgName.toLowerCase())
+    );
+
     let fgPrevStock = 0;
     if (fgItem) {
       fgPrevStock = fgItem.physicalStock;
       fgItem.physicalStock += wo.actualGoodOutput;
       fgItem.availableStock = fgItem.physicalStock - fgItem.reservedStock;
     } else {
-      // Create FG item dynamically if not existing
-      this.inventory.push({
-        code: wo.finishedProductCode,
-        name: wo.finishedProductName,
+      // Create new FG item dynamically in inventory catalog
+      fgItem = {
+        code: targetFgCode,
+        name: targetFgName,
         category: 'Finished Goods',
-        unit: wo.unit,
+        unit: wo.unit || 'Pieces',
         physicalStock: wo.actualGoodOutput,
         reservedStock: 0,
         availableStock: wo.actualGoodOutput,
@@ -835,7 +851,8 @@ class ProductionModuleEngine {
         safetyStock: 20,
         unitRate: 150,
         bayLocation: 'Bay #4 - FG Store'
-      });
+      };
+      this.inventory.push(fgItem);
     }
 
     // Create FG Receipt Ledger
