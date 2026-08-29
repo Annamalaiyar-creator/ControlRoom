@@ -525,6 +525,15 @@ class ProductionModuleEngine {
     };
 
     this.workOrders.unshift(newWO);
+
+    // Automatically reserve & issue raw material stock for production floor
+    try {
+      this.reserveMaterial(woId);
+      this.issueMaterial(woId);
+    } catch (e) {
+      console.warn('Auto material issue warning:', e.message);
+    }
+
     this.saveToStorage();
     return newWO;
   }
