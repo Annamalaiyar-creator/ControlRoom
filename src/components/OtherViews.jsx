@@ -14064,7 +14064,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       const existingWO = prodModuleEngine.getWorkOrderById(woId);
                       if (existingWO) {
                         existingWO.targetQty = Number(sw.plannedQty || sw.targetQty) || existingWO.targetQty;
-                        existingWO.finishedProductName = sw.productName || sw.finishedProductName || existingWO.finishedProductName;
+                        if (sw.status && sw.status !== 'IN_PROGRESS' && sw.status !== 'ACCEPTED') {
+                          existingWO.status = sw.status;
+                        }
                       } else {
                         prodModuleEngine.workOrders.unshift({
                           id: woId,
@@ -14079,7 +14081,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           rawMaterialName: sw.rawMaterial || sw.rawMaterialName || 'Raw Aluminum Coil 1.5mm',
                           priority: 'Normal',
                           assignedEmployee: 'Floor Team',
-                          status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : 'ACCEPTED')
+                          status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : (sw.status || 'PENDING_MATERIAL'))
                         });
                       }
                     }
