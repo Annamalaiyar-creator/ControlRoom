@@ -13803,10 +13803,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
                                 {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '16px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '12px' }}>
                                     <span style={{ color: '#0E7490', fontSize: '13px', fontWeight: '900' }}>└─</span>
-                                    <span style={{ backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '2px 7px', borderRadius: '5px', fontSize: '11px', fontWeight: '700' }}>
-                                      {m.code}
+                                    <span style={{ color: '#0E7490', fontSize: '12px', fontWeight: '700' }}>
+                                      {m.parentCode}
                                     </span>
                                   </div>
                                 ) : (
@@ -13815,10 +13815,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
                                 {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '16px' }}>
-                                    <span>{m.name}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '1px 7px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      ↳ Sub-Product of {m.parentName || '100mm mini rail (new)'}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px' }}>
+                                    <span style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '1px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      Sub-Length Variant of {m.parentName || '100mm mini rail (new)'}
                                     </span>
                                   </div>
                                 ) : (
