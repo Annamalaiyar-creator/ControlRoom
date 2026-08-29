@@ -13816,9 +13816,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
                                 {m.parentCode ? (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '16px' }}>
-                                    <span>{m.name}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '1px 7px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      ↳ Sub-Product of {m.parentName || '100mm mini rail (new)'}
+                                    <span style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '1px 8px', borderRadius: '10px' }}>
+                                      Sub-Branch Length (300 MM)
                                     </span>
                                   </div>
                                 ) : (
