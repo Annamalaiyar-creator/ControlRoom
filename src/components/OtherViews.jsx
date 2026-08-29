@@ -12905,18 +12905,35 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
 
-            // Filter logic
+            // Filter logic: Strict separation between Raw Material Directory (Raw Materials) and Inventory Stores (Finished Goods)
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
               return materials.filter(m => {
-                // If viewing Raw Material Directory specifically, show ONLY Aluminum Length (2414 mm / stock 1000)
+                const mName = (m.name || '').toLowerCase();
+                const mCode = (m.code || '').toLowerCase();
+                const mCat = (m.cat || m.category || '').toLowerCase();
+                
+                // Identify if item is a Raw Material vs Finished Goods
+                const isRawMat = mCat.includes('raw') || 
+                                 mCat.includes('coil') || 
+                                 mCat.includes('extrusion') || 
+                                 mCat.includes('steel stock') || 
+                                 mName.includes('length') || 
+                                 mName.includes('coil') || 
+                                 mName.includes('bar') || 
+                                 mName.includes('stock') || 
+                                 mCode.includes('alu-len') || 
+                                 mCode.includes('rm-') ||
+                                 mCode.includes('coil');
+
                 if (isRawMaterialDirectory) {
-                  const mName = (m.name || '').toLowerCase();
-                  const mCode = (m.code || '').toLowerCase();
-                  const mDim = String(m.lengthMm || m.dim || m.dimension || '');
-                  const isAluminumLength = mName.includes('aluminum length') || mName.includes('aluminium length') || mCode.includes('alu-2414');
-                  if (!isAluminumLength) return false;
+                  // Raw Material Directory MUST ONLY contain Raw Materials
+                  if (!isRawMat) return false;
+                } else {
+                  // Inventory Stores MUST ONLY contain Finished Goods (manufactured products)
+                  if (isRawMat) return false;
                 }
+
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
                 const matchesCat = selectedCat === 'All Categories' || m.cat === selectedCat;
                 const matchesStore = selectedStore === 'All Stores' || m.store === selectedStore;
@@ -13441,8 +13458,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const pageConfig = {
               title: isRawMaterialDirectory ? 'Raw Material Directory' : 'Inventory Stores',
               subtitle: isRawMaterialDirectory
-                ? 'Master catalog of raw aluminum coils, steel profiles, fasteners, and raw material stock balances'
-                : 'Raw aluminum coils, steel profiles, fasteners, and warehouse store balances',
+                ? 'Master catalog of raw aluminum coils, extrusions, raw lengths, and raw material stock balances'
+                : 'Finished goods warehouse store, manufactured solar mounting products, and ready stock balances',
               actionText: 'Add Stock',
               searchPlaceholder: isRawMaterialDirectory
                 ? 'Search Raw Materials (Material Code, Name, Category)...'
