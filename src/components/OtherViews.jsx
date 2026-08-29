@@ -12907,12 +12907,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   else if (stockVal <= minLvl) statusText = 'Low Stock';
 
                   // Detect sub-product relationship (e.g. 300 mm Mini Rail cut variant under 100 MM Mini Rail main product)
-                  const isSubProduct = item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm');
+                  const isSubProduct = item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm') || item.name?.includes('300MM');
+                  const formattedSubName = isSubProduct ? '100 MM Mini Rail (300 MM)' : (item.name || existing.name);
 
                   matMap.set(mappedCode, {
                     ...existing,
                     code: mappedCode,
-                    name: item.name || existing.name,
+                    name: formattedSubName,
                     cat: item.category || existing.cat || 'Finished Goods',
                     unit: item.unit || existing.unit || 'Pieces',
                     stock: stockVal,
@@ -13818,7 +13819,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px' }}>
                                     <span style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</span>
                                     <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '1px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      Sub-Length Variant of {m.parentName || '100mm mini rail (new)'}
+                                      ↳ Sub-Branch of {m.parentName || '100mm mini rail (new)'}
                                     </span>
                                   </div>
                                 ) : (
