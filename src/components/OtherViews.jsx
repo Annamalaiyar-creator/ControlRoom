@@ -13836,17 +13836,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
                                 {m.parentCode ? (
-                                  <div style={{ paddingLeft: '16px', color: '#64748B', fontWeight: '600' }}>
-                                    —
-                                  </div>
+                                  <span style={{ paddingLeft: '12px', color: '#64748B', fontSize: '12px', fontWeight: '600' }}>
+                                    └─ {m.code}
+                                  </span>
                                 ) : (
                                   m.code
                                 )}
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
                                 {m.parentCode ? (
-                                  <div style={{ paddingLeft: '16px', color: '#334155', fontWeight: '600' }}>
-                                    └─ {m.name}
+                                  <div style={{ paddingLeft: '12px', color: '#0F172A', fontWeight: '600' }}>
+                                    {m.name}
                                   </div>
                                 ) : (
                                   <>
