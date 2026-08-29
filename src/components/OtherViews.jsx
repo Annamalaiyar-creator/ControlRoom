@@ -12990,36 +12990,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
-              
-              // Compute aggregated sub-branch stock for main parent products (e.g., MR100N)
-              const subStockTotalsMap = new Map();
-              materials.forEach(m => {
-                if (m.parentCode) {
-                  const pCode = m.parentCode;
-                  const currentSubTotal = subStockTotalsMap.get(pCode) || 0;
-                  subStockTotalsMap.set(pCode, currentSubTotal + Number(m.stock || 0));
-                }
-              });
-
-              const preparedList = materials.map(m => {
-                // If it's a main branch parent product that has sub-branches, display total accumulated sub-branch physical stock
-                if (!m.parentCode && subStockTotalsMap.has(m.code)) {
-                  const aggregatedTotalStock = subStockTotalsMap.get(m.code);
-                  let calcStatus = 'In Stock';
-                  if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
-                  else if (aggregatedTotalStock <= (m.minLevel || 50)) calcStatus = 'Low Stock';
-
-                  return {
-                    ...m,
-                    stock: aggregatedTotalStock,
-                    status: calcStatus,
-                    hasSubBranches: true
-                  };
-                }
-                return m;
-              });
-
-              return preparedList.filter(m => {
+              return materials.filter(m => {
                 const mName = (m.name || '').toLowerCase();
                 const mCode = (m.code || '').toLowerCase();
                 const mCat = (m.cat || m.category || '').toLowerCase();
