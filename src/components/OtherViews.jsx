@@ -13973,41 +13973,51 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const isFloorEmployee = String(userRole || '').toLowerCase().includes('employee') || String(userRole || '').toLowerCase().includes('floor') || String(userRole || '').toLowerCase().includes('operator');
 
             useEffect(() => {
+              const applyWorkOrders = (workOrdersList) => {
+                if (workOrdersList && Array.isArray(workOrdersList)) {
+                  workOrdersList.forEach(sw => {
+                    const woId = sw.workOrderNo || sw.id;
+                    if (woId) {
+                      const existingWO = prodModuleEngine.getWorkOrderById(woId);
+                      if (existingWO) {
+                        existingWO.targetQty = Number(sw.plannedQty || sw.targetQty) || existingWO.targetQty;
+                        existingWO.finishedProductName = sw.productName || sw.finishedProductName || existingWO.finishedProductName;
+                      } else {
+                        prodModuleEngine.workOrders.unshift({
+                          id: woId,
+                          date: sw.targetDate || sw.date || new Date().toISOString().split('T')[0],
+                          productionHead: 'Senthil Kumar (Production Head)',
+                          finishedProductCode: sw.productName || sw.finishedProductCode || 'MR100',
+                          finishedProductName: sw.productName || sw.finishedProductName || 'Mini Rail 100 mm',
+                          targetQty: Number(sw.plannedQty || sw.targetQty) || 500,
+                          cutLengthMm: 300,
+                          productItems: [],
+                          unit: 'Pieces',
+                          rawMaterialName: sw.rawMaterial || sw.rawMaterialName || 'Raw Aluminum Coil 1.5mm',
+                          priority: 'Normal',
+                          assignedEmployee: 'Floor Team',
+                          status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : 'ACCEPTED')
+                        });
+                      }
+                    }
+                  });
+                  prodModuleEngine.saveToStorage();
+                  setEngineTick(t => t + 1);
+                }
+              };
+
               fetch('/api/workorders')
                 .then(res => res.json())
                 .then(data => {
-                  if (data && data.workOrders && Array.isArray(data.workOrders)) {
-                    data.workOrders.forEach(sw => {
-                      const woId = sw.workOrderNo || sw.id;
-                      if (woId) {
-                        const existingWO = prodModuleEngine.getWorkOrderById(woId);
-                        if (existingWO) {
-                          existingWO.targetQty = Number(sw.plannedQty) || existingWO.targetQty;
-                          existingWO.finishedProductName = sw.productName || existingWO.finishedProductName;
-                        } else {
-                          prodModuleEngine.workOrders.unshift({
-                            id: woId,
-                            date: sw.targetDate || new Date().toISOString().split('T')[0],
-                            productionHead: 'Senthil Kumar (Production Head)',
-                            finishedProductCode: sw.productName || 'MR100',
-                            finishedProductName: sw.productName || 'Mini Rail 100 mm',
-                            targetQty: Number(sw.plannedQty) || 500,
-                            cutLengthMm: 300,
-                            productItems: [],
-                            unit: 'Pieces',
-                            rawMaterialName: sw.rawMaterial || 'Raw Aluminum Coil 1.5mm',
-                            priority: 'Normal',
-                            assignedEmployee: 'Floor Team',
-                            status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : 'ACCEPTED')
-                          });
-                        }
-                      }
-                    });
-                    prodModuleEngine.saveToStorage();
-                    setEngineTick(t => t + 1);
+                  if (data && data.workOrders) {
+                    applyWorkOrders(data.workOrders);
                   }
                 })
-                .catch(err => console.error('Failed to sync server workorders:', err));
+                .catch(() => {
+                  fetchCloudStore('workorder_store', prodModuleEngine.getWorkOrders()).then(cloudWOs => {
+                    if (cloudWOs) applyWorkOrders(cloudWOs);
+                  });
+                });
 
               const unsubscribe = prodModuleEngine.subscribe(() => {
                 setEngineTick(t => t + 1);
