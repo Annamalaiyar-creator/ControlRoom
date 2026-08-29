@@ -3303,3 +3303,5 @@ if (process.env.VERCEL !== '1') {
     console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
   });
 }
+
+export default app;
