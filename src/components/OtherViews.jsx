@@ -12920,8 +12920,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     status: statusText,
                     store: item.bayLocation || existing.store || 'Main Store',
                     lastUpdated: 'Live Engine',
-                    parentCode: isSubProduct ? (item.parentCode || 'MR100') : existing.parentCode,
-                    parentName: isSubProduct ? (item.parentName || '100 MM mini rail (new)') : existing.parentName
+                    parentCode: isSubProduct ? (item.parentCode || 'MR100N') : existing.parentCode,
+                    parentName: isSubProduct ? (item.parentName || '100mm mini rail (new)') : existing.parentName
                   });
                 });
 
@@ -13818,7 +13818,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '16px' }}>
                                     <span>{m.name}</span>
                                     <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '1px 7px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      ↳ Sub-Product of {m.parentName || '100 MM mini rail (new)'}
+                                      ↳ Sub-Product of {m.parentName || '100mm mini rail (new)'}
                                     </span>
                                   </div>
                                 ) : (

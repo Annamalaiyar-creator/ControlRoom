@@ -109,8 +109,8 @@ export const INITIAL_INVENTORY_ITEMS = [
     bayLocation: 'Bay #2 - Coil Storage'
   },
   {
-    code: 'MR100',
-    name: 'Mini Rail 100 mm',
+    code: 'MR100N',
+    name: '100mm mini rail (new)',
     category: 'Finished Goods',
     unit: 'Pieces',
     physicalStock: 50,
@@ -118,8 +118,8 @@ export const INITIAL_INVENTORY_ITEMS = [
     availableStock: 50,
     issuedStock: 0,
     consumedStock: 0,
-    safetyStock: 100,
-    unitRate: 120,
+    safetyStock: 20,
+    unitRate: 150,
     bayLocation: 'Bay #4 - FG Store'
   },
   {
