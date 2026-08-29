@@ -13847,30 +13847,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 onClick={() => handleOpenStockAdj(m)}
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
-                                {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '12px' }}>
-                                    <span style={{ color: '#0E7490', fontSize: '13px', fontWeight: '900' }}>└─</span>
-                                    <span style={{ color: '#0E7490', fontSize: '12px', fontWeight: '700' }}>
-                                      {m.parentCode}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  m.code
-                                )}
+                                {m.code}
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
-                                {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px' }}>
-                                    <span style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '1px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      ↳ Sub-Branch of {m.parentName || '100mm mini rail (new)'}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    {m.name} {activeTab === 'Raw Material Directory' && (m.lengthMm || '2414') ? <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>{m.lengthMm || '2414'} mm</span> : null}
-                                  </>
-                                )}
+                                {m.name} {activeTab === 'Raw Material Directory' && (m.lengthMm || '2414') ? <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>{m.lengthMm || '2414'} mm</span> : null}
                               </td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.cat}</td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.unit}</td>
