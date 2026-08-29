@@ -12815,7 +12815,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           // =========================================================================
           // DEDICATED RAW MATERIAL INVENTORY VIEW (MATCHES USER UI DESIGN EXACTLY)
           // =========================================================================
-          const RawMaterialInventoryView = ({ showAddStockForm: externalShowForm, setShowAddStockForm: externalSetShowForm, userRole, activeTab }) => {
+          const RawMaterialInventoryView = ({ showAddStockForm: externalShowForm, setShowAddStockForm: externalSetShowForm, userRole, activeTab, itemsLoading }) => {
             const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
             const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
             const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
@@ -13744,7 +13744,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         </tr>
                       </thead>
                       <tbody>
-                        {currentMaterialsPage.map((m, idx) => {
+                        {itemsLoading ? (
+                          Array.from({ length: 5 }).map((_, i) => (
+                            <tr key={`skel-rm-${i}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                              <td style={{ padding: '14px' }}><div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px' }}><div style={{ width: '90px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px' }}><div style={{ width: '180px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px' }}><div style={{ width: '80px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '60px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                            </tr>
+                          ))
+                        ) : currentMaterialsPage.map((m, idx) => {
                           const isSelected = selectedRows.includes(m.code);
                           const isOut = m.status === 'Out of Stock';
                           const isLow = m.status === 'Low Stock';
@@ -15264,6 +15277,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 setShowAddStockForm={setShowAddStockForm}
                 userRole={userRole}
                 activeTab={activeTab}
+                itemsLoading={itemsLoading}
               />
             );
           }
