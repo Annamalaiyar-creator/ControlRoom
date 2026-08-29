@@ -12985,7 +12985,40 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
-              return materials.filter(m => {
+              
+              // Aggregate physical stock & min level across sub-branches onto parent main branch
+              const subTotalsMap = new Map();
+              materials.forEach(m => {
+                if (m.parentCode) {
+                  const pCode = m.parentCode;
+                  const current = subTotalsMap.get(pCode) || { stock: 0, minLevel: 0 };
+                  subTotalsMap.set(pCode, {
+                    stock: current.stock + Number(m.stock || 0),
+                    minLevel: current.minLevel + Number(m.minLevel || 0)
+                  });
+                }
+              });
+
+              const preparedList = materials.map(m => {
+                if (!m.parentCode && subTotalsMap.has(m.code)) {
+                  const subTotals = subTotalsMap.get(m.code);
+                  const aggregatedTotalStock = subTotals.stock;
+                  const aggregatedMinLevel = subTotals.minLevel || m.minLevel || 50;
+                  let calcStatus = 'In Stock';
+                  if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
+                  else if (aggregatedTotalStock <= aggregatedMinLevel) calcStatus = 'Low Stock';
+
+                  return {
+                    ...m,
+                    stock: aggregatedTotalStock,
+                    minLevel: aggregatedMinLevel,
+                    status: calcStatus
+                  };
+                }
+                return m;
+              });
+
+              return preparedList.filter(m => {
                 const mName = (m.name || '').toLowerCase();
                 const mCode = (m.code || '').toLowerCase();
                 const mCat = (m.cat || m.category || '').toLowerCase();
@@ -13803,11 +13836,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
                                 {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '16px' }}>
-                                    <span style={{ color: '#0E7490', fontSize: '13px', fontWeight: '900' }}>└─</span>
-                                    <span style={{ backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '2px 7px', borderRadius: '5px', fontSize: '11px', fontWeight: '700' }}>
-                                      {m.code}
-                                    </span>
+                                  <div style={{ paddingLeft: '16px', color: '#64748B', fontWeight: '600' }}>
+                                    —
                                   </div>
                                 ) : (
                                   m.code
@@ -13815,11 +13845,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
                                 {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '16px' }}>
-                                    <span style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '1px 8px', borderRadius: '10px' }}>
-                                      Sub-Branch Length (300 MM)
-                                    </span>
+                                  <div style={{ paddingLeft: '16px', color: '#334155', fontWeight: '600' }}>
+                                    └─ {m.name}
                                   </div>
                                 ) : (
                                   <>
