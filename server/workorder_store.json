@@ -1,5 +1,47 @@
 [
   {
+    "id": "wo_1787979587391",
+    "workOrderNo": "WO-2",
+    "productName": "MR100",
+    "plannedQty": 12,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-08-30"
+  },
+  {
+    "id": "wo_1787979024194",
+    "workOrderNo": "WO-2",
+    "productName": "MR100",
+    "plannedQty": 8,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-08-30"
+  },
+  {
+    "id": "wo_1787978925273",
+    "workOrderNo": "WO-2",
+    "productName": "MR100",
+    "plannedQty": 8,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-08-30"
+  },
+  {
     "id": "wo_1",
     "workOrderNo": "VRM26/07/118",
     "productName": "Mini Rail 100 mm",

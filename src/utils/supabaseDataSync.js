@@ -12,7 +12,7 @@ function mergeDatasets(localArray, remoteArray) {
 
   const getId = (item) => {
     if (!item || typeof item !== 'object') return JSON.stringify(item);
-    return item.bomCode || item.id || item.code || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.coilNo || item.name;
+    return item.bomCode || item.id || item.workOrderNo || item.woNo || item.code || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.coilNo || item.name;
   };
 
   const map = new Map();

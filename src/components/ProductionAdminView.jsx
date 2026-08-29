@@ -53,13 +53,47 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   const fetchWorkOrders = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch('/api/zoho/workorders');
+      const res = await fetch('/api/workorders');
+      let serverWOs = [];
       if (res.ok) {
         const data = await res.json();
-        if (data.workOrders && data.workOrders.length > 0) {
-          setWorkOrders(data.workOrders);
+        if (data.workOrders && Array.isArray(data.workOrders)) {
+          serverWOs = data.workOrders;
         }
       }
+      const engineWOs = prodModuleEngine.getWorkOrders() || [];
+      const woMap = new Map();
+      
+      // Combine engine work orders first
+      engineWOs.forEach(wo => {
+        const key = wo.id || wo.workOrderNo;
+        if (key) {
+          woMap.set(key, {
+            id: wo.id,
+            workOrderNo: wo.id || wo.workOrderNo,
+            productName: wo.finishedProductCode || wo.productName || 'Solar Mounting Rail',
+            plannedQty: wo.targetQty || wo.plannedQty || 500,
+            completedQty: wo.completedQty || 0,
+            delayDays: wo.delayDays || 0,
+            delayReason: wo.delayReason || 'Normal Production',
+            status: wo.status || 'In Progress',
+            statusColor: wo.statusColor || '#EA580C',
+            rawMaterial: wo.rawMaterial || 'Raw Alu Coil',
+            customer: wo.customer || 'Solar Client',
+            targetDate: wo.targetDate || wo.date || new Date().toISOString().split('T')[0]
+          });
+        }
+      });
+
+      // Overlay server work orders
+      serverWOs.forEach(wo => {
+        const key = wo.workOrderNo || wo.id;
+        if (key) {
+          woMap.set(key, { ...woMap.get(key), ...wo });
+        }
+      });
+
+      setWorkOrders(Array.from(woMap.values()));
     } catch (err) {
       console.error('Failed to fetch work orders:', err);
     } finally {
@@ -70,8 +104,10 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   const [, setEngineTick] = useState(0);
 
   useEffect(() => {
+    fetchWorkOrders();
     const unsubscribe = prodModuleEngine.subscribe(() => {
       setEngineTick(t => t + 1);
+      fetchWorkOrders();
     });
     return () => unsubscribe();
   }, []);
@@ -81,7 +117,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   const handleCreateWorkOrder = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/zoho/workorders', {
+      const res = await fetch('/api/workorders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newWO)

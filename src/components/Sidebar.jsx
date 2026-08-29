@@ -43,6 +43,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Dashboard', icon: LayoutDashboard },
         { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
         { label: 'Items Directory', icon: Boxes },
+        { label: 'Raw Material Directory', icon: Warehouse },
         { label: 'Proforma Invoice', icon: FileText }
       ]
     },
@@ -57,15 +58,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Price Comparison', icon: Scale },
         { label: 'Payments', icon: Wallet }
       ]
-    },
-    {
-      category: 'WORKSPACE & REPORTS',
-      items: [
-        { label: 'Spend Analytics', icon: PieChart },
-        { label: 'Procurement Reports', icon: FileBarChart },
-        { label: 'Spend Reports', icon: TrendingUp },
-        { label: 'Supplier Reports', icon: UserCheck }
-      ]
     }
   ];
 
@@ -76,7 +68,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Dashboard', icon: LayoutDashboard },
         { label: 'Work Orders', icon: ClipboardList, badge: realWOCount > 0 ? String(realWOCount) : undefined },
         { label: 'Dispatch Orders', icon: Truck },
-        { label: 'Inventory (Raw Material)', icon: Warehouse }
+        { label: 'Inventory', icon: Warehouse },
+        { label: 'Raw Material Directory', icon: Warehouse }
       ]
     },
     {

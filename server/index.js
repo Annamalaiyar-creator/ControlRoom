@@ -41,11 +41,20 @@ const syncStoreWithSupabase = async (key, localData) => {
       .single();
 
     if (!error && data && data.data) {
-      // If remote Supabase item_store has fewer items than local disk, force upsert local disk items
-      if (key === 'item_store' && Array.isArray(localData) && localData.length > (data.data.length || 0)) {
-        await supabase.from('controlroom_store').upsert({ key, data: localData, updated_at: new Date().toISOString() });
-        supabaseMemoryStore[key] = localData;
-        return localData;
+      // If remote Supabase store has data, merge local file data with remote data so local entries are preserved
+      if (Array.isArray(localData) && localData.length > 0) {
+        const itemMap = new Map();
+        (data.data || []).forEach(item => {
+          const id = item?.id || item?.workOrderNo || item?.code;
+          if (id) itemMap.set(id, item);
+        });
+        localData.forEach(item => {
+          const id = item?.id || item?.workOrderNo || item?.code;
+          if (id) itemMap.set(id, { ...itemMap.get(id), ...item });
+        });
+        const mergedData = Array.from(itemMap.values());
+        supabaseMemoryStore[key] = mergedData;
+        return mergedData;
       }
       supabaseMemoryStore[key] = data.data;
       return data.data;
@@ -77,12 +86,14 @@ const pushStoreToSupabase = async (key, storeData) => {
 // Initial background sync from Supabase cloud store on server boot
 (async () => {
   try {
+    const initialWOs = loadLocalWorkOrders();
     await Promise.all([
       syncStoreWithSupabase('po_store', []),
       syncStoreWithSupabase('vendor_store', []),
       syncStoreWithSupabase('item_store', []),
       syncStoreWithSupabase('grn_store', []),
-      syncStoreWithSupabase('bom_store', [])
+      syncStoreWithSupabase('bom_store', []),
+      syncStoreWithSupabase('workorder_store', initialWOs)
     ]);
     console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');
   } catch (err) {
@@ -813,6 +824,9 @@ const loadLocalWorkOrders = () => {
   } catch (err) {
     console.error('Error reading workorder_store.json:', err.message);
   }
+  if (supabaseMemoryStore['workorder_store'] && Array.isArray(supabaseMemoryStore['workorder_store']) && supabaseMemoryStore['workorder_store'].length > 0) {
+    return supabaseMemoryStore['workorder_store'];
+  }
   return [
     { id: 'wo_1', workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
     { id: 'wo_2', workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
@@ -826,20 +840,21 @@ const saveLocalWorkOrders = (orders) => {
   try {
     const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
     fs.writeFileSync(storePath, JSON.stringify(orders, null, 2), 'utf8');
+    supabaseMemoryStore['workorder_store'] = orders;
     pushStoreToSupabase('workorder_store', orders);
   } catch (err) {
     console.error('Error writing workorder_store.json:', err.message);
   }
 };
 
-// Endpoint to GET Production Work Orders (Synced with Zoho Inventory & Local Store)
-app.get('/api/zoho/workorders', async (req, res) => {
+// Endpoint to GET Production Work Orders (Local & Supabase Store)
+app.get('/api/workorders', async (req, res) => {
   const localOrders = loadLocalWorkOrders();
   res.json({ success: true, count: localOrders.length, workOrders: localOrders });
 });
 
 // Endpoint to CREATE / ISSUE a Production Work Order
-app.post('/api/zoho/workorders', async (req, res) => {
+app.post('/api/workorders', async (req, res) => {
   try {
     const newOrder = {
       id: `wo_${Date.now()}`,
@@ -860,7 +875,7 @@ app.post('/api/zoho/workorders', async (req, res) => {
     const updated = [newOrder, ...currentOrders];
     saveLocalWorkOrders(updated);
 
-    res.json({ success: true, message: 'Production Work Order Created and Synced with Zoho Inventory!', workOrder: newOrder });
+    res.json({ success: true, message: 'Production Work Order Created and Saved!', workOrder: newOrder });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

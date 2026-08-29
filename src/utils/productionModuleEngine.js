@@ -155,7 +155,7 @@ export const INITIAL_INVENTORY_ITEMS = [
 // Seed Work Orders
 export const INITIAL_WORK_ORDERS = [
   {
-    id: 'WO-2026-00125',
+    id: 'WO-1',
     date: new Date().toISOString().split('T')[0],
     productionHead: 'Senthil Kumar (Production Head)',
     finishedProductCode: 'MR100',
@@ -243,6 +243,45 @@ class ProductionModuleEngine {
 
     this.subscribers = [];
     this.loadFromStorage();
+    this.initCloudSync();
+  }
+
+  initCloudSync() {
+    fetchCloudStore('vrm_prod_workorders', this.workOrders).then(cloudWOs => {
+      if (cloudWOs && Array.isArray(cloudWOs) && cloudWOs.length > 0) {
+        const woMap = new Map();
+        // 1. Load remote cloud WOs first
+        cloudWOs.forEach(w => {
+          const id = w.id || w.workOrderNo;
+          if (id) woMap.set(id, w);
+        });
+        // 2. Overlay current local WOs so freshly created ones are preserved
+        this.workOrders.forEach(w => {
+          const id = w.id || w.workOrderNo;
+          if (id) woMap.set(id, { ...woMap.get(id), ...w });
+        });
+        this.workOrders = Array.from(woMap.values());
+        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
+        this.notifySubscribers();
+      }
+    });
+
+    subscribeToCloudStore('vrm_prod_workorders', (latestWOs) => {
+      if (latestWOs && Array.isArray(latestWOs)) {
+        const woMap = new Map();
+        latestWOs.forEach(w => {
+          const id = w.id || w.workOrderNo;
+          if (id) woMap.set(id, w);
+        });
+        this.workOrders.forEach(w => {
+          const id = w.id || w.workOrderNo;
+          if (id) woMap.set(id, { ...woMap.get(id), ...w });
+        });
+        this.workOrders = Array.from(woMap.values());
+        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
+        this.notifySubscribers();
+      }
+    });
   }
 
   loadFromStorage() {
@@ -291,7 +330,7 @@ class ProductionModuleEngine {
   }
 
   // Calculate Raw Material Requirement from Manufacturing Recipe & Custom Cut Length (mm)
-  calculateMaterialRequirement(productCode, targetQty, customCutLengthMm = null) {
+  calculateMaterialRequirement(productCode, targetQty, customCutLengthMm = null, allProductItems = []) {
     const recipe = this.recipes.find(r => r.productCode === productCode);
     const rawItem = this.inventory.find(i => (recipe && i.code === recipe.rawMaterialCode) || i.code === 'ALU-LEN-2414MM');
 
@@ -304,14 +343,27 @@ class ProductionModuleEngine {
 
     // Standard raw material length is 2414 mm
     const rawLengthMm = 2414;
-    const bladeKerfMm = 3; // 3mm mandatory saw blade kerf width per cut stroke
+    const bladeKerfMm = 2; // 2mm saw blade kerf width per cut stroke
 
-    // Calculate how many pieces fit in 1 length of 2414 mm (accounting for 3mm kerf per cut)
+    // Calculate how many pieces N fit in 1 length of 2414 mm (where N pieces require N - 1 cuts of bladeKerfMm)
     let piecesPerLength = recipe ? Number(recipe.expectedOutputQty) : 1;
     if (cutLenMm > 0) {
-      const effectiveCutLen = cutLenMm + bladeKerfMm;
-      piecesPerLength = Math.floor(rawLengthMm / effectiveCutLen);
+      // (N * cutLenMm) + ((N - 1) * bladeKerfMm) <= rawLengthMm  =>  N * (cutLenMm + bladeKerfMm) <= rawLengthMm + bladeKerfMm
+      piecesPerLength = Math.floor((rawLengthMm + bladeKerfMm) / (cutLenMm + bladeKerfMm));
       if (piecesPerLength < 1) piecesPerLength = 1;
+    }
+
+    // Calculate additional offcut cuts derived from extra rows in allProductItems
+    let additionalConsumedMmPerBar = 0;
+    if (Array.isArray(allProductItems) && allProductItems.length > 1) {
+      allProductItems.slice(1).forEach(item => {
+        const itemCutLen = parseFloat(String(item.cutLength || 0).replace(/[^\d.]/g, '')) || 0;
+        const itemQty = parseFloat(item.targetQty || 0) || 0;
+        if (itemCutLen > 0 && itemQty > 0) {
+          // Each piece adds cut length + 2mm kerf cut stroke
+          additionalConsumedMmPerBar += (itemQty * itemCutLen) + (itemQty * bladeKerfMm);
+        }
+      });
     }
 
     // Exact theoretical raw material length required
@@ -323,21 +375,25 @@ class ProductionModuleEngine {
     let expectedTheoreticalOutput = physicalMatToIssue * piecesPerLength;
 
     // Wastage & Scrap Calculations (Product Length + Blade Kerf Loss)
+    // 8 finished pieces from 1 bar require 7 cut strokes (N pieces = N - 1 cuts)
+    const cutsPerBar = Math.max(0, piecesPerLength - 1);
     const netProductMmPerBar = piecesPerLength * cutLenMm;
-    const kerfLossMmPerBar = piecesPerLength * bladeKerfMm;
-    const usedLengthMmPerBar = netProductMmPerBar + kerfLossMmPerBar;
+    const kerfLossMmPerBar = cutsPerBar * bladeKerfMm;
+    const usedLengthMmPerBar = netProductMmPerBar + kerfLossMmPerBar + additionalConsumedMmPerBar;
     const endOffcutScrapMmPerBar = Math.max(0, rawLengthMm - usedLengthMmPerBar);
 
     const totalIssuedMm = physicalMatToIssue * rawLengthMm;
-    const totalNetProductMm = (Number(targetQty) || 0) * cutLenMm;
-    const totalKerfLossMm = (Number(targetQty) || 0) * bladeKerfMm;
+    const totalNetProductMm = ((Number(targetQty) || 0) * cutLenMm) + additionalConsumedMmPerBar;
+    const totalCutStrokes = Math.max(0, (Number(targetQty) || 0) - physicalMatToIssue);
+    const totalKerfLossMm = totalCutStrokes * bladeKerfMm;
     const totalUtilizedMmForTarget = totalNetProductMm + totalKerfLossMm;
     const totalWastageMm = totalIssuedMm > 0 ? Math.max(0, totalIssuedMm - totalNetProductMm) : 0;
     const wastagePercent = totalIssuedMm > 0 ? Number(((totalWastageMm / totalIssuedMm) * 100).toFixed(2)) : 0;
 
     // Remainder Offcut Bar from Last Issued Unit
     const piecesInLastBar = (Number(targetQty) || 0) % piecesPerLength;
-    const usedMmInLastBar = piecesInLastBar > 0 ? (piecesInLastBar * (cutLenMm + bladeKerfMm)) : 0;
+    const cutsInLastBar = Math.max(0, piecesInLastBar - 1);
+    const usedMmInLastBar = piecesInLastBar > 0 ? (piecesInLastBar * cutLenMm + cutsInLastBar * bladeKerfMm) : 0;
     const remainderOffcutMm = piecesInLastBar > 0 ? Math.max(0, rawLengthMm - usedMmInLastBar) : 0;
     const remainderOffcutMeters = Number((remainderOffcutMm / 1000).toFixed(2));
 
@@ -355,7 +411,9 @@ class ProductionModuleEngine {
       cutLenMm,
       bladeKerfMm,
       netProductMmPerBar,
+      cutsPerBar,
       kerfLossMmPerBar,
+      totalCutStrokes,
       totalKerfLossMm,
       targetQty: Number(targetQty) || 0,
       piecesPerLength,
@@ -378,30 +436,65 @@ class ProductionModuleEngine {
     };
   }
 
+  // Get Next Sequential WO Number (Format: WO-1, WO-2, WO-3, etc.)
+  getNextWoNumber() {
+    const existing = this.workOrders || [];
+    let maxSeq = 0;
+    existing.forEach(w => {
+      if (w && w.id) {
+        const match = String(w.id).match(/WO-(\d+)/i);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) maxSeq = num;
+        }
+      }
+    });
+    const nextSeq = maxSeq + 1;
+    return `WO-${nextSeq}`;
+  }
+
   // Create Work Order (Production Head)
   createWorkOrder(data) {
-    const calc = this.calculateMaterialRequirement(data.finishedProductCode, data.targetQty);
-    if (calc.error) {
-      throw new Error(calc.error);
-    }
+    const calc = this.calculateMaterialRequirement(data.finishedProductCode || 'MR100', data.targetQty || 1, data.cutLength || 300);
+    const recipe = calc.recipe || {
+      productName: data.finishedProductCode || 'Mini Rail 100 mm',
+      outputUnit: 'Pieces',
+      id: 'RECIPE-MR100',
+      rawMaterialCode: 'ALU-LEN-2414MM',
+      rawMaterialName: 'Aluminium Length (2414 mm)',
+      rawMaterialUnit: 'Length',
+      expectedOutputQty: 8
+    };
 
-    const woId = data.id || `WO-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const woId = data.id || this.getNextWoNumber();
     const newWO = {
       id: woId,
       date: data.date || new Date().toISOString().split('T')[0],
       productionHead: data.productionHead || 'Senthil Kumar (Production Head)',
       finishedProductCode: data.finishedProductCode,
-      finishedProductName: calc.recipe.productName,
-      targetQty: Number(data.targetQty),
-      unit: calc.recipe.outputUnit,
-      recipeId: calc.recipe.id,
-      recipeRatio: `1 ${calc.recipe.rawMaterialName} → ${calc.recipe.expectedOutputQty} ${calc.recipe.outputUnit}`,
-      rawMaterialCode: calc.recipe.rawMaterialCode,
-      rawMaterialName: calc.recipe.rawMaterialName,
-      rawMaterialRequiredQty: calc.exactRequiredMatQty,
-      rawMaterialPhysicalToIssue: calc.physicalMatToIssue,
-      rawMaterialUnit: calc.recipe.rawMaterialUnit,
-      expectedOutputQty: calc.expectedTheoreticalOutput,
+      finishedProductName: recipe.productName,
+      targetQty: Number(data.targetQty) || 1,
+      cutLengthMm: data.cutLength ? parseFloat(String(data.cutLength).replace(/[^\d.]/g, '')) : (calc.cutLenMm || 300),
+      productItems: data.productItems || [],
+      unit: recipe.outputUnit || 'Pieces',
+      recipeId: recipe.id,
+      recipeRatio: `1 ${recipe.rawMaterialName} → ${recipe.expectedOutputQty} ${recipe.outputUnit}`,
+      rawMaterialCode: recipe.rawMaterialCode,
+      rawMaterialName: recipe.rawMaterialName,
+      rawMaterialRequiredQty: calc.exactRequiredMatQty || 1,
+      rawMaterialPhysicalToIssue: calc.physicalMatToIssue || 1,
+      rawMaterialUnit: recipe.rawMaterialUnit || 'Length',
+      materialRequirement: {
+        items: [
+          {
+            materialName: recipe.rawMaterialName || 'Aluminium Length (2414 mm)',
+            piecesPerLength: calc.piecesPerLength || 6,
+            rawLengthsRequired: calc.physicalMatToIssue || 1,
+            requiredTotalMeters: Number(((calc.physicalMatToIssue || 1) * 2.414).toFixed(2))
+          }
+        ]
+      },
+      expectedOutputQty: calc.expectedTheoreticalOutput || (Number(data.targetQty) || 1),
       excessTheoreticalQty: calc.excessOutputPossible,
       priority: data.priority || 'Normal',
       productionLocation: data.productionLocation || 'CNC Line 01',

@@ -13,6 +13,23 @@ input[type="number"] {
   appearance: textfield !important;
 }
 
+/* Light, subtle example placeholder text across inputs */
+::placeholder {
+  color: #94A3B8 !important;
+  opacity: 0.55 !important;
+  font-weight: 500 !important;
+}
+::-webkit-input-placeholder {
+  color: #94A3B8 !important;
+  opacity: 0.55 !important;
+  font-weight: 500 !important;
+}
+:-ms-input-placeholder {
+  color: #94A3B8 !important;
+  opacity: 0.55 !important;
+  font-weight: 500 !important;
+}
+
 /* ==========================================================================
    01. DESIGN TOKENS (VARIABLES)
    ========================================================================== */

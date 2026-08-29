@@ -15,7 +15,9 @@ import {
   Package,
   Boxes,
   Cpu,
-  RotateCcw
+  RotateCcw,
+  Lightbulb,
+  Zap
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 import NotificationToast from './NotificationToast';
@@ -24,11 +26,12 @@ import { addLiveNotification } from './Header';
 export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   // 1. GENERAL & PRODUCTION STATE
   const [formStep, setFormStep] = useState(1); // 1 = General Details, 2 = Process Routing & Work Plan
-  const [woNumber, setWoNumber] = useState(`WO-2026-${Math.floor(10000 + Math.random() * 90000)}`);
+  const [woNumber, setWoNumber] = useState(() => prodModuleEngine.getNextWoNumber());
   const [woDate, setWoDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedProductCode, setSelectedProductCode] = useState('');
-  const [cutLength, setCutLength] = useState('');
-  const [targetQty, setTargetQty] = useState('');
+  // Multi-Product Target Output Items List (Initializes completely empty for new Work Order)
+  const [productItems, setProductItems] = useState([
+    { id: 1, productCode: '', cutLength: '', targetQty: '' }
+  ]);
   const [assignedEmployee, setAssignedEmployee] = useState('');
   const [priority, setPriority] = useState('');
   const [productionLocation, setProductionLocation] = useState('');
@@ -49,7 +52,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         id: Date.now(),
         stepNo: prev.length + 1,
         opName: '',
-        machine: 'CNC Cutting Machine',
+        machine: 'C - 1',
         operator: 'Karthik',
         estTimeHours: '',
         estTimeMins: '',
@@ -72,28 +75,54 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
 
   const recipes = prodModuleEngine.getRecipes();
 
-  // Recalculate material requirements on product code, cut length, or target quantity change
+  const handleAddProductItem = () => {
+    setProductItems(prev => [
+      ...prev,
+      { id: Date.now(), productCode: '', cutLength: '', targetQty: '' }
+    ]);
+  };
+
+  const handleRemoveProductItem = (id) => {
+    if (productItems.length <= 1) return;
+    setProductItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateProductItem = (id, field, value) => {
+    setProductItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  // Active primary product item for calculation
+  const primaryItem = productItems[0] || { productCode: '', cutLength: '', targetQty: '' };
+  const selectedProductCode = primaryItem.productCode;
+  const cutLength = primaryItem.cutLength;
+  const targetQty = primaryItem.targetQty;
+
+  const setCutLength = (val) => {
+    setProductItems(prev => prev.map((item, idx) => idx === 0 ? { ...item, cutLength: val } : item));
+  };
+
+  const setTargetQty = (val) => {
+    setProductItems(prev => prev.map((item, idx) => idx === 0 ? { ...item, targetQty: val } : item));
+  };
+
+  const setSelectedProductCode = (val) => {
+    setProductItems(prev => prev.map((item, idx) => idx === 0 ? { ...item, productCode: val } : item));
+  };
+
+  // Recalculate material requirements across all product items in the Work Order
   useEffect(() => {
-    if (targetQty && Number(targetQty) > 0) {
-      const calc = prodModuleEngine.calculateMaterialRequirement(selectedProductCode, Number(targetQty), cutLength);
+    if (productItems && productItems.length > 0) {
+      const calc = prodModuleEngine.calculateMaterialRequirement(selectedProductCode, Number(targetQty), cutLength, productItems);
       setMatCalc(calc);
     } else {
       setMatCalc(null);
     }
-  }, [selectedProductCode, cutLength, targetQty]);
+  }, [productItems, selectedProductCode, cutLength, targetQty]);
 
-  // Handle Product Change
-  const handleProductChange = (e) => {
-    const code = e.target.value;
-    setSelectedProductCode(code);
-    const chosenRecipe = recipes.find(r => r.productCode === code);
-    if (chosenRecipe) {
-      setInstructions(`Produce ${targetQty || chosenRecipe.expectedOutputQty} ${chosenRecipe.outputUnit} of ${chosenRecipe.productName} using ${chosenRecipe.rawMaterialName}.`);
-    }
-  };
+
 
   // Submit Handler
-  const handleCreateWorkOrder = (e) => {
+  const handleCreateWorkOrder = async (e) => {
     e.preventDefault();
 
     if (!targetQty || Number(targetQty) <= 0) {
@@ -121,6 +150,9 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         productionHead: 'Senthil Kumar (Production Head)',
         finishedProductCode: selectedProductCode,
         targetQty: Number(targetQty),
+        cutLength: cutLength,
+        productItems: productItems,
+        matCalc: matCalc,
         priority,
         productionLocation,
         assignedEmployee,
@@ -143,6 +175,23 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         targetTab: 'Work Orders',
         badgeColor: '#0284C7'
       });
+
+      try {
+        await fetch('/api/workorders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workOrderNo: newWO.id || woNumber,
+            productName: selectedProductCode || 'Mini Rail 100 mm',
+            plannedQty: Number(targetQty),
+            completedQty: 0,
+            status: 'In Progress',
+            targetDate: expectedCompletionDate || woDate
+          })
+        });
+      } catch (e) {
+        console.error('Server sync failed:', e);
+      }
 
       if (onWorkOrderCreated) {
         onWorkOrderCreated(newWO);
@@ -344,14 +393,19 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                         <select
                           value={step.machine}
                           onChange={(e) => handleUpdateWorkPlanStep(step.id, 'machine', e.target.value)}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', color: '#475569', outline: 'none' }}
+                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', color: '#475569', outline: 'none', fontWeight: '600' }}
                         >
-                          <option value="CNC Cutting Machine">CNC Cutting Machine</option>
-                          <option value="Punching Machine #1">Punching Machine #1</option>
-                          <option value="Punching Machine #2">Punching Machine #2</option>
-                          <option value="QC Station #1">QC Station #1</option>
-                          <option value="Packing Bench">Packing Bench</option>
-                          <option value="FRP Line 03">FRP Line 03</option>
+                          <option value="C - 1">C - 1</option>
+                          <option value="C - 2">C - 2</option>
+                          <option value="T - 1">T - 1</option>
+                          <option value="P - 1">P - 1</option>
+                          <option value="P - 2">P - 2</option>
+                          <option value="P - 3">P - 3</option>
+                          <option value="D - 1">D - 1</option>
+                          <option value="D - 2">D - 2</option>
+                          <option value="D - 3">D - 3</option>
+                          <option value="D - 4">D - 4</option>
+                          <option value="D - 5">D - 5</option>
                         </select>
                       </td>
 
@@ -502,83 +556,120 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
           </div>
 
           {/* SECTION 2: PRODUCT SELECTION & TARGET */}
-          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
                   <Package style={{ width: '14px', height: '14px' }} />
                 </div>
-                <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#64748B', margin: 0 }}>
+                <h3 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                   Product & Target Output
                 </h3>
               </div>
 
-              {(selectedProductCode || cutLength || targetQty) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedProductCode('');
-                    setCutLength('');
-                    setTargetQty('');
-                    setMatCalc(null);
-                  }}
+                  onClick={handleAddProductItem}
                   style={{
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#F8FAFC',
-                    color: '#64748B',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    border: '1px solid #0E7490',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '800',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s ease'
+                    gap: '5px'
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEF2F2'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.borderColor = '#FCA5A5'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.color = '#64748B'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
                 >
-                  <RotateCcw style={{ width: '12px', height: '12px' }} /> Clear Selection
+                  <Plus style={{ width: '14px', height: '14px' }} /> Add Product / Item
                 </button>
-              )}
+
+                {(selectedProductCode || cutLength || targetQty) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductItems([{ id: Date.now(), productCode: '', cutLength: '', targetQty: '' }]);
+                      setMatCalc(null);
+                    }}
+                    style={{
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#F8FAFC',
+                      color: '#64748B',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <RotateCcw style={{ width: '12px', height: '12px' }} /> Clear
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={labelStyle}>FINISHED PRODUCT (RECIPE)</label>
-                <select value={selectedProductCode} onChange={handleProductChange} style={{ ...inputStyle, fontWeight: '600', color: selectedProductCode ? '#64748B' : '#94A3B8' }}>
-                  <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
-                  {recipes.map(r => (
-                    <option key={r.id} value={r.productCode} style={{ color: '#64748B' }}>
-                      {r.productName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* DYNAMIC PRODUCT & TARGET OUTPUT ROWS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {productItems.map((item, index) => (
+                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 40px', gap: '12px', alignItems: 'flex-end', backgroundColor: index > 0 ? '#F8FAFC' : 'transparent', padding: index > 0 ? '10px' : '0px', borderRadius: '10px', border: (index > 0 ? '1px solid #E2E8F0' : 'none') }}>
+                  <div>
+                    <label style={labelStyle}>FINISHED PRODUCT {productItems.length > 1 ? `#${index + 1}` : ''}</label>
+                    <select
+                      value={item.productCode}
+                      onChange={(e) => handleUpdateProductItem(item.id, 'productCode', e.target.value)}
+                      style={{ ...inputStyle, fontWeight: '600', color: item.productCode ? '#64748B' : '#94A3B8' }}
+                    >
+                      <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
+                      {recipes.map(r => (
+                        <option key={r.id} value={r.productCode} style={{ color: '#64748B' }}>
+                          {r.productName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label style={labelStyle}>CUT LENGTH (MM)</label>
-                <input
-                  type="text"
-                  value={cutLength}
-                  onChange={(e) => setCutLength(e.target.value)}
-                  placeholder="Type the Cut Length"
-                  style={{ ...inputStyle, fontSize: '13px', fontWeight: '600', color: cutLength ? '#64748B' : '#94A3B8' }}
-                />
-              </div>
+                  <div>
+                    <label style={labelStyle}>CUT LENGTH (MM)</label>
+                    <input
+                      type="text"
+                      value={item.cutLength}
+                      onChange={(e) => handleUpdateProductItem(item.id, 'cutLength', e.target.value)}
+                      placeholder="e.g. 300"
+                      style={{ ...inputStyle, fontSize: '13px', fontWeight: '600', color: item.cutLength ? '#64748B' : '#94A3B8' }}
+                    />
+                  </div>
 
-              <div>
-                <label style={labelStyle}>TARGET OUTPUT QTY (PIECES)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={targetQty}
-                  onChange={(e) => setTargetQty(e.target.value)}
-                  placeholder="Type Output Qty"
-                  style={{ ...inputStyle, fontSize: '13px', fontWeight: '600', color: targetQty ? '#64748B' : '#94A3B8' }}
-                />
-              </div>
+                  <div>
+                    <label style={labelStyle}>TARGET OUTPUT QTY (PCS)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.targetQty}
+                      onChange={(e) => handleUpdateProductItem(item.id, 'targetQty', e.target.value)}
+                      placeholder="e.g. 1"
+                      style={{ ...inputStyle, fontSize: '13px', fontWeight: '600', color: item.targetQty ? '#64748B' : '#94A3B8' }}
+                    />
+                  </div>
+
+                  {productItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProductItem(item.id)}
+                      style={{ border: 'none', backgroundColor: '#FEF2F2', color: '#EF4444', width: '38px', height: '40px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title="Remove Product Item"
+                    >
+                      <Trash2 style={{ width: '15px', height: '15px' }} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* RECIPE BADGE BANNER & AI PROFIT OPTIMIZER RECOMMENDATION */}
@@ -612,10 +703,9 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      flexShrink: 0,
-                      fontWeight: '900'
+                      flexShrink: 0
                     }}>
-                      💡
+                      <Lightbulb size={16} />
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -633,8 +723,8 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
 
                       {/* Kerf & Scrap Breakdown */}
                       <div style={{ fontSize: '11px', color: '#854D0E', backgroundColor: '#FEF9C3', padding: '8px 10px', borderRadius: '6px', border: '1px solid #FEF08A', lineHeight: '1.4' }}>
-                        • <strong>Mandatory Blade Kerf Loss:</strong> 3 mm per cut stroke ({matCalc.piecesPerLength} cuts × 3 mm = {matCalc.piecesPerLength * 3} mm kerf/bar).<br/>
-                        • <strong>Bar Yield:</strong> 2414 mm ÷ (400 mm + 3 mm kerf) = <strong>6 Pieces per Bar</strong> with 14 mm end clamp scrap.<br/>
+                        • <strong>Mandatory Blade Kerf Loss:</strong> 2 mm per cut stroke ({matCalc.piecesPerLength} finished pieces = {matCalc.cutsPerBar} cuts × 2 mm = {matCalc.kerfLossMmPerBar} mm kerf/bar).<br/>
+                        • <strong>Bar Yield:</strong> 2414 mm length = <strong>{matCalc.piecesPerLength} Pieces per Bar</strong> with {matCalc.endOffcutScrapMmPerBar} mm end clamp scrap.<br/>
                         • <strong>Unutilized Issued Capacity:</strong> <strong>{matCalc.excessOutputPossible} pieces</strong> remaining in issued material.
                       </div>
 
@@ -658,7 +748,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                             boxShadow: '0 2px 4px rgba(133, 77, 14, 0.25)'
                           }}
                         >
-                          ⚡ Apply Max Profit Target: {matCalc.expectedTheoreticalOutput} Pieces
+                          <Zap size={14} /> Apply Max Profit Target: {matCalc.expectedTheoreticalOutput} Pieces
                         </button>
                         <span style={{ fontSize: '11px', color: '#854D0E', fontWeight: '700' }}>
                           (Eliminates material waste & brings full {matCalc.expectedTheoreticalOutput} pcs of exact 400 mm!)
@@ -778,15 +868,56 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                     </span>
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: '800', color: '#475569' }}>
-                    {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Bar-End Stub + 3 mm kerf/cut ({matCalc.totalWastageMm} mm total)</span>
+                    {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Bar-End Stub + 2 mm kerf/cut ({matCalc.totalWastageMm} mm total)</span>
                   </div>
 
-                  {/* Explicit 3mm Blade Kerf Loss Breakdown */}
+                  {/* Explicit 2mm Blade Kerf Loss Breakdown */}
                   <div style={{ fontSize: '11px', color: '#475569', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <div>• <strong>3 mm Saw Blade Kerf Loss:</strong> {matCalc.targetQty} cuts × 3 mm = <strong>{matCalc.totalKerfLossMm} mm total kerf loss</strong></div>
+                    <div>• <strong>2 mm Saw Blade Kerf Loss:</strong> {matCalc.totalCutStrokes} cut strokes ({matCalc.targetQty} pcs produced) × 2 mm = <strong>{matCalc.totalKerfLossMm} mm total kerf loss</strong></div>
                     <div>• <strong>Bar-End Stub:</strong> {matCalc.endOffcutScrapMmPerBar} mm per bar</div>
-                    <div>• <strong>Formula:</strong> 2414 mm - [{matCalc.piecesPerLength} pcs × ({matCalc.cutLenMm || 400} mm product + 3 mm kerf)] = {matCalc.endOffcutScrapMmPerBar} mm</div>
+                    <div>• <strong>Formula per Bar:</strong> 2414 mm - [{matCalc.piecesPerLength} pcs × {matCalc.cutLenMm || 400} mm + {matCalc.cutsPerBar} cuts × 2 mm kerf] = {matCalc.endOffcutScrapMmPerBar} mm scrap</div>
                   </div>
+
+                  {/* ACTION BUTTON: CONVERT USABLE SCRAP TO NEW PRODUCT ITEM ROW */}
+                  {matCalc.endOffcutScrapMmPerBar >= 300 && (
+                    <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#0F172A', fontWeight: '700' }}>
+                        ♻️ Usable Offcut Scrap Available: <strong>{matCalc.endOffcutScrapMmPerBar} mm bar</strong>
+                      </div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductItems(prev => [
+                              ...prev,
+                              { id: Date.now(), productCode: selectedProductCode || 'MINI-RAIL-100', cutLength: '300', targetQty: '1' }
+                            ]);
+                            setToastAlert({
+                              type: 'success',
+                              title: 'Added New Product Item Row',
+                              message: `Added a new 300 mm Cut Length (1 Piece) row from the ${matCalc.endOffcutScrapMmPerBar} mm usable offcut scrap!`
+                            });
+                          }}
+                          style={{
+                            backgroundColor: '#0E7490',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(14,116,144,0.25)'
+                          }}
+                        >
+                          ⚡ + Convert Scrap to 300 mm Work Order Item (1 Pc)
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* LEFTOVER MATERIAL HANDLING STRATEGY (OPTION 1 vs OPTION 2) */}

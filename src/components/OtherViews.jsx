@@ -25,7 +25,7 @@ const saveMediaToCache = (docKey, dataUrl) => {
     cache[docKey] = dataUrl;
     localStorage.setItem("controlroom_media_cache", JSON.stringify(cache));
     saveCloudStore("media_cache", cache);
-  } catch (e) {}
+  } catch (e) { }
 };
 
 const getMediaFromCache = (docKey) => {
@@ -188,7 +188,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   const [custFormGstNo, setCustFormGstNo] = useState('');
   const [custFormMobile, setCustFormMobile] = useState('');
   const [custFormEmail, setCustFormEmail] = useState('');
-  
+
   // Structured Billing Address
   const [custFormBillingAddress, setCustFormBillingAddress] = useState('');
   const [custFormBillingCity, setCustFormBillingCity] = useState('');
@@ -318,12 +318,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
   // Save bomStore to localStorage on every change and sync cloud store
   useEffect(() => {
-    try {
-      localStorage.setItem('controlroom_bom_store', JSON.stringify(bomStore));
-    } catch (e) {
-      console.error("Error setting controlroom_bom_store", e);
+    if (bomStore && Array.isArray(bomStore) && bomStore.length > 0) {
+      const sanitized = bomStore.map(stripDataUrlsFromRecord);
+      try {
+        localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
+      } catch (e) {
+        console.error("Error setting controlroom_bom_store", e);
+      }
+      saveCloudStore('bom_store', sanitized);
     }
-    saveCloudStore('bom_store', bomStore);
   }, [bomStore]);
 
   useEffect(() => {
@@ -331,26 +334,44 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       if (data && Array.isArray(data) && data.length > 0) {
         setBomStore(prev => {
           const map = new Map();
-          // Read local storage to ensure fresh local BOM items are overlaid on top of cloud data
-          let localCurrent = prev;
+          let localCurrent = Array.isArray(prev) ? prev : [];
           try {
             const savedStr = localStorage.getItem('controlroom_bom_store');
             if (savedStr) {
               const parsed = JSON.parse(savedStr);
-              if (Array.isArray(parsed) && parsed.length > 0) localCurrent = parsed;
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                // Merge parsed with localCurrent
+                const currentMap = new Map();
+                localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                localCurrent = Array.from(currentMap.values());
+              }
             }
-          } catch (e) {}
+          } catch (e) { }
 
-          // Insert cloud data first, then overlay local state so fresh local BOMs always win
-          [...data, ...(Array.isArray(localCurrent) ? localCurrent : [])].forEach(item => {
+          // Insert cloud data first, then overlay local state so fresh local BOMs ALWAYS overwrite remote data
+          data.forEach(item => {
             if (item) {
               const k = item.bomCode || item.code;
               if (k) map.set(k, item);
             }
           });
+          localCurrent.forEach(item => {
+            if (item) {
+              const k = item.bomCode || item.code;
+              if (k) {
+                if (map.has(k)) {
+                  map.set(k, { ...map.get(k), ...item });
+                } else {
+                  map.set(k, item);
+                }
+              }
+            }
+          });
           const merged = Array.from(map.values());
-          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(merged)); } catch (e) {}
-          return merged;
+          const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
+          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
+          return sanitizedMerged;
         });
       }
     });
@@ -364,12 +385,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             setBomStore(parsed);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
-    
+
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
@@ -441,7 +462,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           pendingPi = JSON.parse(saved);
           localStorage.removeItem('controlroom_pending_pi_to_bom');
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (pendingPi) {
@@ -490,7 +511,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       window.removeEventListener('controlroom_convert_pi_bom', handleCustomConvert);
     };
   }, [convertingPiData]);
-  
+
   // Vehicle Loading & Final Dispatch State
   const [vehicleLoadingModal, setVehicleLoadingModal] = useState(null); // BOM object undergoing vehicle loading
   const [vehicleLoadingData, setVehicleLoadingData] = useState({
@@ -1697,7 +1718,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
     return INITIAL_QUOTATIONS;
   });
 
@@ -1838,7 +1859,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     try {
       const saved = localStorage.getItem('controlroom_payment_store');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return INITIAL_PAYMENTS;
   });
 
@@ -5757,7 +5778,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
                                     const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
                                     const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
-                                    
+
                                     const rawUrl = evt.target.result || '';
                                     if (file.type.startsWith('image/')) {
                                       const img = new Image();
@@ -6533,14 +6554,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       )}
       {activeTab === 'Payments' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Payment Disbursements</h2>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>Disbursement status and bank transaction references for paid invoices</span>
-            </div>
-          </div>
 
           {(() => {
             // Mapped mock data matching the image
@@ -8452,55 +8465,55 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         qtyColor = '#F59E0B'; // Orange
                       }
 
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                        <td style={{ padding: '12px 4px', color: '#94A3B8' }}>{idx + 1}</td>
-                        <td style={{ padding: '12px 4px' }}>
-                          <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
-                          <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
-                        </td>
-                        <td style={{ padding: '12px 4px', color: '#475569' }}>{row.category}</td>
-                        <td style={{ padding: '12px 4px', color: '#475569' }}>{row.location}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center' }}>
-                          {(() => {
-                            let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-                            if (row.status === 'In Stock') {
-                              colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
-                            } else if (row.status === 'Low Stock') {
-                              colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
-                            } else if (row.status === 'Out of Stock') {
-                              colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
-                            }
-                            return (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                backgroundColor: colors.bg,
-                                color: colors.color,
-                                border: `1px solid ${colors.border}`,
-                                whiteSpace: 'nowrap'
-                              }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-                                {row.status}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                          <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
-                        </td>
-                      </tr>
-                    );
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                          <td style={{ padding: '12px 4px', color: '#94A3B8' }}>{idx + 1}</td>
+                          <td style={{ padding: '12px 4px' }}>
+                            <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
+                            <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
+                          </td>
+                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.category}</td>
+                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.location}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                            {(() => {
+                              let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+                              if (row.status === 'In Stock') {
+                                colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
+                              } else if (row.status === 'Low Stock') {
+                                colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
+                              } else if (row.status === 'Out of Stock') {
+                                colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
+                              }
+                              return (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: colors.bg,
+                                  color: colors.color,
+                                  border: `1px solid ${colors.border}`,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
+                                  {row.status}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
+                            <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
+                          </td>
+                        </tr>
+                      );
                     });
                   })()}
                 </tbody>
@@ -10019,10 +10032,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               {/* Items Table Card */}
               <div className="section-card" style={{ padding: 0, width: '100%', boxSizing: 'border-box' }}>
                 <div className="table-responsive" style={{ border: 'none', borderRadius: 0, margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
-                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ padding: '14px 16px', textAlign: 'center', width: '40px' }}>
+                      <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', width: '44px' }}>
                           <input
                             type="checkbox"
                             checked={(() => {
@@ -10079,14 +10092,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 setSelectedItems(selectedItems.filter(id => !currentItemRows.some(row => row.itemId === id)));
                               }
                             }}
+                            style={{ accentColor: '#0E7490', width: '16px', height: '16px', cursor: 'pointer' }}
                           />
                         </th>
-                        <th style={{ padding: '14px 16px', textAlign: 'left', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Item Name</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'left', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>SKU</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'right', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Rate (₹)</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'center', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Unit</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'left', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Description</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'center', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>Status</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Item / Product Name</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>SKU / Item Code</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Sales Rate (₹)</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Unit</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Description</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -10120,7 +10134,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 className="table-row-hover"
                                 style={{
                                   backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
-                                  borderBottom: idx === currentItemRows.length - 1 ? 'none' : '1px solid #f1f5f9',
+                                  borderBottom: '1px solid #F1F5F9',
                                   transition: 'background-color 0.15s ease'
                                 }}
                               >
@@ -10142,25 +10156,36 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     style={{ accentColor: '#0E7490', width: '16px', height: '16px', cursor: 'pointer' }}
                                   />
                                 </td>
-                                <td style={{ padding: '14px 16px', color: '#1e293b', fontWeight: 'bold' }}>{item.name}</td>
-                                <td style={{ padding: '14px 16px' }}>{item.sku}</td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '500' }}>{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748b' }}>{item.unit}</td>
+                                <td style={{ padding: '14px 16px', color: '#0F172A', fontWeight: '700', fontSize: '13.5px' }}>{item.name}</td>
                                 <td style={{ padding: '14px 16px' }}>
-                                  {item.description && item.description.length > 60
-                                    ? `${item.description.substring(0, 60)}...`
-                                    : (item.description || '')}
+                                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#334155', backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', fontFamily: 'monospace' }}>
+                                    {item.sku || '—'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>
+                                  ₹ {item.rate ? item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', backgroundColor: '#F8FAFC', padding: '2px 8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                                    {item.unit || 'NOS'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '14px 16px', color: '#64748B', fontSize: '12.5px' }}>
+                                  {item.description && item.description.length > 55
+                                    ? `${item.description.substring(0, 55)}...`
+                                    : (item.description || '—')}
                                 </td>
                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                                   <span style={{
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
+                                    padding: '3px 10px',
+                                    borderRadius: '6px',
                                     fontSize: '11px',
-                                    fontWeight: 'bold',
-                                    backgroundColor: item.status === 'Active' ? '#E6F7ED' : '#FEE2E2',
-                                    color: item.status === 'Active' ? '#137333' : '#EF4444'
+                                    fontWeight: '800',
+                                    backgroundColor: item.status === 'Active' ? '#DCFCE7' : '#FEE2E2',
+                                    color: item.status === 'Active' ? '#15803D' : '#B91C1C',
+                                    border: item.status === 'Active' ? '1px solid #86EFAC' : '1px solid #FCA5A5'
                                   }}>
-                                    {item.status}
+                                    {item.status || 'Active'}
                                   </span>
                                 </td>
                               </tr>
@@ -10500,10 +10525,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       {/* ==================== 13. DISPATCH DASHBOARD SCREEN (CONTROL ROOM DESIGN SYSTEM) ==================== */}
       {(activeTab === 'Dispatch Dashboard' || (userRole === 'Dispatch Head' && activeTab === 'Dashboard')) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
-          
+
           {/* Top 7 KPI Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', width: '100%' }}>
-            
+
             {/* KPI 1 */}
             <div className="section-card" style={{ padding: '14px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -10611,7 +10636,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           {/* ROW 1: Dispatch Status | Daily Trend | Top 5 Delayed */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '16px', width: '100%' }}>
-            
+
             {/* Card 1: Dispatch Status (This Month) */}
             <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
               <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -10724,7 +10749,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           {/* ROW 2: Dispatch by Product | Vehicle Utilization | Dispatch Performance */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: '16px', width: '100%' }}>
-            
+
             {/* Table 1: Dispatch By Product / Profile (MTD) */}
             <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
               <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -10853,7 +10878,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           {/* ROW 3: Today's Dispatch Plan | Vehicles in Transit | Dispatch Value Trend */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '16px', width: '100%' }}>
-            
+
             {/* Table: Today's Dispatch Plan */}
             <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
               <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -10968,7 +10993,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           {/* ROW 4: Document Checklist | Invoices Pending | Key Alerts | Today's Snapshot */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', width: '100%' }}>
-            
+
             {/* Card 1: Document Checklist */}
             <div className="section-card" style={{ padding: '0', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
               <div style={{ backgroundColor: '#0B2545', padding: '10px 16px', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -11120,7 +11145,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         'Spend Analytics', 'Procurement Reports', 'Spend Reports', 'Supplier Reports',
         'Procurement Settings', 'Approval Workflows', 'Dispatch Dashboard'
       ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
-        'Quality Control', 'Machine Maintenance', 'Inventory (Raw Material)', 'BOM / Routing', 'BOM', 'Customer Management',
+        'Quality Control', 'Machine Maintenance', 'Inventory', 'BOM / Routing', 'BOM', 'Customer Management',
         'Production Reports', 'Efficiency Reports', 'Downtime Analytics',
         'Add Work Order', 'Record Production', 'Report Downtime', 'Dispatch Orders', 'Accounts Verification', 'Invoice Management'
       ].includes(activeTab)) && activeTab !== 'Dispatch Dashboard' && (() => {
@@ -11328,7 +11353,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             });
                             try {
                               localStorage.setItem('controlroom_stock_registry_store', JSON.stringify(updated));
-                            } catch (e) {}
+                            } catch (e) { }
                             return updated;
                           });
 
@@ -11361,7 +11386,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
                             let currentMats = [];
                             if (savedMatStr) {
-                              try { currentMats = JSON.parse(savedMatStr); } catch (e) {}
+                              try { currentMats = JSON.parse(savedMatStr); } catch (e) { }
                             }
                             if (!currentMats || !Array.isArray(currentMats) || currentMats.length === 0) {
                               currentMats = initialMaterials;
@@ -11404,7 +11429,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
                             saveCloudStore('raw_materials_store', updatedMats);
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                          } catch (err) {}
+                          } catch (err) { }
 
                           // 3. Update Invoice status & persist to localStorage / cloud store
                           setViewingInvoiceModal(prev => prev ? {
@@ -11430,7 +11455,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             try {
                               localStorage.setItem("controlroom_invoice_store", JSON.stringify(updatedInvoices));
                               saveCloudStore("invoice_store", updatedInvoices);
-                            } catch (e) {}
+                            } catch (e) { }
                             return updatedInvoices;
                           });
 
@@ -12178,15 +12203,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
               const packedItems = (b.dispatchPacking && Array.isArray(b.dispatchPacking) && b.dispatchPacking.length > 0)
                 ? b.dispatchPacking.map((p, pIdx) => ({
-                    code: p.code || `PRD-00${pIdx + 1}`,
-                    name: p.name || `Item ${pIdx + 1}`,
-                    qty: p.bomQty || p.qty || 1,
-                    bomQty: p.bomQty || p.qty || 1,
-                    invQty: p.bomQty || p.qty || 1,
-                    rate: p.rate || 1000,
-                    selected: Boolean(p.packed),
-                    packed: Boolean(p.packed)
-                  }))
+                  code: p.code || `PRD-00${pIdx + 1}`,
+                  name: p.name || `Item ${pIdx + 1}`,
+                  qty: p.bomQty || p.qty || 1,
+                  bomQty: p.bomQty || p.qty || 1,
+                  invQty: p.bomQty || p.qty || 1,
+                  rate: p.rate || 1000,
+                  selected: Boolean(p.packed),
+                  packed: Boolean(p.packed)
+                }))
                 : (b.items || []).map(it => ({ ...it, selected: true, packed: true }));
 
               return {
@@ -12379,15 +12404,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: '',
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
-                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Confirmation', 'Pending', 'Edited / Pending Confirmation'].includes(b.status) && (b.status === 'Sent to Production' || b.status === 'Confirmed' || b.status.includes('Packed') || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts || b.status === 'Closed' || b.status === 'CLOSED')).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Confirmation', 'Pending', 'Edited / Pending Confirmation'].includes(b.status) && (b.status === 'Sent to Production' || b.status === 'Confirmed') && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
-                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && ['Sent to Production', 'Confirmed', 'Partially Packed'].includes(b.status) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
-              rows: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Confirmation', 'Pending', 'Edited / Pending Confirmation'].includes(b.status) && (['Sent to Production', 'Confirmed', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch', 'Closed', 'CLOSED'].includes(b.status) || b.reissuedByAccounts)).map(b => {
+              rows: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
@@ -12413,6 +12438,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   stFg = '#475569';
                   stBorder = '1px solid #CBD5E1';
                   tabGroup = 'Closed';
+                } else if (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) {
+                  statusLabel = 'AWAITING VEHICLE LOADING';
+                  stBg = '#DBEAFE';
+                  stFg = '#1E40AF';
+                  stBorder = '1px solid #93C5FD';
+                  tabGroup = 'Packed';
                 } else if (isFullyPacked || b.status === 'Packed & Ready for Dispatch') {
                   statusLabel = 'PACKED & READY FOR DISPATCH';
                   stBg = '#DCFCE7';
@@ -12737,11 +12768,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           // =========================================================================
           // DEDICATED RAW MATERIAL INVENTORY VIEW (MATCHES USER UI DESIGN EXACTLY)
           // =========================================================================
-          const RawMaterialInventoryView = ({ showAddStockForm: externalShowForm, setShowAddStockForm: externalSetShowForm }) => {
+          const RawMaterialInventoryView = ({ showAddStockForm: externalShowForm, setShowAddStockForm: externalSetShowForm, userRole, activeTab }) => {
             const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
             const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
             const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
             const initialMaterials = [
+              { code: 'RM-ALU-2414', name: 'Aluminum Length', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
               { code: 'RM-001', name: 'Aluminium Sheet', cat: 'Aluminium', unit: 'KG', stock: 1250, minLevel: 500, status: 'In Stock', store: 'Main Store', hsn: '7606', lastUpdated: '20 Aug 2026 10:30 AM', reserved: 200, openingStock: 1000, goodsReceived: 500, issuedProd: 180, matReturn: 30, stockAdj: 10 },
               { code: 'RM-002', name: 'GI Sheet', cat: 'Steel', unit: 'KG', stock: 320, minLevel: 400, status: 'Low Stock', store: 'Main Store', hsn: '7210', lastUpdated: '20 Aug 2026 09:15 AM', reserved: 50, openingStock: 400, goodsReceived: 100, issuedProd: 200, matReturn: 10, stockAdj: 10 },
               { code: 'RM-003', name: 'MS Angle', cat: 'Steel', unit: 'Nos', stock: 0, minLevel: 100, status: 'Out of Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 0, openingStock: 150, goodsReceived: 0, issuedProd: 150, matReturn: 0, stockAdj: 0 },
@@ -12768,8 +12800,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             ];
 
             const [materials, setMaterials] = useState(() => {
+              const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
               if (itemsList && itemsList.length > 0) {
-                return itemsList.map(it => {
+                const listMapped = itemsList.map(it => {
                   const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
@@ -12795,6 +12828,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     stockAdj: 0
                   };
                 });
+                return [defaultAluLength, ...listMapped];
               }
               const engineItems = prodModuleEngine.getInventory().map(item => ({
                 code: item.code,
@@ -12811,11 +12845,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 store: item.bayLocation,
                 lastUpdated: 'Live Engine'
               }));
-              return [...engineItems, ...initialMaterials];
+              return [defaultAluLength, ...engineItems, ...initialMaterials];
             });
 
             useEffect(() => {
               if (itemsList && itemsList.length > 0) {
+                const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length', cat: 'Aluminium', unit: 'Length', stock: 1000, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                 const mappedMaster = itemsList.map(it => {
                   const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
@@ -12842,7 +12877,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     stockAdj: 0
                   };
                 });
-                setMaterials(mappedMaster);
+                setMaterials(prev => {
+                  if (!prev || prev.length === 0) return [defaultAluLength, ...mappedMaster];
+                  const existingCodes = new Set(mappedMaster.map(m => m.code));
+                  const localAdditions = prev.filter(m => !existingCodes.has(m.code));
+                  const hasAlu = localAdditions.some(m => m.code === 'RM-ALU-2414' || (m.name || '').toLowerCase().includes('aluminum length'));
+                  return hasAlu ? [...localAdditions, ...mappedMaster] : [defaultAluLength, ...localAdditions, ...mappedMaster];
+                });
               }
             }, [itemsList]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
@@ -12857,19 +12898,32 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const [adjType, setAdjType] = useState('Add');
             const [adjQty, setAdjQty] = useState('');
             const [adjReason, setAdjReason] = useState('Stock Audit Correction');
+            const [selectedTab, setSelectedTab] = useState('All');
+            const [selectedRows, setSelectedRows] = useState([]);
+            const [pageSize, setPageSize] = useState(10);
+            const [goToPageInput, setGoToPageInput] = useState('');
 
             const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
 
             // Filter logic
             const filteredMaterials = useMemo(() => {
+              const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
               return materials.filter(m => {
+                // If viewing Raw Material Directory specifically, show ONLY Aluminum Length (2414 mm / stock 1000)
+                if (isRawMaterialDirectory) {
+                  const mName = (m.name || '').toLowerCase();
+                  const mCode = (m.code || '').toLowerCase();
+                  const mDim = String(m.lengthMm || m.dim || m.dimension || '');
+                  const isAluminumLength = mName.includes('aluminum length') || mName.includes('aluminium length') || mCode.includes('alu-2414');
+                  if (!isAluminumLength) return false;
+                }
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
                 const matchesCat = selectedCat === 'All Categories' || m.cat === selectedCat;
                 const matchesStore = selectedStore === 'All Stores' || m.store === selectedStore;
                 const matchesStatus = selectedStatus === 'All Status' || m.status === selectedStatus;
                 return matchesSearch && matchesCat && matchesStore && matchesStatus;
               });
-            }, [materials, searchQuery, selectedCat, selectedStore, selectedStatus]);
+            }, [materials, searchQuery, selectedCat, selectedStore, selectedStatus, activeTab]);
 
             // Low stock items
             const lowStockItems = useMemo(() => {
@@ -12978,346 +13032,428 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             };
 
             const handleSaveAndConfirm = () => {
-              // Update stock levels based on receipt items
-              setMaterials(prev => prev.map(m => {
-                const matchedItem = receiptItems.find(item => item.material === m.code || item.material.includes(m.code));
-                if (matchedItem) {
-                  const qtyVal = parseFloat(matchedItem.qty) || 0;
-                  if (qtyVal > 0) {
-                    // For standard Goods Receipt (Purchase): Add to stock
-                    // If receiptType is 'Return Receipt' or invoice deduction: Reduce stock
-                    const isReturn = receiptForm.receiptType === 'Return Receipt';
-                    const newStock = isReturn ? Math.max(0, m.stock - qtyVal) : m.stock + qtyVal;
-                    const newGoodsReceived = isReturn ? m.goodsReceived : m.goodsReceived + qtyVal;
-                    const newStatus = newStock === 0 ? 'Out of Stock' : newStock <= m.minLevel ? 'Low Stock' : 'In Stock';
+              let addedCount = 0;
+              const enteredMatCode = (receiptForm.materialCode || '').trim();
+              const enteredMatName = (receiptItems[0]?.material || '').trim();
+              const catVal = receiptForm.category || 'Aluminium';
+              const qtyVal = parseFloat(receiptItems[0]?.qty) || 0;
+              const reservedVal = parseFloat(receiptForm.reservedStock) || 0;
+              const minLevelVal = parseFloat(receiptForm.minLevel) || 10;
+              const unitVal = receiptItems[0]?.unit || 'Length';
+              const batchNoVal = (receiptForm.supplierInvNo || receiptItems[0]?.batchNo || '').trim();
+              const notesVal = (receiptForm.remarks || '').trim();
+
+              if (!enteredMatName) {
+                showCustomAlert('Please enter a valid Material Description / Name.', 'Material Description Required', 'warning');
+                return;
+              }
+              if (qtyVal <= 0) {
+                showCustomAlert('Please enter a valid Physical Stock quantity (> 0).', 'Quantity Required', 'warning');
+                return;
+              }
+
+              let targetMatCode = enteredMatCode;
+              let matched = false;
+
+              setMaterials(prev => {
+                const updated = prev.map(m => {
+                  const isMatch = (targetMatCode && m.code.toLowerCase() === targetMatCode.toLowerCase()) ||
+                                  m.name.toLowerCase() === enteredMatName.toLowerCase();
+                  if (isMatch) {
+                    matched = true;
+                    targetMatCode = m.code;
+                    addedCount += qtyVal;
+                    const newStock = m.stock + qtyVal;
+                    const newReserved = m.reserved + reservedVal;
+                    const newAvailable = Math.max(0, newStock - newReserved);
+                    const effectiveMin = minLevelVal || m.minLevel;
+                    const newStatus = newStock === 0 ? 'Out of Stock' : newStock <= effectiveMin ? 'Low Stock' : 'In Stock';
                     return {
                       ...m,
                       stock: newStock,
-                      goodsReceived: newGoodsReceived,
+                      reserved: newReserved,
+                      available: newAvailable,
+                      minLevel: effectiveMin,
+                      cat: catVal || m.cat,
+                      unit: unitVal || m.unit,
                       status: newStatus,
                       lastUpdated: 'Just now'
                     };
                   }
+                  return m;
+                });
+
+                if (!matched) {
+                  addedCount = qtyVal;
+                  if (!targetMatCode) {
+                    targetMatCode = `RM-${String(prev.length + 1).padStart(3, '0')}`;
+                  }
+                  const availStock = Math.max(0, qtyVal - reservedVal);
+                  const newStatus = qtyVal === 0 ? 'Out of Stock' : qtyVal <= minLevelVal ? 'Low Stock' : 'In Stock';
+                  updated.unshift({
+                    code: targetMatCode,
+                    name: enteredMatName,
+                    cat: catVal,
+                    store: 'Main Store',
+                    stock: qtyVal,
+                    reserved: reservedVal,
+                    available: availStock,
+                    minLevel: minLevelVal,
+                    unit: unitVal,
+                    status: newStatus,
+                    lastUpdated: 'Just now'
+                  });
                 }
-                return m;
-              }));
+                return updated;
+              });
+
+              // Sync with central productionModuleEngine live inventory
+              try {
+                const engineInv = prodModuleEngine.getInventory();
+                const engineMatch = engineInv.find(i => 
+                  i.code.toLowerCase() === targetMatCode.toLowerCase() ||
+                  i.name.toLowerCase() === enteredMatName.toLowerCase()
+                );
+                if (engineMatch) {
+                  engineMatch.physicalStock += qtyVal;
+                  engineMatch.reservedStock = (engineMatch.reservedStock || 0) + reservedVal;
+                  engineMatch.availableStock = Math.max(0, engineMatch.physicalStock - engineMatch.reservedStock);
+                } else {
+                  engineInv.unshift({
+                    code: targetMatCode,
+                    name: enteredMatName,
+                    category: catVal,
+                    unit: unitVal,
+                    isWholeUnitOnly: unitVal === 'Length' || unitVal === 'Bar',
+                    physicalStock: qtyVal,
+                    reservedStock: reservedVal,
+                    availableStock: Math.max(0, qtyVal - reservedVal),
+                    issuedStock: 0,
+                    consumedStock: 0,
+                    safetyStock: minLevelVal,
+                    unitRate: 580,
+                    bayLocation: 'Main Store'
+                  });
+                }
+                prodModuleEngine.saveToStorage();
+              } catch (e) {
+                console.error('Engine sync error:', e);
+              }
+
+              showCustomAlert(`✅ Stock Intake Completed! ${qtyVal} ${unitVal} of "${enteredMatName}" (${targetMatCode}) added to inventory stock balance.`, 'Stock Updated', 'success');
+              setSearchQuery('');
+              setSelectedTab('All');
+              setSelectedCat('All Categories');
+              setSelectedStatus('All Status');
+              setCurrentPage(1);
+              setReceiptForm({ materialCode: '', category: 'Aluminium', reservedStock: '', minLevel: '10', lengthMm: '2414', supplierInvNo: '', remarks: '' });
+              setReceiptItems([{ id: 1, material: '', qty: '', unit: 'Length' }]);
               setAddStockActive(false);
             };
 
             if (isAddStockActive) {
-              const totalQty = receiptItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'Plus Jakarta Sans', 'DM Sans', -apple-system, sans-serif" }}>
 
                   {/* Header / Title Bar */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '16px 20px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <button
                         onClick={() => setAddStockActive(false)}
-                        style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
                       >
-                        ← Back to List
+                        <ArrowLeft size={15} /> Back
                       </button>
-                      <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                        Create Goods Receipt (Add Stock)
-                      </h2>
+                      <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.2px' }}>
+                          Add Stock / Inventory Creation
+                        </h2>
+                        <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                          Create or update raw material inventory stock details
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                  {/* Premium Card Form */}
+                  <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '28px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                    
+                    {/* Section Label */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Package size={18} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Stock Creation Details</h3>
+                        <span style={{ fontSize: '11.5px', color: '#64748B' }}>Specify material code, physical stock, reserved stock, and min level</span>
+                      </div>
+                    </div>
 
-                    {/* LEFT MAIN FORM COLUMN (70%) */}
-                    <div style={{ flex: '1 1 70%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                      {/* SECTION 1: Receipt Information */}
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                          <span style={{ backgroundColor: '#0E7490', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
-                          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Receipt Information</h3>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', fontSize: '13px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt Type</label>
-                            <select value={receiptForm.receiptType} onChange={(e) => setReceiptForm({ ...receiptForm, receiptType: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
-                              <option>Goods Receipt (Purchase)</option>
-                              <option>Internal Transfer Receipt</option>
-                              <option>Return Receipt</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt No. <span style={{ color: '#DC2626' }}>*</span></label>
-                            <input type="text" value={receiptForm.receiptNo} onChange={(e) => setReceiptForm({ ...receiptForm, receiptNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none', fontWeight: '600' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Receipt Date <span style={{ color: '#DC2626' }}>*</span></label>
-                            <div style={{ position: 'relative' }}>
-                              <input type="text" value={receiptForm.receiptDate} onChange={(e) => setReceiptForm({ ...receiptForm, receiptDate: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                              <Calendar style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748B' }} />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Purchase Order No.</label>
-                            <select value={receiptForm.poNo} onChange={(e) => setReceiptForm({ ...receiptForm, poNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
-                              <option>PO-2025-08-015</option>
-                              <option>PO-2025-08-016</option>
-                              <option>PO-2025-08-017</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Supplier / Vendor <span style={{ color: '#DC2626' }}>*</span></label>
-                            <select value={receiptForm.supplier} onChange={(e) => setReceiptForm({ ...receiptForm, supplier: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }}>
-                              <option>Shree Metal Supplies Pvt. Ltd.</option>
-                              <option>Tata Steel Limited</option>
-                              <option>Hindalco Industries</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Supplier Invoice No.</label>
-                            <input type="text" value={receiptForm.supplierInvNo} onChange={(e) => setReceiptForm({ ...receiptForm, supplierInvNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Invoice Date</label>
-                            <div style={{ position: 'relative' }}>
-                              <input type="text" value={receiptForm.invoiceDate} onChange={(e) => setReceiptForm({ ...receiptForm, invoiceDate: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                              <Calendar style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748B' }} />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Delivery Challan No.</label>
-                            <input type="text" value={receiptForm.deliveryChallanNo} onChange={(e) => setReceiptForm({ ...receiptForm, deliveryChallanNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Transporter Name</label>
-                            <input type="text" value={receiptForm.transporterName} onChange={(e) => setReceiptForm({ ...receiptForm, transporterName: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Vehicle No.</label>
-                            <input type="text" value={receiptForm.vehicleNo} onChange={(e) => setReceiptForm({ ...receiptForm, vehicleNo: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Driver Name</label>
-                            <input type="text" value={receiptForm.driverName} onChange={(e) => setReceiptForm({ ...receiptForm, driverName: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-
-                          <div>
-                            <label style={{ display: 'block', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Remarks</label>
-                            <input type="text" value={receiptForm.remarks} onChange={(e) => setReceiptForm({ ...receiptForm, remarks: e.target.value })} style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', color: '#0F172A', outline: 'none' }} />
-                          </div>
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', fontSize: '13px' }}>
+                      
+                      {/* 1. Material Code */}
+                      <div>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Material Code
+                        </label>
+                        <input
+                          type="text"
+                          value={receiptForm.materialCode || ''}
+                          onChange={(e) => setReceiptForm({ ...receiptForm, materialCode: e.target.value })}
+                          placeholder="e.g. RM-011 (Auto-generated if empty)"
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: '#0E7490', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                        />
                       </div>
 
-                      {/* SECTION 2: Material Details Table */}
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                          <span style={{ backgroundColor: '#0E7490', color: '#FFFFFF', width: '24px', height: '24px', borderRadius: '50%', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
-                          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Material Details</h3>
-                        </div>
-
-                        <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                            <thead>
-                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '700' }}>
-                                <th style={{ padding: '10px 12px', width: '30px' }}>#</th>
-                                <th style={{ padding: '10px 12px' }}>Material <span style={{ color: '#DC2626' }}>*</span></th>
-                                <th style={{ padding: '10px 12px' }}>Batch / Lot No.</th>
-                                <th style={{ padding: '10px 12px' }}>Unit <span style={{ color: '#DC2626' }}>*</span></th>
-                                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Quantity <span style={{ color: '#DC2626' }}>*</span></th>
-                                <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {receiptItems.map((item, idx) => (
-                                <tr key={item.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                  <td style={{ padding: '10px 12px', color: '#64748B', fontWeight: '600' }}>{idx + 1}</td>
-
-                                  <td style={{ padding: '10px 12px' }}>
-                                    <select
-                                      value={item.material}
-                                      onChange={(e) => {
-                                        const selectedVal = e.target.value;
-                                        const matObj = materials.find(m => m.code === selectedVal || m.name === selectedVal);
-                                        updateMaterialRow(item.id, 'material', selectedVal);
-                                        if (matObj && matObj.unit) {
-                                          updateMaterialRow(item.id, 'unit', matObj.unit);
-                                        }
-                                      }}
-                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
-                                    >
-                                      <option value="">Select Material</option>
-                                      {materials.map(m => (
-                                        <option key={m.code} value={m.code}>
-                                          {m.name} ({m.code})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </td>
-
-                                  <td style={{ padding: '10px 12px' }}>
-                                    <input
-                                      type="text"
-                                      placeholder="Enter Batch No."
-                                      value={item.batchNo}
-                                      onChange={(e) => updateMaterialRow(item.id, 'batchNo', e.target.value)}
-                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
-                                    />
-                                  </td>
-
-                                  <td style={{ padding: '10px 12px' }}>
-                                    <select
-                                      value={item.unit}
-                                      onChange={(e) => updateMaterialRow(item.id, 'unit', e.target.value)}
-                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', outline: 'none' }}
-                                    >
-                                      <option value="">Select Unit</option>
-                                      <option value="KG">KG</option>
-                                      <option value="Nos">Nos</option>
-                                      <option value="Ltr">Ltr</option>
-                                      <option value="Mtr">Mtr</option>
-                                    </select>
-                                  </td>
-
-                                  <td style={{ padding: '10px 12px' }}>
-                                    <input
-                                      type="number"
-                                      value={item.qty || ''}
-                                      onChange={(e) => updateMaterialRow(item.id, 'qty', e.target.value)}
-                                      placeholder="0.000"
-                                      style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12.5px', textAlign: 'right', outline: 'none' }}
-                                    />
-                                  </td>
-
-                                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                    <button
-                                      onClick={() => handleRemoveMaterialRow(item.id)}
-                                      style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}
-                                    >
-                                      <Trash2 style={{ width: '15px', height: '15px' }} />
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <button
-                          onClick={handleAddMaterialRow}
-                          style={{ border: '1px solid #0E7490', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      {/* 2. Category */}
+                      <div>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Category <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <select
+                          value={receiptForm.category || 'Aluminium'}
+                          onChange={(e) => setReceiptForm({ ...receiptForm, category: e.target.value })}
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
                         >
-                          <Plus style={{ width: '15px', height: '15px' }} /> Add Another Material
-                        </button>
+                          <option value="Aluminium">Aluminium</option>
+                          <option value="Steel">Steel</option>
+                          <option value="Fasteners">Fasteners</option>
+                          <option value="Coating">Coating</option>
+                          <option value="Packing">Packing</option>
+                        </select>
+                      </div>
+
+                      {/* 3. Material Description / Name */}
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Material Description / Name <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          list="material-names-list"
+                          value={receiptItems[0]?.material || ''}
+                          onChange={(e) => {
+                            const enteredVal = e.target.value;
+                            updateMaterialRow(receiptItems[0]?.id || 1, 'material', enteredVal);
+                            const matObj = materials.find(m => 
+                              m.name.toLowerCase() === enteredVal.toLowerCase() || 
+                              m.code.toLowerCase() === enteredVal.toLowerCase()
+                            );
+                            if (matObj) {
+                              if (matObj.unit) updateMaterialRow(receiptItems[0]?.id || 1, 'unit', matObj.unit);
+                              if (matObj.code) setReceiptForm(prev => ({ ...prev, materialCode: matObj.code, category: matObj.cat || prev.category }));
+                            }
+                          }}
+                          placeholder="Type or select material name (e.g. Structural Steel Beams)"
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '600', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                        />
+                        <datalist id="material-names-list">
+                          {activeTab === 'Raw Material Directory'
+                            ? materials.filter(m => (m.name || '').toLowerCase().includes('aluminum length') || (m.name || '').toLowerCase().includes('aluminium length') || (m.code || '').toLowerCase().includes('alu-2414')).map(m => (
+                                <option key={m.code} value={m.name}>
+                                  {m.code} (Current Stock: {m.stock} {m.unit || 'Units'})
+                                </option>
+                              ))
+                            : materials.map(m => (
+                                <option key={m.code} value={m.name}>
+                                  {m.code} (Current Stock: {m.stock} {m.unit || 'Units'})
+                                </option>
+                              ))
+                          }
+                        </datalist>
+                      </div>
+
+                      {/* 4. Unit of Measurement */}
+                      <div>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Unit of Measurement <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <select
+                          value={receiptItems[0]?.unit || 'Length'}
+                          onChange={(e) => {
+                            const newUnit = e.target.value;
+                            updateMaterialRow(receiptItems[0]?.id || 1, 'unit', newUnit);
+                            // Set default dimension values per UOM
+                            let defaultDim = '2414';
+                            if (newUnit === 'KG') defaultDim = '1.0';
+                            else if (newUnit === 'Mtr') defaultDim = '1.0';
+                            else if (newUnit === 'Nos') defaultDim = '1';
+                            else if (newUnit === 'Set') defaultDim = '1';
+                            setReceiptForm(prev => ({ ...prev, lengthMm: defaultDim }));
+                          }}
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                        >
+                          <option value="Length">Length (2414 mm Bar)</option>
+                          <option value="Bar">Bar (Standard Profile)</option>
+                          <option value="Nos">Nos / Pcs (Pieces)</option>
+                          <option value="KG">KG (Kilograms)</option>
+                          <option value="Mtr">Mtr (Meters)</option>
+                          <option value="Set">Set (Assembly Kit)</option>
+                        </select>
+                      </div>
+
+                      {/* 5. Dynamic Unit Dimension / Value Container */}
+                      {(() => {
+                        const currentUnit = receiptItems[0]?.unit || 'Length';
+                        let fieldLabel = 'Length Value / Dimension (mm)';
+                        let fieldPlaceholder = 'e.g. 2414';
+                        let unitBadge = 'mm Bar';
+
+                        if (currentUnit === 'KG') {
+                          fieldLabel = 'Weight Value per Unit (KG)';
+                          fieldPlaceholder = 'e.g. 1.5';
+                          unitBadge = 'KG / Unit';
+                        } else if (currentUnit === 'Mtr') {
+                          fieldLabel = 'Length Dimension per Unit (Meters)';
+                          fieldPlaceholder = 'e.g. 6.0';
+                          unitBadge = 'Meters';
+                        } else if (currentUnit === 'Nos') {
+                          fieldLabel = 'Quantity Pack Size (Pieces)';
+                          fieldPlaceholder = 'e.g. 1';
+                          unitBadge = 'Pcs / Box';
+                        } else if (currentUnit === 'Bar') {
+                          fieldLabel = 'Bar Cut Length / Profile Dimension (mm)';
+                          fieldPlaceholder = 'e.g. 2414';
+                          unitBadge = 'mm Profile';
+                        } else if (currentUnit === 'Set') {
+                          fieldLabel = 'Assembly Set Breakdown (Items)';
+                          fieldPlaceholder = 'e.g. 1';
+                          unitBadge = 'Items / Set';
+                        }
+
+                        return (
+                          <div>
+                            <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                              {fieldLabel}
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input
+                                type="number"
+                                value={receiptForm.lengthMm !== undefined ? receiptForm.lengthMm : (currentUnit === 'Length' || currentUnit === 'Bar' ? '2414' : '1')}
+                                onChange={(e) => setReceiptForm({ ...receiptForm, lengthMm: e.target.value })}
+                                placeholder={fieldPlaceholder}
+                                style={{ flex: 1, height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                              />
+                              <div style={{ height: '44px', padding: '0 14px', borderRadius: '10px', backgroundColor: '#ECFEFF', border: '1px solid #A5F3FC', color: '#0E7490', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                                {unitBadge}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 5. Physical Stock */}
+                      <div>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Physical Stock <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <div style={{ position: 'relative', width: '100%' }}>
+                          <input
+                            type="number"
+                            value={receiptItems[0]?.qty || ''}
+                            onChange={(e) => updateMaterialRow(receiptItems[0]?.id || 1, 'qty', e.target.value)}
+                            placeholder="e.g. 100"
+                            style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '15px', fontWeight: '800', color: '#0E7490', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                          />
+                        </div>
+                      </div>
+
+
+
+                      {/* 8. Min. Level */}
+                      <div>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Min. Level (Reorder Threshold)
+                        </label>
+                        <input
+                          type="number"
+                          value={receiptForm.minLevel || ''}
+                          onChange={(e) => setReceiptForm({ ...receiptForm, minLevel: e.target.value })}
+                          placeholder="e.g. 10"
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                        />
+                      </div>
+
+
+
+                      {/* 10. Remarks / Notes */}
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Remarks / Notes
+                        </label>
+                        <input
+                          type="text"
+                          value={receiptForm.remarks}
+                          onChange={(e) => setReceiptForm({ ...receiptForm, remarks: e.target.value })}
+                          placeholder="Enter any receiving notes..."
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                        />
                       </div>
 
                     </div>
 
-                    {/* RIGHT SUMMARY & NOTES COLUMN (30%) */}
-                    <div style={{ flex: '0 0 30%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                      {/* Receipt Summary Card */}
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', fontSize: '15px', fontWeight: '700', color: '#0F172A' }}>
-                          <FileText style={{ width: '18px', height: '18px', color: '#2563EB' }} /> Receipt Summary
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                            <span>Items (Qty)</span>
-                            <span style={{ fontWeight: '700', color: '#0F172A' }}>{receiptItems.length} Items</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                            <span>Total Quantity</span>
-                            <span style={{ fontWeight: '700', color: '#0F172A' }}>{totalQty}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                            <span>Total Gross Weight</span>
-                            <span style={{ fontWeight: '700', color: '#0F172A' }}>0 KG</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                            <span>Total Net Weight</span>
-                            <span style={{ fontWeight: '700', color: '#0F172A' }}>0 KG</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Important Notes Card */}
-                      <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
-                          <Info style={{ width: '18px', height: '18px', color: '#0E7490' }} /> Important Notes
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', color: '#64748B', lineHeight: '1.5' }}>
-                          <div>• Please verify the material quality and quantity before confirming.</div>
-                          <div>• Stock will be updated only after saving this receipt.</div>
-                          <div>• You can view this receipt in Material Receipts list.</div>
-                        </div>
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  {/* BOTTOM ACTIONS BAR */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '16px 20px', borderRadius: '16px', border: '1px solid #E2E8F0', marginTop: '10px' }}>
-                    <button
-                      onClick={() => setAddStockActive(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <ArrowLeft style={{ width: '15px', height: '15px' }} /> Back to List
-                    </button>
-
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '20px', marginTop: '4px' }}>
                       <button
                         onClick={() => setAddStockActive(false)}
-                        style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                        style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', borderRadius: '10px', padding: '11px 22px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                       >
                         Cancel
                       </button>
                       <button
-                        onClick={() => setAddStockActive(false)}
-                        style={{ border: '1px solid #2563EB', backgroundColor: '#EFF6FF', color: '#2563EB', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <FileText style={{ width: '15px', height: '15px' }} /> Save as Draft
-                      </button>
-                      <button
                         onClick={handleSaveAndConfirm}
-                        style={{ border: 'none', backgroundColor: '#2563EB', color: '#FFFFFF', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', borderRadius: '10px', padding: '11px 26px', fontSize: '13.5px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 14px rgba(14, 116, 144, 0.3)', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s ease' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
                       >
-                        <CheckCircle style={{ width: '15px', height: '15px' }} /> Save & Confirm
+                        <CheckCircle size={16} /> Save & Update Stock
                       </button>
                     </div>
+
                   </div>
 
                 </div>
               );
             }
 
+            const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
+
             const pageConfig = {
-              title: 'Raw Material Inventory Stores & Stock Balances',
-              subtitle: 'Raw aluminum coils, steel profiles, fasteners, and warehouse store balances',
+              title: isRawMaterialDirectory ? 'Raw Material Directory' : 'Inventory Stores',
+              subtitle: isRawMaterialDirectory
+                ? 'Master catalog of raw aluminum coils, steel profiles, fasteners, and raw material stock balances'
+                : 'Raw aluminum coils, steel profiles, fasteners, and warehouse store balances',
               actionText: 'Add Stock',
-              searchPlaceholder: 'Search Inventory (Material Code, Description, Store)...',
+              searchPlaceholder: isRawMaterialDirectory
+                ? 'Search Raw Materials (Material Code, Name, Category)...'
+                : 'Search Inventory (Material Code, Description, Store)...',
               tabs: [
-                { id: 'All', label: 'All Stock Items', count: filteredMaterials.length, bg: '#F1F5F9', fg: '#475569' },
-                { id: 'Sufficient', label: 'Sufficient Stock', count: materials.filter(m => m.status === 'In Stock').length, bg: '#F0FDF4', fg: '#15803D' },
-                { id: 'Warning', label: 'Reorder Warning', count: materials.filter(m => m.status === 'Low Stock').length, bg: '#FFF7ED', fg: '#C2410C' },
-                { id: 'Critical', label: 'Critical Shortage', count: materials.filter(m => m.status === 'Out of Stock').length, bg: '#FEF2F2', fg: '#B91C1C' }
+                { id: 'All', label: isRawMaterialDirectory ? 'All Raw Materials' : 'All Stock Items', count: filteredMaterials.length, bg: '#F1F5F9', fg: '#475569' },
+                { id: 'Sufficient', label: 'Sufficient Stock', count: filteredMaterials.filter(m => m.status === 'In Stock').length, bg: '#F0FDF4', fg: '#15803D' },
+                { id: 'Warning', label: 'Reorder Warning', count: filteredMaterials.filter(m => m.status === 'Low Stock').length, bg: '#FFF7ED', fg: '#C2410C' },
+                { id: 'Critical', label: 'Critical Shortage', count: filteredMaterials.filter(m => m.status === 'Out of Stock').length, bg: '#FEF2F2', fg: '#B91C1C' }
               ]
             };
-
-            const [selectedTab, setSelectedTab] = useState('All');
-            const [selectedRows, setSelectedRows] = useState([]);
-            const [pageSize, setPageSize] = useState(10);
-            const [goToPageInput, setGoToPageInput] = useState('');
 
             const displayedMaterials = filteredMaterials.filter(m => {
               if (selectedTab === 'Sufficient') return m.status === 'In Stock';
@@ -13359,43 +13495,45 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </span>
                   </div>
 
-                  <button
-                    onClick={handleOpenAddStock}
-                    style={{
-                      backgroundColor: '#0E7490',
-                      border: 'none',
-                      color: '#FFFFFF',
-                      height: '40px',
-                      padding: '0 6px 0 20px',
-                      borderRadius: '50px',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
-                      transition: 'all 0.2s ease',
-                      letterSpacing: '0.2px'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
-                  >
-                    <span>{pageConfig.actionText}</span>
-                    <div style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FFFFFF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#0E7490',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                    }}>
-                      <Plus size={16} strokeWidth={2.5} />
-                    </div>
-                  </button>
+                  {userRole !== 'Production Head' && (
+                    <button
+                      onClick={handleOpenAddStock}
+                      style={{
+                        backgroundColor: '#0E7490',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        height: '40px',
+                        padding: '0 6px 0 20px',
+                        borderRadius: '50px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                        transition: 'all 0.2s ease',
+                        letterSpacing: '0.2px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                    >
+                      <span>{pageConfig.actionText}</span>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        backgroundColor: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0E7490',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}>
+                        <Plus size={16} strokeWidth={2.5} />
+                      </div>
+                    </button>
+                  )}
                 </div>
 
                 {/* 2. FILTERS & SEARCH ROW CARD (EXACT MATCH FOR BOM & PO DESIGN) */}
@@ -13510,8 +13648,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Category</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Unit</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Reserved Stock</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Available Stock</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
                         </tr>
@@ -13550,17 +13686,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               >
                                 {m.code}
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{m.name}</td>
+                              <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
+                                {m.name} {activeTab === 'Raw Material Directory' && (m.lengthMm || '2414') ? <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>{m.lengthMm || '2414'} mm</span> : null}
+                              </td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.cat}</td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.unit}</td>
                               <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#B91C1C' : isLow ? '#C2410C' : '#334155' }}>
                                 {m.stock.toLocaleString()}
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '600', color: '#475569' }}>
-                                {(m.reserved || 0).toLocaleString()}
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: '#15803D' }}>
-                                {(m.available !== undefined ? m.available : (m.stock - (m.reserved || 0))).toLocaleString()}
                               </td>
                               <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748B' }}>{m.minLevel.toLocaleString()}</td>
 
@@ -13600,7 +13732,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>«</button>
                       <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>‹</button>
-                      
+
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                         <button
                           key={p}
@@ -13841,6 +13973,42 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const isFloorEmployee = String(userRole || '').toLowerCase().includes('employee') || String(userRole || '').toLowerCase().includes('floor') || String(userRole || '').toLowerCase().includes('operator');
 
             useEffect(() => {
+              fetch('/api/workorders')
+                .then(res => res.json())
+                .then(data => {
+                  if (data && data.workOrders && Array.isArray(data.workOrders)) {
+                    data.workOrders.forEach(sw => {
+                      const woId = sw.workOrderNo || sw.id;
+                      if (woId) {
+                        const existingWO = prodModuleEngine.getWorkOrderById(woId);
+                        if (existingWO) {
+                          existingWO.targetQty = Number(sw.plannedQty) || existingWO.targetQty;
+                          existingWO.finishedProductName = sw.productName || existingWO.finishedProductName;
+                        } else {
+                          prodModuleEngine.workOrders.unshift({
+                            id: woId,
+                            date: sw.targetDate || new Date().toISOString().split('T')[0],
+                            productionHead: 'Senthil Kumar (Production Head)',
+                            finishedProductCode: sw.productName || 'MR100',
+                            finishedProductName: sw.productName || 'Mini Rail 100 mm',
+                            targetQty: Number(sw.plannedQty) || 500,
+                            cutLengthMm: 300,
+                            productItems: [],
+                            unit: 'Pieces',
+                            rawMaterialName: sw.rawMaterial || 'Raw Aluminum Coil 1.5mm',
+                            priority: 'Normal',
+                            assignedEmployee: 'Floor Team',
+                            status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : 'ACCEPTED')
+                          });
+                        }
+                      }
+                    });
+                    prodModuleEngine.saveToStorage();
+                    setEngineTick(t => t + 1);
+                  }
+                })
+                .catch(err => console.error('Failed to sync server workorders:', err));
+
               const unsubscribe = prodModuleEngine.subscribe(() => {
                 setEngineTick(t => t + 1);
               });
@@ -13849,7 +14017,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             // Helper to toggle single row selection
             const toggleSelectRow = (woId) => {
-              setSelectedRows(prev => 
+              setSelectedRows(prev =>
                 prev.includes(woId) ? prev.filter(id => id !== woId) : [...prev, woId]
               );
             };
@@ -13863,49 +14031,64 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               }
             };
 
-            const allWorkOrderRows = [
-              ...prodModuleEngine.getWorkOrders().map(wo => {
-                let stBg = '#EFF6FF';
-                let stFg = '#2563EB';
-                let progress = 0;
-                const statusStr = (wo.status || 'PLANNED').toUpperCase();
+            const allWorkOrderRows = prodModuleEngine.getWorkOrders().map(wo => {
+              let stBg = '#EFF6FF';
+              let stFg = '#2563EB';
+              let progress = 0;
+              const statusStr = (wo.status || 'PLANNED').toUpperCase();
 
-                let formattedStatus = (wo.status || 'PLANNED').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-                if (statusStr === 'ACCEPTED') { formattedStatus = 'Accept / Work Start'; }
+              let formattedStatus = (wo.status || 'PLANNED').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+              if (statusStr === 'ACCEPTED') { formattedStatus = 'Accept / Work Start'; }
 
-                if (statusStr === 'PENDING_MATERIAL') { stBg = '#FEF3C7'; stFg = '#D97706'; progress = 10; }
-                else if (statusStr === 'MATERIAL_RESERVED') { stBg = '#E0F2FE'; stFg = '#0284C7'; progress = 25; }
-                else if (statusStr === 'MATERIAL_ISSUED') { stBg = '#EDE9FE'; stFg = '#7C3AED'; progress = 35; }
-                else if (statusStr === 'ACCEPTED') { stBg = '#E0E7FF'; stFg = '#4338CA'; progress = 45; }
-                else if (statusStr === 'IN_PROGRESS') { stBg = '#DCFCE7'; stFg = '#16A34A'; progress = 75; }
-                else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { stBg = '#CFFAFE'; stFg = '#0E7490'; progress = 90; }
-                else if (statusStr === 'APPROVED_CLOSED') { stBg = '#DCFCE7'; stFg = '#15803D'; progress = 100; }
+              if (statusStr === 'PENDING_MATERIAL') { stBg = '#FEF3C7'; stFg = '#D97706'; progress = 10; }
+              else if (statusStr === 'MATERIAL_RESERVED') { stBg = '#E0F2FE'; stFg = '#0284C7'; progress = 25; }
+              else if (statusStr === 'MATERIAL_ISSUED') { stBg = '#EDE9FE'; stFg = '#7C3AED'; progress = 35; }
+              else if (statusStr === 'ACCEPTED') { stBg = '#E0E7FF'; stFg = '#4338CA'; progress = 45; }
+              else if (statusStr === 'IN_PROGRESS') { stBg = '#DCFCE7'; stFg = '#16A34A'; progress = 75; }
+              else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { stBg = '#CFFAFE'; stFg = '#0E7490'; progress = 90; }
+              else if (statusStr === 'APPROVED_CLOSED') { stBg = '#DCFCE7'; stFg = '#15803D'; progress = 100; }
 
-                return {
-                  rawWO: wo,
-                  woNo: wo.id,
-                  product: wo.finishedProductName || 'Product',
-                  customer: wo.salesOrderNo ? `SO #${wo.salesOrderNo}` : 'Internal Stock',
-                  line: wo.productionLine || 'Line A',
-                  qty: `${(wo.targetQty || 0).toLocaleString()} ${wo.unit || 'Pcs'}`,
-                  plannedDate: (wo.createdAt || '').split('T')[0] || '2026-08-25',
-                  dueDate: wo.dueDate || '2026-08-30',
-                  status: formattedStatus,
-                  statusBg: stBg,
-                  statusFg: stFg,
-                  priority: wo.priority || 'Normal',
-                  priorityColor: wo.priority === 'High' ? '#DC2626' : '#2563EB',
-                  assignedTo: wo.operatorName || 'Floor Team',
-                  progress
-                };
-              })
-            ];
+              let rawItems = wo.productItems;
+              if (rawItems && !Array.isArray(rawItems) && typeof rawItems === 'object') {
+                rawItems = [rawItems];
+              }
+              const itemsList = Array.isArray(rawItems) && rawItems.length > 0 ? rawItems : [];
+              const calculatedTotalQty = itemsList.length > 0 
+                ? itemsList.reduce((acc, it) => acc + (Number(it.targetQty) || 0), 0)
+                : (Number(wo.targetQty) || 1);
+
+              const cutSummary = itemsList.length > 1
+                ? itemsList.map(it => `${it.targetQty || 1}x ${it.cutLength || 300}mm`).join(' + ')
+                : (wo.cutLengthMm ? `${wo.cutLengthMm} mm` : (wo.finishedProductName || 'Product'));
+
+              return {
+                rawWO: wo,
+                woNo: wo.id,
+                product: cutSummary !== '' ? `Mini Rail (${cutSummary})` : (wo.finishedProductName || 'Mini Rail'),
+                customer: wo.salesOrderNo ? `SO #${wo.salesOrderNo}` : 'Internal Stock',
+                line: wo.productionLine || 'Line A',
+                qty: `${calculatedTotalQty.toLocaleString()} Pcs`,
+                plannedDate: (wo.createdAt || wo.date || '').split('T')[0] || new Date().toISOString().split('T')[0],
+                dueDate: wo.dueDate || '2026-08-30',
+                status: formattedStatus,
+                statusBg: stBg,
+                statusFg: stFg,
+                priority: wo.priority || 'Normal',
+                priorityColor: wo.priority === 'High' ? '#DC2626' : '#2563EB',
+                assignedTo: wo.operatorName || wo.assignedEmployee || 'Floor Team',
+                progress
+              };
+            });
 
             const filteredRows = allWorkOrderRows.filter(row => {
               const searchLower = (prodSearchQueryText || '').toLowerCase();
               const matchesSearch = !searchLower || row.woNo.toLowerCase().includes(searchLower) || row.product.toLowerCase().includes(searchLower) || row.customer.toLowerCase().includes(searchLower);
-              const matchesStatus = prodFilterStatusSelect === 'All' || row.status === prodFilterStatusSelect;
-              return matchesSearch && matchesStatus;
+              const matchesStatusSelect = prodFilterStatusSelect === 'All' || row.status === prodFilterStatusSelect;
+              const matchesTab = prodStatusFilterText === 'All' || 
+                row.status.toLowerCase().includes(prodStatusFilterText.toLowerCase()) || 
+                (prodStatusFilterText === 'Pending Material' && row.rawWO?.status === 'PENDING_MATERIAL') ||
+                (prodStatusFilterText === 'In Progress' && (row.rawWO?.status === 'IN_PROGRESS' || row.rawWO?.status === 'ACCEPTED'));
+              return matchesSearch && matchesStatusSelect && matchesTab;
             });
 
             const visibleWoIds = filteredRows.map(r => r.woNo);
@@ -13924,7 +14107,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       {isFloorEmployee ? 'My Production Floor Work Orders' : 'Work Orders Management'}
                     </h2>
                     <span style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-                      {isFloorEmployee 
+                      {isFloorEmployee
                         ? 'Select a work order checkbox to open floating actions (Accept WO, Update Status).'
                         : 'View and manage all work orders across the production floor.'}
                     </span>
@@ -14030,7 +14213,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <option value="Planned">Planned</option>
                     </select>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setProdSearchQueryText('');
                         setProdFilterStatusSelect('All');
@@ -14083,7 +14266,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <thead>
                         <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
                           <th style={{ padding: '12px 14px', width: '30px' }}>
-                            <input 
+                            <input
                               type="checkbox"
                               checked={isAllSelected}
                               onChange={() => toggleSelectAll(visibleWoIds)}
@@ -14106,26 +14289,31 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const isSelected = selectedRows.includes(row.woNo);
 
                           return (
-                            <tr 
-                              key={idx} 
-                              style={{ 
+                            <tr
+                              key={idx}
+                              style={{
                                 borderBottom: '1px solid #F1F5F9',
                                 backgroundColor: isSelected ? '#ECFEFF' : '#FFFFFF',
                                 transition: 'background-color 0.15s ease'
                               }}
                             >
-                              <td style={{ 
+                              <td style={{
                                 padding: '12px 14px',
                                 borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
                               }}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={isSelected}
                                   onChange={() => toggleSelectRow(row.woNo)}
                                   style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>{row.woNo}</td>
+                              <td
+                                onClick={() => setSelectedWoForAcceptanceModal(row.rawWO || row)}
+                                style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline' }}
+                              >
+                                {row.woNo}
+                              </td>
                               <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#1E293B' }}>{row.product}</td>
                               {!isFloorEmployee && <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.plannedDate}</td>}
                               {isFloorEmployee && <td style={{ padding: '12px 14px', color: '#475569' }}>{row.customer}</td>}
@@ -14210,25 +14398,69 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         </div>
 
                         {updateStatusChoice === 'COMPLETED' && (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#166534', marginBottom: '4px' }}>ACTUAL GOOD QTY</label>
-                              <input
-                                type="number"
-                                value={actualGoodOutputVal}
-                                onChange={(e) => setActualGoodOutputVal(e.target.value)}
-                                style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#166534' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#DC2626', marginBottom: '4px' }}>REJECTED QTY</label>
-                              <input
-                                type="number"
-                                value={actualRejectedOutputVal}
-                                onChange={(e) => setActualRejectedOutputVal(e.target.value)}
-                                style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#DC2626' }}
-                              />
-                            </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              ACTUAL OUTPUT QUANTITIES BY PRODUCT ITEM
+                            </label>
+                            {(() => {
+                              let rawItems = selectedWoForStatusUpdate.productItems;
+                              if (rawItems && !Array.isArray(rawItems) && typeof rawItems === 'object') {
+                                rawItems = [rawItems];
+                              }
+                              const items = Array.isArray(rawItems) && rawItems.length > 0 ? rawItems : [];
+                              if (items.length > 0) {
+                                return items.map((it, i) => (
+                                  <div key={i} style={{ border: '1px solid #BAE6FD', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#F0F9FF' }}>
+                                    <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0369A1', marginBottom: '6px' }}>
+                                      Item #{i + 1}: {it.productCode || selectedWoForStatusUpdate.finishedProductName || 'Finished Product'} ({it.cutLength || selectedWoForStatusUpdate.cutLengthMm || 350} mm Cut) — Target: {it.targetQty} Pcs
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                      <div>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#166534', marginBottom: '4px' }}>GOOD QTY (PCS)</label>
+                                        <input
+                                          type="number"
+                                          defaultValue={it.targetQty || 1}
+                                          id={`good_qty_item_${i}`}
+                                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', fontWeight: '800', color: '#166534', backgroundColor: '#FFFFFF' }}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#DC2626', marginBottom: '4px' }}>REJECTED (PCS)</label>
+                                        <input
+                                          type="number"
+                                          defaultValue={0}
+                                          id={`rej_qty_item_${i}`}
+                                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FFFFFF' }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ));
+                              }
+
+                              return (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                                  <div>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#166534', marginBottom: '4px' }}>ACTUAL GOOD QTY</label>
+                                    <input
+                                      type="number"
+                                      value={actualGoodOutputVal}
+                                      onChange={(e) => setActualGoodOutputVal(e.target.value)}
+                                      style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#166534' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#DC2626', marginBottom: '4px' }}>REJECTED QTY</label>
+                                    <input
+                                      type="number"
+                                      value={actualRejectedOutputVal}
+                                      onChange={(e) => setActualRejectedOutputVal(e.target.value)}
+                                      style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', fontWeight: '800', color: '#DC2626' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
 
@@ -14313,9 +14545,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     justifyContent: 'flex-end',
                     zIndex: 9999
                   }}
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) setSelectedWoForAcceptanceModal(null);
-                  }}>
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) setSelectedWoForAcceptanceModal(null);
+                    }}>
                     <div style={{
                       backgroundColor: '#FFFFFF',
                       width: '540px',
@@ -14331,7 +14563,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       fontFamily: "'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif"
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        
+
                         {/* 1. Header with Page Counter */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -14342,7 +14574,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>1 of 1</span>
                             </div>
                           </div>
-                          
+
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {isFloorEmployee && (
                               !(selectedWoForAcceptanceModal.status === 'ACCEPTED' || selectedWoForAcceptanceModal.status === 'IN_PROGRESS' || selectedWoForAcceptanceModal.status === 'COMPLETED_PENDING_VERIFICATION') ? (
@@ -14415,7 +14647,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0F172A' }}>
-                                {selectedWoForAcceptanceModal.finishedProductName}
+                                {(() => {
+                                  let rawItems = selectedWoForAcceptanceModal.productItems;
+                                  if (rawItems && !Array.isArray(rawItems) && typeof rawItems === 'object') {
+                                    rawItems = [rawItems];
+                                  }
+                                  const itemsList = Array.isArray(rawItems) && rawItems.length > 0 ? rawItems : [];
+                                  if (itemsList.length > 1) {
+                                    return `Mini Rail (${itemsList.map(it => `${it.targetQty || 1}x ${it.cutLength || 300}mm`).join(' + ')})`;
+                                  } else if (itemsList.length === 1 && itemsList[0].cutLength) {
+                                    return `Mini Rail ${itemsList[0].cutLength} mm Height`;
+                                  }
+                                  return selectedWoForAcceptanceModal.finishedProductName || 'Mini Rail Structure';
+                                })()}
                               </h2>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>
                                 • {selectedWoForAcceptanceModal.status || 'ISSUED'}
@@ -14428,127 +14672,173 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         </div>
 
                         {/* 3. Top Metrics Metric Grid (Reference Style Bar) */}
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(4, 1fr)',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '12px',
-                          padding: '12px 8px',
-                          backgroundColor: '#FFFFFF',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TARGET QTY</span>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', marginTop: '4px' }}>
-                              {selectedWoForAcceptanceModal.targetQty} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>Pcs</span>
-                            </div>
-                          </div>
-                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CUT LENGTH</span>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#0284C7', marginTop: '4px' }}>
-                              {selectedWoForAcceptanceModal.cutLengthMm || 100} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>mm</span>
-                            </div>
-                          </div>
-                          <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL RAW M</span>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669', marginTop: '4px' }}>
-                              {((selectedWoForAcceptanceModal.materialRequirement?.items || [])[0]?.requiredTotalMeters || '0.00')} <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>m</span>
-                            </div>
-                          </div>
-                          <div style={{ padding: '0 8px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>LENGTHS</span>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#D97706', marginTop: '4px' }}>
-                              {((selectedWoForAcceptanceModal.materialRequirement?.items || [])[0]?.rawLengthsRequired || '0')}
-                            </div>
-                          </div>
-                        </div>
+                        {(() => {
+                          let rawItems = selectedWoForAcceptanceModal.productItems;
+                          if (rawItems && !Array.isArray(rawItems) && typeof rawItems === 'object') {
+                            rawItems = [rawItems];
+                          }
+                          const parsedItems = Array.isArray(rawItems) && rawItems.length > 0 ? rawItems : [];
+                          const primaryCut = parsedItems[0]?.cutLength || selectedWoForAcceptanceModal.cutLengthMm || selectedWoForAcceptanceModal.cutLength || 350;
+                          const cutSpecsStr = parsedItems.length > 1
+                            ? parsedItems.map(it => `${it.cutLength || 300}mm`).join(' + ')
+                            : `${primaryCut} mm`;
 
-                        {/* 4. Details List (Clean 2-column key-value grid) */}
-                        <div>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
-                            Work Order Details
-                          </h4>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '14px 20px',
-                            padding: '16px',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: '12px',
-                            backgroundColor: '#FFFFFF',
-                            fontSize: '13px'
-                          }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>WO Number</span>
-                              <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.id}</strong>
-                            </div>
+                          const totalQtyVal = parsedItems.length > 0
+                            ? parsedItems.reduce((sum, it) => sum + (Number(it.targetQty) || 0), 0)
+                            : (selectedWoForAcceptanceModal.targetQty || 1);
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Status</span>
+                          const rawLengths = selectedWoForAcceptanceModal.rawMaterialPhysicalToIssue || ((selectedWoForAcceptanceModal.materialRequirement?.items || [])[0]?.rawLengthsRequired) || 1;
+                          const totalMeters = Number((rawLengths * 2.414).toFixed(2));
+
+                          return (
+                            <>
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(4, 1fr)',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '12px',
+                                padding: '12px 8px',
+                                backgroundColor: '#FFFFFF',
+                                textAlign: 'center'
+                              }}>
+                                <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TARGET QTY</span>
+                                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', marginTop: '4px' }}>
+                                    {totalQtyVal} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>Pcs</span>
+                                  </div>
+                                </div>
+                                <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CUT LENGTH</span>
+                                  <div style={{ fontSize: parsedItems.length > 1 ? '14px' : '18px', fontWeight: '700', color: '#0284C7', marginTop: '4px' }}>
+                                    {cutSpecsStr}
+                                  </div>
+                                </div>
+                                <div style={{ borderRight: '1px solid #F1F5F9', padding: '0 8px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL RAW M</span>
+                                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669', marginTop: '4px' }}>
+                                    {totalMeters} <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>m</span>
+                                  </div>
+                                </div>
+                                <div style={{ padding: '0 8px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>LENGTHS</span>
+                                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#D97706', marginTop: '4px' }}>
+                                    {rawLengths}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 4. Details List (Clean 2-column key-value grid) */}
                               <div>
-                                <span style={{ backgroundColor: '#F3E8FF', color: '#7C3AED', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }}>
-                                  {(selectedWoForAcceptanceModal.status || 'ISSUED').replace(/_/g, ' ')}
-                                </span>
-                              </div>
-                            </div>
+                                <h4 style={{ margin: '14px 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                                  Work Order Details
+                                </h4>
+                                <div style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(2, 1fr)',
+                                  gap: '14px 20px',
+                                  padding: '16px',
+                                  border: '1px solid #E2E8F0',
+                                  borderRadius: '12px',
+                                  backgroundColor: '#FFFFFF',
+                                  fontSize: '13px'
+                                }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>WO Number</span>
+                                    <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.id}</strong>
+                                  </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Assigned Employee</span>
-                              <strong style={{ color: '#2563EB', fontWeight: '700' }}>{selectedWoForAcceptanceModal.operatorName || selectedWoForAcceptanceModal.assignedEmployee || 'Floor Team'}</strong>
-                            </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Status</span>
+                                    <div>
+                                      <span style={{ backgroundColor: '#F3E8FF', color: '#7C3AED', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }}>
+                                        {(selectedWoForAcceptanceModal.status || 'ISSUED').replace(/_/g, ' ')}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Production Line</span>
-                              <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.productionLine || 'Line A'}</strong>
-                            </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Assigned Employee</span>
+                                    <strong style={{ color: '#2563EB', fontWeight: '700' }}>{selectedWoForAcceptanceModal.operatorName || selectedWoForAcceptanceModal.assignedEmployee || 'Floor Team'}</strong>
+                                  </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Stock Length</span>
-                              <strong style={{ color: '#0284C7', fontWeight: '700' }}>2414 mm</strong>
-                            </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Production Line</span>
+                                    <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.productionLine || 'Line A'}</strong>
+                                  </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Cut Spec</span>
-                              <strong style={{ color: '#0E7490', fontWeight: '700' }}>{selectedWoForAcceptanceModal.cutLengthMm || 100} mm</strong>
-                            </div>
-                          </div>
-                        </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Stock Length</span>
+                                    <strong style={{ color: '#0284C7', fontWeight: '700' }}>2414 mm</strong>
+                                  </div>
 
-                        {/* 5. BOM Material Breakdown Card */}
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#334155' }}>
-                              Required Materials (BOM)
-                            </h4>
-                          </div>
-
-                          {(selectedWoForAcceptanceModal.materialRequirement?.items || []).map((mat, i) => (
-                            <div key={i} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', backgroundColor: '#FFFFFF', marginBottom: '10px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>
-                                  {mat.materialName}
-                                </span>
-                                <span style={{ backgroundColor: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
-                                  BOM Standard
-                                </span>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '8px', fontSize: '12px' }}>
-                                <div>
-                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Pieces / Length</span>
-                                  <strong style={{ color: '#0F172A', fontWeight: '600' }}>{mat.piecesPerLength} pcs</strong>
-                                </div>
-                                <div>
-                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Raw Lengths</span>
-                                  <strong style={{ color: '#D97706', fontWeight: '700' }}>{mat.rawLengthsRequired} Lengths</strong>
-                                </div>
-                                <div>
-                                  <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Total Meters</span>
-                                  <strong style={{ color: '#059669', fontWeight: '700' }}>{mat.requiredTotalMeters} m</strong>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: '#64748B', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Cut Spec</span>
+                                    <strong style={{ color: '#0E7490', fontWeight: '700' }}>{cutSpecsStr}</strong>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
+
+                              {/* 5. Product & Target Output Specifications List */}
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 12px 0' }}>
+                                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                                    Product & Target Output Specifications ({ parsedItems.length > 0 ? parsedItems.length : 1 } Items)
+                                  </h4>
+                                </div>
+
+                                {parsedItems.length > 0 ? (
+                                  parsedItems.map((item, idx) => (
+                                    <div key={idx} style={{ border: '1px solid #BAE6FD', borderRadius: '12px', padding: '14px 16px', backgroundColor: '#F0F9FF', marginBottom: '10px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#0369A1' }}>
+                                          Item #{idx + 1}: {item.productCode || selectedWoForAcceptanceModal.finishedProductName || 'Finished Product'}
+                                        </span>
+                                        <span style={{ backgroundColor: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
+                                          {item.cutLength || primaryCut} mm Cut
+                                        </span>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', borderTop: '1px solid #BAE6FD', paddingTop: '8px', fontSize: '12.5px' }}>
+                                        <div>
+                                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: '600' }}>Cut Length</span>
+                                          <strong style={{ color: '#0E7490', fontWeight: '700' }}>{item.cutLength || primaryCut} mm</strong>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: '600' }}>Target Output Qty</span>
+                                          <strong style={{ color: '#0F172A', fontWeight: '700' }}>{item.targetQty || totalQtyVal} Pcs</strong>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px 16px', backgroundColor: '#FFFFFF', marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>
+                                        {selectedWoForAcceptanceModal.finishedProductName || 'Aluminium Profile'}
+                                      </span>
+                                      <span style={{ backgroundColor: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px' }}>
+                                        {primaryCut} mm Cut
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '8px', fontSize: '12px' }}>
+                                      <div>
+                                        <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Cut Spec</span>
+                                        <strong style={{ color: '#0E7490', fontWeight: '700' }}>{primaryCut} mm</strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Target Qty</span>
+                                        <strong style={{ color: '#0F172A', fontWeight: '700' }}>{selectedWoForAcceptanceModal.targetQty} Pcs</strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Raw Lengths</span>
+                                        <strong style={{ color: '#D97706', fontWeight: '700' }}>{rawLengths} Bar</strong>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
 
                       </div>
 
@@ -14670,10 +14960,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <button
                           onClick={() => {
                             const targetId = selectedRows[0];
-                            const allWOs = prodModuleEngine.getWorkOrders();
-                            const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
-                            if (targetWO) {
-                              setSelectedWoForAcceptanceModal(targetWO);
+                            const targetRow = allWorkOrderRows.find(w => w.woNo === targetId) || allWorkOrderRows[0];
+                            if (targetRow) {
+                              setSelectedWoForAcceptanceModal(targetRow.rawWO || targetRow);
                             }
                           }}
                           style={{
@@ -14766,10 +15055,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <button
                           onClick={() => {
                             const targetId = selectedRows[0];
-                            const allWOs = prodModuleEngine.getWorkOrders();
-                            const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
-                            if (targetWO) {
-                              setSelectedWoForAcceptanceModal(targetWO);
+                            const targetRow = allWorkOrderRows.find(w => w.woNo === targetId) || allWorkOrderRows[0];
+                            if (targetRow) {
+                              setSelectedWoForAcceptanceModal(targetRow.rawWO || targetRow);
                             }
                           }}
                           style={{
@@ -14798,7 +15086,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   try {
                                     prodModuleEngine.approveProduction(w.id);
                                     countApproved++;
-                                  } catch (e) {}
+                                  } catch (e) { }
                                 }
                               });
                               if (countApproved > 0) {
@@ -14865,12 +15153,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             );
           };
 
-          // Dedicated Custom Renderer for Inventory (Raw Material) matching User UI Design
-          if (activeTab === 'Inventory (Raw Material)' || activeTab === 'Inventory' || (activeTab && activeTab.toLowerCase().includes('inventory'))) {
+          // Dedicated Custom Renderer for Inventory & Raw Material Directory matching User UI Design
+          if (activeTab === 'Raw Material Directory' || activeTab === 'Inventory (Raw Material)' || activeTab === 'Inventory' || (activeTab && activeTab.toLowerCase().includes('inventory')) || (activeTab && activeTab.toLowerCase().includes('raw material'))) {
             return (
               <RawMaterialInventoryView
                 showAddStockForm={showAddStockForm}
                 setShowAddStockForm={setShowAddStockForm}
+                userRole={userRole}
+                activeTab={activeTab}
               />
             );
           }
@@ -14984,10 +15274,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           const packingItems = (confirmingBomModal.dispatchPacking && confirmingBomModal.dispatchPacking.length > 0)
                             ? confirmingBomModal.dispatchPacking
                             : finalizedItems.map(it => ({
-                                name: it.name || it.c2 || 'Item',
-                                bomQty: it.qty || 1,
-                                packed: false
-                              }));
+                              name: it.name || it.c2 || 'Item',
+                              bomQty: it.qty || 1,
+                              packed: false
+                            }));
 
                           setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
                             ...b,
@@ -15481,14 +15771,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                         const file = e.target.files && e.target.files[0];
                                         if (file) {
                                           setConfirmingBomModal(prev => ({
-    ...prev,
-    deliveryAddressProofDoc: {
-      name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-      type: file.type || "application/pdf",
-      uploadedAt: new Date().toISOString()
-    }
-  }));
+                                            ...prev,
+                                            deliveryAddressProofDoc: {
+                                              name: file.name,
+                                              size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                              type: file.type || "application/pdf",
+                                              uploadedAt: new Date().toISOString()
+                                            }
+                                          }));
                                         }
                                       }}
                                     />
@@ -16311,7 +16601,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 setTimeout(() => {
                   if (cameraVideoRef.current) {
                     cameraVideoRef.current.srcObject = stream;
-                    cameraVideoRef.current.play().catch(() => {});
+                    cameraVideoRef.current.play().catch(() => { });
                   }
                 }, 100);
               } catch (err) {
@@ -16401,10 +16691,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                 ...b,
                 invoiceNo: newInvNo,
-                accountsVerification: { 
-                  paymentStatus: currentPayStatus, 
-                  hardCopyReceived: hardCopy, 
-                  softCopyReceived: softCopy, 
+                accountsVerification: {
+                  paymentStatus: currentPayStatus,
+                  hardCopyReceived: hardCopy,
+                  softCopyReceived: softCopy,
                   verified: true,
                   softCopyDoc: softDocToSave
                 },
@@ -16415,15 +16705,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
               const packedItems = (verifiedBOM.dispatchPacking && Array.isArray(verifiedBOM.dispatchPacking) && verifiedBOM.dispatchPacking.length > 0)
                 ? verifiedBOM.dispatchPacking.map((p, pIdx) => ({
-                    code: p.code || `PRD-00${pIdx + 1}`,
-                    name: p.name || `Item ${pIdx + 1}`,
-                    qty: p.bomQty || p.qty || 1,
-                    bomQty: p.bomQty || p.qty || 1,
-                    invQty: p.bomQty || p.qty || 1,
-                    rate: p.rate || 1000,
-                    selected: Boolean(p.packed),
-                    packed: Boolean(p.packed)
-                  }))
+                  code: p.code || `PRD-00${pIdx + 1}`,
+                  name: p.name || `Item ${pIdx + 1}`,
+                  qty: p.bomQty || p.qty || 1,
+                  bomQty: p.bomQty || p.qty || 1,
+                  invQty: p.bomQty || p.qty || 1,
+                  rate: p.rate || 1000,
+                  selected: Boolean(p.packed),
+                  packed: Boolean(p.packed)
+                }))
                 : (verifiedBOM.items || []).map(it => ({ ...it, selected: true, packed: true }));
 
               const newInvEntry = {
@@ -16466,7 +16756,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const updated = [newInvEntry, ...filtered];
                 try {
                   localStorage.setItem('controlroom_invoice_store', JSON.stringify(updated));
-                } catch (e) {}
+                } catch (e) { }
                 return updated;
               });
 
@@ -16989,8 +17279,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         {hardCopy && softCopy
                           ? 'Both document copies received and verified'
                           : hardCopy ? 'Hard copy received · Soft copy still pending'
-                          : softCopy ? 'Soft copy received · Hard copy still pending'
-                          : 'Both document copies are pending from Dispatch Team'}
+                            : softCopy ? 'Soft copy received · Hard copy still pending'
+                              : 'Both document copies are pending from Dispatch Team'}
                       </div>
                     </div>
                   </div>
@@ -17025,344 +17315,344 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   const accGrandTotal = accSubTotal + accCgst + accSgst;
 
                   return (
-                <div style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  overflow: 'hidden'
-                }}>
-                  {/* Toolbar & View Switcher */}
-                  <div style={{
-                    padding: '16px 24px',
-                    borderBottom: '2px solid #F1F5F9',
-                    background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '14px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Toolbar & View Switcher */}
                       <div style={{
-                        width: '36px', height: '36px', borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #0F172A, #334155)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 6px rgba(15,23,42,0.25)'
+                        padding: '16px 24px',
+                        borderBottom: '2px solid #F1F5F9',
+                        background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '14px'
                       }}>
-                        <FileCheck style={{ width: '18px', height: '18px', color: '#FFFFFF' }} />
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                            BOM Hard Copy Document Inspection
-                          </h3>
-                          <span style={{
-                            padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '800',
-                            backgroundColor: hardCopy ? '#DCFCE7' : '#FEF3C7',
-                            color: hardCopy ? '#166534' : '#92400E',
-                            border: `1px solid ${hardCopy ? '#BBF7D0' : '#FDE68A'}`
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '36px', height: '36px', borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #0F172A, #334155)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 2px 6px rgba(15,23,42,0.25)'
                           }}>
-                            {hardCopy ? 'Hard Copy Delivered' : 'Awaiting Physical Paper'}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
-                          Verify items, quantities, and rates against the physical paper BOM delivered by Dispatch.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* View Switcher Buttons */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F1F5F9', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                      <button
-                        onClick={() => setAccountsBomViewMode('paper')}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '6px',
-                          border: 'none',
-                          backgroundColor: accountsBomViewMode === 'paper' ? '#FFFFFF' : 'transparent',
-                          color: accountsBomViewMode === 'paper' ? '#0F172A' : '#64748B',
-                          padding: '6px 14px', borderRadius: '8px',
-                          fontSize: '12px', fontWeight: accountsBomViewMode === 'paper' ? '800' : '600',
-                          cursor: 'pointer',
-                          boxShadow: accountsBomViewMode === 'paper' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <FileText style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'paper' ? '#2563EB' : '#64748B' }} />
-                        Paper BOM Sheet View
-                      </button>
-
-                      <button
-                        onClick={() => setAccountsBomViewMode('table')}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '6px',
-                          border: 'none',
-                          backgroundColor: accountsBomViewMode === 'table' ? '#FFFFFF' : 'transparent',
-                          color: accountsBomViewMode === 'table' ? '#0F172A' : '#64748B',
-                          padding: '6px 14px', borderRadius: '8px',
-                          fontSize: '12px', fontWeight: accountsBomViewMode === 'table' ? '800' : '600',
-                          cursor: 'pointer',
-                          boxShadow: accountsBomViewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Layers style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'table' ? '#2563EB' : '#64748B' }} />
-                        Itemized Table View
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ─── VIEW 1: AUTHENTIC PAPER BOM DOCUMENT SHEET (HARD COPY VIEW) ─── */}
-                  {accountsBomViewMode === 'paper' ? (
-                    <div style={{ padding: '24px', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'center' }}>
-                      <div style={{
-                        maxWidth: '900px',
-                        width: '100%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: '12px',
-                        border: '1px solid #CBD5E1',
-                        padding: '36px 40px',
-                        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
-                        position: 'relative'
-                      }}>
-                        {/* Watermark/Stamp if hard copy verified */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '36px',
-                          right: '40px',
-                          border: hardCopy ? '3px dashed #166534' : '3px dashed #D97706',
-                          borderRadius: '8px',
-                          padding: '6px 14px',
-                          color: hardCopy ? '#166534' : '#D97706',
-                          fontWeight: '900',
-                          fontSize: '12px',
-                          letterSpacing: '1px',
-                          textTransform: 'uppercase',
-                          transform: 'rotate(-4deg)',
-                          backgroundColor: hardCopy ? 'rgba(240, 253, 244, 0.85)' : 'rgba(254, 243, 199, 0.85)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '2px'
-                        }}>
-                          <span>{hardCopy ? 'HARD COPY RECEIVED' : 'HARD COPY PENDING'}</span>
-                          <span style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.5px' }}>
-                            {hardCopy ? 'ACCOUNTS DESK VERIFIED' : 'DISPATCH DESK TRANSIT'}
-                          </span>
-                        </div>
-
-                        {/* Document Header */}
-                        <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '16px', marginBottom: '20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>
-                              CONTROLROOM INDUSTRIAL MANUFACTURING PVT LTD
-                            </span>
+                            <FileCheck style={{ width: '18px', height: '18px', color: '#FFFFFF' }} />
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
-                            Works: Plot 14, Phase II, Nagappa Industrial Estate, Puzhal, Chennai – 600066, Tamil Nadu, India<br />
-                            GSTIN: 33AAACC4451R1ZV • Email: dispatch@controlroom.io • Phone: +91 (044) 2854-9900
-                          </div>
-                        </div>
-
-                        {/* Document Title Banner */}
-                        <div style={{
-                          backgroundColor: '#F1F5F9',
-                          padding: '10px 16px',
-                          borderRadius: '6px',
-                          marginBottom: '20px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <span style={{ fontSize: '13px', fontWeight: '900', color: '#0F172A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                            BILL OF MATERIALS & GOODS DISPATCH MEMO (HARD COPY)
-                          </span>
-                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB' }}>
-                            DOC REF: {bomCodeText}
-                          </span>
-                        </div>
-
-                        {/* Meta 2-column info */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', fontSize: '12px' }}>
-                          <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                              CUSTOMER / BILLED TO
-                            </div>
-                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>{custNameText}</div>
-                            <div style={{ color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
-                              {accountsVerificationModal.deliveryAddress || 'Plot 14, Nagappa Industrial Estate, Puzhal, Chennai – 600066.'}
-                            </div>
-                            <div style={{ marginTop: '6px', color: '#64748B' }}>
-                              Payment Terms: <strong style={{ color: '#0F172A' }}>{payTypeText}</strong>
-                            </div>
-                          </div>
-
-                          <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                              DISPATCH & VOUCHER DETAILS
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', color: '#475569' }}>
-                              <span style={{ fontWeight: '700' }}>BOM Number:</span>
-                              <span style={{ fontWeight: '800', color: '#0F172A' }}>{bomCodeText}</span>
-                              <span style={{ fontWeight: '700' }}>Date of Dispatch:</span>
-                              <span>17-Aug-2026</span>
-                              <span style={{ fontWeight: '700' }}>Dispatch Vehicle:</span>
-                              <span>TN-05-DZ-4419 (Direct Truck)</span>
-                              <span style={{ fontWeight: '700' }}>Dispatch Inspector:</span>
-                              <span>Arun (Dispatch Team Head)</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Document Items Table */}
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
-                          <thead>
-                            <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF' }}>
-                              <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '11px' }}>S.No</th>
-                              <th style={{ padding: '10px 12px', width: '90px', fontSize: '11px' }}>Part Code</th>
-                              <th style={{ padding: '10px 12px', fontSize: '11px' }}>Item Description & Specification</th>
-                              <th style={{ padding: '10px 12px', width: '70px', textAlign: 'center', fontSize: '11px' }}>BOM Qty</th>
-                              <th style={{ padding: '10px 12px', width: '50px', textAlign: 'center', fontSize: '11px' }}>UoM</th>
-                              <th style={{ padding: '10px 12px', width: '90px', textAlign: 'right', fontSize: '11px' }}>Rate (₹)</th>
-                              <th style={{ padding: '10px 12px', width: '100px', textAlign: 'right', fontSize: '11px' }}>Amount (₹)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dynamicAccItems.map((it, idx) => (
-                              <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                                <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
-                                <td style={{ padding: '10px 12px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
-                                <td style={{ padding: '10px 12px' }}>
-                                  <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
-                                  <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>{it.qty}</td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B' }}>{it.uom}</td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>{it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-
-                        {/* Calculation Summary & Signatures */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', borderTop: '2px solid #0F172A', paddingTop: '16px', fontSize: '12px' }}>
                           <div>
-                            <div style={{ fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>Declaration & Terms:</div>
-                            <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 16px 0', lineHeight: '1.4' }}>
-                              We declare that this Bill of Materials accurately represents the physical goods inspected and packed for dispatch. Verified physical hard copy is filed in Accounts & Logistics records.
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                                BOM Hard Copy Document Inspection
+                              </h3>
+                              <span style={{
+                                padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '800',
+                                backgroundColor: hardCopy ? '#DCFCE7' : '#FEF3C7',
+                                color: hardCopy ? '#166534' : '#92400E',
+                                border: `1px solid ${hardCopy ? '#BBF7D0' : '#FDE68A'}`
+                              }}>
+                                {hardCopy ? 'Hard Copy Delivered' : 'Awaiting Physical Paper'}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                              Verify items, quantities, and rates against the physical paper BOM delivered by Dispatch.
                             </p>
+                          </div>
+                        </div>
 
-                            {/* Signatures */}
-                            <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-                              <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Dispatch Head Sign</span>
-                                <div style={{ fontSize: '10px', color: '#166534', fontWeight: '800', marginTop: '2px' }}>Arun (Dispatch Verified)</div>
+                        {/* View Switcher Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F1F5F9', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <button
+                            onClick={() => setAccountsBomViewMode('paper')}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px',
+                              border: 'none',
+                              backgroundColor: accountsBomViewMode === 'paper' ? '#FFFFFF' : 'transparent',
+                              color: accountsBomViewMode === 'paper' ? '#0F172A' : '#64748B',
+                              padding: '6px 14px', borderRadius: '8px',
+                              fontSize: '12px', fontWeight: accountsBomViewMode === 'paper' ? '800' : '600',
+                              cursor: 'pointer',
+                              boxShadow: accountsBomViewMode === 'paper' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <FileText style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'paper' ? '#2563EB' : '#64748B' }} />
+                            Paper BOM Sheet View
+                          </button>
+
+                          <button
+                            onClick={() => setAccountsBomViewMode('table')}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px',
+                              border: 'none',
+                              backgroundColor: accountsBomViewMode === 'table' ? '#FFFFFF' : 'transparent',
+                              color: accountsBomViewMode === 'table' ? '#0F172A' : '#64748B',
+                              padding: '6px 14px', borderRadius: '8px',
+                              fontSize: '12px', fontWeight: accountsBomViewMode === 'table' ? '800' : '600',
+                              cursor: 'pointer',
+                              boxShadow: accountsBomViewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <Layers style={{ width: '14px', height: '14px', color: accountsBomViewMode === 'table' ? '#2563EB' : '#64748B' }} />
+                            Itemized Table View
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* ─── VIEW 1: AUTHENTIC PAPER BOM DOCUMENT SHEET (HARD COPY VIEW) ─── */}
+                      {accountsBomViewMode === 'paper' ? (
+                        <div style={{ padding: '24px', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'center' }}>
+                          <div style={{
+                            maxWidth: '900px',
+                            width: '100%',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '12px',
+                            border: '1px solid #CBD5E1',
+                            padding: '36px 40px',
+                            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
+                            position: 'relative'
+                          }}>
+                            {/* Watermark/Stamp if hard copy verified */}
+                            <div style={{
+                              position: 'absolute',
+                              top: '36px',
+                              right: '40px',
+                              border: hardCopy ? '3px dashed #166534' : '3px dashed #D97706',
+                              borderRadius: '8px',
+                              padding: '6px 14px',
+                              color: hardCopy ? '#166534' : '#D97706',
+                              fontWeight: '900',
+                              fontSize: '12px',
+                              letterSpacing: '1px',
+                              textTransform: 'uppercase',
+                              transform: 'rotate(-4deg)',
+                              backgroundColor: hardCopy ? 'rgba(240, 253, 244, 0.85)' : 'rgba(254, 243, 199, 0.85)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}>
+                              <span>{hardCopy ? 'HARD COPY RECEIVED' : 'HARD COPY PENDING'}</span>
+                              <span style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.5px' }}>
+                                {hardCopy ? 'ACCOUNTS DESK VERIFIED' : 'DISPATCH DESK TRANSIT'}
+                              </span>
+                            </div>
+
+                            {/* Document Header */}
+                            <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '16px', marginBottom: '20px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>
+                                  CONTROLROOM INDUSTRIAL MANUFACTURING PVT LTD
+                                </span>
                               </div>
-                              <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Accounts Officer Sign</span>
-                                <div style={{ fontSize: '10px', color: hardCopy ? '#166534' : '#D97706', fontWeight: '800', marginTop: '2px' }}>
-                                  {hardCopy ? 'Received & Verified' : 'Pending Signature'}
+                              <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
+                                Works: Plot 14, Phase II, Nagappa Industrial Estate, Puzhal, Chennai – 600066, Tamil Nadu, India<br />
+                                GSTIN: 33AAACC4451R1ZV • Email: dispatch@controlroom.io • Phone: +91 (044) 2854-9900
+                              </div>
+                            </div>
+
+                            {/* Document Title Banner */}
+                            <div style={{
+                              backgroundColor: '#F1F5F9',
+                              padding: '10px 16px',
+                              borderRadius: '6px',
+                              marginBottom: '20px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <span style={{ fontSize: '13px', fontWeight: '900', color: '#0F172A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                BILL OF MATERIALS & GOODS DISPATCH MEMO (HARD COPY)
+                              </span>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB' }}>
+                                DOC REF: {bomCodeText}
+                              </span>
+                            </div>
+
+                            {/* Meta 2-column info */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', fontSize: '12px' }}>
+                              <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                                  CUSTOMER / BILLED TO
+                                </div>
+                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>{custNameText}</div>
+                                <div style={{ color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
+                                  {accountsVerificationModal.deliveryAddress || 'Plot 14, Nagappa Industrial Estate, Puzhal, Chennai – 600066.'}
+                                </div>
+                                <div style={{ marginTop: '6px', color: '#64748B' }}>
+                                  Payment Terms: <strong style={{ color: '#0F172A' }}>{payTypeText}</strong>
+                                </div>
+                              </div>
+
+                              <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                                  DISPATCH & VOUCHER DETAILS
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', color: '#475569' }}>
+                                  <span style={{ fontWeight: '700' }}>BOM Number:</span>
+                                  <span style={{ fontWeight: '800', color: '#0F172A' }}>{bomCodeText}</span>
+                                  <span style={{ fontWeight: '700' }}>Date of Dispatch:</span>
+                                  <span>17-Aug-2026</span>
+                                  <span style={{ fontWeight: '700' }}>Dispatch Vehicle:</span>
+                                  <span>TN-05-DZ-4419 (Direct Truck)</span>
+                                  <span style={{ fontWeight: '700' }}>Dispatch Inspector:</span>
+                                  <span>Arun (Dispatch Team Head)</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Document Items Table */}
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF' }}>
+                                  <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '11px' }}>S.No</th>
+                                  <th style={{ padding: '10px 12px', width: '90px', fontSize: '11px' }}>Part Code</th>
+                                  <th style={{ padding: '10px 12px', fontSize: '11px' }}>Item Description & Specification</th>
+                                  <th style={{ padding: '10px 12px', width: '70px', textAlign: 'center', fontSize: '11px' }}>BOM Qty</th>
+                                  <th style={{ padding: '10px 12px', width: '50px', textAlign: 'center', fontSize: '11px' }}>UoM</th>
+                                  <th style={{ padding: '10px 12px', width: '90px', textAlign: 'right', fontSize: '11px' }}>Rate (₹)</th>
+                                  <th style={{ padding: '10px 12px', width: '100px', textAlign: 'right', fontSize: '11px' }}>Amount (₹)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dynamicAccItems.map((it, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
+                                    <td style={{ padding: '10px 12px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
+                                      <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>{it.qty}</td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B' }}>{it.uom}</td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>{it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+
+                            {/* Calculation Summary & Signatures */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', borderTop: '2px solid #0F172A', paddingTop: '16px', fontSize: '12px' }}>
+                              <div>
+                                <div style={{ fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>Declaration & Terms:</div>
+                                <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 16px 0', lineHeight: '1.4' }}>
+                                  We declare that this Bill of Materials accurately represents the physical goods inspected and packed for dispatch. Verified physical hard copy is filed in Accounts & Logistics records.
+                                </p>
+
+                                {/* Signatures */}
+                                <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+                                  <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Dispatch Head Sign</span>
+                                    <div style={{ fontSize: '10px', color: '#166534', fontWeight: '800', marginTop: '2px' }}>Arun (Dispatch Verified)</div>
+                                  </div>
+                                  <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Accounts Officer Sign</span>
+                                    <div style={{ fontSize: '10px', color: hardCopy ? '#166534' : '#D97706', fontWeight: '800', marginTop: '2px' }}>
+                                      {hardCopy ? 'Received & Verified' : 'Pending Signature'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Financial Totals */}
+                              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
+                                  <span>Taxable Subtotal:</span>
+                                  <strong style={{ color: '#0F172A' }}>₹ {accSubTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
+                                  <span>CGST @ 9%:</span>
+                                  <span>₹ {accCgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#475569' }}>
+                                  <span>SGST @ 9%:</span>
+                                  <span>₹ {accSgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div style={{
+                                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                  borderTop: '2px solid #0F172A', paddingTop: '10px',
+                                  fontSize: '15px', fontWeight: '900', color: '#0F172A'
+                                }}>
+                                  <span>Grand Total:</span>
+                                  <span style={{ color: '#166534' }}>
+                                    ₹ {(orderValue > 0 ? orderValue : accGrandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
                                 </div>
                               </div>
                             </div>
                           </div>
-
-                          {/* Financial Totals */}
-                          <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
-                              <span>Taxable Subtotal:</span>
-                              <strong style={{ color: '#0F172A' }}>₹ {accSubTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
-                              <span>CGST @ 9%:</span>
-                              <span>₹ {accCgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#475569' }}>
-                              <span>SGST @ 9%:</span>
-                              <span>₹ {accSgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            <div style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              borderTop: '2px solid #0F172A', paddingTop: '10px',
-                              fontSize: '15px', fontWeight: '900', color: '#0F172A'
-                            }}>
-                              <span>Grand Total:</span>
-                              <span style={{ color: '#166534' }}>
-                                ₹ {(orderValue > 0 ? orderValue : accGrandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </div>
                         </div>
+                      ) : (
+                        /* ─── VIEW 2: INTERACTIVE BOM TABLE VIEW ─── */
+                        <div style={{ overflowX: 'auto', width: '100%' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                                <th style={{ padding: '13px 16px', width: '50px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
+                                <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Code</th>
+                                <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Description</th>
+                                <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Required Qty</th>
+                                <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Unit Rate (₹)</th>
+                                <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Line Total (₹)</th>
+                                <th style={{ padding: '13px 20px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Physical Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dynamicAccItems.map((it, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFBFC' }}>
+                                  <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
+                                  <td style={{ padding: '14px 16px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
+                                  <td style={{ padding: '14px 16px' }}>
+                                    <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
+                                  </td>
+                                  <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>
+                                    {it.qty} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>{it.uom}</span>
+                                  </td>
+                                  <td style={{ padding: '14px 16px', textAlign: 'right', color: '#475569' }}>
+                                    ₹ {it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
+                                    ₹ {it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                    <span style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                      padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                                      backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0'
+                                    }}>
+                                      <CheckCircle style={{ width: '12px', height: '12px' }} />
+                                      Packed in BOM
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Document Section Footer */}
+                      <div style={{
+                        padding: '14px 24px',
+                        borderTop: '1px solid #F1F5F9',
+                        backgroundColor: '#FAFBFC',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontSize: '13px', color: '#64748B' }}>
+                          Showing 5 verified BOM line items
+                        </span>
+                        <span style={{ fontSize: '13px', color: '#475569' }}>
+                          Total Verified Order Value: <strong style={{ color: '#0F172A', fontSize: '14px', fontWeight: '900' }}>₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}</strong>
+                        </span>
                       </div>
                     </div>
-                  ) : (
-                    /* ─── VIEW 2: INTERACTIVE BOM TABLE VIEW ─── */
-                    <div style={{ overflowX: 'auto', width: '100%' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                            <th style={{ padding: '13px 16px', width: '50px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>#</th>
-                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Code</th>
-                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Description</th>
-                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Required Qty</th>
-                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Unit Rate (₹)</th>
-                            <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>Line Total (₹)</th>
-                            <th style={{ padding: '13px 20px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Physical Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dynamicAccItems.map((it, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFBFC' }}>
-                              <td style={{ padding: '14px 16px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
-                              <td style={{ padding: '14px 16px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
-                              <td style={{ padding: '14px 16px' }}>
-                                <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
-                                <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
-                              </td>
-                              <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>
-                                {it.qty} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>{it.uom}</span>
-                              </td>
-                              <td style={{ padding: '14px 16px', textAlign: 'right', color: '#475569' }}>
-                                ₹ {it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
-                                ₹ {it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td style={{ padding: '14px 20px', textAlign: 'center' }}>
-                                <span style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                  padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
-                                  backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0'
-                                }}>
-                                  <CheckCircle style={{ width: '12px', height: '12px' }} />
-                                  Packed in BOM
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Document Section Footer */}
-                  <div style={{
-                    padding: '14px 24px',
-                    borderTop: '1px solid #F1F5F9',
-                    backgroundColor: '#FAFBFC',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '13px', color: '#64748B' }}>
-                      Showing 5 verified BOM line items
-                    </span>
-                    <span style={{ fontSize: '13px', color: '#475569' }}>
-                      Total Verified Order Value: <strong style={{ color: '#0F172A', fontSize: '14px', fontWeight: '900' }}>₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}</strong>
-                    </span>
-                  </div>
-                </div>
                   );
                 })()}
 
@@ -17382,17 +17672,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         onClick={() => {
                           const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
                           const reissueTime = new Date().toISOString();
-                          
+
                           setBomStore(prev => {
                             const existingBom = prev.find(b => b.bomCode === targetCode || b.code === targetCode);
                             const currentCount = existingBom?.reissueCount || 0;
-                            
+
                             // If reissued 2nd time (currentCount >= 1), cancel & generate a new sequential BOM code
                             if (currentCount >= 1) {
                               const numMatch = targetCode.match(/\d+/);
                               const baseNum = numMatch ? parseInt(numMatch[0], 10) : 550;
                               const newBomCode = `BOM-${baseNum + 1}`;
-                              
+
                               return prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                                 ...b,
                                 status: 'Cancelled & Reissued (New BOM Generated)',
@@ -18847,7 +19137,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </button>
 
                     <button
-                      onClick={() => setBomConfirmModal('create')}
+                      onClick={() => {
+                        if (!newBomProductName || !newBomProductName.trim()) {
+                          alert('⚠️ Please select or enter a Customer Name before creating the BOM order.');
+                          return;
+                        }
+                        if (!bomMaterialsList || bomMaterialsList.length === 0) {
+                          alert('⚠️ Please add at least one Product / Item to the BOM materials list.');
+                          return;
+                        }
+                        setBomConfirmModal('create');
+                      }}
                       style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       Create Order →
@@ -18971,7 +19271,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     const companyName = selCust ? (selCust.c2 || selCust.code) : (newBomProductName || '—');
                     const mobileNo = selCust ? (selCust.c4 || '—') : '—';
                     const emailAddr = selCust ? (selCust.c5 || '—') : '—';
-                    
+
                     const bObj = selCust?.billingAddressObj || {};
                     const billingStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '—';
                     const billingCity = bObj.city || '—';
@@ -19866,7 +20166,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           ) : (
                             <div
                               onDragOver={(e) => e.preventDefault()}
-                               onDrop={(e) => {
+                              onDrop={(e) => {
                                 e.preventDefault();
                                 const file = e.dataTransfer.files && e.dataTransfer.files[0];
                                 if (file) {
@@ -19945,6 +20245,41 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <span>Grand Total (Incl. GST)</span>
                       <span style={{ color: '#4F46E5' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
+                  </div>
+
+                  {/* BOTTOM ACTION BUTTON BAR */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
+                    <button
+                      onClick={() => setBomConfirmModal('cancel')}
+                      style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      onClick={() => setBomConfirmModal('draft')}
+                      style={{ border: '1px solid #C7D2FE', background: '#EEF2FF', color: '#4F46E5', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <FileText style={{ width: '15px', height: '15px' }} />
+                      Save as Draft
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (!newBomProductName || !newBomProductName.trim()) {
+                          alert('⚠️ Please select or enter a Customer Name before creating the BOM order.');
+                          return;
+                        }
+                        if (!bomMaterialsList || bomMaterialsList.length === 0) {
+                          alert('⚠️ Please add at least one Product / Item to the BOM materials list.');
+                          return;
+                        }
+                        setBomConfirmModal('create');
+                      }}
+                      style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      Create Order →
+                    </button>
                   </div>
                 </div>
 
@@ -20035,25 +20370,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               setBomConfirmModal(null);
                             } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
                               const isDraft = bomConfirmModal === 'draft';
-                              const selCust = customerList.find(c => c.code === newBomProductName);
+                              const selCust = customerList.find(c =>
+                                (c.code || '').toLowerCase() === (newBomProductName || '').toLowerCase() ||
+                                (c.c2 || '').toLowerCase() === (newBomProductName || '').toLowerCase()
+                              );
+
                               const bObj = selCust?.billingAddressObj || {};
                               const bStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '';
                               const bCity = bObj.city || '';
                               const bState = bObj.state || '';
                               const bPin = bObj.pincode || '';
 
-                              const formatAddr = (addr, city, state, pin) => {
-                                const parts = [];
-                                if (addr && addr.trim() && addr.trim() !== '—') parts.push(addr.trim());
-                                if (city && city.trim() && city.trim() !== '—') parts.push(city.trim());
-                                if (state && state.trim() && state.trim() !== '—' && pin && pin.trim() && pin.trim() !== '—') {
-                                  parts.push(`${state.trim()} - ${pin.trim()}`);
-                                } else {
-                                  if (state && state.trim() && state.trim() !== '—') parts.push(state.trim());
-                                  if (pin && pin.trim() && pin.trim() !== '—') parts.push(pin.trim());
-                                }
+                              const formatAddr = (st, ct, sta, pin) => {
+                                const parts = [st, ct, sta, pin ? `Pincode: ${pin}` : ''].filter(Boolean);
                                 return parts.join(', ');
                               };
+
+                              const billingObj = { address: bStreet, city: bCity, state: bState, pincode: bPin };
 
                               const billingFull = formatAddr(bStreet, bCity, bState, bPin) || selCust?.c6 || selCust?.billingAddress || '-';
                               const deliveryFull = sameAsBilling
@@ -20064,20 +20397,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                                 : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                              const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+                              const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || '').replace('BOM-', ''))).filter(n => !isNaN(n));
                               const maxNumRec = existingNumsRec.length > 0 ? Math.max(...existingNumsRec) : 600;
                               const finalCode = newBomCode || `BOM-${maxNumRec + 1}`;
 
                               const hasPaymentProof = Boolean(newBomPaymentProofDoc);
                               const newBomRecord = {
+                                id: finalCode,
                                 bomCode: finalCode,
+                                code: finalCode,
                                 date: new Date().toISOString().split('T')[0],
                                 customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
                                 companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
                                 mobile: selCust?.c4 || '-',
                                 email: selCust?.c5 || '-',
                                 billingAddress: billingFull,
-                                billingAddressObj: bObj,
+                                billingAddressObj: billingObj,
                                 deliveryAddress: deliveryFull,
                                 deliveryAddressObj: deliveryObj,
                                 deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
@@ -20091,10 +20426,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 paymentProofDoc: newBomPaymentProofDoc || null,
                                 paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                                 remarks: newBomRemarks || '',
-                                status: isDraft ? 'Draft' : 'Pending Confirmation',
+                                status: isDraft ? 'Draft' : 'Sent to Production',
                                 salesPerson: userRole === 'Sales Head' ? 'Pooja Sharma (Sales Head)' : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)'),
-                                items: bomMaterialsList.map(item => ({
-                                  name: item.name,
+                                items: (bomMaterialsList || []).map(item => ({
+                                  name: item.name || 'Custom Item',
                                   category: item.category || '',
                                   uom: item.uom || 'NOS',
                                   qty: parseFloat(item.qty) || 0,
@@ -20111,8 +20446,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   proofDocObj: newBomPaymentProofDoc || null,
                                   paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc)
                                 },
-                                dispatchPacking: bomMaterialsList.map(item => ({
-                                  name: item.name,
+                                dispatchPacking: (bomMaterialsList || []).map(item => ({
+                                  name: item.name || 'Custom Item',
                                   bomQty: parseFloat(item.qty) || 0,
                                   packed: false
                                 })),
@@ -20123,26 +20458,27 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 },
                                 invoiceConfirmed: false,
                                 invoiceDeducted: false,
-                                subTotal: totals.sub,
-                                gstAmount: totals.gst,
-                                cgstAmount: totals.cgst,
-                                sgstAmount: totals.sgst,
-                                grandTotal: totals.grand
+                                subTotal: totals.sub || 0,
+                                gstAmount: totals.gst || 0,
+                                cgstAmount: totals.cgst || 0,
+                                sgstAmount: totals.sgst || 0,
+                                grandTotal: totals.grand || 0
                               };
 
                               setBomStore(prev => {
                                 const current = Array.isArray(prev) ? prev : [];
-                                const filtered = current.filter(item => item && item.bomCode !== newBomRecord.bomCode);
+                                const filtered = current.filter(item => item && (item.bomCode !== newBomRecord.bomCode && item.code !== newBomRecord.bomCode));
                                 const updatedList = [newBomRecord, ...filtered];
+                                const sanitized = updatedList.map(stripDataUrlsFromRecord);
                                 try {
-                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
-                                  saveCloudStore('bom_store', updatedList);
+                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
                                 } catch (e) {
-                                  console.warn("Storage quota hit, saving sanitized metadata list", e);
-                                  const sanitized = updatedList.map(stripDataUrlsFromRecord);
-                                  try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized)); } catch (err) {}
-                                  saveCloudStore('bom_store', sanitized);
+                                  console.warn("Storage quota hit for local storage", e);
                                 }
+                                saveCloudStore('bom_store', sanitized);
+                                try {
+                                  window.dispatchEvent(new Event('controlroom_storage_update'));
+                                } catch (e) { }
                                 return updatedList;
                               });
                               setNewBomPaymentProofDoc(null);
@@ -20153,9 +20489,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               setNewBomLrNo('');
                               setNewBomCreditDays(7);
                               setNewBomPaymentType('100% Paid');
+                              setNewBomProductName('');
+                              setBomMaterialsList([]);
+                              setNewBomCode('');
                               setShowBOMForm(false);
                               setBomConfirmModal(null);
-                              alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created with status 'Pending Confirmation'!`);
+                              alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created and sent to Production & Dispatch!`);
                             }
                           }}
                           style={{
@@ -20226,13 +20565,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               (r.customerName && r.customerName.toLowerCase().includes(prodSearchQueryText.toLowerCase()));
 
             const subTab = (prodActiveSubTab || 'All').toLowerCase();
+            const rStatus = (r.status || '').toLowerCase();
+            const rTabGroup = (r.tabGroup || '').toLowerCase();
+
             const matchesTab = subTab === 'all' ||
               subTab === 'all boms' ||
               subTab === 'all orders' ||
-              r.tabGroup === prodActiveSubTab ||
-              (subTab.includes('pending') && (r.status || '').toLowerCase().includes('pending')) ||
-              (subTab.includes('draft') && (r.status || '').toLowerCase().includes('draft')) ||
-              (subTab.includes('sent') && ((r.status || '').toLowerCase().includes('sent') || (r.status || '').toLowerCase().includes('confirm')));
+              rTabGroup === subTab ||
+              (subTab.includes('pending') && (rStatus.includes('pending') || rStatus.includes('draft'))) ||
+              (subTab.includes('draft') && rStatus.includes('draft')) ||
+              (subTab.includes('sent') && (rStatus.includes('sent') || rStatus.includes('confirm') || rStatus.includes('production')));
 
             return matchesSearch && matchesTab;
           });
@@ -20507,90 +20849,90 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   onChange={() => handleSelectRowGeneric(row.code)}
                                 />
                               </td>
-                          <td
-                            onClick={() => {
-                              if (activeTab === 'Dispatch Orders') {
-                                setQuickPreviewRecord(row);
-                              } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
-                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
-                                setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
-                              } else {
-                                setQuickPreviewRecord(row);
-                              }
-                            }}
-                            style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
-                          >
-                            {row.code}
-                          </td>
-                          <td
-                            onClick={() => {
-                              if (activeTab === 'Dispatch Orders') {
-                                setQuickPreviewRecord(row);
-                              } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
-                                const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
-                                setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
-                              } else {
-                                setQuickPreviewRecord(row);
-                              }
-                            }}
-                            style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B', cursor: 'pointer' }}
-                          >
-                            {row.c2 || row.name}
-                          </td>
-                          <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
-                          <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
-                          {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5?.toString()?.includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
-                          {row.c6 !== undefined && activeTab !== 'Customer Management' && (
-                            <td style={{ padding: '12px 14px', color: '#475569' }}>
-                              {activeTab === 'Invoice Management' ? (
-                                <span style={{
-                                  backgroundColor: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#DCFCE7' : '#FEF3C7',
-                                  color: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#166534' : '#B45309',
-                                  padding: '4px 10px',
-                                  borderRadius: '12px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
-                                  {row.c6}
-                                </span>
-                              ) : (
-                                row.c6
+                              <td
+                                onClick={() => {
+                                  if (activeTab === 'Dispatch Orders') {
+                                    setQuickPreviewRecord(row);
+                                  } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
+                                    const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
+                                    setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
+                                  } else {
+                                    setQuickPreviewRecord(row);
+                                  }
+                                }}
+                                style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
+                              >
+                                {row.code}
+                              </td>
+                              <td
+                                onClick={() => {
+                                  if (activeTab === 'Dispatch Orders') {
+                                    setQuickPreviewRecord(row);
+                                  } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
+                                    const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
+                                    setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
+                                  } else {
+                                    setQuickPreviewRecord(row);
+                                  }
+                                }}
+                                style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B', cursor: 'pointer' }}
+                              >
+                                {row.c2 || row.name}
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
+                              <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
+                              {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5?.toString()?.includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
+                              {row.c6 !== undefined && activeTab !== 'Customer Management' && (
+                                <td style={{ padding: '12px 14px', color: '#475569' }}>
+                                  {activeTab === 'Invoice Management' ? (
+                                    <span style={{
+                                      backgroundColor: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#DCFCE7' : '#FEF3C7',
+                                      color: (row.c6 === 'Ready' || row.c6 === 'Ready for Payment' || row.c6 === 'Paid') ? '#166534' : '#B45309',
+                                      padding: '4px 10px',
+                                      borderRadius: '12px',
+                                      fontSize: '11px',
+                                      fontWeight: 'bold',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}>
+                                      {row.c6}
+                                    </span>
+                                  ) : (
+                                    row.c6
+                                  )}
+                                </td>
                               )}
-                            </td>
-                          )}
-                          {pageConfig.headers.includes('Fulfillment Status') ? (
-                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                              <span style={{
-                                backgroundColor: row.stBg,
-                                color: row.stFg,
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                border: row.stBorder
-                              }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
-                                {row.status}
-                              </span>
-                            </td>
-                          ) : pageConfig.headers.includes('Status') && (
-                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                              <span style={{ backgroundColor: row.stBg, color: row.stFg, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', border: row.stBorder }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
-                                {row.status}
-                              </span>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    });
-                  })()}
+                              {pageConfig.headers.includes('Fulfillment Status') ? (
+                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                  <span style={{
+                                    backgroundColor: row.stBg,
+                                    color: row.stFg,
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    border: row.stBorder
+                                  }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
+                                    {row.status}
+                                  </span>
+                                </td>
+                              ) : pageConfig.headers.includes('Status') && (
+                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                  <span style={{ backgroundColor: row.stBg, color: row.stFg, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', border: row.stBorder }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
+                                    {row.status}
+                                  </span>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -20774,7 +21116,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           setViewingInvoiceModal(targetRow);
                           setInvoiceModalActiveTab('Invoice Items');
                         } else if (activeTab === 'Dispatch Orders') {
-                          setDispatchPackingModal(targetRow);
+                          if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
+                            setVehicleLoadingModal(targetRow);
+                          } else {
+                            setDispatchPackingModal(targetRow);
+                          }
                         } else if (activeTab === 'Accounts Verification') {
                           setAccountsVerificationModal(targetRow);
                           setIsAccountsViewOnly(false);
@@ -20910,10 +21256,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                         <button
                           onClick={() => {
-                            if (selectedRows.length === 1) {
-                              alert(`Cloned #${selectedRows[0]} as a new duplicate draft.`);
+                            const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+                            const targetRow = codeVal
+                              ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => b.bomCode === codeVal))
+                              : ((bomStore || [])[0] || (filteredRows || [])[0]);
+
+                            if (targetRow) {
+                              setUploadPaymentModal(targetRow);
                             } else {
-                              alert(`Cloned ${selectedRows.length} selected items.`);
+                              alert('Please select a BOM order to view payment details.');
                             }
                             setShowFloatingMoreMenu(false);
                           }}
@@ -20935,7 +21286,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <Copy size={14} style={{ color: '#2563EB' }} /> Clone / Duplicate
+                          <CreditCard size={14} style={{ color: '#2563EB' }} /> View Payment Details
                         </button>
 
                         <button
@@ -20961,7 +21312,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                          <Printer size={14} style={{ color: '#059669' }} /> Export and Print
                         </button>
 
                       </div>
@@ -20992,7 +21343,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 </div>
               )}
               {quickPreviewRecord && (
-                <div 
+                <div
                   onClick={() => setQuickPreviewRecord(null)}
                   style={{
                     position: 'fixed',
@@ -21009,7 +21360,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   }}
                 >
                   {/* Right-Side Slide-Over Drawer Panel */}
-                  <div 
+                  <div
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       backgroundColor: '#FFFFFF',
@@ -21264,110 +21615,198 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
               {uploadPaymentModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, fontFamily: "'DM Sans', sans-serif" }}>
-                  <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '520px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Upload style={{ width: '18px', height: '18px' }} />
+                          <CreditCard style={{ width: '18px', height: '18px' }} />
                         </div>
                         <div>
-                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Upload Payment Details</h3>
-                          <span style={{ fontSize: '12px', color: '#64748B' }}>{uploadPaymentModal.bomCode} — {uploadPaymentModal.paymentType}</span>
+                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Payment Details & Proof</h3>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>{uploadPaymentModal.bomCode} — {uploadPaymentModal.paymentType || '100% Full Advance'}</span>
                         </div>
                       </div>
                       <button onClick={() => setUploadPaymentModal(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}><X style={{ width: '18px', height: '18px' }} /></button>
                     </div>
 
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Select Payment Stage</label>
-                      <select
-                        value={paymentStageType}
-                        onChange={(e) => setPaymentStageType(e.target.value)}
-                        style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none' }}
-                      >
-                        {uploadPaymentModal.paymentType === '50% Advance + 50% Dispatch' ? (
-                          <>
-                            <option value="50% Advance">Stage 1: 50% Advance Payment</option>
-                            <option value="50% Dispatch">Stage 2: 50% Dispatch Payment</option>
-                          </>
-                        ) : uploadPaymentModal.paymentType === 'Net 30 Days' ? (
-                          <option value="Net 30 Days">Net 30 Days Credit Payment</option>
-                        ) : (
-                          <option value="100% Advance">100% Full Advance Payment</option>
-                        )}
-                      </select>
-                    </div>
+                    {/* PAYMENT DETAILS SUMMARY CARD */}
+                    {(() => {
+                      const proofObj = uploadPaymentModal.paymentProofDoc || uploadPaymentModal.payments?.proofDocObj;
+                      const hasProof = Boolean(proofObj || uploadPaymentModal.payments?.proofDoc);
+                      const proofName = typeof proofObj === 'object' ? proofObj?.name : (uploadPaymentModal.payments?.proofDoc || proofObj);
+                      const proofData = typeof proofObj === 'object' ? proofObj?.dataUrl : uploadPaymentModal.payments?.proofDocData;
+                      const isImage = proofData && proofData.startsWith('data:image/');
 
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Payment Proof / Reference Document</label>
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={(e) => {
-                          const f = e.target.files && e.target.files[0];
-                          if (f) {
-                            const reader = new FileReader();
-                            reader.onload = (loadEvt) => {
-                              setPaymentProofFile({
-                                name: f.name,
-                                size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
-                                dataUrl: loadEvt.target.result,
-                                uploadedAt: new Date().toISOString()
-                              });
-                            };
-                            reader.readAsDataURL(f);
-                          }
-                        }}
-                        style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
-                      />
-                      {paymentProofFile && (
-                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {paymentProofFile.dataUrl && paymentProofFile.dataUrl.startsWith('data:image/') && (
-                            <img src={paymentProofFile.dataUrl} alt="Proof Thumbnail" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #BBF7D0' }} />
+                      return (
+                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Payment Status</span>
+                            <span style={{ backgroundColor: hasProof ? '#DCFCE7' : '#FEF3C7', color: hasProof ? '#166534' : '#B45309', fontSize: '11px', fontWeight: '800', padding: '4px 12px', borderRadius: '12px', border: hasProof ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
+                              {hasProof ? '✓ Payment Proof Uploaded' : '• Pending Payment Upload'}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: '11px', marginBottom: '2px' }}>Customer Name</span>
+                              <strong style={{ color: '#0F172A' }}>{uploadPaymentModal.customerName || uploadPaymentModal.companyName || '—'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: '11px', marginBottom: '2px' }}>Payment Terms</span>
+                              <strong style={{ color: '#0F172A' }}>{uploadPaymentModal.paymentType || '100% Full Advance'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: '11px', marginBottom: '2px' }}>Grand Total Amount</span>
+                              <strong style={{ color: '#059669', fontSize: '14px', fontWeight: '800' }}>
+                                ₹ {Number(uploadPaymentModal.grandTotal || uploadPaymentModal.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </strong>
+                            </div>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: '11px', marginBottom: '2px' }}>Order Ref Code</span>
+                              <strong style={{ color: '#0E7490' }}>{uploadPaymentModal.bomCode || '—'}</strong>
+                            </div>
+                          </div>
+
+                          {/* UPLOADED ATTACHMENT DISPLAY */}
+                          {hasProof ? (
+                            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '4px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '8px' }}>Payment Proof Document:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '12px 14px' }}>
+                                {isImage ? (
+                                  <img src={proofData} alt="Proof" style={{ width: '46px', height: '46px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #E2E8F0' }} />
+                                ) : (
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <FileText size={20} />
+                                  </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#0F172A', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                    {proofName || 'Payment_Proof_Document.pdf'}
+                                  </div>
+                                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>
+                                    {typeof proofObj === 'object' && proofObj?.size ? proofObj.size : 'Attached Document'} • Verified
+                                  </span>
+                                </div>
+                                {proofData ? (
+                                  <button
+                                    onClick={() => {
+                                      const win = window.open('');
+                                      if (win) {
+                                        if (proofData.startsWith('data:image/')) {
+                                          win.document.write(`<!DOCTYPE html><html><head><title>${proofName || 'Payment Proof'}</title></head><body style="margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${proofData}" style="max-width:95vw;max-height:95vh;object-fit:contain;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border-radius:12px;"/></body></html>`);
+                                        } else {
+                                          win.location.href = proofData;
+                                        }
+                                      }
+                                    }}
+                                    style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '6px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                  >
+                                    <Eye size={13} /> View File
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '6px' }}>
+                                    Attached
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            /* IF NO PROOF DOCUMENT HAS BEEN UPLOADED YET */
+                            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: '700', color: '#B45309' }}>Upload Payment Proof File:</span>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>Payment Stage</label>
+                                <select
+                                  value={paymentStageType}
+                                  onChange={(e) => setPaymentStageType(e.target.value)}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
+                                >
+                                  {uploadPaymentModal.paymentType === '50% Advance + 50% Dispatch' ? (
+                                    <>
+                                      <option value="50% Advance">Stage 1: 50% Advance Payment</option>
+                                      <option value="50% Dispatch">Stage 2: 50% Dispatch Payment</option>
+                                    </>
+                                  ) : uploadPaymentModal.paymentType === 'Net 30 Days' ? (
+                                    <option value="Net 30 Days">Net 30 Days Credit Payment</option>
+                                  ) : (
+                                    <option value="100% Advance">100% Full Advance Payment</option>
+                                  )}
+                                </select>
+                              </div>
+
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                onChange={(e) => {
+                                  const f = e.target.files && e.target.files[0];
+                                  if (f) {
+                                    const reader = new FileReader();
+                                    reader.onload = (loadEvt) => {
+                                      setPaymentProofFile({
+                                        name: f.name,
+                                        size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
+                                        dataUrl: loadEvt.target.result,
+                                        uploadedAt: new Date().toISOString()
+                                      });
+                                    };
+                                    reader.readAsDataURL(f);
+                                  }
+                                }}
+                                style={{ width: '100%', padding: '10px', border: '1px dashed #CBD5E1', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}
+                              />
+                            </div>
                           )}
-                          <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
-                            Selected: {paymentProofFile.name || paymentProofFile}
-                          </span>
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-                      <button
-                        onClick={() => setUploadPaymentModal(null)}
-                        style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!paymentProofFile) {
-                            alert('Please attach or select payment proof file!');
-                            return;
-                          }
-                          const pDocObj = typeof paymentProofFile === 'object' ? paymentProofFile : { name: paymentProofFile, dataUrl: null };
-                          setBomStore(prev => prev.map(b => b.bomCode === uploadPaymentModal.bomCode ? {
-                            ...b,
-                            status: 'Payment Uploaded & Verified',
-                            paymentProofDoc: pDocObj,
-                            payments: {
-                              ...b.payments,
-                              proofDoc: pDocObj.name,
-                              proofDocObj: pDocObj,
-                              proofDocData: pDocObj.dataUrl,
-                              advance100Uploaded: paymentStageType === '100% Advance',
-                              advance50Uploaded: paymentStageType === '50% Advance' || b.payments?.advance50Uploaded,
-                              dispatch50Uploaded: paymentStageType === '50% Dispatch' || b.payments?.dispatch50Uploaded,
-                              net30Uploaded: paymentStageType === 'Net 30 Days'
-                            }
-                          } : b));
-                          setUploadPaymentModal(null);
-                          alert(`✅ Payment details for (${paymentStageType}) uploaded and recorded successfully!`);
-                        }}
-                        style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.2)' }}
-                      >
-                        Record & Submit Payment Details
-                      </button>
+                      {!(uploadPaymentModal.paymentProofDoc || uploadPaymentModal.payments?.proofDocObj || uploadPaymentModal.payments?.proofDoc) ? (
+                        <>
+                          <button
+                            onClick={() => setUploadPaymentModal(null)}
+                            style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!paymentProofFile) {
+                                alert('Please attach or select payment proof file!');
+                                return;
+                              }
+                              const pDocObj = typeof paymentProofFile === 'object' ? paymentProofFile : { name: paymentProofFile, dataUrl: null };
+                              setBomStore(prev => prev.map(b => b.bomCode === uploadPaymentModal.bomCode ? {
+                                ...b,
+                                status: 'Payment Uploaded & Verified',
+                                paymentProofDoc: pDocObj,
+                                payments: {
+                                  ...b.payments,
+                                  proofDoc: pDocObj.name,
+                                  proofDocObj: pDocObj,
+                                  proofDocData: pDocObj.dataUrl,
+                                  advance100Uploaded: paymentStageType === '100% Advance',
+                                  advance50Uploaded: paymentStageType === '50% Advance' || b.payments?.advance50Uploaded,
+                                  dispatch50Uploaded: paymentStageType === '50% Dispatch' || b.payments?.dispatch50Uploaded,
+                                  net30Uploaded: paymentStageType === 'Net 30 Days'
+                                }
+                              } : b));
+                              setUploadPaymentModal(null);
+                              alert(`✅ Payment details for (${paymentStageType}) uploaded and recorded successfully!`);
+                            }}
+                            style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#10B981', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}
+                          >
+                            Record Payment
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setUploadPaymentModal(null)}
+                          style={{ padding: '9px 22px', borderRadius: '8px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Close Details
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -22263,17 +22702,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           canvas.width = 640;
           canvas.height = 400;
           const ctx = canvas.getContext('2d');
-          
+
           // Background truck interior
           ctx.fillStyle = '#1E293B';
           ctx.fillRect(0, 0, 640, 400);
-          
+
           // Staged pallets & solar rails
           ctx.fillStyle = '#334155';
           ctx.fillRect(60, 160, 520, 180);
           ctx.fillStyle = '#64748B';
           ctx.fillRect(100, 100, 440, 100);
-          
+
           // Straps
           ctx.strokeStyle = '#F59E0B';
           ctx.lineWidth = 6;
@@ -22367,7 +22806,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         return (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
             <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', width: '920px', maxWidth: '96%', maxHeight: '92vh', overflow: 'hidden', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
-              
+
               {/* Modal Header Banner */}
               <div style={{
                 padding: '20px 28px',
@@ -22415,7 +22854,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
               {/* Modal Body (Scrollable) */}
               <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '22px', backgroundColor: '#F8FAFC' }}>
-                
+
                 {/* 1. Fulfillment & Stock Deduction Strip */}
                 <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -22810,7 +23249,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       {completedBomSummaryModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100001, fontFamily: "'DM Sans', sans-serif" }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', width: '620px', maxWidth: '95%', padding: '32px', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', gap: '22px', textAlign: 'center' }}>
-            
+
             <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 20px rgba(22,101,52,0.2)' }}>
               <CheckCircle size={40} />
             </div>
@@ -22830,7 +23269,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             {/* Lifecycle Stages Passed */}
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left' }}>
               <div style={{ fontSize: '12px', fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>Completed Journey Stages</div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
                   <CheckCircle size={15} /> 1. Sales BOM Created & Address Proof Attached
@@ -23315,7 +23754,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       try {
                         localStorage.setItem("controlroom_bom_store", JSON.stringify(updated));
                         saveCloudStore("bom_store", updated);
-                      } catch (err) {}
+                      } catch (err) { }
                       return updated;
                     });
                   }
