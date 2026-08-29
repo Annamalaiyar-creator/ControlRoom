@@ -856,9 +856,10 @@ app.get('/api/workorders', async (req, res) => {
 // Endpoint to CREATE / ISSUE a Production Work Order
 app.post('/api/workorders', async (req, res) => {
   try {
+    const woId = req.body.workOrderNo || req.body.id || `WO-${Date.now().toString().slice(-4)}`;
     const newOrder = {
-      id: `wo_${Date.now()}`,
-      workOrderNo: req.body.workOrderNo || `VRM26/07/${Math.floor(100 + Math.random() * 900)}`,
+      id: woId,
+      workOrderNo: woId,
       productName: req.body.productName || 'Solar Mounting Rail',
       plannedQty: parseInt(req.body.plannedQty) || 500,
       completedQty: parseInt(req.body.completedQty) || 0,
