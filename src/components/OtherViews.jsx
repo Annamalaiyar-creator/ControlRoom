@@ -13088,6 +13088,27 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const handleStockAdjustment = () => {
               if (!adjQty || isNaN(adjQty)) return;
               const val = parseFloat(adjQty);
+              const impactQty = adjType === 'Add' ? val : -val;
+              const formattedTime = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+              const adjRefDoc = `ADJ-${Math.floor(1000 + Math.random() * 9000)}`;
+
+              // Log stock adjustment entry to engine ledger so it instantly appears in Item Audit Log
+              prodModuleEngine.addLedgerEntry({
+                timestamp: formattedTime,
+                type: 'STOCK_ADJUSTMENT',
+                woId: adjRefDoc,
+                itemCode: selectedMat.code,
+                itemName: selectedMat.name,
+                qty: impactQty,
+                unit: selectedMat.unit || 'Pieces',
+                previousStock: selectedMat.stock,
+                newStock: adjType === 'Add' ? selectedMat.stock + val : Math.max(0, selectedMat.stock - val),
+                user: 'Senthil Kumar (Production Head)',
+                employee: 'Inventory Controller',
+                reason: `Stock Adjustment (${adjType === 'Add' ? 'Add Audit Surplus' : 'Deduct Shortage/Wastage'} ${impactQty > 0 ? '+' + impactQty : impactQty} ${selectedMat.unit}): ${adjReason || 'Physical Audit Correction'}`,
+                referenceDoc: adjRefDoc
+              });
+
               setMaterials(prev => prev.map(m => {
                 if (m.code === selectedMat.code) {
                   const newStock = adjType === 'Add' ? m.stock + val : Math.max(0, m.stock - val);
@@ -13095,7 +13116,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   return {
                     ...m,
                     stock: newStock,
-                    stockAdj: m.stockAdj + (adjType === 'Add' ? val : -val),
+                    stockAdj: m.stockAdj + impactQty,
                     status: newStatus,
                     lastUpdated: 'Just now'
                   };
@@ -13873,10 +13894,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </td>
                               <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedMat(m); setShowTxModal(true); }}
-                                  style={{ border: '1px solid #E2E8F0', background: '#F8FAFC', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', color: '#64748B', fontWeight: '700' }}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedCode(m.code); setShowTxModal(true); }}
+                                  style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer', color: '#0E7490', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
-                                  Info
+                                  <Info size={13} /> Info / Audit Log
                                 </button>
                               </td>
                             </tr>
@@ -13980,8 +14001,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       onClick={() => {
                         if (selectedRows.length > 0) {
-                          const mat = materials.find(m => m.code === selectedRows[0]);
-                          setSelectedMat(mat);
+                          setSelectedCode(selectedRows[0]);
                           setShowTxModal(true);
                         }
                       }}
