@@ -818,13 +818,12 @@ class ProductionModuleEngine {
     });
 
     // 2. Finished Goods Stock Addition (Only Good Output)
-    // Standardize Finished Goods Code & Name based on cut length (e.g. Cut 300mm -> FG-MR-300MM / Mini Rail 300 mm)
+    // Subbranch shares the exact code of the main branch (MR100N / MR100)
     const cutLen = wo.cutLengthMm || 300;
-    const targetFgCode = wo.finishedProductCode && wo.finishedProductCode.startsWith('FG-') 
-      ? wo.finishedProductCode 
-      : (wo.finishedProductCode === 'MR100' && cutLen !== 100 
-          ? `FG-MR-${cutLen}MM` 
-          : (wo.finishedProductCode || `FG-MR-${cutLen}MM`));
+    const parentMainCode = wo.parentCode || 'MR100N';
+    const targetFgCode = (wo.finishedProductCode === 'FG-MR-300MM' || wo.finishedProductCode?.includes('300')) 
+      ? parentMainCode 
+      : (wo.finishedProductCode || parentMainCode);
     
     const targetFgName = wo.finishedProductName && !wo.finishedProductName.includes('100 mm') 
       ? wo.finishedProductName 
@@ -840,10 +839,12 @@ class ProductionModuleEngine {
       fgPrevStock = fgItem.physicalStock;
       fgItem.physicalStock += wo.actualGoodOutput;
       fgItem.availableStock = fgItem.physicalStock - fgItem.reservedStock;
+      if (!fgItem.parentCode) fgItem.parentCode = parentMainCode;
     } else {
       // Create new FG item dynamically in inventory catalog
       fgItem = {
         code: targetFgCode,
+        parentCode: parentMainCode,
         name: targetFgName,
         category: 'Finished Goods',
         unit: wo.unit || 'Pieces',

@@ -12908,10 +12908,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   // Detect sub-product relationship (e.g. 300 mm Mini Rail cut variant under 100 MM Mini Rail main product)
                   const isSubProduct = item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm');
+                  const subbranchCode = isSubProduct ? (item.parentCode || 'MR100N') : mappedCode;
 
                   matMap.set(mappedCode, {
                     ...existing,
-                    code: mappedCode,
+                    code: subbranchCode,
                     name: item.name || existing.name,
                     cat: item.category || existing.cat || 'Finished Goods',
                     unit: item.unit || existing.unit || 'Pieces',
