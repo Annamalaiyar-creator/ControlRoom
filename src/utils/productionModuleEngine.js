@@ -811,9 +811,9 @@ class ProductionModuleEngine {
       unit: rawItem.unit,
       previousStock: rawPrevStock,
       newStock: rawItem.physicalStock,
-      user: wo.productionHead,
-      employee: wo.assignedEmployee,
-      reason: `Consumed in Work Order ${wo.id} for ${wo.actualGoodOutput} ${wo.unit} ${wo.finishedProductName}`,
+      user: wo.productionHead || 'Senthil Kumar (Production Head)',
+      employee: wo.assignedEmployee || 'Karthi (Operator)',
+      reason: `Raw material issued & consumed by ${wo.assignedEmployee || 'Karthi'} for Work Order ${wo.id} (Manufacturing ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${wo.finishedProductName || 'Mini Rail 300 mm'})`,
       referenceDoc: wo.id
     });
 
@@ -870,9 +870,9 @@ class ProductionModuleEngine {
       unit: wo.unit,
       previousStock: fgPrevStock,
       newStock: fgPrevStock + wo.actualGoodOutput,
-      user: wo.productionHead,
-      employee: wo.assignedEmployee,
-      reason: `Production receipt approved from Work Order ${wo.id}`,
+      user: wo.productionHead || 'Senthil Kumar (Production Head)',
+      employee: wo.assignedEmployee || 'Karthi (Operator)',
+      reason: `${wo.assignedEmployee || 'Karthi'} manufactured ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${wo.finishedProductName || 'Mini Rail 300 mm'} under Work Order ${wo.id} (Verified and approved into FG Inventory by ${wo.productionHead || 'Senthil Kumar'})`,
       referenceDoc: wo.id
     });
 

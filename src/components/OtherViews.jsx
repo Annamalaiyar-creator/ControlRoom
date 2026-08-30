@@ -13789,6 +13789,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Audit Info</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -13802,6 +13803,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               <td style={{ padding: '14px' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '60px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
+                              <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                             </tr>
                           ))
@@ -13868,6 +13870,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
                                   {m.status}
                                 </span>
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedMat(m); setShowTxModal(true); }}
+                                  style={{ border: '1px solid #E2E8F0', background: '#F8FAFC', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', color: '#64748B', fontWeight: '700' }}
+                                >
+                                  Info
+                                </button>
                               </td>
                             </tr>
                           );
@@ -13966,6 +13976,31 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
                       <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
                     </span>
+
+                    <button
+                      onClick={() => {
+                        if (selectedRows.length > 0) {
+                          const mat = materials.find(m => m.code === selectedRows[0]);
+                          setSelectedMat(mat);
+                          setShowTxModal(true);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        color: '#64748B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Info size={14} /> Info
+                    </button>
 
                     <button
                       onClick={() => {
@@ -14075,45 +14110,121 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </div>
                 )}
 
-                {/* MODAL 2: View Transactions */}
-                {showTxModal && (
-                  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
-                          Transaction History — {selectedMat.name} ({selectedMat.code})
-                        </h3>
-                        <button onClick={() => setShowTxModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                {/* MODAL 2: ITEM AUDIT LOG & MANUFACTURING TRACEABILITY */}
+                {showTxModal && selectedMat && (
+                  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(2px)' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '820px', width: '92%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                      
+                      {/* Modal Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #E2E8F0', paddingBottom: '14px', marginBottom: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                              Item Audit Log & Production Traceability
+                            </h3>
+                            <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '6px' }}>
+                              Full History Trace
+                            </span>
+                          </div>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B' }}>
+                            Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '6px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
+                          </p>
+                        </div>
+                        <button onClick={() => setShowTxModal(false)} style={{ border: 'none', background: '#F1F5F9', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', color: '#64748B', fontWeight: 'bold', fontSize: '16px' }}>✕</button>
                       </div>
-                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                          <thead>
-                            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#64748b' }}>
-                              <th style={{ padding: '10px' }}>Date</th>
-                              <th style={{ padding: '10px' }}>Doc Ref</th>
-                              <th style={{ padding: '10px' }}>Type</th>
-                              <th style={{ padding: '10px', textAlign: 'right' }}>Qty ({selectedMat.unit})</th>
+
+                      {/* Stock Summary Banner */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textTransform: 'uppercase' }}>Current Physical Stock</div>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{Number(selectedMat.stock || 0).toLocaleString()} {selectedMat.unit}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textTransform: 'uppercase' }}>Safety / Min Level</div>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: '#64748B', marginTop: '2px' }}>{Number(selectedMat.minLevel || 50).toLocaleString()} {selectedMat.unit}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textTransform: 'uppercase' }}>Store / Bay Location</div>
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490', marginTop: '4px' }}>{selectedMat.store || 'Main Store'}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textTransform: 'uppercase' }}>Current Status</div>
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: selectedMat.status === 'Out of Stock' ? '#FEF2F2' : selectedMat.status === 'Low Stock' ? '#FFF7ED' : '#F0FDF4', color: selectedMat.status === 'Out of Stock' ? '#B91C1C' : selectedMat.status === 'Low Stock' ? '#C2410C' : '#15803D', padding: '3px 10px', borderRadius: '6px' }}>
+                              {selectedMat.status || 'In Stock'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Audit Log Table Header */}
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Production & Material Audit Ledger Entries ({itemAuditLogs.length})</span>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '400' }}>Captures who manufactured/reduced material with date, time, and WO reference</span>
+                      </div>
+
+                      {/* Audit Log Table */}
+                      <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                          <thead style={{ position: 'sticky', top: 0, backgroundColor: '#F8FAFC', zIndex: 10 }}>
+                            <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
+                              <th style={{ padding: '10px 12px', fontWeight: '700' }}>Date & Time</th>
+                              <th style={{ padding: '10px 12px', fontWeight: '700' }}>Event Type</th>
+                              <th style={{ padding: '10px 12px', fontWeight: '700' }}>Operator / Person</th>
+                              <th style={{ padding: '10px 12px', fontWeight: '700' }}>Authorized By</th>
+                              <th style={{ padding: '10px 12px', fontWeight: '700', textAlign: 'right' }}>Qty Impact</th>
+                              <th style={{ padding: '10px 12px', fontWeight: '700' }}>Audit Narrative / Reason</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '10px' }}>20 Aug 2026</td>
-                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>GRN-102</td>
-                              <td style={{ padding: '10px', color: '#166534', fontWeight: '700' }}>Goods Receipt</td>
-                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#166534' }}>+ 500</td>
-                            </tr>
-                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '10px' }}>19 Aug 2026</td>
-                              <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>ADJ-008</td>
-                              <td style={{ padding: '10px', color: '#ea580c', fontWeight: '700' }}>Stock Adjustment</td>
-                              <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#ea580c' }}>+ 10</td>
-                            </tr>
+                            {itemAuditLogs.map((log, idx) => {
+                              const isAddition = log.qty > 0 || log.type === 'PRODUCTION_RECEIPT' || log.type === 'GOODS_RECEIPT';
+                              const typeBg = isAddition ? '#F0FDF4' : '#FEF2F2';
+                              const typeFg = isAddition ? '#166534' : '#991B1B';
+                              const typeBorder = isAddition ? '1px solid #DCFCE7' : '1px solid #FEE2E2';
+
+                              return (
+                                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                                  <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: '#475569', fontWeight: '600' }}>
+                                    {log.timestamp}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                                    <span style={{ backgroundColor: typeBg, color: typeFg, border: typeBorder, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800' }}>
+                                      {log.type === 'PRODUCTION_RECEIPT' ? '➕ Production Addition' : log.type === 'PRODUCTION_CONSUMPTION' ? '➖ Material Reduction' : log.type === 'GOODS_RECEIPT' ? '📦 Goods Receipt' : '✏️ Stock Adjustment'}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0F172A' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <span style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0369A1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
+                                        {(log.employee || 'K').charAt(0).toUpperCase()}
+                                      </span>
+                                      {log.employee || 'Karthi (Operator)'}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 12px', color: '#475569', fontSize: '11px' }}>
+                                    {log.user || 'Senthil Kumar (Production Head)'}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', fontSize: '13px', color: isAddition ? '#16A34A' : '#DC2626', whiteSpace: 'nowrap' }}>
+                                    {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', color: '#334155', lineHeight: '1.4' }}>
+                                    {log.reason} {log.woId && <span style={{ marginLeft: '4px', fontSize: '10px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '1px 6px', borderRadius: '4px' }}>{log.woId}</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
-                      <div style={{ marginTop: '16px', textAlign: 'right' }}>
-                        <button onClick={() => setShowTxModal(false)} style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>Close</button>
+                      <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#64748B' }}>
+                          💡 Full operator traceability: Shows who manufactured/cut material, timestamps, and production head approvals.
+                        </span>
+                        <button onClick={() => setShowTxModal(false)} style={{ padding: '8px 22px', border: 'none', borderRadius: '8px', background: '#0F172A', color: 'white', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>
+                          Close Audit Log
+                        </button>
                       </div>
+
                     </div>
                   </div>
                 )}
