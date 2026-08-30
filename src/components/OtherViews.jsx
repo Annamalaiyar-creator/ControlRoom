@@ -13777,6 +13777,293 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               }
             };
 
+            // FULL PAGE VIEW 1: Stock Adjustment & Edit (Matching Create Work Order Page Layout)
+            if (showAdjModal && selectedMat) {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+                  {/* Top Header Card matching Create Work Order Page */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: '20px 24px',
+                    borderRadius: '14px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                  }}>
+                    <div>
+                      <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                        Stock Adjustment & Physical Audit Edit — {selectedMat.name} ({selectedMat.code})
+                      </h1>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                        Adjust physical stock counts, record surplus additions or shortage deductions, and log audit trail entries.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAdjModal(false)}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Cancel & Return
+                    </button>
+                  </div>
+
+                  {/* Main Form Card */}
+                  <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '28px', maxWidth: '720px', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px', margin: '0 auto', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                    
+                    {/* Item Header Banner */}
+                    <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Target Material</div>
+                        <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{selectedMat.name} ({selectedMat.code})</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Current Stock</div>
+                        <div style={{ fontSize: '18px', fontWeight: '800', color: '#0E7490', marginTop: '2px' }}>{selectedMat.stock} {selectedMat.unit}</div>
+                      </div>
+                    </div>
+
+                    {/* Adjustment Type Selection */}
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
+                        Adjustment Type
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setAdjType('Add')}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '10px',
+                            border: adjType === 'Add' ? '2px solid #16A34A' : '1px solid #E2E8F0',
+                            backgroundColor: adjType === 'Add' ? '#F0FDF4' : '#FFFFFF',
+                            color: adjType === 'Add' ? '#166534' : '#64748B',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                          }}
+                        >
+                          ➕ Add Stock (Physical Surplus)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAdjType('Deduct')}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '10px',
+                            border: adjType === 'Deduct' ? '2px solid #DC2626' : '1px solid #E2E8F0',
+                            backgroundColor: adjType === 'Deduct' ? '#FEF2F2' : '#FFFFFF',
+                            color: adjType === 'Deduct' ? '#991B1B' : '#64748B',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                          }}
+                        >
+                          ➖ Deduct Stock (Shortage / Damage)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quantity Field */}
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
+                        Adjustment Quantity ({selectedMat.unit})
+                      </label>
+                      <input
+                        type="number"
+                        placeholder={`Enter quantity to ${adjType === 'Add' ? 'add' : 'deduct'}...`}
+                        value={adjQty}
+                        onChange={(e) => setAdjQty(e.target.value)}
+                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '15px', fontWeight: '700', outline: 'none' }}
+                      />
+                    </div>
+
+                    {/* Reason / Remarks */}
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
+                        Audit Reason / Remarks
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Physical Audit Surplus, Damage Shortage, Scrapped..."
+                        value={adjReason}
+                        onChange={(e) => setAdjReason(e.target.value)}
+                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '14px', outline: 'none' }}
+                      />
+                    </div>
+
+                    {/* Live Calculation Preview */}
+                    {adjQty && !isNaN(adjQty) && (
+                      <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '14px 18px', color: '#1E40AF', fontSize: '13px', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Resulting New Physical Stock:</span>
+                        <span style={{ fontSize: '18px', fontWeight: '800', color: '#1D4ED8' }}>
+                          {adjType === 'Add' ? selectedMat.stock + Number(adjQty) : Math.max(0, selectedMat.stock - Number(adjQty))} {selectedMat.unit}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdjModal(false)}
+                        style={{ padding: '12px 24px', border: '1px solid #CBD5E1', borderRadius: '10px', background: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: '#475569' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleStockAdjustment}
+                        style={{ padding: '12px 28px', border: 'none', borderRadius: '10px', background: '#0E7490', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 6px -1px rgba(14, 116, 144, 0.3)' }}
+                      >
+                        Confirm Stock Adjustment & Save Audit Trail
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            }
+
+            // FULL PAGE VIEW 2: Item Audit Log & Production Traceability (Matching Create Work Order Page Layout)
+            if (showTxModal && selectedMat) {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+                  
+                  {/* Top Header Card matching Create Work Order Page */}
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: '20px 24px',
+                    borderRadius: '14px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                          Item Audit Log & Production Traceability
+                        </h1>
+                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '12px' }}>
+                          Full History Trace
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                        Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowTxModal(false)}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      ← Back to Inventory Stores
+                    </button>
+                  </div>
+
+                  {/* Summary KPI Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Physical Stock</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', marginTop: '4px' }}>{Number(selectedMat.stock || 0).toLocaleString()} {selectedMat.unit}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Safety / Min Level</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#64748B', marginTop: '4px' }}>{Number(selectedMat.minLevel || 50).toLocaleString()} {selectedMat.unit}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bay & Storage Location</div>
+                      <div style={{ fontSize: '16px', fontWeight: '800', color: '#0E7490', marginTop: '6px' }}>{selectedMat.store || 'Main Store (Bay #4)'}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock Health Status</div>
+                      <div style={{ marginTop: '6px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: selectedMat.status === 'Out of Stock' ? '#FEF2F2' : selectedMat.status === 'Low Stock' ? '#FFF7ED' : '#F0FDF4', color: selectedMat.status === 'Out of Stock' ? '#B91C1C' : selectedMat.status === 'Low Stock' ? '#C2410C' : '#15803D', padding: '4px 10px', borderRadius: '6px', border: selectedMat.status === 'Out of Stock' ? '1px solid #FEE2E2' : selectedMat.status === 'Low Stock' ? '1px solid #FFEDD5' : '1px solid #DCFCE7' }}>
+                          {selectedMat.status || 'In Stock'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Main Audit History Table Card */}
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                          Movement & Production Audit History ({itemAuditLogs.length} Entries)
+                        </h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                          Captures operator manufacturing completions, raw material reductions, and supervisor verifications with timestamps.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#475569', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: '800' }}>
+                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Date & Time</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Event / Type</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Operator / Person</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Authorized / Verified By</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '800', textAlign: 'right' }}>Qty Impact</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Full Audit Narrative & Doc Reference</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {itemAuditLogs.map((log, idx) => {
+                            const isAddition = log.qty > 0 || log.type === 'PRODUCTION_RECEIPT' || log.type === 'GOODS_RECEIPT';
+                            const typeBg = isAddition ? '#F0FDF4' : '#FEF2F2';
+                            const typeFg = isAddition ? '#166534' : '#991B1B';
+                            const typeBorder = isAddition ? '1px solid #DCFCE7' : '1px solid #FEE2E2';
+
+                            return (
+                              <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#334155', fontWeight: '700' }}>
+                                  {log.timestamp}
+                                </td>
+                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                  <span style={{ backgroundColor: typeBg, color: typeFg, border: typeBorder, padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800' }}>
+                                    {log.type === 'PRODUCTION_RECEIPT' ? '➕ Production Addition' : log.type === 'PRODUCTION_CONSUMPTION' ? '➖ Material Reduction' : log.type === 'GOODS_RECEIPT' ? '📦 Goods Receipt' : '✏️ Stock Adjustment'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px 16px', fontWeight: '700', color: '#0F172A' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0369A1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
+                                      {(log.employee || 'K').charAt(0).toUpperCase()}
+                                    </span>
+                                    <div>
+                                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{log.employee || 'Karthi (Operator)'}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px', fontWeight: '600' }}>
+                                  {log.user || 'Senthil Kumar (Production Head)'}
+                                </td>
+                                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '800', fontSize: '14px', color: isAddition ? '#16A34A' : '#DC2626', whiteSpace: 'nowrap' }}>
+                                  {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
+                                </td>
+                                <td style={{ padding: '12px 16px', color: '#1E293B', lineHeight: '1.5', fontSize: '12.5px' }}>
+                                  {log.reason} {log.woId && <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>{log.woId}</span>}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -14221,355 +14508,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     >
                       ✕
                     </button>
-                  </div>
-                )}
-
-                {/* FULL SCREEN VIEW 1: Stock Adjustment & Edit */}
-                {showAdjModal && selectedMat && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    backgroundColor: '#F8FAFC',
-                    zIndex: 99999,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    fontFamily: "'DM Sans', sans-serif"
-                  }}>
-                    {/* Full Screen Top Header Bar */}
-                    <div style={{
-                      backgroundColor: '#0F172A',
-                      color: '#FFFFFF',
-                      padding: '16px 28px',
-                      display: 'flex',
-                      justify: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid #1E293B',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <button
-                          onClick={() => setShowAdjModal(false)}
-                          style={{
-                            backgroundColor: '#1E293B',
-                            color: '#FFFFFF',
-                            border: '1px solid #334155',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                        >
-                          ← Back to Inventory
-                        </button>
-                        <div>
-                          <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: '#FFFFFF' }}>
-                            Stock Adjustment & Physical Audit Edit — {selectedMat.name} ({selectedMat.code})
-                          </h2>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94A3B8' }}>
-                            Adjust physical stock counts, record surplus additions or shortage deductions, and log audit trail entries.
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setShowAdjModal(false)}
-                        style={{ backgroundColor: '#1E293B', color: '#94A3B8', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Main Adjustment Body Form */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', justifyContent: 'center' }}>
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '32px', maxWidth: '640px', width: '100%', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '24px', alignSelf: 'flex-start' }}>
-                        
-                        {/* Item Header Banner */}
-                        <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Target Material</div>
-                            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{selectedMat.name} ({selectedMat.code})</div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Current Stock</div>
-                            <div style={{ fontSize: '18px', fontWeight: '800', color: '#0E7490', marginTop: '2px' }}>{selectedMat.stock} {selectedMat.unit}</div>
-                          </div>
-                        </div>
-
-                        {/* Adjustment Type Selection */}
-                        <div>
-                          <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
-                            Adjustment Type
-                          </label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setAdjType('Add')}
-                              style={{
-                                padding: '12px 16px',
-                                borderRadius: '10px',
-                                border: adjType === 'Add' ? '2px solid #16A34A' : '1px solid #E2E8F0',
-                                backgroundColor: adjType === 'Add' ? '#F0FDF4' : '#FFFFFF',
-                                color: adjType === 'Add' ? '#166534' : '#64748B',
-                                fontWeight: '800',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                textAlign: 'center'
-                              }}
-                            >
-                              ➕ Add Stock (Physical Surplus)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAdjType('Deduct')}
-                              style={{
-                                padding: '12px 16px',
-                                borderRadius: '10px',
-                                border: adjType === 'Deduct' ? '2px solid #DC2626' : '1px solid #E2E8F0',
-                                backgroundColor: adjType === 'Deduct' ? '#FEF2F2' : '#FFFFFF',
-                                color: adjType === 'Deduct' ? '#991B1B' : '#64748B',
-                                fontWeight: '800',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                textAlign: 'center'
-                              }}
-                            >
-                              ➖ Deduct Stock (Shortage / Damage)
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Quantity Field */}
-                        <div>
-                          <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
-                            Adjustment Quantity ({selectedMat.unit})
-                          </label>
-                          <input
-                            type="number"
-                            placeholder={`Enter quantity to ${adjType === 'Add' ? 'add' : 'deduct'}...`}
-                            value={adjQty}
-                            onChange={(e) => setAdjQty(e.target.value)}
-                            style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '15px', fontWeight: '700', outline: 'none' }}
-                          />
-                        </div>
-
-                        {/* Reason / Remarks */}
-                        <div>
-                          <label style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
-                            Audit Reason / Remarks
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Physical Audit Surplus, Damage Shortage, Scrapped..."
-                            value={adjReason}
-                            onChange={(e) => setAdjReason(e.target.value)}
-                            style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '14px', outline: 'none' }}
-                          />
-                        </div>
-
-                        {/* Live Calculation Preview */}
-                        {adjQty && !isNaN(adjQty) && (
-                          <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '14px 18px', color: '#1E40AF', fontSize: '13px', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>Resulting New Physical Stock:</span>
-                            <span style={{ fontSize: '18px', fontWeight: '800', color: '#1D4ED8' }}>
-                              {adjType === 'Add' ? selectedMat.stock + Number(adjQty) : Math.max(0, selectedMat.stock - Number(adjQty))} {selectedMat.unit}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div style={{ display: 'flex', gap: '14px', justifyContent: 'flex-end', marginTop: '12px' }}>
-                          <button
-                            onClick={() => setShowAdjModal(false)}
-                            style={{ padding: '12px 24px', border: '1px solid #CBD5E1', borderRadius: '10px', background: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: '#475569' }}
-                          >
-                            Cancel & Return
-                          </button>
-                          <button
-                            onClick={handleStockAdjustment}
-                            style={{ padding: '12px 28px', border: 'none', borderRadius: '10px', background: '#0E7490', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 6px -1px rgba(14, 116, 144, 0.3)' }}
-                          >
-                            Confirm Stock Adjustment & Save Audit Trail
-                          </button>
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* FULL SCREEN VIEW 2: ITEM AUDIT LOG & MANUFACTURING TRACEABILITY */}
-                {showTxModal && selectedMat && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    backgroundColor: '#F8FAFC',
-                    zIndex: 99999,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    fontFamily: "'DM Sans', sans-serif"
-                  }}>
-                    {/* Full Screen Top Header Bar */}
-                    <div style={{
-                      backgroundColor: '#0F172A',
-                      color: '#FFFFFF',
-                      padding: '16px 28px',
-                      display: 'flex',
-                      justify: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid #1E293B',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <button
-                          onClick={() => setShowTxModal(false)}
-                          style={{
-                            backgroundColor: '#1E293B',
-                            color: '#FFFFFF',
-                            border: '1px solid #334155',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                        >
-                          ← Back to Inventory Stores
-                        </button>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: '#FFFFFF' }}>
-                              Item Audit Log & Production Traceability
-                            </h2>
-                            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#0E7490', color: '#ECFEFF', padding: '3px 10px', borderRadius: '12px' }}>
-                              Full Screen History
-                            </span>
-                          </div>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94A3B8' }}>
-                            Material Description: <strong style={{ color: '#F8FAFC' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#38BDF8' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#CBD5E1' }}>(Main Branch Product: {selectedMat.parentCode})</span>}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setShowTxModal(false)}
-                        style={{ backgroundColor: '#1E293B', color: '#94A3B8', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontWeight: 'bold', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Scrollable Body Content */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      
-                      {/* 4 Summary KPI Cards */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Physical Stock</div>
-                          <div style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', marginTop: '4px' }}>{Number(selectedMat.stock || 0).toLocaleString()} {selectedMat.unit}</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Safety / Min Level</div>
-                          <div style={{ fontSize: '24px', fontWeight: '800', color: '#64748B', marginTop: '4px' }}>{Number(selectedMat.minLevel || 50).toLocaleString()} {selectedMat.unit}</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bay & Storage Location</div>
-                          <div style={{ fontSize: '18px', fontWeight: '800', color: '#0E7490', marginTop: '8px' }}>{selectedMat.store || 'Main Store (Bay #4)'}</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock Health Status</div>
-                          <div style={{ marginTop: '8px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '800', backgroundColor: selectedMat.status === 'Out of Stock' ? '#FEF2F2' : selectedMat.status === 'Low Stock' ? '#FFF7ED' : '#F0FDF4', color: selectedMat.status === 'Out of Stock' ? '#B91C1C' : selectedMat.status === 'Low Stock' ? '#C2410C' : '#15803D', padding: '4px 12px', borderRadius: '8px', border: selectedMat.status === 'Out of Stock' ? '1px solid #FEE2E2' : selectedMat.status === 'Low Stock' ? '1px solid #FFEDD5' : '1px solid #DCFCE7' }}>
-                              {selectedMat.status || 'In Stock'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Main Audit History Table */}
-                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-                              Complete Movement & Production Audit History ({itemAuditLogs.length} Entries)
-                            </h3>
-                            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                              Shows operator manufacturing completions, raw material reductions, and supervisor verifications with timestamps.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div style={{ overflowX: 'auto', flex: 1 }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-                            <thead style={{ position: 'sticky', top: 0, backgroundColor: '#F8FAFC', zIndex: 10 }}>
-                              <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                                <th style={{ padding: '14px 18px', fontWeight: '800' }}>Date & Time</th>
-                                <th style={{ padding: '14px 18px', fontWeight: '800' }}>Event / Type</th>
-                                <th style={{ padding: '14px 18px', fontWeight: '800' }}>Operator / Person</th>
-                                <th style={{ padding: '14px 18px', fontWeight: '800' }}>Authorized / Verified By</th>
-                                <th style={{ padding: '14px 18px', fontWeight: '800', textAlign: 'right' }}>Qty Impact</th>
-                                <th style={{ padding: '14px 18px', fontWeight: '800' }}>Full Audit Narrative & Doc Reference</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {itemAuditLogs.map((log, idx) => {
-                                const isAddition = log.qty > 0 || log.type === 'PRODUCTION_RECEIPT' || log.type === 'GOODS_RECEIPT';
-                                const typeBg = isAddition ? '#F0FDF4' : '#FEF2F2';
-                                const typeFg = isAddition ? '#166534' : '#991B1B';
-                                const typeBorder = isAddition ? '1px solid #DCFCE7' : '1px solid #FEE2E2';
-
-                                return (
-                                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                                    <td style={{ padding: '14px 18px', whiteSpace: 'nowrap', color: '#334155', fontWeight: '700' }}>
-                                      {log.timestamp}
-                                    </td>
-                                    <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
-                                      <span style={{ backgroundColor: typeBg, color: typeFg, border: typeBorder, padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '800' }}>
-                                        {log.type === 'PRODUCTION_RECEIPT' ? '➕ Production Addition' : log.type === 'PRODUCTION_CONSUMPTION' ? '➖ Material Reduction' : log.type === 'GOODS_RECEIPT' ? '📦 Goods Receipt' : '✏️ Stock Adjustment'}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '14px 18px', fontWeight: '700', color: '#0F172A' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0369A1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
-                                          {(log.employee || 'K').charAt(0).toUpperCase()}
-                                        </span>
-                                        <div>
-                                          <div style={{ fontSize: '13px', fontWeight: '700' }}>{log.employee || 'Karthi (Operator)'}</div>
-                                          <div style={{ fontSize: '11px', color: '#64748B' }}>Machine Operator / Floor Team</div>
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td style={{ padding: '14px 18px', color: '#475569', fontSize: '12px', fontWeight: '600' }}>
-                                      {log.user || 'Senthil Kumar (Production Head)'}
-                                    </td>
-                                    <td style={{ padding: '14px 18px', textAlign: 'right', fontWeight: '800', fontSize: '15px', color: isAddition ? '#16A34A' : '#DC2626', whiteSpace: 'nowrap' }}>
-                                      {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
-                                    </td>
-                                    <td style={{ padding: '14px 18px', color: '#1E293B', lineHeight: '1.5', fontSize: '13px' }}>
-                                      {log.reason} {log.woId && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>{log.woId}</span>}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
