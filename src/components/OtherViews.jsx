@@ -13946,7 +13946,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Audit Info</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -13960,7 +13959,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               <td style={{ padding: '14px' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '60px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'right' }}><div style={{ width: '50px', height: '16px', borderRadius: '6px', backgroundColor: '#E2E8F0', marginLeft: 'auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
-                              <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                               <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                             </tr>
                           ))
@@ -14027,14 +14025,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
                                   {m.status}
                                 </span>
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedCode(m.code); setShowTxModal(true); }}
-                                  style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer', color: '#0E7490', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  <Info size={13} /> Info / Audit Log
-                                </button>
                               </td>
                             </tr>
                           );
