@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ClipboardList, TrendingUp, Percent, CheckCircle2, XCircle, Clock, Cpu,
   Calendar, Filter, AlertTriangle, AlertCircle, Info, ShieldCheck, Factory,
