@@ -13790,26 +13790,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     display: 'flex',
                     justify: 'space-between',
                     alignItems: 'center',
+                    width: '100%',
+                    boxSizing: 'border-box',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                   }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-                          Stock Adjustment & Physical Audit Edit
-                        </h1>
-                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 10px', borderRadius: '6px' }}>
-                          {selectedMat.name} ({selectedMat.code})
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
-                        Adjust physical stock counts, record surplus additions or shortage deductions, and log audit trail entries.
+                    <div>
+                      <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                        Stock Adjustment & Physical Audit Edit
+                      </h1>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                        Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong>
                       </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setShowAdjModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}
                     >
                       Cancel & Return
                     </button>
@@ -13948,18 +13945,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     display: 'flex',
                     justify: 'space-between',
                     alignItems: 'center',
+                    width: '100%',
+                    boxSizing: 'border-box',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                   }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-                          Item Audit Log & Production Traceability
-                        </h1>
-                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 10px', borderRadius: '6px' }}>
-                          {selectedMat.name} ({selectedMat.code})
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
+                    <div>
+                      <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                        Item Audit Log & Production Traceability
+                      </h1>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
                         Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
                       </p>
                     </div>
@@ -13967,34 +13961,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       type="button"
                       onClick={() => setShowTxModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}
                     >
                       ← Back to Inventory Stores
                     </button>
-                  </div>
-
-                  {/* Summary KPI Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Physical Stock</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', marginTop: '4px' }}>{Number(selectedMat.stock || 0).toLocaleString()} {selectedMat.unit}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Safety / Min Level</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#64748B', marginTop: '4px' }}>{Number(selectedMat.minLevel || 50).toLocaleString()} {selectedMat.unit}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bay & Storage Location</div>
-                      <div style={{ fontSize: '16px', fontWeight: '800', color: '#0E7490', marginTop: '6px' }}>{selectedMat.store || 'Main Store (Bay #4)'}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock Health Status</div>
-                      <div style={{ marginTop: '6px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: selectedMat.status === 'Out of Stock' ? '#FEF2F2' : selectedMat.status === 'Low Stock' ? '#FFF7ED' : '#F0FDF4', color: selectedMat.status === 'Out of Stock' ? '#B91C1C' : selectedMat.status === 'Low Stock' ? '#C2410C' : '#15803D', padding: '4px 10px', borderRadius: '6px', border: selectedMat.status === 'Out of Stock' ? '1px solid #FEE2E2' : selectedMat.status === 'Low Stock' ? '1px solid #FFEDD5' : '1px solid #DCFCE7' }}>
-                          {selectedMat.status || 'In Stock'}
-                        </span>
-                      </div>
-                    </div>
                   </div>
 
                   {/* TIMELINE ACTIVITY FEED (MATCHING USER REFERENCE DESIGN) */}
