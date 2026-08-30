@@ -13997,72 +13997,129 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </div>
                   </div>
 
-                  {/* Main Audit History Table Card */}
-                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* TIMELINE ACTIVITY FEED (MATCHING USER REFERENCE DESIGN) */}
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
                       <div>
-                        <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-                          Movement & Production Audit History ({itemAuditLogs.length} Entries)
+                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                          Movement & Production Audit Activity Feed ({itemAuditLogs.length} Events)
                         </h3>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                          Captures operator manufacturing completions, raw material reductions, and supervisor verifications with timestamps.
+                        <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                          Real-time timeline trail of operator completions, material issues, receipts, and supervisor approvals.
                         </p>
                       </div>
+                      <span style={{ fontSize: '12px', fontWeight: '700', backgroundColor: '#F1F5F9', color: '#475569', padding: '4px 12px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
+                        Timeline ({itemAuditLogs.length} Events)
+                      </span>
                     </div>
 
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#475569', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: '800' }}>
-                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Date & Time</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Event / Type</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Operator / Person</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Authorized / Verified By</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '800', textAlign: 'right' }}>Qty Impact</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '800' }}>Full Audit Narrative & Doc Reference</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {itemAuditLogs.map((log, idx) => {
-                            const isAddition = log.qty > 0 || log.type === 'PRODUCTION_RECEIPT' || log.type === 'GOODS_RECEIPT';
-                            const typeBg = isAddition ? '#F0FDF4' : '#FEF2F2';
-                            const typeFg = isAddition ? '#166534' : '#991B1B';
-                            const typeBorder = isAddition ? '1px solid #DCFCE7' : '1px solid #FEE2E2';
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '28px', paddingLeft: '8px' }}>
+                      
+                      {/* Continuous Vertical Connector Line */}
+                      <div style={{ position: 'absolute', top: '16px', bottom: '16px', left: '23px', width: '2px', backgroundColor: '#E2E8F0', zIndex: 1 }}></div>
 
-                            return (
-                              <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#334155', fontWeight: '700' }}>
-                                  {log.timestamp}
-                                </td>
-                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
-                                  <span style={{ backgroundColor: typeBg, color: typeFg, border: typeBorder, padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800' }}>
-                                    {log.type === 'PRODUCTION_RECEIPT' ? '➕ Production Addition' : log.type === 'PRODUCTION_CONSUMPTION' ? '➖ Material Reduction' : log.type === 'GOODS_RECEIPT' ? '📦 Goods Receipt' : '✏️ Stock Adjustment'}
+                      {itemAuditLogs.map((log, idx) => {
+                        const isAddition = log.qty > 0 || log.type === 'PRODUCTION_RECEIPT' || log.type === 'GOODS_RECEIPT';
+                        const isAdj = log.type === 'STOCK_ADJUSTMENT';
+                        const isReceipt = log.type === 'GOODS_RECEIPT';
+
+                        const iconBg = isReceipt ? '#ECFEFF' : isAddition ? '#F0FDF4' : isAdj ? '#FFF7ED' : '#EFF6FF';
+                        const iconColor = isReceipt ? '#0E7490' : isAddition ? '#16A34A' : isAdj ? '#EA580C' : '#2563EB';
+                        const cardAccentBorder = isReceipt ? '#0E7490' : isAddition ? '#16A34A' : isAdj ? '#EA580C' : '#2563EB';
+
+                        const eventAction = log.type === 'PRODUCTION_RECEIPT'
+                          ? 'manufactured and added finished goods'
+                          : log.type === 'PRODUCTION_CONSUMPTION'
+                          ? 'issued and reduced raw material'
+                          : log.type === 'GOODS_RECEIPT'
+                          ? 'processed goods receipt GRN'
+                          : 'performed stock adjustment';
+
+                        return (
+                          <div key={idx} style={{ position: 'relative', zIndex: 2, display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                            
+                            {/* Left Timeline Icon Avatar */}
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: iconBg, border: `2px solid ${cardAccentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: iconColor }}>
+                                {(log.employee || log.user || 'K').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+
+                            {/* Right Content Card Container */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              
+                              {/* Header Line: User Name + Action + Tag Pill + Time */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13.5px' }}>
+                                <strong style={{ color: '#0F172A', fontWeight: '800' }}>{log.employee || log.user || 'Karthi (Operator)'}</strong>
+                                <span style={{ color: '#64748B' }}>{eventAction}</span>
+                                
+                                {log.referenceDoc && (
+                                  <span style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#475569', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    {log.referenceDoc} ↗
                                   </span>
-                                </td>
-                                <td style={{ padding: '12px 16px', fontWeight: '700', color: '#0F172A' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0369A1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
-                                      {(log.employee || 'K').charAt(0).toUpperCase()}
-                                    </span>
-                                    <div>
-                                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{log.employee || 'Karthi (Operator)'}</div>
-                                    </div>
+                                )}
+
+                                <span style={{ color: '#94A3B8', fontSize: '12px', marginLeft: 'auto' }}>
+                                  • {log.timestamp}
+                                </span>
+                              </div>
+
+                              {/* Nested Details Card Box (Matching User Reference Image) */}
+                              <div style={{
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '12px',
+                                padding: '16px 20px',
+                                boxShadow: '0 2px 6px -2px rgba(0, 0, 0, 0.04)',
+                                borderLeft: `4px solid ${cardAccentBorder}`,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px'
+                              }}>
+                                
+                                {/* Impact Quantity & Reason Narrative */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                  <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: '1.6', fontWeight: '500' }}>
+                                    {log.reason}
+                                  </p>
+
+                                  <div style={{
+                                    backgroundColor: isAddition ? '#F0FDF4' : '#FEF2F2',
+                                    color: isAddition ? '#166534' : '#991B1B',
+                                    border: isAddition ? '1px solid #DCFCE7' : '1px solid #FEE2E2',
+                                    padding: '4px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '800',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
+                                  }}>
+                                    {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
                                   </div>
-                                </td>
-                                <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px', fontWeight: '600' }}>
-                                  {log.user || 'Senthil Kumar (Production Head)'}
-                                </td>
-                                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '800', fontSize: '14px', color: isAddition ? '#16A34A' : '#DC2626', whiteSpace: 'nowrap' }}>
-                                  {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
-                                </td>
-                                <td style={{ padding: '12px 16px', color: '#1E293B', lineHeight: '1.5', fontSize: '12.5px' }}>
-                                  {log.reason} {log.woId && <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>{log.woId}</span>}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                                </div>
+
+                                {/* Sub-Card Footer Badge (Supervisor Verification & Store Location) */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '10px', marginTop: '4px', fontSize: '12px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B' }}>
+                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#E2E8F0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#334155' }}>
+                                      S
+                                    </span>
+                                    <span>Authorized & Verified by: <strong style={{ color: '#0F172A' }}>{log.user || 'Senthil Kumar (Production Head)'}</strong></span>
+                                  </div>
+
+                                  <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                                    Location: {selectedMat.store || 'Main Store'}
+                                  </span>
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </div>
+                        );
+                      })}
+
                     </div>
                   </div>
                 </div>
