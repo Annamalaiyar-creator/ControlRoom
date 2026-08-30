@@ -13792,11 +13792,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     alignItems: 'center',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                   }}>
-                    <div>
-                      <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-                        Stock Adjustment & Physical Audit Edit — {selectedMat.name} ({selectedMat.code})
-                      </h1>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
+                          Stock Adjustment & Physical Audit Edit
+                        </h1>
+                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 10px', borderRadius: '6px' }}>
+                          {selectedMat.name} ({selectedMat.code})
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
                         Adjust physical stock counts, record surplus additions or shortage deductions, and log audit trail entries.
                       </p>
                     </div>
@@ -13804,14 +13809,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       type="button"
                       onClick={() => setShowAdjModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
                     >
                       Cancel & Return
                     </button>
                   </div>
 
                   {/* Main Form Card */}
-                  <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '28px', maxWidth: '720px', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px', margin: '0 auto', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '28px', maxWidth: '720px', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px', margin: '0 auto', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', boxSizing: 'border-box' }}>
                     
                     {/* Item Header Banner */}
                     <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -13878,7 +13883,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         placeholder={`Enter quantity to ${adjType === 'Add' ? 'add' : 'deduct'}...`}
                         value={adjQty}
                         onChange={(e) => setAdjQty(e.target.value)}
-                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '15px', fontWeight: '700', outline: 'none' }}
+                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
                       />
                     </div>
 
@@ -13892,7 +13897,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         placeholder="e.g. Physical Audit Surplus, Damage Shortage, Scrapped..."
                         value={adjReason}
                         onChange={(e) => setAdjReason(e.target.value)}
-                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '14px', outline: 'none' }}
+                        style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 16px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                       />
                     </div>
 
@@ -13945,16 +13950,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     alignItems: 'center',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                   }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
                           Item Audit Log & Production Traceability
                         </h1>
-                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '12px' }}>
-                          Full History Trace
+                        <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 10px', borderRadius: '6px' }}>
+                          {selectedMat.name} ({selectedMat.code})
                         </span>
                       </div>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0 }}>
                         Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
                       </p>
                     </div>
@@ -13962,7 +13967,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       type="button"
                       onClick={() => setShowTxModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
                     >
                       ← Back to Inventory Stores
                     </button>
