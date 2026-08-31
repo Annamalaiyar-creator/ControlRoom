@@ -14348,7 +14348,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               >
                                 {m.parentCode ? (
                                   <span style={{ paddingLeft: '12px', color: '#64748B', fontSize: '12px', fontWeight: '600' }}>
-                                    └─ {m.code}
+                                    └─ {m.parentCode}
                                   </span>
                                 ) : (
                                   m.code
