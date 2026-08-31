@@ -12973,8 +12973,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               if (itemsList && itemsList.length > 0) {
                 itemsList.forEach(it => {
                   const key = it.code || it.sku || it.itemId || 'RM-VRM';
-                  const existing = matMap.get(key);
-                  const stockVal = Number(existing && existing.stock !== undefined ? existing.stock : (it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000)));
+                  if (matMap.has(key)) return;
+                  const stockVal = Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -13067,28 +13067,24 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 if (itemsList && itemsList.length > 0) {
                   itemsList.forEach(it => {
                     const key = it.code || it.sku || it.itemId || 'RM-VRM';
-                    const existing = matMap.get(key);
-                    // Priority: If existing entry has live engine/localStorage updated stock, keep updated stock
-                    const stockVal = (existing && existing.stock !== undefined)
-                      ? Number(existing.stock)
-                      : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
+                    if (matMap.has(key)) return;
+                    const stockVal = Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
                     const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                     let statusText = 'In Stock';
                     if (stockVal === 0) statusText = 'Out of Stock';
                     else if (stockVal <= minLvl) statusText = 'Low Stock';
 
                     matMap.set(key, {
-                      ...(existing || {}),
                       code: key,
-                      name: it.name || existing?.name,
-                      cat: it.category || it.material || existing?.cat || 'Aluminium',
-                      unit: it.unit || it.uom || existing?.unit || 'Nos',
+                      name: it.name,
+                      cat: it.category || it.material || 'Aluminium',
+                      unit: it.unit || it.uom || 'Nos',
                       stock: stockVal,
                       minLevel: minLvl,
                       status: statusText,
                       store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
                       hsn: '7604',
-                      lastUpdated: existing?.lastUpdated || 'Live Store'
+                      lastUpdated: 'Live Store'
                     });
                   });
                 }
