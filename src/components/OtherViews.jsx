@@ -23447,20 +23447,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             return updated;
           });
 
-          // Deduct dispatched Finished Goods from inventory engine store
-          try {
-            if (packedItems && packedItems.length > 0) {
-              packedItems.forEach(item => {
-                const itemQty = Number(item.qty || item.quantity || 1);
-                const itemCode = item.code || item.itemCode || 'MR100N';
-                const itemName = item.name || item.description || 'Mini Rail 300 mm';
-                prodModuleEngine.recordFinishedGoodsDispatch(itemCode, itemQty, invNo, itemName);
-              });
-            }
-          } catch (e) {
-            console.error('Dispatch inventory deduction error:', e);
-          }
-
           // Update Invoice status to Fully Dispatched & Delivered & persist
           setInvoiceList(prev => {
             const updatedInvoices = prev.map(i => (i.poNo === bCode || i.code === bCode || i.invNo === invNo) ? {
