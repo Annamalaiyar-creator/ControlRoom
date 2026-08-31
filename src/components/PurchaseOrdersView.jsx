@@ -2055,7 +2055,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                     </label>
                     <select value={scope} onChange={(e) => setScope(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', color: '#334155' }}>
                       <option value="Vendor Scope">Vendor Scope</option>
-                      <option value="ARMS AI Scope">ARMS AI Scope</option>
+                      <option value="VRM Structure Scope">VRM Structure Scope</option>
                     </select>
                   </div>
 
@@ -2162,10 +2162,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                             </td>
                             <td style={{ padding: '8px 12px' }}>
                               <select value={item.account} onChange={(e) => handleItemChange(idx, 'account', e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 6px', fontSize: '12px' }}>
-                                <option>Raw Material</option>
-                                <option>Consumables</option>
-                                <option>Fasteners</option>
-                                <option>Tools</option>
+                                <option value="Raw Materials">Raw Materials</option>
+                                <option value="Finished Goods">Finished Goods</option>
                               </select>
                             </td>
                             <td style={{ padding: '8px 12px' }}>

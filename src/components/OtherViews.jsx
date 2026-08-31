@@ -5810,47 +5810,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             multiple
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                             style={{ display: 'none' }}
-                            onChange={async (e) => {
+                            onChange={(e) => {
                               const files = Array.from(e.target.files || []);
                               if (files.length > 0) {
-                                const docPromises = files.map((file, i) => new Promise((resolve) => {
-                                  const reader = new FileReader();
-                                  reader.onerror = () => {
-                                    resolve({ title: `Attachment ${grnDocs.length + i + 1}`, filename: file.name, size: '0.1 MB', url: '' });
+                                const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
+                                const newDocs = files.map((file, i) => {
+                                  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                                  const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
+                                  let blobUrl = '';
+                                  try {
+                                    blobUrl = URL.createObjectURL(file);
+                                  } catch (err) { }
+                                  return {
+                                    title,
+                                    filename: file.name,
+                                    size: `${sizeMB} MB`,
+                                    url: blobUrl,
+                                    fileObj: file
                                   };
-                                  reader.onload = (evt) => {
-                                    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-                                    const names = ['Delivery Challan *', 'Invoice', 'Inspection Report', 'Additional Document'];
-                                    const title = names[grnDocs.length + i] || `Attachment ${grnDocs.length + i + 1}`;
-
-                                    const rawUrl = evt.target?.result || '';
-                                    if (file.type.startsWith('image/')) {
-                                      const img = new Image();
-                                      img.onload = () => {
-                                        const canvas = document.createElement('canvas');
-                                        const MAX_WIDTH = 500;
-                                        let w = img.width;
-                                        let h = img.height;
-                                        if (w > MAX_WIDTH) {
-                                          h = Math.round((h * MAX_WIDTH) / w);
-                                          w = MAX_WIDTH;
-                                        }
-                                        canvas.width = w;
-                                        canvas.height = h;
-                                        const ctx = canvas.getContext('2d');
-                                        ctx.drawImage(img, 0, 0, w, h);
-                                        const compressedUrl = canvas.toDataURL('image/jpeg', 0.4);
-                                        resolve({ title, filename: file.name, size: `${sizeMB} MB`, url: compressedUrl });
-                                      };
-                                      img.onerror = () => resolve({ title, filename: file.name, size: `${sizeMB} MB`, url: rawUrl });
-                                      img.src = rawUrl;
-                                    } else {
-                                      resolve({ title, filename: file.name, size: `${sizeMB} MB`, url: rawUrl });
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }));
-                                const newDocs = await Promise.all(docPromises);
+                                });
                                 setGrnDocs(prev => [...prev, ...newDocs]);
                               }
                               e.target.value = '';

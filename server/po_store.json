@@ -76,11 +76,12 @@
     "statusType": "closed",
     "items": [
       {
-        "name": "Raw Steel",
-        "account": "Raw Material",
-        "qty": 1000,
-        "unit": "MT",
-        "rate": 45000,
+        "name": "Aluminium Length (2414 mm)",
+        "description": "HDG Aluminum Length 2414mm Profile Rail",
+        "account": "Raw Materials",
+        "qty": 500,
+        "unit": "Length",
+        "rate": 10620,
         "tax": 18
       }
     ],
