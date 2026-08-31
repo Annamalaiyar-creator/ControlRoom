@@ -13011,9 +13011,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   const existing = matMap.get(mapKey) || {};
                   const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
-                  const stockVal = (engineStock !== null && engineStock > 0)
-                    ? engineStock
-                    : (existing.stock !== undefined ? Number(existing.stock) : (item.physicalStock !== undefined ? Number(item.physicalStock) : 1000));
+                  // If existing (from localStorage controlroom_raw_materials_store) has a lower stock due to deduction, use the deducted stock
+                  const stockVal = (existing.stock !== undefined)
+                    ? Number(existing.stock)
+                    : (engineStock !== null ? engineStock : 1000);
                   const minLvl = Number(item.safetyStock || existing.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -13029,7 +13030,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     minLevel: minLvl,
                     status: statusText,
                     store: item.bayLocation || existing.store || 'Main Store',
-                    lastUpdated: 'Live Engine',
+                    lastUpdated: existing.lastUpdated || 'Live Engine',
                     parentCode: pCode || existing.parentCode,
                     parentName: isSubProduct ? (item.parentName || '100mm mini rail (new)') : existing.parentName
                   });
