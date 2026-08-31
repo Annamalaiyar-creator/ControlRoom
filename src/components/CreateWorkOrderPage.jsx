@@ -635,39 +635,36 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                     >
                       <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
                       {[
-                        "Double C Rail NEW",
-                        "Double C Rail",
-                        "Strut Rail",
-                        "Mini Rail - 100mm",
-                        "Mini Rail - 100mm (New)",
-                        "Locking Nut",
-                        "Mini Rail - 60mm",
-                        "Mini Rail - 40mm",
-                        "Adhesive rail 95 mm",
-                        "Adhesive rail 70 mm",
-                        "Adhesive rail 100 mm",
-                        "Adhesive rail 120 mm",
-                        "Mid Section",
-                        "Top Section - 2 Mtr",
-                        "Bottom Section - 2 Mtr",
-                        "Top Section - 1.5 Mtr",
-                        "Bottom Section - 2.4 Mtr",
-                        "Mid Clamp - 35 mm",
-                        "Mid Clamp - 30 mm",
-                        "T Nut -10mm",
-                        "Mid Clamp (Universal)",
-                        "End Clamp 35mm (New)",
-                        "End Clamp 35mm",
-                        "L Bracket",
-                        "T Nut (KMC) - 8mm"
-                      ].map((prodName, pIdx) => {
-                        const codeVal = prodName.includes('30 mm') ? 'MC30' : (prodName.includes('100mm (New)') ? 'MR100N' : `PRD-${pIdx + 1}`);
-                        return (
-                          <option key={pIdx} value={codeVal} style={{ color: '#64748B' }}>
-                            {prodName}
-                          </option>
-                        );
-                      })}
+                        { label: "Double C Rail NEW", code: "CC4.8N" },
+                        { label: "Double C Rail", code: "CC3.6" },
+                        { label: "Strut Rail", code: "SR3.6" },
+                        { label: "Mini Rail - 100mm", code: "MR100O" },
+                        { label: "Mini Rail - 100mm (New)", code: "MR100N" },
+                        { label: "Locking Nut", code: "LC" },
+                        { label: "Mini Rail - 60mm", code: "MR60" },
+                        { label: "Mini Rail - 40mm", code: "MR40" },
+                        { label: "Adhesive rail 95 mm", code: "AR95" },
+                        { label: "Adhesive rail 70 mm", code: "AR70" },
+                        { label: "Adhesive rail 100 mm", code: "AR100" },
+                        { label: "Adhesive rail 120 mm", code: "AR120" },
+                        { label: "Mid Section", code: "MID-SEC" },
+                        { label: "Top Section - 2 Mtr", code: "TOP-2M" },
+                        { label: "Bottom Section - 2 Mtr", code: "BOT-2M" },
+                        { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M" },
+                        { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M" },
+                        { label: "Mid Clamp - 35 mm", code: "MC35" },
+                        { label: "Mid Clamp - 30 mm", code: "MC30" },
+                        { label: "T Nut -10mm", code: "T10" },
+                        { label: "Mid Clamp (Universal)", code: "UM" },
+                        { label: "End Clamp 35mm (New)", code: "UE" },
+                        { label: "End Clamp 35mm", code: "EC35" },
+                        { label: "L Bracket", code: "ALB" },
+                        { label: "T Nut (KMC) - 8mm", code: "T8" }
+                      ].map((item, pIdx) => (
+                        <option key={pIdx} value={item.code} style={{ color: '#64748B' }}>
+                          {item.label} ({item.code})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
