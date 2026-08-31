@@ -148,12 +148,12 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           setPoList(prev => {
             const merged = [...zohoPOs];
             prev.forEach(p => {
-              const pNo = String(p.poNo || p.id || '').toLowerCase();
-              const pZohoId = String(p.zohoId || '').toLowerCase();
+              const pNo = String(p.poNo || p.id || '').trim().toLowerCase();
+              const pZohoId = String(p.zohoId || '').trim().toLowerCase();
               const matchIdx = merged.findIndex(m => {
-                const mNo = String(m.poNo || m.id || '').toLowerCase();
-                const mZohoId = String(m.zohoId || '').toLowerCase();
-                return (pNo && (mNo === pNo || mNo.includes(pNo) || pNo.includes(mNo))) || (pZohoId && mZohoId === pZohoId);
+                const mNo = String(m.poNo || m.id || '').trim().toLowerCase();
+                const mZohoId = String(m.zohoId || '').trim().toLowerCase();
+                return (pNo && mNo && pNo === mNo) || (pZohoId && mZohoId && pZohoId === mZohoId);
               });
               if (matchIdx !== -1) {
                 if (p.gstNo && p.gstNo !== '—' && (!merged[matchIdx].gstNo || merged[matchIdx].gstNo === '—')) {
