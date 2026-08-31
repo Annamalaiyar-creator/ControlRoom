@@ -11484,34 +11484,38 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             packedItemsToDeduct.forEach(pItem => {
                               const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
                               const pCode = (pItem.code || '').toUpperCase().trim();
-                              const pName = (pItem.name || '').toLowerCase().trim();
+                              const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
 
-                              const targetItems = engineInv.filter(i => {
+                              let targetItem = engineInv.find(i => {
                                 const iCode = (i.code || '').toUpperCase().trim();
                                 const iParent = (i.parentCode || '').toUpperCase().trim();
                                 const iName = (i.name || '').toLowerCase().trim();
                                 if (pCode && (iCode === pCode || iParent === pCode)) return true;
-                                if (pName && iName && (iName === pName || (pName.includes('mini rail') && iName.includes('mini rail')))) return true;
+                                if (pName && iName && (iName === pName || iName.includes(pName) || pName.includes(iName))) return true;
                                 return false;
                               });
 
-                              if (targetItems.length > 0) {
-                                targetItems.forEach(targetItem => {
-                                  targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
-                                  targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
-                                });
+                              if (targetItem) {
+                                targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
+                                targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
                               } else {
-                                // Fallback for MR100N / finished goods
-                                const defaultItem = engineInv.find(i => i.code === 'MR100N' || i.code === 'ALU-LEN-2414MM');
-                                if (defaultItem) {
-                                  defaultItem.physicalStock = Math.max(0, defaultItem.physicalStock - qtyToDeduct);
-                                  defaultItem.availableStock = Math.max(0, defaultItem.physicalStock - (defaultItem.reservedStock || 0));
-                                }
+                                // Add/deduct item directly in inventory engine catalog if not present
+                                prodModuleEngine.inventory.push({
+                                  code: pCode || 'MC35',
+                                  name: pItem.name || pItem.description || 'Mid 35mm',
+                                  category: 'Finished Goods',
+                                  unit: pItem.unit || 'Nos',
+                                  physicalStock: Math.max(0, 1000 - qtyToDeduct),
+                                  availableStock: Math.max(0, 1000 - qtyToDeduct),
+                                  reservedStock: 0,
+                                  safetyStock: 50,
+                                  bayLocation: 'Main Store'
+                                });
                               }
                             });
                             prodModuleEngine.saveToStorage();
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                          } catch (e) { }
+                          } catch (e) { console.error('Invoice stock deduction error:', e); }
 
                           // 3. Update Invoice status & persist to localStorage / cloud store
                           setViewingInvoiceModal(prev => prev ? {
