@@ -986,6 +986,41 @@ class ProductionModuleEngine {
     return this.inventory;
   }
 
+  recordFinishedGoodsDispatch(itemCode, qty, referenceDoc = '', itemName = '') {
+    const targetCode = (itemCode || 'MR100N').toUpperCase();
+    let fgItem = this.inventory.find(i => 
+      i.code.toUpperCase() === targetCode || 
+      (itemName && i.name && i.name.toLowerCase() === itemName.toLowerCase())
+    );
+
+    if (!fgItem) {
+      fgItem = this.inventory.find(i => i.category === 'Finished Goods') || this.inventory[0];
+    }
+
+    if (fgItem) {
+      const prevStock = fgItem.physicalStock;
+      fgItem.physicalStock = Math.max(0, fgItem.physicalStock - Number(qty || 1));
+      fgItem.availableStock = fgItem.physicalStock - (fgItem.reservedStock || 0);
+
+      this.addLedgerEntry({
+        type: 'DISPATCH_DEDUCTION',
+        woId: referenceDoc,
+        itemCode: fgItem.code,
+        itemName: fgItem.name,
+        qty: -Number(qty || 1),
+        unit: fgItem.unit || 'Pieces',
+        previousStock: prevStock,
+        newStock: fgItem.physicalStock,
+        user: 'Dispatch Executive',
+        employee: 'Logistics Team',
+        reason: `Dispatched & loaded on vehicle for ${referenceDoc}`,
+        referenceDoc: referenceDoc
+      });
+
+      this.saveToStorage();
+    }
+  }
+
   getWorkOrders() {
     return this.workOrders;
   }
