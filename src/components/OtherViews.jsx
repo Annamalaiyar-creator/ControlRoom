@@ -11444,14 +11444,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               const mCode = (m.code || '').toLowerCase().trim();
 
                               const matchP = packedItemsToDeduct.find(pItem => {
-                                const pName = (pItem.name || '').toLowerCase().trim();
+                                const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
                                 const pCode = (pItem.code || '').toLowerCase().trim();
 
                                 if (pCode && mCode && pCode === mCode) return true;
                                 if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
 
                                 // Key structural category keyword matching for BOM presets & custom items
-                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer'];
+                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
                                 for (const kw of keywords) {
                                   if (pName.includes(kw) && mName.includes(kw)) return true;
                                 }
@@ -11499,7 +11499,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
                                 targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
                               } else {
-                                // Add/deduct item directly in inventory engine catalog if not present
                                 prodModuleEngine.inventory.push({
                                   code: pCode || 'MC35',
                                   name: pItem.name || pItem.description || 'Mid 35mm',
