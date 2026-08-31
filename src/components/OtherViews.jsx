@@ -12477,13 +12477,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: '',
               searchPlaceholder: 'Search Accounts Verification (BOM Code, Customer Name)...',
               tabs: [
-                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Verified', label: 'Verified', count: (bomStore || []).filter(b => (b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'Cancelled', label: 'Cancelled / Reissued', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEE2E2', fg: '#DC2626' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Status', 'Document Receipt', 'Status', 'Action'],
-              rows: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).map(b => {
+              rows: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).map(b => {
                 const acc = b.accountsVerification || {};
                 const isReissuedOrCancelled = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
                 const isVerified = !isReissuedOrCancelled && Boolean(
@@ -16881,7 +16881,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 : 'Partially Packed';
               const needsSalesPaymentNotification = allItemsPacked && isWhileDispatch;
 
-              setBomStore(prev => prev.map(b => b.bomCode === dispatchPackingModal.bomCode ? {
+              setBomStore(prev => prev.map(b => (b.bomCode === dispatchPackingModal.bomCode || b.code === dispatchPackingModal.bomCode || b.id === dispatchPackingModal.id) ? {
                 ...b,
                 dispatchPacking: itemsToPack,
                 status: nextStatus,
