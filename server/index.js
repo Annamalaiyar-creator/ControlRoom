@@ -1567,47 +1567,22 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
       line_items: lineItems
     };
 
-    const cgstVal = totalTaxAmt / 2;
-    const sgstVal = totalTaxAmt / 2;
-
-    if (totalTaxAmt > 0) {
-      payload.adjustment = totalTaxAmt;
-      payload.adjustment_description = `GST 18% (CGST 9%: ₹${cgstVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} + SGST 9%: ₹${sgstVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })})`;
-    }
-
-    const taxNote = `CGST (9%): ₹${cgstVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\nSGST (9%): ₹${sgstVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\nTotal Tax (18%): ₹${totalTaxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-    payload.notes = notesStr ? `${notesStr}\n\n--- TAX DETAILS ---\n${taxNote}` : taxNote;
-
     if (vendorId) {
       payload.vendor_id = vendorId;
-      const addrToSync = delAddressStr || billAddressStr;
-      if (addrToSync || req.body.gstNo) {
-        const parts = (addrToSync || '').split(',').map(s => s.trim()).filter(Boolean);
-        const addrObj = {
-          address: (parts[0] || addrToSync || '').slice(0, 40),
-          street2: (parts[1] || '').slice(0, 40),
-          city: (parts[2] || 'Chennai').slice(0, 20),
-          state: (parts[3] || 'Tamil Nadu').slice(0, 20),
-          country: 'India'
-        };
-        try {
-          await updateZohoVendorAddress(accessToken, vendorId, addrObj, req.body.gstNo);
-        } catch (e) {}
-      }
     }
 
     if (delAddressStr) {
       payload.delivery_address = delAddressStr.slice(0, 80);
-      try {
-        await updateZohoOrganizationAddress(accessToken, delAddressStr);
-      } catch (e) {}
     }
+
     if (billAddressStr) {
       payload.billing_address = billAddressStr.slice(0, 80);
     }
 
     if (notesStr) {
       payload.notes = notesStr;
+    } else {
+      payload.notes = '';
     }
 
     if (termsStr) {
