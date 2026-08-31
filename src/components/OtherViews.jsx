@@ -17096,66 +17096,80 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                          <th style={{ padding: '13px 20px', width: '70px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}></th>
-                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Code</th>
-                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Description</th>
+                          <th style={{ padding: '13px 20px', width: '60px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check</th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>Product Code</th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left' }}>Product Description</th>
+                          <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Cut Length (MM)</th>
                           <th style={{ padding: '13px 16px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>BOM Qty</th>
                           <th style={{ padding: '13px 20px', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {itemsToPack.map((pItem, idx) => (
-                          <tr
-                            key={idx}
-                            onClick={isPackedAndReady ? undefined : () => {
-                              const updatedPacking = itemsToPack.map((pi, i) => i === idx ? { ...pi, packed: !pi.packed } : pi);
-                              setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: updatedPacking });
-                            }}
-                            style={{
-                              borderBottom: '1px solid #F1F5F9',
-                              backgroundColor: pItem.packed ? '#F0FDF4' : '#FFFFFF',
-                              cursor: isPackedAndReady ? 'default' : 'pointer',
-                              transition: 'background-color 0.15s ease'
-                            }}
-                            onMouseEnter={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                            onMouseLeave={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
-                          >
-                            <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                              <div style={{
-                                width: '22px', height: '22px', borderRadius: '6px', margin: '0 auto',
-                                backgroundColor: pItem.packed ? '#166534' : '#FFFFFF',
-                                border: pItem.packed ? '2px solid #166534' : '2px solid #CBD5E1',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: 'all 0.15s ease',
-                                boxShadow: pItem.packed ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
-                              }}>
-                                {pItem.packed && <CheckCircle style={{ width: '14px', height: '14px', color: '#FFFFFF' }} />}
-                              </div>
-                            </td>
-                            <td style={{ padding: '16px', fontWeight: '700', color: '#2563EB', fontSize: '13px' }}>
-                              {pItem.code || `PRD-${String(idx + 1).padStart(3, '0')}`}
-                            </td>
-                            <td style={{ padding: '16px', fontWeight: pItem.packed ? '700' : '600', color: pItem.packed ? '#166534' : '#1E293B', fontSize: '13px' }}>
-                              {pItem.name}
-                            </td>
-                            <td style={{ padding: '16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '13px' }}>
-                              {pItem.bomQty} <span style={{ fontSize: '11px', color: '#94A3B8' }}>Nos</span>
-                            </td>
-                            <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                padding: '5px 14px', borderRadius: '20px',
-                                fontSize: '11px', fontWeight: '800',
-                                backgroundColor: pItem.packed ? '#DCFCE7' : '#FFF7ED',
-                                color: pItem.packed ? '#166534' : '#C2410C',
-                                border: `1px solid ${pItem.packed ? '#BBF7D0' : '#FED7AA'}`
-                              }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: pItem.packed ? '#22C55E' : '#F97316' }}></span>
-                                {pItem.packed ? 'Packed' : 'Pending'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {itemsToPack.map((pItem, idx) => {
+                          const cutLenMm = pItem.cutLengthMm || pItem.lengthMm || (pItem.name && pItem.name.includes('300') ? '300' : (pItem.name && pItem.name.includes('100') ? '100' : (pItem.name && pItem.name.includes('mm') ? pItem.name.match(/\d+\s*mm/i)?.[0]?.replace(/mm/i, '').trim() : '300')));
+
+                          return (
+                            <tr
+                              key={idx}
+                              onClick={isPackedAndReady ? undefined : () => {
+                                const updatedPacking = itemsToPack.map((pi, i) => i === idx ? { ...pi, packed: !pi.packed } : pi);
+                                setDispatchPackingModal({ ...dispatchPackingModal, dispatchPacking: updatedPacking });
+                              }}
+                              style={{
+                                borderBottom: '1px solid #F1F5F9',
+                                backgroundColor: pItem.packed ? '#F0FDF4' : '#FFFFFF',
+                                cursor: isPackedAndReady ? 'default' : 'pointer',
+                                transition: 'background-color 0.15s ease'
+                              }}
+                              onMouseEnter={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                              onMouseLeave={e => (!isPackedAndReady && !pItem.packed) && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                            >
+                              <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                <div style={{
+                                  width: '22px', height: '22px', borderRadius: '6px', margin: '0 auto',
+                                  backgroundColor: pItem.packed ? '#166534' : '#FFFFFF',
+                                  border: pItem.packed ? '2px solid #166534' : '2px solid #CBD5E1',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                  boxShadow: pItem.packed ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
+                                }}>
+                                  {pItem.packed && <CheckCircle style={{ width: '14px', height: '14px', color: '#FFFFFF' }} />}
+                                </div>
+                              </td>
+                              <td style={{ padding: '14px 16px', fontWeight: '700', color: '#2563EB', fontSize: '13px', textAlign: 'left' }}>
+                                {pItem.code || (pItem.parentCode || `MR100N`)}
+                              </td>
+                              <td style={{ padding: '14px 16px', fontWeight: pItem.packed ? '700' : '600', color: pItem.packed ? '#166534' : '#1E293B', fontSize: '13px', textAlign: 'left' }}>
+                                {pItem.name}
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', padding: '3px 10px',
+                                  borderRadius: '6px', fontSize: '12px', fontWeight: '800',
+                                  backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC'
+                                }}>
+                                  {cutLenMm} MM
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '13px' }}>
+                                {pItem.bomQty || pItem.qty || 1} <span style={{ fontSize: '11px', color: '#94A3B8' }}>Nos</span>
+                              </td>
+                              <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                  padding: '5px 14px', borderRadius: '20px',
+                                  fontSize: '11px', fontWeight: '800',
+                                  backgroundColor: pItem.packed ? '#DCFCE7' : '#FFF7ED',
+                                  color: pItem.packed ? '#166534' : '#C2410C',
+                                  border: `1px solid ${pItem.packed ? '#BBF7D0' : '#FED7AA'}`
+                                }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: pItem.packed ? '#22C55E' : '#F97316' }}></span>
+                                  {pItem.packed ? 'Packed' : 'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
