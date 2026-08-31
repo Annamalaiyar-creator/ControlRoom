@@ -11494,13 +11494,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   target = candidates.find(c => !c.parentCode) || candidates[0];
                                 }
                                 if (target) {
-                                  matchedDeductionsMap.set(target.code || target.name, pItem);
+                                  const targetMapKey = target.parentCode ? `${target.code}_sub_${target.name}` : (target.code || target.name);
+                                  matchedDeductionsMap.set(targetMapKey, pItem);
                                 }
                               }
                             });
 
                             let updatedMats = currentMats.map(m => {
-                              const mKey = m.code || m.name;
+                              const mKey = m.parentCode ? `${m.code}_sub_${m.name}` : (m.code || m.name);
                               const matchP = matchedDeductionsMap.get(mKey);
                               if (matchP) {
                                 const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
@@ -14233,6 +14234,38 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     flexShrink: 0
                                   }}>
                                     {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
+                                  </div>
+                                </div>
+
+                                {/* Stock Movement Summary Metrics Grid */}
+                                <div style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(3, 1fr)',
+                                  gap: '10px',
+                                  backgroundColor: '#F8FAFC',
+                                  borderRadius: '8px',
+                                  padding: '10px 14px',
+                                  border: '1px solid #E2E8F0'
+                                }}>
+                                  <div>
+                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textTransform: 'uppercase' }}>Stock Before</div>
+                                    <strong style={{ fontSize: '13.5px', color: '#334155', fontWeight: '800' }}>
+                                      {log.previousStock !== undefined ? log.previousStock : (selectedMat.openingStock || selectedMat.stock)} {log.unit || selectedMat.unit}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '11px', fontWeight: '600', color: isAddition ? '#166534' : '#991B1B', textTransform: 'uppercase' }}>
+                                      {isAddition ? 'Quantity Added' : 'Quantity Reduced'}
+                                    </div>
+                                    <strong style={{ fontSize: '13.5px', color: isAddition ? '#15803D' : '#DC2626', fontWeight: '800' }}>
+                                      {isAddition ? `+${log.qty}` : log.qty} {log.unit || selectedMat.unit}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#0E7490', textTransform: 'uppercase' }}>Total Stock Now</div>
+                                    <strong style={{ fontSize: '13.5px', color: '#0F172A', fontWeight: '800' }}>
+                                      {log.newStock !== undefined ? log.newStock : selectedMat.stock} {log.unit || selectedMat.unit}
+                                    </strong>
                                   </div>
                                 </div>
 
