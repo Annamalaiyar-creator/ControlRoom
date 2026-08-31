@@ -23300,7 +23300,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         const dName = vehicleLoadingData.driverName || existingLoading.driverName || '';
         const dPhone = vehicleLoadingData.driverPhone || existingLoading.driverPhone || '';
         const transp = vehicleLoadingData.transporter || existingLoading.transporter || 'VRL Logistics Direct Fleet';
-        const lr = vehicleLoadingData.lrNo || existingLoading.lrNo || `LR-${Date.now().toString().slice(-6)}`;
+        const lr = vehicleLoadingData.lrNo || existingLoading.lrNo || 'LR-881204';
         const seal = vehicleLoadingData.sealNo || existingLoading.sealNo || 'SL-884920';
 
         const currentPhotos = loadingPhotos.length > 0 ? loadingPhotos : (existingLoading.photos || []);
