@@ -14358,18 +14358,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 {m.parentCode ? (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '16px' }}>
                                     <span style={{ color: '#0E7490', fontWeight: '800', fontSize: '13px' }}>└─</span>
-                                    <span style={{ color: '#0F172A', fontWeight: '700' }}>{m.code}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#F1F5F9', color: '#475569', padding: '2px 6px', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
-                                      Sub-Branch
-                                    </span>
+                                    <span style={{ color: '#0F172A', fontWeight: '700' }}>{m.parentCode || m.code}</span>
                                   </div>
                                 ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ color: '#0E7490', fontWeight: '800' }}>{m.code}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '2px 6px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
-                                      Main Branch
-                                    </span>
-                                  </div>
+                                  <span style={{ color: '#0E7490', fontWeight: '800' }}>{m.code}</span>
                                 )}
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
