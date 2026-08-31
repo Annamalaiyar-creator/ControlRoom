@@ -635,34 +635,32 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                     >
                       <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
                       {[
-                        { label: "Double C Rail NEW", code: "CC4.8N" },
-                        { label: "Double C Rail", code: "CC3.6" },
-                        { label: "Strut Rail", code: "SR3.6" },
-                        { label: "Mini Rail - 100mm", code: "MR100O" },
-                        { label: "Mini Rail - 100mm (New)", code: "MR100N" },
-                        { label: "Locking Nut", code: "LC" },
-                        { label: "Mini Rail - 60mm", code: "MR60" },
-                        { label: "Mini Rail - 40mm", code: "MR40" },
-                        { label: "Adhesive rail 95 mm", code: "AR95" },
-                        { label: "Adhesive rail 70 mm", code: "AR70" },
-                        { label: "Adhesive rail 100 mm", code: "AR100" },
-                        { label: "Adhesive rail 120 mm", code: "AR120" },
-                        { label: "Mid Section", code: "MID-SEC" },
-                        { label: "Top Section - 2 Mtr", code: "TOP-2M" },
-                        { label: "Bottom Section - 2 Mtr", code: "BOT-2M" },
-                        { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M" },
-                        { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M" },
-                        { label: "Mid Clamp - 35 mm", code: "MC35" },
-                        { label: "Mid Clamp - 30 mm", code: "MC30" },
-                        { label: "T Nut -10mm", code: "T10" },
-                        { label: "Mid Clamp (Universal)", code: "UM" },
-                        { label: "End Clamp 35mm (New)", code: "UE" },
-                        { label: "End Clamp 35mm", code: "EC35" },
-                        { label: "L Bracket", code: "ALB" },
-                        { label: "T Nut (KMC) - 8mm", code: "T8" }
+                        { label: "Double C Rail NEW", code: "CC4.8N", totalLen: 4800 },
+                        { label: "Double C Rail", code: "CC3.6", totalLen: 3600 },
+                        { label: "Strut Rail", code: "SR3.6", totalLen: 3600 },
+                        { label: "Mini Rail - 100mm", code: "MR100O", totalLen: 2414 },
+                        { label: "Mini Rail - 100mm (New)", code: "MR100N", totalLen: 2414 },
+                        { label: "Locking Nut", code: "LC", totalLen: 3000 },
+                        { label: "Mini Rail - 60mm", code: "MR60", totalLen: 2414 },
+                        { label: "Mini Rail - 40mm", code: "MR40", totalLen: 2414 },
+                        { label: "Adhesive rail 100 mm", code: "AR100", totalLen: 2414 },
+                        { label: "Adhesive rail 120 mm", code: "AR120", totalLen: 2414 },
+                        { label: "Mid Section", code: "MID-SEC", totalLen: 2730 },
+                        { label: "Top Section - 2 Mtr", code: "TOP-2M", totalLen: 2000 },
+                        { label: "Bottom Section - 2 Mtr", code: "BOT-2M", totalLen: 2000 },
+                        { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M", totalLen: 1500 },
+                        { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M", totalLen: 2400 },
+                        { label: "Mid Clamp - 35 mm", code: "MC35", totalLen: 2650 },
+                        { label: "Mid Clamp - 30 mm", code: "MC30", totalLen: 2650 },
+                        { label: "T Nut -10mm", code: "T10", totalLen: 2562 },
+                        { label: "Mid Clamp (Universal)", code: "UM", totalLen: 2650 },
+                        { label: "End Clamp 35mm (New)", code: "UE", totalLen: 2650 },
+                        { label: "End Clamp 35mm", code: "EC35", totalLen: 2650 },
+                        { label: "L Bracket", code: "ALB", totalLen: 2050 },
+                        { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580 }
                       ].map((item, pIdx) => (
                         <option key={pIdx} value={item.code} style={{ color: '#64748B' }}>
-                          {item.label} ({item.code})
+                          {item.label} ({item.code} - {item.totalLen} mm Raw Length)
                         </option>
                       ))}
                     </select>

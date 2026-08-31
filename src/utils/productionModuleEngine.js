@@ -341,11 +341,38 @@ class ProductionModuleEngine {
       if (!isNaN(parsed) && parsed > 0) cutLenMm = parsed;
     }
 
-    // Standard raw material length is 2414 mm
-    const rawLengthMm = 2414;
+    // Product-specific raw bar total length lookup table (mm)
+    const PRODUCT_RAW_BAR_LENGTHS = {
+      'CC4.8N': 4800,
+      'CC3.6': 3600,
+      'SR3.6': 3600,
+      'MR100O': 2414,
+      'MR100N': 2414,
+      'LC': 3000,
+      'MR60': 2414,
+      'MR40': 2414,
+      'AR100': 2414,
+      'AR120': 2414,
+      'MID-SEC': 2730,
+      'TOP-2M': 2000,
+      'BOT-2M': 2000,
+      'TOP-1.5M': 1500,
+      'BOT-2.4M': 2400,
+      'MC35': 2650,
+      'MC30': 2650,
+      'T10': 2562,
+      'UM': 2650,
+      'UE': 2650,
+      'EC35': 2650,
+      'ALB': 2050,
+      'T8': 2580
+    };
+
+    // Determine raw bar total length for the selected product (Defaults to 2414 mm if not specified)
+    const rawLengthMm = PRODUCT_RAW_BAR_LENGTHS[productCode] || 2414;
     const bladeKerfMm = 2; // 2mm saw blade kerf width per cut stroke
 
-    // Calculate how many pieces N fit in 1 length of 2414 mm (where N pieces require N - 1 cuts of bladeKerfMm)
+    // Calculate how many pieces N fit in 1 length of rawLengthMm (where N pieces require N - 1 cuts of bladeKerfMm)
     let piecesPerLength = recipe ? Number(recipe.expectedOutputQty) : 1;
     if (cutLenMm > 0) {
       // (N * cutLenMm) + ((N - 1) * bladeKerfMm) <= rawLengthMm  =>  N * (cutLenMm + bladeKerfMm) <= rawLengthMm + bladeKerfMm
