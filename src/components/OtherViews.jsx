@@ -12857,6 +12857,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
             const initialMaterials = [
               { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: getEngineAluStock(), lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: getEngineAluStock(), goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
+              { code: 'MR100N', name: '100mm mini rail (new)', cat: 'Finished Goods', unit: 'Nos', stock: 1200, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Main Catalog', reserved: 0, openingStock: 1200, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
+              { code: 'MR100N', parentCode: 'MR100N', name: 'Mini Rail 300 mm', cat: 'Finished Goods', unit: 'Pieces', stock: 360, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Sub-Branch Cut', reserved: 0, openingStock: 360, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
               ...vrmProductItems
             ];
 
@@ -12865,7 +12867,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngineStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngineStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
               const matMap = new Map();
               matMap.set('RM-ALU-2414', defaultAluLength);
-              (initialMaterials || []).forEach(m => matMap.set(m.code, m));
+              (initialMaterials || []).forEach(m => {
+                const mapKey = m.parentCode ? `${m.code}_sub_${m.name}` : m.code;
+                matMap.set(mapKey, m);
+              });
               if (itemsList && itemsList.length > 0) {
                 itemsList.forEach(it => {
                   const key = it.code || it.sku || it.itemId || 'RM-VRM';
@@ -12906,12 +12911,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const currentEngStock = getEngineAluStock();
                 const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                 matMap.set('RM-ALU-2414', defaultAluLength);
-                (initialMaterials || []).forEach(m => matMap.set(m.code, m));
+                (initialMaterials || []).forEach(m => {
+                  const mapKey = m.parentCode ? `${m.code}_sub_${m.name}` : m.code;
+                  matMap.set(mapKey, m);
+                });
 
                 // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
                 (engineInv || []).forEach(item => {
                   const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
-                  const existing = matMap.get(mappedCode) || matMap.get('RM-ALU-2414') || {};
+                  const isSubProduct = Boolean(item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm'));
+                  const pCode = isSubProduct ? (item.parentCode || 'MR100N') : null;
+                  const displayCode = pCode || mappedCode;
+                  const mapKey = isSubProduct ? `${displayCode}_sub_${item.name}` : displayCode;
+
+                  const existing = matMap.get(mapKey) || {};
                   const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
                   const stockVal = (engineStock !== null && engineStock > 0)
                     ? engineStock
@@ -12921,13 +12934,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   if (stockVal === 0) statusText = 'Out of Stock';
                   else if (stockVal <= minLvl) statusText = 'Low Stock';
 
-                  // Detect sub-product relationship (e.g. 300 mm Mini Rail cut variant under 100 MM Mini Rail main product)
-                  const isSubProduct = item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm');
-                  const subbranchCode = isSubProduct ? (item.parentCode || 'MR100N') : mappedCode;
-
-                  matMap.set(mappedCode, {
+                  matMap.set(mapKey, {
                     ...existing,
-                    code: mappedCode,
+                    code: displayCode,
                     name: item.name || existing.name,
                     cat: item.category || existing.cat || 'Finished Goods',
                     unit: item.unit || existing.unit || 'Pieces',
@@ -12936,7 +12945,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     status: statusText,
                     store: item.bayLocation || existing.store || 'Main Store',
                     lastUpdated: 'Live Engine',
-                    parentCode: isSubProduct ? (item.parentCode || 'MR100N') : existing.parentCode,
+                    parentCode: pCode || existing.parentCode,
                     parentName: isSubProduct ? (item.parentName || '100mm mini rail (new)') : existing.parentName
                   });
                 });
