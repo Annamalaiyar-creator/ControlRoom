@@ -11478,6 +11478,30 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
                           } catch (err) { }
 
+                          // Deduct stock directly from prodModuleEngine central live inventory
+                          try {
+                            const engineInv = prodModuleEngine.getInventory();
+                            packedItemsToDeduct.forEach(pItem => {
+                              const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                              const pCode = (pItem.code || '').toUpperCase().trim();
+                              const pName = (pItem.name || '').toLowerCase().trim();
+
+                              const targetItem = engineInv.find(i => {
+                                const iCode = (i.code || '').toUpperCase().trim();
+                                const iParent = (i.parentCode || '').toUpperCase().trim();
+                                const iName = (i.name || '').toLowerCase().trim();
+                                if (pCode && (iCode === pCode || iParent === pCode || iCode === 'MR100N')) return true;
+                                if (pName && iName && (iName.includes('mini rail') || iName.includes('100 mm') || iName.includes('300 mm') || iName === pName)) return true;
+                                return false;
+                              });
+
+                              if (targetItem) {
+                                targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
+                                targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
+                              }
+                            });
+                          } catch (e) { }
+
                           // 3. Update Invoice status & persist to localStorage / cloud store
                           setViewingInvoiceModal(prev => prev ? {
                             ...prev,
