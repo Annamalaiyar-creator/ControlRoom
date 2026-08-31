@@ -429,8 +429,9 @@ class ProductionModuleEngine {
     const shortageQty = isSufficient ? 0 : (physicalMatToIssue - availableStock);
 
     return {
+      rawLengthMm,
       recipe: recipe || {
-        rawMaterialName: 'Aluminium Length (2414 mm)',
+        rawMaterialName: `Aluminium Length (${rawLengthMm} mm)`,
         rawMaterialUnit: 'Raw Bars',
         expectedOutputQty: piecesPerLength
       },

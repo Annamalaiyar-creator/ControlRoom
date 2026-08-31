@@ -709,7 +709,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                 <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
                   <div style={{ fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
-                    <strong>Cut Yield Rule:</strong> 1 Raw Bar (2414 mm) ÷ {matCalc.cutLenMm || 400} mm Cut Length = <strong>{matCalc.piecesPerLength} Pieces per Raw Bar</strong>
+                    <strong>Cut Yield Rule:</strong> 1 Raw Bar ({matCalc.rawLengthMm || 2414} mm) ÷ {matCalc.cutLenMm || 400} mm Cut Length = <strong>{matCalc.piecesPerLength} Pieces per Raw Bar</strong>
                   </div>
                 </div>
 
@@ -749,13 +749,13 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       </div>
 
                       <div style={{ fontSize: '11.5px', color: '#713F12', lineHeight: '1.45' }}>
-                        Issuing <strong>{matCalc.physicalMatToIssue} raw bars ({matCalc.physicalMatToIssue * 2414} mm total)</strong> for <strong>{targetQty} pieces</strong> of 400 mm cut length.
+                        Issuing <strong>{matCalc.physicalMatToIssue} raw bars ({matCalc.physicalMatToIssue * (matCalc.rawLengthMm || 2414)} mm total)</strong> for <strong>{targetQty} pieces</strong> of {matCalc.cutLenMm || 400} mm cut length.
                       </div>
 
                       {/* Kerf & Scrap Breakdown */}
                       <div style={{ fontSize: '11px', color: '#854D0E', backgroundColor: '#FEF9C3', padding: '8px 10px', borderRadius: '6px', border: '1px solid #FEF08A', lineHeight: '1.4' }}>
                         • <strong>Mandatory Blade Kerf Loss:</strong> 2 mm per cut stroke ({matCalc.piecesPerLength} finished pieces = {matCalc.cutsPerBar} cuts × 2 mm = {matCalc.kerfLossMmPerBar} mm kerf/bar).<br/>
-                        • <strong>Bar Yield:</strong> 2414 mm length = <strong>{matCalc.piecesPerLength} Pieces per Bar</strong> with {matCalc.endOffcutScrapMmPerBar} mm end clamp scrap.<br/>
+                        • <strong>Bar Yield:</strong> {matCalc.rawLengthMm || 2414} mm length = <strong>{matCalc.piecesPerLength} Pieces per Bar</strong> with {matCalc.endOffcutScrapMmPerBar} mm end clamp scrap.<br/>
                         • <strong>Unutilized Issued Capacity:</strong> <strong>{matCalc.excessOutputPossible} pieces</strong> remaining in issued material.
                       </div>
 
