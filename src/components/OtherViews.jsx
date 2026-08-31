@@ -11439,83 +11439,111 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               currentMats = initialMaterials;
                             }
 
-                             const matchedItemsSet = new Set();
-                             let updatedMats = currentMats.map(m => {
-                               const mName = (m.name || '').toLowerCase().trim();
-                               const mCode = (m.code || '').toLowerCase().trim();
+                            // Dynamic Sub-Branch Aware Stock Deduction Algorithm
+                            // 1. If product has a matching sub-branch in Inventory for the requested MM cut length -> Deduct from that sub-branch
+                            // 2. If NO sub-branch exists for that cut length (or product has no sub-branches) -> Deduct directly from the main product
+                            const matchedDeductionsMap = new Map(); // pItem -> target material object
 
-                               const matchP = packedItemsToDeduct.find(pItem => {
-                                 const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
-                                 const pCode = (pItem.code || '').toLowerCase().trim();
+                            packedItemsToDeduct.forEach(pItem => {
+                              const pCode = (pItem.code || '').toUpperCase().trim();
+                              const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+                              const mmVal = (pItem.mm || pItem.lengthMm || pItem.cutLength || '').toString().toLowerCase().replace(/[^0-9]/g, '');
 
-                                 if (pCode && mCode && pCode === mCode) return true;
-                                 if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
+                              // Find all candidates matching code or name
+                              const candidates = currentMats.filter(m => {
+                                const mCode = (m.code || '').toUpperCase().trim();
+                                const mName = (m.name || '').toLowerCase().trim();
+                                const mParent = (m.parentCode || '').toUpperCase().trim();
 
-                                 // Key structural category keyword matching for BOM presets & custom items
-                                 const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
-                                 for (const kw of keywords) {
-                                   if (pName.includes(kw) && mName.includes(kw)) {
-                                     // Ensure size number match if present (e.g. 30 vs 35)
-                                     const pNum = (pName.match(/\d+/) || [])[0];
-                                     const mNum = (mName.match(/\d+/) || [])[0];
-                                     if (pNum && mNum && pNum !== mNum) return false;
-                                     return true;
-                                   }
-                                 }
-                                 return false;
-                               });
+                                if (pCode && (mCode === pCode || mParent === pCode)) return true;
+                                if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
 
-                               if (matchP) {
-                                 matchedItemsSet.add(matchP.code || matchP.name);
-                                 const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
-                                 const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
-                                 const newSt = Math.max(0, currSt - qtyToDeduct);
-                                 const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
-                                 return {
-                                   ...m,
-                                   stock: newSt,
-                                   issuedProd: (m.issuedProd || 0) + qtyToDeduct,
-                                   status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
-                                   lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                 };
-                               }
-                               return m;
-                             });
+                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
+                                for (const kw of keywords) {
+                                  if (pName.includes(kw) && mName.includes(kw)) {
+                                    const pNum = (pName.match(/\d+/) || [])[0];
+                                    const mNum = (mName.match(/\d+/) || [])[0];
+                                    if (pNum && mNum && pNum !== mNum) return false;
+                                    return true;
+                                  }
+                                }
+                                return false;
+                              });
 
-                             // If item (e.g. Mid 30mm MC30) wasn't in currentMats array yet, add it directly so it displays in Inventory Stores
-                             packedItemsToDeduct.forEach(pItem => {
-                               const itemKey = pItem.code || pItem.name;
-                               if (!matchedItemsSet.has(itemKey)) {
-                                 const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
-                                 const pCode = (pItem.code || 'MC30').toUpperCase().trim();
-                                 const pName = pItem.name || pItem.description || 'Mid 30mm';
-                                 const startStock = 1000;
-                                 const newSt = Math.max(0, startStock - qtyToDeduct);
-                                 updatedMats.push({
-                                   code: pCode,
-                                   name: pName,
-                                   cat: 'Finished Goods',
-                                   unit: pItem.unit || 'Nos',
-                                   stock: newSt,
-                                   minLevel: 50,
-                                   status: newSt === 0 ? 'Out of Stock' : (newSt <= 50 ? 'Low Stock' : 'In Stock'),
-                                   store: 'Main Store',
-                                   hsn: '7616',
-                                   lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                                   reserved: 0,
-                                   openingStock: startStock,
-                                   goodsReceived: 0,
-                                   issuedProd: qtyToDeduct,
-                                   matReturn: 0,
-                                   stockAdj: 0
-                                 });
-                               }
-                             });
+                              if (candidates.length > 0) {
+                                let target = null;
+                                // Check if any candidate is a sub-branch matching the entered MM length
+                                if (mmVal) {
+                                  target = candidates.find(c => {
+                                    const cName = (c.name || '').toLowerCase();
+                                    const cCode = (c.code || '').toLowerCase();
+                                    return Boolean(c.parentCode) && (cName.includes(`${mmVal}mm`) || cName.includes(`${mmVal} mm`) || cCode.includes(mmVal));
+                                  });
+                                }
+                                // If no matching sub-branch found (or item has no sub-branches), pick main parent product
+                                if (!target) {
+                                  target = candidates.find(c => !c.parentCode) || candidates[0];
+                                }
+                                if (target) {
+                                  matchedDeductionsMap.set(target.code || target.name, pItem);
+                                }
+                              }
+                            });
 
-                             localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
-                             saveCloudStore('raw_materials_store', updatedMats);
-                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                           } catch (err) { }
+                            let updatedMats = currentMats.map(m => {
+                              const mKey = m.code || m.name;
+                              const matchP = matchedDeductionsMap.get(mKey);
+                              if (matchP) {
+                                const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
+                                const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
+                                const newSt = Math.max(0, currSt - qtyToDeduct);
+                                const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
+                                return {
+                                  ...m,
+                                  stock: newSt,
+                                  issuedProd: (m.issuedProd || 0) + qtyToDeduct,
+                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
+                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                };
+                              }
+                              return m;
+                            });
+
+                            // If item wasn't present in catalog at all, auto-create main product entry
+                            packedItemsToDeduct.forEach(pItem => {
+                              const pCode = (pItem.code || '').toUpperCase().trim();
+                              const pName = pItem.name || pItem.description || 'Custom Finished Good';
+                              const isMatched = Array.from(matchedDeductionsMap.values()).includes(pItem);
+
+                              if (!isMatched) {
+                                const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                                const startStock = 1000;
+                                const newSt = Math.max(0, startStock - qtyToDeduct);
+                                updatedMats.push({
+                                  code: pCode || 'FG-NEW-001',
+                                  name: pName,
+                                  cat: 'Finished Goods',
+                                  unit: pItem.unit || 'Nos',
+                                  stock: newSt,
+                                  minLevel: 50,
+                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= 50 ? 'Low Stock' : 'In Stock'),
+                                  store: 'Main Store',
+                                  hsn: '7616',
+                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                                  reserved: 0,
+                                  openingStock: startStock,
+                                  goodsReceived: 0,
+                                  issuedProd: qtyToDeduct,
+                                  matReturn: 0,
+                                  stockAdj: 0
+                                });
+                              }
+                            });
+
+                            localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
+                            saveCloudStore('raw_materials_store', updatedMats);
+                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+                          } catch (err) { }
 
                           // Deduct stock directly from prodModuleEngine central live inventory
                           try {
