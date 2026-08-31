@@ -16843,17 +16843,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           // Render Dispatch Head Packing Verification Screen (Full Size Page)
           if (dispatchPackingModal) {
-            const rawItems = (dispatchPackingModal.items || []).map(it => ({ 
-              name: it.name || it.c2 || 'Item', 
-              code: it.code || it.itemCode || it.productCode || it.c1 || null,
-              bomQty: it.qty || 1, 
-              packed: false 
-            }));
+            const rawItems = (dispatchPackingModal.items || []).map(it => {
+              const nameStr = (it.name || it.c2 || 'Item').toLowerCase().trim();
+              const code = nameStr.includes('mid 30') ? 'MC30' : (nameStr.includes('mini rail') ? 'MR100N' : (it.code || it.itemCode || it.productCode || it.c1 || null));
+              return { name: it.name || it.c2 || 'Item', code, bomQty: it.qty || 1, packed: false };
+            });
             const itemsToPack = (dispatchPackingModal.dispatchPacking && Array.isArray(dispatchPackingModal.dispatchPacking) && dispatchPackingModal.dispatchPacking.length > 0)
-              ? dispatchPackingModal.dispatchPacking.map(p => ({
-                  ...p,
-                  code: p.code || (p.name && p.name.toLowerCase().includes('mid 30') ? 'MC30' : (p.name && p.name.toLowerCase().includes('mini rail') ? 'MR100N' : null))
-                }))
+              ? dispatchPackingModal.dispatchPacking.map(p => {
+                  const nameStr = (p.name || '').toLowerCase().trim();
+                  const code = nameStr.includes('mid 30') ? 'MC30' : (nameStr.includes('mini rail') ? 'MR100N' : (p.code || null));
+                  return { ...p, code };
+                })
               : rawItems;
 
             const isPackedAndReady = Boolean(
@@ -16908,79 +16908,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 }
                 return inv;
               }));
-              // Automatically deduct verified packed items from inventory stock
-              const packedItemsToDeduct = itemsToPack.filter(p => Boolean(p.packed));
-              if (packedItemsToDeduct.length > 0) {
-                // 1. Update stockRegistry state & localStorage
-                setStockRegistry(prevRegistry => {
-                  const updated = [...prevRegistry];
-                  packedItemsToDeduct.forEach(pItem => {
-                    const qtyToDeduct = parseInt(pItem.bomQty || pItem.qty || pItem.invQty || 1, 10) || 0;
-                    const matchIdx = updated.findIndex(r =>
-                      (r.code && pItem.code && r.code.toLowerCase().trim() === pItem.code.toLowerCase().trim()) ||
-                      (r.item && pItem.name && (
-                        r.item.toLowerCase().trim() === pItem.name.toLowerCase().trim() ||
-                        r.item.toLowerCase().includes(pItem.name.toLowerCase().trim()) ||
-                        pItem.name.toLowerCase().includes(r.item.toLowerCase().trim())
-                      ))
-                    );
-                    if (matchIdx !== -1) {
-                      const currentStock = Math.max(0, parseInt(String(updated[matchIdx].stock).replace(/,/g, ''), 10) || 0);
-                      const newStock = Math.max(0, currentStock - qtyToDeduct);
-                      const minLvl = parseInt(String(updated[matchIdx].minLevel || '500').replace(/,/g, ''), 10) || 500;
-                      updated[matchIdx] = {
-                        ...updated[matchIdx],
-                        stock: String(newStock),
-                        status: newStock === 0 ? 'Out of Stock' : (newStock <= minLvl ? 'Low Stock' : 'In Stock')
-                      };
-                    }
-                  });
-                  try {
-                    localStorage.setItem('controlroom_stock_registry_store', JSON.stringify(updated));
-                  } catch (e) { }
-                  return updated;
-                });
-
-                // 2. Update raw materials & finished goods inventory catalog store
-                try {
-                  const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
-                  let currentMats = [];
-                  if (savedMatStr) {
-                    try { currentMats = JSON.parse(savedMatStr); } catch (e) { }
-                  }
-                  if (currentMats && Array.isArray(currentMats) && currentMats.length > 0) {
-                    const updatedMats = currentMats.map(m => {
-                      const mCode = (m.code || '').toUpperCase().trim();
-                      const mName = (m.name || '').toLowerCase().trim();
-                      const matchP = packedItemsToDeduct.find(p => {
-                        const pCode = (p.code || '').toUpperCase().trim();
-                        const pName = (p.name || '').toLowerCase().trim();
-                        if (pCode && mCode === pCode) return true;
-                        if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
-                        return false;
-                      });
-                      if (matchP) {
-                        const qtyToDeduct = parseInt(matchP.bomQty || matchP.qty || 1, 10) || 0;
-                        const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
-                        const newSt = Math.max(0, currSt - qtyToDeduct);
-                        const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
-                        return {
-                          ...m,
-                          stock: newSt,
-                          issuedProd: (m.issuedProd || 0) + qtyToDeduct,
-                          status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
-                          lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        };
-                      }
-                      return m;
-                    });
-                    localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
-                    saveCloudStore('raw_materials_store', updatedMats);
-                    window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                  }
-                } catch (err) { }
-              }
-
               setDispatchPackingModal(null);
               addLiveNotification({
                 title: allItemsPacked ? 'BOM Packing Verified' : 'BOM Packing Updated',
