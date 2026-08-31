@@ -83,6 +83,30 @@ const pushStoreToSupabase = async (key, storeData) => {
   }
 };
 
+// Helpers for Production Work Orders local store
+const loadLocalWorkOrders = () => {
+  try {
+    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
+    if (fs.existsSync(storePath)) {
+      const content = fs.readFileSync(storePath, 'utf8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (err) {
+    console.error('Error reading workorder_store.json:', err.message);
+  }
+  if (supabaseMemoryStore['workorder_store'] && Array.isArray(supabaseMemoryStore['workorder_store']) && supabaseMemoryStore['workorder_store'].length > 0) {
+    return supabaseMemoryStore['workorder_store'];
+  }
+  return [
+    { id: 'wo_1', workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
+    { id: 'wo_2', workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
+    { id: 'wo_3', workOrderNo: 'VRM26/07/089', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
+    { id: 'wo_4', workOrderNo: 'VRM26/07/074', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' },
+    { id: 'wo_5', workOrderNo: 'VRM26/07/061', productName: 'End Clamp 35 mm', plannedQty: 300, completedQty: 210, delayDays: 1, delayReason: 'Inspection Hold', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Clamp Stock', customer: 'Waaree Energies', targetDate: '2026-07-27' }
+  ];
+};
+
 // Initial background sync from Supabase cloud store on server boot
 (async () => {
   try {
@@ -811,30 +835,6 @@ app.delete('/api/zoho/vendors/:id', async (req, res) => {
 
   res.json({ success: true, message: `Vendor ${targetId} deleted from Control Room!` });
 });
-
-// Helpers for Production Work Orders local store
-const loadLocalWorkOrders = () => {
-  try {
-    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
-    if (fs.existsSync(storePath)) {
-      const content = fs.readFileSync(storePath, 'utf8');
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (err) {
-    console.error('Error reading workorder_store.json:', err.message);
-  }
-  if (supabaseMemoryStore['workorder_store'] && Array.isArray(supabaseMemoryStore['workorder_store']) && supabaseMemoryStore['workorder_store'].length > 0) {
-    return supabaseMemoryStore['workorder_store'];
-  }
-  return [
-    { id: 'wo_1', workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
-    { id: 'wo_2', workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
-    { id: 'wo_3', workOrderNo: 'VRM26/07/089', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
-    { id: 'wo_4', workOrderNo: 'VRM26/07/074', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' },
-    { id: 'wo_5', workOrderNo: 'VRM26/07/061', productName: 'End Clamp 35 mm', plannedQty: 300, completedQty: 210, delayDays: 1, delayReason: 'Inspection Hold', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Clamp Stock', customer: 'Waaree Energies', targetDate: '2026-07-27' }
-  ];
-};
 
 const saveLocalWorkOrders = (orders) => {
   try {
