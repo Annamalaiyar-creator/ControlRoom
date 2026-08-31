@@ -1663,21 +1663,16 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
     // Create Purchase Order in Zoho Books (Zoho creates it as Draft by default)
     let result = await createZohoPurchaseOrder(accessToken, payload);
     
-    // If Zoho auto-generation conflict code 4097 occurs, retry without custom purchaseorder_number
-    if (result && result.code === 4097) {
+    // If Zoho returns any error code, strip custom purchaseorder_number & non-essential fields and retry
+    if (result && result.code && result.code !== 0) {
       delete payload.purchaseorder_number;
-      result = await createZohoPurchaseOrder(accessToken, payload);
-    }
-    // If discount error 11018 occurs, retry without discount fields
-    if (result && result.code === 11018) {
       delete payload.discount;
       delete payload.discount_type;
-      result = await createZohoPurchaseOrder(accessToken, payload);
-    }
-    // If address error 15 occurs, truncate delivery_address and billing_address and retry
-    if (result && result.code === 15) {
-      if (delAddressStr) payload.delivery_address = delAddressStr.slice(0, 75);
-      if (billAddressStr) payload.billing_address = billAddressStr.slice(0, 75);
+      delete payload.shipping_charge;
+      delete payload.adjustment;
+      delete payload.reference_number;
+      if (payload.delivery_address) payload.delivery_address = payload.delivery_address.slice(0, 60);
+      if (payload.billing_address) payload.billing_address = payload.billing_address.slice(0, 60);
       result = await createZohoPurchaseOrder(accessToken, payload);
     }
 
@@ -1728,9 +1723,11 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
       });
     } else {
       console.warn('[ZOHO PO CREATE NOTICE]', result);
+      const zohoErrMsg = (result && result.message) ? result.message : 'Unknown Zoho error';
       return res.json({
-        success: true,
-        message: 'PO saved in Control Room!',
+        success: false,
+        message: `Zoho creation warning: ${zohoErrMsg}`,
+        zohoResult: result,
         po: localPOObj
       });
     }
