@@ -18342,55 +18342,74 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               const baseNum = numMatch ? parseInt(numMatch[0], 10) : 550;
                               const newBomCode = `BOM-${baseNum + 1}`;
 
-                              return prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
-                                ...b,
-                                status: 'Cancelled & Reissued (New BOM Generated)',
-                                originalBomCode: targetCode,
-                                bomCode: newBomCode,
-                                code: newBomCode,
-                                isAccountsDone: false,
-                                reissuedByAccounts: true,
-                                reissuedAt: reissueTime,
-                                reissueCount: currentCount + 1,
-                                accountsVerification: {
-                                  verified: false,
-                                  paymentStatus: null,
-                                  hardCopyReceived: false,
-                                  softCopyReceived: false,
-                                  reissueRemarks: `Cancelled (2nd Reissue). Upgraded to new BOM Code (${newBomCode}) and returned to Dispatch.`
-                                },
-                                dispatchPacking: (b.items || []).map(it => ({
-                                  name: it.name,
-                                  bomQty: it.qty || 1,
-                                  packed: false
-                                }))
-                              } : b);
+                              let reissuedItem = null;
+                              const remaining = prev.filter(b => {
+                                if (b.bomCode === targetCode || b.code === targetCode) {
+                                  reissuedItem = {
+                                    ...b,
+                                    status: 'Cancelled & Reissued (New BOM Generated)',
+                                    originalBomCode: targetCode,
+                                    bomCode: newBomCode,
+                                    code: newBomCode,
+                                    createdAt: new Date().toISOString(),
+                                    isAccountsDone: false,
+                                    reissuedByAccounts: true,
+                                    reissuedAt: reissueTime,
+                                    reissueCount: currentCount + 1,
+                                    accountsVerification: {
+                                      verified: false,
+                                      paymentStatus: null,
+                                      hardCopyReceived: false,
+                                      softCopyReceived: false,
+                                      reissueRemarks: `Cancelled (2nd Reissue). Upgraded to new BOM Code (${newBomCode}) and returned to Dispatch.`
+                                    },
+                                    dispatchPacking: (b.items || []).map(it => ({
+                                      name: it.name,
+                                      bomQty: it.qty || 1,
+                                      packed: false
+                                    }))
+                                  };
+                                  return false;
+                                }
+                                return true;
+                              });
+
+                              return reissuedItem ? [reissuedItem, ...remaining] : prev;
                             }
 
                             // 1st Reissue: prefix with RE- if not already prefixed
                             const reCode = targetCode.startsWith('RE-') ? targetCode : `RE-${targetCode}`;
-                            return prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
-                              ...b,
-                              status: 'Cancelled & Reissued to Dispatch',
-                              bomCode: reCode,
-                              code: reCode,
-                              isAccountsDone: false,
-                              reissuedByAccounts: true,
-                              reissuedAt: reissueTime,
-                              reissueCount: currentCount + 1,
-                              accountsVerification: {
-                                verified: false,
-                                paymentStatus: null,
-                                hardCopyReceived: false,
-                                softCopyReceived: false,
-                                reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
-                              },
-                              dispatchPacking: (b.items || []).map(it => ({
-                                name: it.name,
-                                bomQty: it.qty || 1,
-                                packed: false
-                              }))
-                            } : b);
+                            let reissuedItem1 = null;
+                            const remaining1 = prev.filter(b => {
+                              if (b.bomCode === targetCode || b.code === targetCode) {
+                                reissuedItem1 = {
+                                  ...b,
+                                  status: 'Cancelled & Reissued to Dispatch',
+                                  bomCode: reCode,
+                                  code: reCode,
+                                  createdAt: new Date().toISOString(),
+                                  isAccountsDone: false,
+                                  reissuedByAccounts: true,
+                                  reissuedAt: reissueTime,
+                                  reissueCount: currentCount + 1,
+                                  accountsVerification: {
+                                    verified: false,
+                                    paymentStatus: null,
+                                    hardCopyReceived: false,
+                                    softCopyReceived: false,
+                                    reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
+                                  },
+                                  dispatchPacking: (b.items || []).map(it => ({
+                                    name: it.name,
+                                    bomQty: it.qty || 1,
+                                    packed: false
+                                  }))
+                                };
+                                return false;
+                              }
+                              return true;
+                            });
+                            return reissuedItem1 ? [reissuedItem1, ...remaining1] : prev;
                           });
 
                           setAccountsVerificationModal(null);
