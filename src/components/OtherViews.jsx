@@ -12467,7 +12467,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED').length, bg: '#F1F5F9', fg: '#475569' }
+                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted).length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
               rows: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).map(b => {
@@ -12475,7 +12475,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
                 const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
-                const isClosed = b.status === 'Closed' || b.status === 'CLOSED';
+                const isClosed = b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted;
                 const isReissued = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
 
                 let statusLabel = 'PENDING DISPATCH PACKING';
@@ -12491,10 +12491,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   stBorder = '1px solid #FDE68A';
                   tabGroup = 'Reissued';
                 } else if (isClosed) {
-                  statusLabel = 'CLOSED';
-                  stBg = '#F1F5F9';
-                  stFg = '#475569';
-                  stBorder = '1px solid #CBD5E1';
+                  statusLabel = 'COMPLETED & DISPATCHED';
+                  stBg = '#DCFCE7';
+                  stFg = '#166534';
+                  stBorder = '1px solid #86EFAC';
                   tabGroup = 'Closed';
                 } else if (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) {
                   statusLabel = 'AWAITING VEHICLE LOADING';
@@ -23421,22 +23421,36 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             loadedTimeStr: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           };
 
-          // Update BOM status to Fully Completed
-          setBomStore(prev => prev.map(b => (b.bomCode === bCode || b.code === bCode) ? {
-            ...b,
-            status: 'Completed',
-            fullyCompleted: true,
-            vehicleLoading: loadingPayload,
-            completedAt: new Date().toISOString()
-          } : b));
+          // Update BOM status to Fully Completed & persist
+          setBomStore(prev => {
+            const updated = prev.map(b => (b.bomCode === bCode || b.code === bCode) ? {
+              ...b,
+              status: 'Completed',
+              fullyCompleted: true,
+              vehicleLoading: loadingPayload,
+              completedAt: new Date().toISOString()
+            } : b);
+            try {
+              localStorage.setItem('controlroom_bom_store', JSON.stringify(updated));
+              saveCloudStore('bom_store', updated);
+            } catch (e) { }
+            return updated;
+          });
 
-          // Update Invoice status to Fully Dispatched & Delivered
-          setInvoiceList(prev => prev.map(i => (i.poNo === bCode || i.code === bCode || i.invNo === invNo) ? {
-            ...i,
-            status: 'Fully Dispatched & Delivered',
-            pay: 'Completed & Delivered',
-            vehicleLoading: loadingPayload
-          } : i));
+          // Update Invoice status to Fully Dispatched & Delivered & persist
+          setInvoiceList(prev => {
+            const updatedInvoices = prev.map(i => (i.poNo === bCode || i.code === bCode || i.invNo === invNo) ? {
+              ...i,
+              status: 'Fully Dispatched & Delivered',
+              pay: 'Completed & Delivered',
+              vehicleLoading: loadingPayload
+            } : i);
+            try {
+              localStorage.setItem('controlroom_invoice_store', JSON.stringify(updatedInvoices));
+              saveCloudStore('invoice_store', updatedInvoices);
+            } catch (e) { }
+            return updatedInvoices;
+          });
 
           const completedSummary = {
             bomCode: bCode,
@@ -23454,8 +23468,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         };
 
         return (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100000, fontFamily: "'DM Sans', sans-serif" }}>
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', width: '920px', maxWidth: '96%', maxHeight: '92vh', overflow: 'hidden', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', backgroundColor: '#F8FAFC', zIndex: 999999, fontFamily: "'DM Sans', sans-serif", overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column' }}>
 
               {/* Modal Header Banner */}
               <div style={{
@@ -23695,18 +23709,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             />
                           </label>
 
-                          <button
-                            type="button"
-                            onClick={handleAddSamplePhoto}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '8px',
-                              backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
-                              padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Camera size={16} /> 📸 Capture Live Truck Photo
-                          </button>
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0',
+                            padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', boxShadow: '0 2px 6px rgba(22,101,52,0.15)'
+                          }}>
+                            <Camera size={16} /> 📸 Capture Live Camera Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleAddPhotoFiles(e.target.files)}
+                            />
+                          </label>
                         </div>
                       )}
 
@@ -23769,28 +23786,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             />
                           </label>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Create sample video clip for instant playback
-                              const sampleVideo = {
-                                id: `vid_${Date.now()}`,
-                                name: `Loading_Recording_${Date.now().toString().slice(-4)}.mp4`,
-                                size: '4.2 MB',
-                                dataUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-                                recordedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                              };
-                              setLoadingVideos(prev => [...prev, sampleVideo]);
-                            }}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '8px',
-                              backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE',
-                              padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Video size={16} /> 🎥 Record Live Vehicle Loading Video
-                          </button>
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            backgroundColor: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE',
+                            padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer'
+                          }}>
+                            <Video size={16} /> 🎥 Record Live Camera Video
+                            <input
+                              type="file"
+                              accept="video/*"
+                              capture="environment"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleAddVideoFiles(e.target.files)}
+                            />
+                          </label>
                         </div>
                       )}
 
