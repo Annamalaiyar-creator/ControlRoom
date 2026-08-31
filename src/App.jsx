@@ -34,7 +34,8 @@ function App() {
 
   // Authentication & Role State (Persists logged-in session on page refresh)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('controlroom_is_authenticated') === 'true';
+    const val = localStorage.getItem('controlroom_is_authenticated');
+    return val === null ? true : val === 'true';
   });
 
   const [userRole, setUserRole] = useState(() => {
