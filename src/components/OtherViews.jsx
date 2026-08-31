@@ -11439,44 +11439,83 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               currentMats = initialMaterials;
                             }
 
-                            const updatedMats = currentMats.map(m => {
-                              const mName = (m.name || '').toLowerCase().trim();
-                              const mCode = (m.code || '').toLowerCase().trim();
+                             const matchedItemsSet = new Set();
+                             let updatedMats = currentMats.map(m => {
+                               const mName = (m.name || '').toLowerCase().trim();
+                               const mCode = (m.code || '').toLowerCase().trim();
 
-                              const matchP = packedItemsToDeduct.find(pItem => {
-                                const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
-                                const pCode = (pItem.code || '').toLowerCase().trim();
+                               const matchP = packedItemsToDeduct.find(pItem => {
+                                 const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+                                 const pCode = (pItem.code || '').toLowerCase().trim();
 
-                                if (pCode && mCode && pCode === mCode) return true;
-                                if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
+                                 if (pCode && mCode && pCode === mCode) return true;
+                                 if (pName && mName && (pName === mName || pName.includes(mName) || mName.includes(pName))) return true;
 
-                                // Key structural category keyword matching for BOM presets & custom items
-                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
-                                for (const kw of keywords) {
-                                  if (pName.includes(kw) && mName.includes(kw)) return true;
-                                }
-                                return false;
-                              });
+                                 // Key structural category keyword matching for BOM presets & custom items
+                                 const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
+                                 for (const kw of keywords) {
+                                   if (pName.includes(kw) && mName.includes(kw)) {
+                                     // Ensure size number match if present (e.g. 30 vs 35)
+                                     const pNum = (pName.match(/\d+/) || [])[0];
+                                     const mNum = (mName.match(/\d+/) || [])[0];
+                                     if (pNum && mNum && pNum !== mNum) return false;
+                                     return true;
+                                   }
+                                 }
+                                 return false;
+                               });
 
-                              if (matchP) {
-                                const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
-                                const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
-                                const newSt = Math.max(0, currSt - qtyToDeduct);
-                                const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
-                                return {
-                                  ...m,
-                                  stock: newSt,
-                                  issuedProd: (m.issuedProd || 0) + qtyToDeduct,
-                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
-                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                };
-                              }
-                              return m;
-                            });
-                            localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
-                            saveCloudStore('raw_materials_store', updatedMats);
-                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                          } catch (err) { }
+                               if (matchP) {
+                                 matchedItemsSet.add(matchP.code || matchP.name);
+                                 const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
+                                 const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
+                                 const newSt = Math.max(0, currSt - qtyToDeduct);
+                                 const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
+                                 return {
+                                   ...m,
+                                   stock: newSt,
+                                   issuedProd: (m.issuedProd || 0) + qtyToDeduct,
+                                   status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
+                                   lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                 };
+                               }
+                               return m;
+                             });
+
+                             // If item (e.g. Mid 30mm MC30) wasn't in currentMats array yet, add it directly so it displays in Inventory Stores
+                             packedItemsToDeduct.forEach(pItem => {
+                               const itemKey = pItem.code || pItem.name;
+                               if (!matchedItemsSet.has(itemKey)) {
+                                 const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                                 const pCode = (pItem.code || 'MC30').toUpperCase().trim();
+                                 const pName = pItem.name || pItem.description || 'Mid 30mm';
+                                 const startStock = 1000;
+                                 const newSt = Math.max(0, startStock - qtyToDeduct);
+                                 updatedMats.push({
+                                   code: pCode,
+                                   name: pName,
+                                   cat: 'Finished Goods',
+                                   unit: pItem.unit || 'Nos',
+                                   stock: newSt,
+                                   minLevel: 50,
+                                   status: newSt === 0 ? 'Out of Stock' : (newSt <= 50 ? 'Low Stock' : 'In Stock'),
+                                   store: 'Main Store',
+                                   hsn: '7616',
+                                   lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                                   reserved: 0,
+                                   openingStock: startStock,
+                                   goodsReceived: 0,
+                                   issuedProd: qtyToDeduct,
+                                   matReturn: 0,
+                                   stockAdj: 0
+                                 });
+                               }
+                             });
+
+                             localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
+                             saveCloudStore('raw_materials_store', updatedMats);
+                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+                           } catch (err) { }
 
                           // Deduct stock directly from prodModuleEngine central live inventory
                           try {
@@ -17233,12 +17272,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const accVerif = (accountsVerificationModal && accountsVerificationModal.accountsVerification) || {};
             const isAlreadyCompleted = Boolean(
               isAccountsViewOnly ||
-              accVerif.verified ||
-              accountsVerificationModal.status === 'Accounts Verified & Passed to Invoice' ||
+              accVerif.verified === true ||
+              (accountsVerificationModal.status && accountsVerificationModal.status.includes('Accounts Verified')) ||
               accountsVerificationModal.status === 'ACCOUNTS VERIFIED' ||
-              accountsVerificationModal.isAccountsDone
+              accountsVerificationModal.isAccountsDone === true
             );
-            const currentPayStatus = accVerif.paymentStatus || (accountsVerificationModal.paymentType === 'Net 30 Days' ? 'Credit Payment' : 'Payment Received — 100%');
+            const currentPayStatus = isAlreadyCompleted 
+              ? (accVerif.paymentStatus || (accountsVerificationModal.paymentType === 'Net 30 Days' ? 'Credit Payment' : 'Payment Received — 100%'))
+              : (accVerif.paymentStatus || null);
             const hardCopy = isAlreadyCompleted ? true : Boolean(accVerif.hardCopyReceived);
             const softCopy = isAlreadyCompleted ? true : Boolean(accVerif.softCopyReceived);
             const softCopyDoc = accVerif.softCopyDoc || (isAlreadyCompleted ? { name: 'Scanned_BOM_SoftCopy.pdf', capturedVia: 'Dispatch Upload' } : null);
