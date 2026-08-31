@@ -17232,16 +17232,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               </td>
                               <td style={{ padding: '14px 16px', fontWeight: '700', color: '#2563EB', fontSize: '13px', textAlign: 'left' }}>
                                 {(() => {
-                                  if (pItem.code) return pItem.code;
-                                  if (pItem.itemCode) return pItem.itemCode;
-                                  const matchedProduct = VRM_PRODUCTS.find(vp => vp.name && pItem.name && vp.name.toLowerCase().trim() === pItem.name.toLowerCase().trim());
+                                  const nameStr = (pItem.name || '').toLowerCase().trim();
+                                  if (nameStr.includes('mid 30') || nameStr.includes('mid30') || nameStr.includes('mc30')) return 'MC30';
+                                  if (nameStr.includes('mid 35') || nameStr.includes('mid35') || nameStr.includes('mc35')) return 'MC35';
+                                  if (nameStr.includes('end 30') || nameStr.includes('end30') || nameStr.includes('ec30')) return 'EC30';
+                                  if (nameStr.includes('end 35') || nameStr.includes('end35') || nameStr.includes('ec35')) return 'EC35';
+                                  if (nameStr.includes('mini rail') || nameStr.includes('mr100')) return 'MR100N';
+                                  if (pItem.code && pItem.code !== 'MR100N') return pItem.code;
+                                  if (pItem.itemCode && pItem.itemCode !== 'MR100N') return pItem.itemCode;
+                                  const matchedProduct = VRM_PRODUCTS.find(vp => vp.name && pItem.name && vp.name.toLowerCase().trim() === nameStr);
                                   if (matchedProduct) return matchedProduct.code;
-                                  if (pItem.name && pItem.name.toLowerCase().includes('mid 30')) return 'MC30';
-                                  if (pItem.name && pItem.name.toLowerCase().includes('mid 35')) return 'MC35';
-                                  if (pItem.name && pItem.name.toLowerCase().includes('end 30')) return 'EC30';
-                                  if (pItem.name && pItem.name.toLowerCase().includes('end 35')) return 'EC35';
-                                  if (pItem.name && pItem.name.toLowerCase().includes('mini rail')) return 'MR100N';
-                                  return pItem.parentCode || 'PROD-CODE';
+                                  return pItem.code || 'PROD-CODE';
                                 })()}
                               </td>
                               <td style={{ padding: '14px 16px', fontWeight: pItem.packed ? '700' : '600', color: pItem.packed ? '#166534' : '#1E293B', fontSize: '13px', textAlign: 'left' }}>
