@@ -20,6 +20,7 @@ import {
   Zap
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
+import { VRM_PRODUCTS } from '../utils/vrmProductsData';
 import NotificationToast from './NotificationToast';
 import { addLiveNotification } from './Header';
 
@@ -633,11 +634,20 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       style={{ ...inputStyle, fontWeight: '600', color: item.productCode ? '#64748B' : '#94A3B8' }}
                     >
                       <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
-                      {recipes.map(r => (
-                        <option key={r.id} value={r.productCode} style={{ color: '#64748B' }}>
-                          {r.productName}
-                        </option>
-                      ))}
+                      <optgroup label="Manufacturing Profiles">
+                        {recipes.map(r => (
+                          <option key={r.id} value={r.productCode} style={{ color: '#64748B' }}>
+                            {r.productName} ({r.productCode})
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="VRM Finished Goods Catalog">
+                        {VRM_PRODUCTS.map(vp => (
+                          <option key={`vrm-${vp.code}-${vp.sno}`} value={vp.code} style={{ color: '#64748B' }}>
+                            {vp.name} ({vp.code}) {vp.material ? `- ${vp.material}` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 
