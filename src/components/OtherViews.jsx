@@ -13204,8 +13204,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   const isAluLength2414 = mCode.includes('rm-alu-2414') || (mName.includes('aluminum length') && mName.includes('2414'));
                   if (!isAluLength2414) return false;
                 } else {
-                  // Inventory Stores shows Finished Goods (e.g. Mini Rail 300 mm) and hides raw material bars
-                  if (!isFGItem && (mCode.includes('rm-alu-2414') || isRawMat)) return false;
+                  // Inventory Stores treats EVERYTHING as Finished Goods (hides raw material 2414mm length bars only)
+                  if (mCode.includes('rm-alu-2414') || mName.includes('aluminum length')) return false;
                 }
 
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
