@@ -11486,20 +11486,31 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               const pCode = (pItem.code || '').toUpperCase().trim();
                               const pName = (pItem.name || '').toLowerCase().trim();
 
-                              const targetItem = engineInv.find(i => {
+                              const targetItems = engineInv.filter(i => {
                                 const iCode = (i.code || '').toUpperCase().trim();
                                 const iParent = (i.parentCode || '').toUpperCase().trim();
                                 const iName = (i.name || '').toLowerCase().trim();
-                                if (pCode && (iCode === pCode || iParent === pCode || iCode === 'MR100N')) return true;
-                                if (pName && iName && (iName.includes('mini rail') || iName.includes('100 mm') || iName.includes('300 mm') || iName === pName)) return true;
+                                if (pCode && (iCode === pCode || iParent === pCode)) return true;
+                                if (pName && iName && (iName === pName || (pName.includes('mini rail') && iName.includes('mini rail')))) return true;
                                 return false;
                               });
 
-                              if (targetItem) {
-                                targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
-                                targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
+                              if (targetItems.length > 0) {
+                                targetItems.forEach(targetItem => {
+                                  targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
+                                  targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
+                                });
+                              } else {
+                                // Fallback for MR100N / finished goods
+                                const defaultItem = engineInv.find(i => i.code === 'MR100N' || i.code === 'ALU-LEN-2414MM');
+                                if (defaultItem) {
+                                  defaultItem.physicalStock = Math.max(0, defaultItem.physicalStock - qtyToDeduct);
+                                  defaultItem.availableStock = Math.max(0, defaultItem.physicalStock - (defaultItem.reservedStock || 0));
+                                }
                               }
                             });
+                            prodModuleEngine.saveToStorage();
+                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
                           } catch (e) { }
 
                           // 3. Update Invoice status & persist to localStorage / cloud store
@@ -12934,29 +12945,27 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   itemsList.forEach(it => {
                     const key = it.code || it.sku || it.itemId || 'RM-VRM';
                     const existing = matMap.get(key);
-                    const stockVal = Number(existing && existing.stock !== undefined ? existing.stock : (it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000)));
+                    // Priority: If existing entry has live engine updated stock, keep live stock
+                    const stockVal = (existing && existing.stock !== undefined)
+                      ? Number(existing.stock)
+                      : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
                     const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                     let statusText = 'In Stock';
                     if (stockVal === 0) statusText = 'Out of Stock';
                     else if (stockVal <= minLvl) statusText = 'Low Stock';
 
                     matMap.set(key, {
+                      ...(existing || {}),
                       code: key,
-                      name: it.name,
-                      cat: it.category || it.material || 'Aluminium',
-                      unit: it.unit || it.uom || 'Nos',
+                      name: it.name || existing?.name,
+                      cat: it.category || it.material || existing?.cat || 'Aluminium',
+                      unit: it.unit || it.uom || existing?.unit || 'Nos',
                       stock: stockVal,
                       minLevel: minLvl,
                       status: statusText,
                       store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
                       hsn: '7604',
-                      lastUpdated: 'Live Store',
-                      reserved: 0,
-                      openingStock: stockVal,
-                      goodsReceived: 0,
-                      issuedProd: 0,
-                      matReturn: 0,
-                      stockAdj: 0
+                      lastUpdated: existing?.lastUpdated || 'Live Store'
                     });
                   });
                 }
