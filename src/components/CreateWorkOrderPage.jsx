@@ -704,7 +704,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
             </div>
 
             {/* RECIPE BADGE BANNER & AI PROFIT OPTIMIZER RECOMMENDATION */}
-            {matCalc && (
+            {Boolean(selectedProductCode && cutLength && matCalc) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
