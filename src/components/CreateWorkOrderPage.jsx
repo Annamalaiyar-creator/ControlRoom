@@ -660,7 +660,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                         { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580 }
                       ].map((item, pIdx) => (
                         <option key={pIdx} value={item.code} style={{ color: '#64748B' }}>
-                          {item.label} ({item.code} - {item.totalLen} mm Raw Length)
+                          {item.label}
                         </option>
                       ))}
                     </select>
