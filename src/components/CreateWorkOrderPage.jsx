@@ -634,20 +634,40 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       style={{ ...inputStyle, fontWeight: '600', color: item.productCode ? '#64748B' : '#94A3B8' }}
                     >
                       <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
-                      <optgroup label="Manufacturing Profiles">
-                        {recipes.map(r => (
-                          <option key={r.id} value={r.productCode} style={{ color: '#64748B' }}>
-                            {r.productName} ({r.productCode})
+                      {[
+                        "Double C Rail NEW",
+                        "Double C Rail",
+                        "Strut Rail",
+                        "Mini Rail - 100mm",
+                        "Mini Rail - 100mm (New)",
+                        "Locking Nut",
+                        "Mini Rail - 60mm",
+                        "Mini Rail - 40mm",
+                        "Adhesive rail 95 mm",
+                        "Adhesive rail 70 mm",
+                        "Adhesive rail 100 mm",
+                        "Adhesive rail 120 mm",
+                        "Mid Section",
+                        "Top Section - 2 Mtr",
+                        "Bottom Section - 2 Mtr",
+                        "Top Section - 1.5 Mtr",
+                        "Bottom Section - 2.4 Mtr",
+                        "Mid Clamp - 35 mm",
+                        "Mid Clamp - 30 mm",
+                        "T Nut -10mm",
+                        "Mid Clamp (Universal)",
+                        "End Clamp 35mm (New)",
+                        "End Clamp 35mm",
+                        "L Bracket",
+                        "T Nut (KMC) - 8mm"
+                      ].map((prodName, pIdx) => {
+                        const codeVal = prodName.includes('30 mm') ? 'MC30' : (prodName.includes('100mm (New)') ? 'MR100N' : `PRD-${pIdx + 1}`);
+                        return (
+                          <option key={pIdx} value={codeVal} style={{ color: '#64748B' }}>
+                            {prodName}
                           </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="VRM Finished Goods Catalog">
-                        {VRM_PRODUCTS.map(vp => (
-                          <option key={`vrm-${vp.code}-${vp.sno}`} value={vp.code} style={{ color: '#64748B' }}>
-                            {vp.name} ({vp.code}) {vp.material ? `- ${vp.material}` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
+                        );
+                      })}
                     </select>
                   </div>
 
