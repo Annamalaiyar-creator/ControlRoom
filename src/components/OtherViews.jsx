@@ -11428,7 +11428,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               { code: 'FG-HDG-009', name: 'Heavy Rafter 120x50x20x2.5 (Length 4.5m)', cat: 'Steel', unit: 'Nos', stock: 95, minLevel: 25, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 10, openingStock: 70, goodsReceived: 45, issuedProd: 20, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-010', name: 'Purlin 80x40x15x2.0 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 280, minLevel: 80, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 30, openingStock: 200, goodsReceived: 130, issuedProd: 50, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-011', name: 'Cross Bracing Pipe 42.4x2.6mm', cat: 'Steel', unit: 'Nos', stock: 160, minLevel: 40, status: 'In Stock', store: 'Store B', hsn: '7306', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 80, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-012', name: 'Base Plate 250x250x10mm with M16 Anchors', cat: 'Steel', unit: 'Set', stock: 140, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 100, goodsReceived: 65, issuedProd: 25, matReturn: 0, stockAdj: 0 }
+                              { code: 'FG-HDG-012', name: 'Base Plate 250x250x10mm with M16 Anchors', cat: 'Steel', unit: 'Set', stock: 140, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 100, goodsReceived: 65, issuedProd: 25, matReturn: 0, stockAdj: 0 },
+                              { code: 'MC30', name: 'Mid 30mm', cat: 'Fasteners', unit: 'Nos', stock: 1000, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 }
                             ];
                             const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
                             let currentMats = [];
@@ -11455,6 +11456,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 const mName = (m.name || '').toLowerCase().trim();
                                 const mParent = (m.parentCode || '').toUpperCase().trim();
 
+                                if (pCode === 'MC30' && (mCode === 'MC30' || mName.includes('mid 30'))) return true;
                                 if (pCode && (mCode === pCode || mParent === pCode)) return true;
                                 if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
 
