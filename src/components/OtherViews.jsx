@@ -16843,9 +16843,17 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
           // Render Dispatch Head Packing Verification Screen (Full Size Page)
           if (dispatchPackingModal) {
-            const rawItems = (dispatchPackingModal.items || []).map(it => ({ name: it.name || it.c2 || 'Item', bomQty: it.qty || 1, packed: false }));
+            const rawItems = (dispatchPackingModal.items || []).map(it => ({ 
+              name: it.name || it.c2 || 'Item', 
+              code: it.code || it.itemCode || it.productCode || it.c1 || null,
+              bomQty: it.qty || 1, 
+              packed: false 
+            }));
             const itemsToPack = (dispatchPackingModal.dispatchPacking && Array.isArray(dispatchPackingModal.dispatchPacking) && dispatchPackingModal.dispatchPacking.length > 0)
-              ? dispatchPackingModal.dispatchPacking
+              ? dispatchPackingModal.dispatchPacking.map(p => ({
+                  ...p,
+                  code: p.code || (p.name && p.name.toLowerCase().includes('mid 30') ? 'MC30' : (p.name && p.name.toLowerCase().includes('mini rail') ? 'MR100N' : null))
+                }))
               : rawItems;
 
             const isPackedAndReady = Boolean(
