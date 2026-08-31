@@ -11512,6 +11512,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             stockDeductionDate: new Date().toISOString()
                           } : prev);
 
+                          const unpackedItems = (itemsList || []).filter(it => it.selected === false);
                           setInvoiceList(prev => {
                             const updatedInvoices = prev.map(item => (item.invNo === inv.invNo || item.code === inv.code || item.bomCode === inv.bomCode) ? {
                               ...item,
@@ -11893,44 +11894,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{dAddr}</div>
                               </div>
                             </div>
-
-                            <button
-                              onClick={() => {
-                                const targetCode = inv.poNo || inv.code || inv.bomCode || bomRefText;
-                                setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
-                                  ...b,
-                                  status: 'Wrong Proof',
-                                  addressProofStatus: 'Wrong Proof',
-                                  addressProofRequestedAt: new Date().toISOString()
-                                } : b));
-
-                                setInvoiceList(prev => prev.map(i => (i.invNo === inv.invNo || i.poNo === targetCode || i.code === targetCode) ? {
-                                  ...i,
-                                  status: 'Pending Address Proof',
-                                  addressProofStatus: 'Wrong Proof'
-                                } : i));
-
-                                alert(`Address Proof Request sent to Sales team for ${targetCode}! Status updated to "Wrong Proof".`);
-                              }}
-                              style={{
-                                border: '1px solid #FED7AA',
-                                backgroundColor: '#FFF7ED',
-                                color: '#C2410C',
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: '800',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFEDD5'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFF7ED'}
-                            >
-                              <AlertCircle style={{ width: '14px', height: '14px', color: '#C2410C' }} /> Request Address Proof
-                            </button>
                           </div>
 
                           {addressProofDoc && (() => {
@@ -12378,7 +12341,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             );
           });
 
-          const allInvoicesUnified = [...missingVerified, ...mergedInvoices];
+          const allInvoicesUnified = [...missingVerified, ...mergedInvoices].sort((a, b) => {
+            const numA = parseInt((a.poNo || a.bomCode || a.invNo || '').replace(/[^0-9]/g, ''), 10) || 0;
+            const numB = parseInt((b.poNo || b.bomCode || b.invNo || '').replace(/[^0-9]/g, ''), 10) || 0;
+            return numB - numA;
+          });
 
           // Domain-specific Page Configs for all Production Admin views using the Purchase Orders 5-part layout template
           const configs = {
@@ -16796,7 +16763,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 pendingSalesDispatchPayment: needsSalesPaymentNotification,
                 reissuedByAccounts: false,
                 isAccountsDone: false,
-                accountsVerification: allItemsPacked ? { paymentStatus: isWhileDispatch ? 'Awaiting Sales Payment Slip' : null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {})
+                accountsVerification: (b.accountsVerification && b.accountsVerification.verified)
+                  ? b.accountsVerification
+                  : (allItemsPacked ? { paymentStatus: isWhileDispatch ? 'Awaiting Sales Payment Slip' : null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {}))
               } : b));
               const targetBomCode = dispatchPackingModal.bomCode;
               const targetNum = targetBomCode ? targetBomCode.replace(/[^0-9]/g, '') : '';
@@ -17525,36 +17494,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   {!isAlreadyCompleted && (
                     <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                      <button
-                        onClick={() => {
-                          const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
-                          setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
-                            ...b,
-                            status: 'Wrong Proof',
-                            addressProofStatus: 'Wrong Proof',
-                            addressProofReuploadRequested: true,
-                            addressProofRequestedAt: new Date().toISOString()
-                          } : b));
-
-                          setInvoiceList(prev => (prev || []).map(i => (i.invNo === accountsVerificationModal.invNo || i.poNo === targetCode || i.code === targetCode) ? {
-                            ...i,
-                            status: 'Pending Address Proof',
-                            addressProofStatus: 'Wrong Proof',
-                            addressProofReuploadRequested: true
-                          } : i));
-
-                          alert(`⚠️ Address Proof Request sent to Sales team for ${targetCode}! Status updated to "Wrong Proof".`);
-                          setAccountsVerificationModal(null);
-                        }}
-                        style={{
-                          border: '1px solid #FDBA74', backgroundColor: '#FFF7ED',
-                          color: '#C2410C', height: '42px', padding: '0 16px', borderRadius: '10px',
-                          fontSize: '13px', fontWeight: '800', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                      >
-                        <AlertCircle style={{ width: '15px', height: '15px', color: '#C2410C' }} /> Request Address Proof
-                      </button>
                       <button
                         onClick={() => setAccountsVerificationModal(null)}
                         style={{
