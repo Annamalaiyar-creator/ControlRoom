@@ -14356,16 +14356,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
                                 {m.parentCode ? (
-                                  <span style={{ paddingLeft: '12px', color: '#64748B', fontSize: '12px', fontWeight: '600' }}>
-                                    └─ {m.parentCode}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '14px' }}>
+                                    <span style={{ color: '#0E7490', fontWeight: 'bold' }}>└─</span>
+                                    <span>{m.code}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#F1F5F9', color: '#475569', padding: '2px 6px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
+                                      Sub-Branch of {m.parentCode}
+                                    </span>
+                                  </div>
                                 ) : (
-                                  m.code
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>{m.code}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '2px 6px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                                      Main Branch
+                                    </span>
+                                  </div>
                                 )}
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
                                 {m.parentCode ? (
-                                  <div style={{ paddingLeft: '12px', color: '#0F172A', fontWeight: '600' }}>
+                                  <div style={{ paddingLeft: '14px', color: '#0F172A', fontWeight: '600' }}>
                                     {m.name}
                                   </div>
                                 ) : (
