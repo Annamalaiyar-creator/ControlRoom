@@ -17223,7 +17223,18 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                 </div>
                               </td>
                               <td style={{ padding: '14px 16px', fontWeight: '700', color: '#2563EB', fontSize: '13px', textAlign: 'left' }}>
-                                {pItem.code || (pItem.parentCode || `MR100N`)}
+                                {(() => {
+                                  if (pItem.code) return pItem.code;
+                                  if (pItem.itemCode) return pItem.itemCode;
+                                  const matchedProduct = VRM_PRODUCTS.find(vp => vp.name && pItem.name && vp.name.toLowerCase().trim() === pItem.name.toLowerCase().trim());
+                                  if (matchedProduct) return matchedProduct.code;
+                                  if (pItem.name && pItem.name.toLowerCase().includes('mid 30')) return 'MC30';
+                                  if (pItem.name && pItem.name.toLowerCase().includes('mid 35')) return 'MC35';
+                                  if (pItem.name && pItem.name.toLowerCase().includes('end 30')) return 'EC30';
+                                  if (pItem.name && pItem.name.toLowerCase().includes('end 35')) return 'EC35';
+                                  if (pItem.name && pItem.name.toLowerCase().includes('mini rail')) return 'MR100N';
+                                  return pItem.parentCode || 'PROD-CODE';
+                                })()}
                               </td>
                               <td style={{ padding: '14px 16px', fontWeight: pItem.packed ? '700' : '600', color: pItem.packed ? '#166534' : '#1E293B', fontSize: '13px', textAlign: 'left' }}>
                                 {pItem.name}
