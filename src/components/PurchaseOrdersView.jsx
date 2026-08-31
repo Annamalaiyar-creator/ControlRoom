@@ -2373,6 +2373,31 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
               </div>
 
+              {/* 6. Form Footer Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px', padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => executeCreatePO(e, 'Draft')}
+                  style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '600', color: '#c2410c', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FileText style={{ width: '15px', height: '15px' }} />
+                  Save as Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={triggerSaveConfirm}
+                  style={{ backgroundColor: '#0E7490', border: 'none', borderRadius: '8px', padding: '10px 28px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(14, 116, 144, 0.3)' }}
+                >
+                  Create & Save PO
+                </button>
+              </div>
             </div>
           )}
         </div>
