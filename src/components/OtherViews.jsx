@@ -11421,7 +11421,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-005', name: 'Mid Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 926, minLevel: 300, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 150, openingStock: 926, goodsReceived: 800, issuedProd: 300, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
                               { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
@@ -12988,6 +12987,20 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   matMap.set(mapKey, m);
                 });
 
+                // Load stored raw materials from localStorage if updated on invoice completion
+                const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
+                if (savedMatStr) {
+                  try {
+                    const savedMats = JSON.parse(savedMatStr);
+                    if (Array.isArray(savedMats) && savedMats.length > 0) {
+                      savedMats.forEach(sm => {
+                        const mapKey = sm.parentCode ? `${sm.code}_sub_${sm.name}` : (sm.code || sm.name);
+                        matMap.set(mapKey, sm);
+                      });
+                    }
+                  } catch (e) { }
+                }
+
                 // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
                 (engineInv || []).forEach(item => {
                   const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
@@ -13026,7 +13039,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   itemsList.forEach(it => {
                     const key = it.code || it.sku || it.itemId || 'RM-VRM';
                     const existing = matMap.get(key);
-                    // Priority: If existing entry has live engine updated stock, keep live stock
+                    // Priority: If existing entry has live engine/localStorage updated stock, keep updated stock
                     const stockVal = (existing && existing.stock !== undefined)
                       ? Number(existing.stock)
                       : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
@@ -13057,7 +13070,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               const unsubscribe = prodModuleEngine.subscribe(() => {
                 syncEngineInventory();
               });
-              return () => unsubscribe();
+              window.addEventListener('controlroom_raw_materials_update', syncEngineInventory);
+              return () => {
+                unsubscribe();
+                window.removeEventListener('controlroom_raw_materials_update', syncEngineInventory);
+              };
             }, [itemsList]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
             const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
