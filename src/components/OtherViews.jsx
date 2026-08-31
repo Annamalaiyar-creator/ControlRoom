@@ -12858,7 +12858,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               if (itemsList && itemsList.length > 0) {
                 itemsList.forEach(it => {
                   const key = it.code || it.sku || it.itemId || 'RM-VRM';
-                  const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
+                  const existing = matMap.get(key);
+                  const stockVal = Number(existing && existing.stock !== undefined ? existing.stock : (it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000)));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -12900,7 +12901,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 (engineInv || []).forEach(item => {
                   const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
                   const existing = matMap.get(mappedCode) || matMap.get('RM-ALU-2414') || {};
-                  const stockVal = Number(item.physicalStock !== undefined ? item.physicalStock : (existing.stock || 0));
+                  const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
+                  const stockVal = (engineStock !== null && engineStock > 0)
+                    ? engineStock
+                    : (existing.stock !== undefined ? Number(existing.stock) : (item.physicalStock !== undefined ? Number(item.physicalStock) : 1000));
                   const minLvl = Number(item.safetyStock || existing.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -12912,7 +12916,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                   matMap.set(mappedCode, {
                     ...existing,
-                    code: subbranchCode,
+                    code: mappedCode,
                     name: item.name || existing.name,
                     cat: item.category || existing.cat || 'Finished Goods',
                     unit: item.unit || existing.unit || 'Pieces',
@@ -12930,7 +12934,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   itemsList.forEach(it => {
                     const key = it.code || it.sku || it.itemId || 'RM-VRM';
                     const existing = matMap.get(key);
-                    const stockVal = Number(existing ? existing.stock : (it.stock !== undefined ? it.stock : (it.openingStock || 0)));
+                    const stockVal = Number(existing && existing.stock !== undefined ? existing.stock : (it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000)));
                     const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                     let statusText = 'In Stock';
                     if (stockVal === 0) statusText = 'Out of Stock';
@@ -13784,7 +13788,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   {/* Top Header Card matching Create Work Order Page */}
                   <div style={{
                     backgroundColor: '#FFFFFF',
-                    padding: '20px 24px',
+                    padding: '18px 24px',
                     borderRadius: '14px',
                     border: '1px solid #E2E8F0',
                     display: 'flex',
@@ -13792,13 +13796,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     alignItems: 'center',
                     width: '100%',
                     boxSizing: 'border-box',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    gap: '16px'
                   }}>
-                    <div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
                         Stock Adjustment & Physical Audit Edit
                       </h1>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0', lineHeight: '1.4' }}>
                         Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong>
                       </p>
                     </div>
@@ -13806,7 +13811,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       type="button"
                       onClick={() => setShowAdjModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}
+                      style={{
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#475569',
+                        padding: '9px 18px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        marginLeft: 'auto'
+                      }}
                     >
                       Cancel & Return
                     </button>
@@ -13939,7 +13956,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   {/* Top Header Card matching Create Work Order Page */}
                   <div style={{
                     backgroundColor: '#FFFFFF',
-                    padding: '20px 24px',
+                    padding: '18px 24px',
                     borderRadius: '14px',
                     border: '1px solid #E2E8F0',
                     display: 'flex',
@@ -13947,13 +13964,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     alignItems: 'center',
                     width: '100%',
                     boxSizing: 'border-box',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    gap: '16px'
                   }}>
-                    <div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
                         Item Audit Log & Production Traceability
                       </h1>
-                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0' }}>
+                      <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0', lineHeight: '1.4' }}>
                         Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
                       </p>
                     </div>
@@ -13961,7 +13979,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     <button
                       type="button"
                       onClick={() => setShowTxModal(false)}
-                      style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}
+                      style={{
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#475569',
+                        padding: '9px 18px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        marginLeft: 'auto'
+                      }}
                     >
                       ← Back to Inventory Stores
                     </button>
@@ -14281,7 +14311,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               <td style={{ padding: '14px', textAlign: 'center' }}><div style={{ width: '70px', height: '22px', borderRadius: '12px', backgroundColor: '#E2E8F0', margin: '0 auto', animation: 'pulse 1.5s infinite ease-in-out' }}></div></td>
                             </tr>
                           ))
-                        ) : currentMaterialsPage.map((m, idx) => {
+                        ) : currentMaterialsPage.filter(m => {
+                          // Filter out generic/invalid Mini Rail item without proper code and MR100
+                          if (!m.code || m.code === '—' || m.code === 'RM-VRM' || m.code === 'MR100' || m.name?.trim().toLowerCase() === 'mini rail') return false;
+                          return true;
+                        }).map((m, idx) => {
                           const isSelected = selectedRows.includes(m.code);
                           const isOut = m.status === 'Out of Stock';
                           const isLow = m.status === 'Low Stock';
@@ -14370,29 +14404,39 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <span>| Showing {Math.min((currentPage - 1) * pageSize + 1, displayedMaterials.length)} to {Math.min(currentPage * pageSize, displayedMaterials.length)} of {displayedMaterials.length} entries</span>
                     </div>
 
-                    {/* Right side: Page number buttons Adjacent to Go to page */}
+                    {/* Right side: 3-Page Window Pagination Adjacent to Go to page */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>«</button>
                       <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>‹</button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                        <button
-                          key={p}
-                          onClick={() => setCurrentPage(p)}
-                          style={{
-                            border: currentPage === p ? '1px solid #0E7490' : '1px solid #E2E8F0',
-                            background: currentPage === p ? '#ECFEFF' : 'white',
-                            color: currentPage === p ? '#0E7490' : '#475569',
-                            fontWeight: 'bold',
-                            borderRadius: '6px',
-                            width: '28px',
-                            height: '28px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {p}
-                        </button>
-                      ))}
+                      {(() => {
+                        let start = Math.max(1, currentPage - 1);
+                        if (start + 2 > totalPages) {
+                          start = Math.max(1, totalPages - 2);
+                        }
+                        const pagesToShow = [];
+                        for (let i = start; i <= Math.min(totalPages, start + 2); i++) {
+                          pagesToShow.push(i);
+                        }
+                        return pagesToShow.map(p => (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            style={{
+                              border: currentPage === p ? '1px solid #0E7490' : '1px solid #E2E8F0',
+                              background: currentPage === p ? '#ECFEFF' : 'white',
+                              color: currentPage === p ? '#0E7490' : '#475569',
+                              fontWeight: 'bold',
+                              borderRadius: '6px',
+                              width: '28px',
+                              height: '28px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {p}
+                          </button>
+                        ));
+                      })()}
 
                       <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}>›</button>
                       <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} style={{ border: '1px solid #E2E8F0', background: 'white', borderRadius: '6px', width: '28px', height: '28px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}>»</button>
