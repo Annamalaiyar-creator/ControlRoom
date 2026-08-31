@@ -11587,6 +11587,25 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   bayLocation: 'Main Store'
                                 });
                               }
+
+                              // Record in central audit log ledger for inventory traceability
+                              const salesRepName = inv.salesPerson || (inv.createdByName ? `${inv.createdByName} (Sales)` : 'Sales Team');
+                              const targetCodeName = targetItem ? targetItem.code : (pCode || 'FG-ITEM');
+                              prodModuleEngine.addLedgerEntry({
+                                timestamp: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+                                type: 'PRODUCTION_CONSUMPTION',
+                                woId: invNoText,
+                                itemCode: targetCodeName,
+                                itemName: pItem.name || pItem.description || 'Finished Good Item',
+                                qty: -qtyToDeduct,
+                                unit: pItem.unit || 'Nos',
+                                previousStock: targetItem ? targetItem.physicalStock + qtyToDeduct : 1000,
+                                newStock: targetItem ? targetItem.physicalStock : Math.max(0, 1000 - qtyToDeduct),
+                                user: 'Accounts & Billing Department',
+                                employee: salesRepName,
+                                reason: `Dispatch & Invoice Outflow (-${qtyToDeduct} ${pItem.unit || 'Nos'}): Sales order BOM (${bomRefText}) invoiced (${invNoText}) by ${salesRepName}. Stock deducted from inventory.`,
+                                referenceDoc: invNoText
+                              });
                             });
                             prodModuleEngine.saveToStorage();
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
@@ -14143,8 +14162,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         const iconColor = isReceipt ? '#0E7490' : isAddition ? '#16A34A' : isAdj ? '#EA580C' : '#2563EB';
                         const cardAccentBorder = isReceipt ? '#0E7490' : isAddition ? '#16A34A' : isAdj ? '#EA580C' : '#2563EB';
 
+                        const isInvoiceOutflow = log.reason && log.reason.toLowerCase().includes('invoiced');
                         const eventAction = log.type === 'PRODUCTION_RECEIPT'
                           ? 'manufactured and added finished goods'
+                          : isInvoiceOutflow
+                          ? 'completed sales invoice & deducted inventory'
                           : log.type === 'PRODUCTION_CONSUMPTION'
                           ? 'issued and reduced raw material'
                           : log.type === 'GOODS_RECEIPT'
