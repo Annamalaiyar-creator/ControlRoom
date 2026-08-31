@@ -12198,31 +12198,40 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   }}>
                     <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Invoice Workflow Timeline</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', paddingLeft: '16px', borderLeft: '2px solid #E2E8F0' }}>
-                      {[
-                        { title: 'Accounts Verification Completed', date: `${invDateText}, 10:15 AM`, user: 'Accounts Executive', role: 'Accounts Team', color: '#16A34A' },
-                        { title: 'Invoice Auto-Generated', date: `${invDateText}, 10:16 AM`, user: 'ControlRoom Engine', role: 'System Automated', color: '#2563EB' },
-                        { title: 'Pending Invoice Confirmation', date: `${invDateText}, 10:20 AM`, user: 'Invoice Executive', role: 'Invoice Team', color: '#D97706' }
-                      ].map((tl, i) => (
-                        <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span style={{
-                            position: 'absolute',
-                            left: '-22px',
-                            top: '4px',
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: tl.color
-                          }} />
-                          <div>
-                            <strong style={{ fontSize: '12px', color: '#0F172A' }}>{tl.title}</strong>
-                            <div style={{ fontSize: '10px', color: '#64748B' }}>{tl.date}</div>
+                      {(() => {
+                        const accData = (matchingBom && matchingBom.accountsVerification) || inv.accountsVerification || {};
+                        const approverName = accData.verifiedBy || inv.verifiedBy || 'Accounts Executive (Venkatesh)';
+                        const approverRole = accData.verifiedByRole || 'Accounts Approver';
+                        const approvalTime = accData.verifiedAt || `${invDateText}, 10:15 AM`;
+                        const isConfirmed = ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status);
+                        const confirmedByName = inv.confirmedBy || 'Invoice Executive (Priya)';
+                        
+                        return [
+                          { title: 'Accounts Verification & Approval', date: approvalTime, user: approverName, role: approverRole, color: '#16A34A' },
+                          { title: 'Invoice Auto-Generated', date: `${invDateText}, 10:16 AM`, user: 'ControlRoom Engine', role: 'System Automated', color: '#2563EB' },
+                          { title: isConfirmed ? 'Invoice Confirmed & Locked' : 'Pending Invoice Confirmation', date: isConfirmed ? `${invDateText}, 10:25 AM` : `${invDateText}, 10:20 AM`, user: isConfirmed ? confirmedByName : 'Invoice Executive', role: 'Invoice Team', color: isConfirmed ? '#16A34A' : '#D97706' }
+                        ].map((tl, i) => (
+                          <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <span style={{
+                              position: 'absolute',
+                              left: '-22px',
+                              top: '4px',
+                              width: '10px',
+                              height: '10px',
+                              borderRadius: '50%',
+                              backgroundColor: tl.color
+                            }} />
+                            <div>
+                              <strong style={{ fontSize: '12px', color: '#0F172A' }}>{tl.title}</strong>
+                              <div style={{ fontSize: '10px', color: '#64748B' }}>{tl.date}</div>
+                            </div>
+                            <div style={{ textAlign: 'right', fontSize: '10px' }}>
+                              <strong style={{ color: '#475569' }}>{tl.user}</strong>
+                              <span style={{ display: 'block', color: '#94A3B8' }}>{tl.role}</span>
+                            </div>
                           </div>
-                          <div style={{ textAlign: 'right', fontSize: '10px' }}>
-                            <strong style={{ color: '#475569' }}>{tl.user}</strong>
-                            <span style={{ display: 'block', color: '#94A3B8' }}>{tl.role}</span>
-                          </div>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -17344,6 +17353,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   hardCopyReceived: hardCopy,
                   softCopyReceived: softCopy,
                   verified: true,
+                  verifiedBy: b.accountsVerification?.verifiedBy || 'Accounts Executive (Venkatesh)',
+                  verifiedByRole: 'Accounts Team Lead',
+                  verifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' }),
                   softCopyDoc: softDocToSave
                 },
                 proofDoc: softDocToSave?.name || b.payments?.proofDoc || b.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
@@ -19821,8 +19833,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <input
                           type="date"
                           value={new Date().toISOString().split('T')[0]}
-                          onChange={() => { }}
-                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: '#FAF9F6', boxSizing: 'border-box', outline: 'none' }}
+                          disabled
+                          readOnly
+                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#64748B', backgroundColor: '#F1F5F9', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
                         />
                       </div>
                     </div>
@@ -21124,6 +21137,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   console.warn("Storage quota hit for local storage", e);
                                 }
                                 saveCloudStore('bom_store', sanitized);
+                                setShowBOMForm(false);
+                                setBomConfirmModal(null);
+                                setCurrentPage(1);
                                 try {
                                   window.dispatchEvent(new Event('controlroom_storage_update'));
                                 } catch (e) { }
