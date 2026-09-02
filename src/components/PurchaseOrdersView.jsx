@@ -145,26 +145,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
       if (response.ok) {
         const zohoPOs = await response.json();
         if (Array.isArray(zohoPOs)) {
-          setPoList(prev => {
-            const merged = [...zohoPOs];
-            prev.forEach(p => {
-              const pNo = String(p.poNo || p.id || '').trim().toLowerCase();
-              const pZohoId = String(p.zohoId || '').trim().toLowerCase();
-              const matchIdx = merged.findIndex(m => {
-                const mNo = String(m.poNo || m.id || '').trim().toLowerCase();
-                const mZohoId = String(m.zohoId || '').trim().toLowerCase();
-                return (pNo && mNo && pNo === mNo) || (pZohoId && mZohoId && pZohoId === mZohoId);
-              });
-              if (matchIdx !== -1) {
-                if (p.gstNo && p.gstNo !== '—' && (!merged[matchIdx].gstNo || merged[matchIdx].gstNo === '—')) {
-                  merged[matchIdx].gstNo = p.gstNo;
-                }
-              } else {
-                merged.unshift(p);
-              }
-            });
-            return merged;
-          });
+          setPoList(zohoPOs);
         }
       }
     } catch (err) {
@@ -193,6 +174,13 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
     };
     fetchZohoPOs();
     fetchZohoDropdowns();
+
+    // Auto-poll Zoho Books POs every 15 seconds to ensure real-time synchronization
+    const pollInterval = setInterval(() => {
+      fetchZohoPOs();
+    }, 15000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   useEffect(() => {

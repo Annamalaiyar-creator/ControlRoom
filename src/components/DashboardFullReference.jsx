@@ -189,9 +189,77 @@ export default function DashboardFullReference({ userRole }) {
     );
   }
 
+  // Get logged-in user profile details
+  const loggedEmail = localStorage.getItem('controlroom_logged_user') || 'dev@vrm.com';
+  const roleName = userRole || 'Procurement Head';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
       
+      {/* PERSONALIZED WELCOME BANNER CARD */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        padding: '20px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Welcome back, {(() => {
+                const storedName = localStorage.getItem('controlroom_logged_user_name');
+                if (storedName) return storedName;
+                if (userRole === 'Production Head') return 'Senthil Kumar';
+                if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+                if (userRole === 'Dispatch Head') return 'Karthik Raja';
+                if (userRole === 'Floor Supervisor') return 'Murugan';
+                if (userRole === 'Floor Employee') return 'Ramesh';
+                if (userRole === 'Accounts Head') return 'Venkatesh';
+                if (userRole === 'Accounts Executive') return 'Priya';
+                if (userRole === 'Sales Head') return 'Vijay';
+                if (userRole === 'Sales Executive') return 'Saravanan';
+                if (userRole === 'Design Engineer') return 'Dinesh';
+                if (userRole === 'Design Executive') return 'Kavitha';
+                if (userRole === 'Invoice Executive') return 'Anand';
+                if (userRole === 'BOM Executive') return 'Balaji';
+                return 'Arun Kumar';
+              })()}!
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
+              Here is your operational summary, live approvals & enterprise inventory metrics for today.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current System Status</div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span>
+              All Systems Operational
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          position: 'absolute',
+          right: '-20px',
+          top: '-20px',
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, rgba(255,255,255,0) 70%)',
+          pointerEvents: 'none'
+        }} />
+      </div>
+
       {/* ROW 1: KPI CARDS WITH NEW DESIGN LAYOUT */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
         {((userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? [

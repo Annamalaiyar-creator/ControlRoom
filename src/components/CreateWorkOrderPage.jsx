@@ -24,6 +24,32 @@ import { VRM_PRODUCTS } from '../utils/vrmProductsData';
 import NotificationToast from './NotificationToast';
 import { addLiveNotification } from './Header';
 
+export const PRODUCT_CATALOG_OPTIONS = [
+  { label: "Double C Rail NEW", code: "CC4.8N", totalLen: 4800 },
+  { label: "Double C Rail", code: "CC3.6", totalLen: 3600 },
+  { label: "Strut Rail", code: "SR3.6", totalLen: 3600 },
+  { label: "Mini Rail - 100mm", code: "MR100O", totalLen: 2414 },
+  { label: "Mini Rail - 100mm (New)", code: "MR100N", totalLen: 2414 },
+  { label: "Locking Nut", code: "LC", totalLen: 3000 },
+  { label: "Mini Rail - 60mm", code: "MR60", totalLen: 2414 },
+  { label: "Mini Rail - 40mm", code: "MR40", totalLen: 2414 },
+  { label: "Adhesive rail 100 mm", code: "AR100", totalLen: 2414 },
+  { label: "Adhesive rail 120 mm", code: "AR120", totalLen: 2414 },
+  { label: "Mid Section", code: "MID-SEC", totalLen: 2730 },
+  { label: "Top Section - 2 Mtr", code: "TOP-2M", totalLen: 2000 },
+  { label: "Bottom Section - 2 Mtr", code: "BOT-2M", totalLen: 2000 },
+  { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M", totalLen: 1500 },
+  { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M", totalLen: 2400 },
+  { label: "Mid Clamp - 35 mm", code: "MC35", totalLen: 2650 },
+  { label: "Mid Clamp - 30 mm", code: "MC30", totalLen: 2650 },
+  { label: "T Nut -10mm", code: "T10", totalLen: 2562 },
+  { label: "Mid Clamp (Universal)", code: "UM", totalLen: 2650 },
+  { label: "End Clamp 35mm (New)", code: "UE", totalLen: 2650 },
+  { label: "End Clamp 35mm", code: "EC35", totalLen: 2650 },
+  { label: "L Bracket", code: "ALB", totalLen: 2050 },
+  { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580 }
+];
+
 export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   // 1. GENERAL & PRODUCTION STATE
   const [formStep, setFormStep] = useState(1); // 1 = General Details, 2 = Process Routing & Work Plan
@@ -33,7 +59,39 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   const [productItems, setProductItems] = useState([
     { id: 1, productCode: '', cutLength: '', targetQty: '' }
   ]);
-  const [assignedEmployee, setAssignedEmployee] = useState('');
+
+  // Load real registered Floor Employees (strictly created FE accounts from controlroom_employees_list)
+  const [floorEmployeesList, setFloorEmployeesList] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+      if (Array.isArray(stored)) {
+        return stored.filter(emp => {
+          const roleUpper = String(emp.role || '').toUpperCase();
+          const codeUpper = String(emp.employee_code || '').toUpperCase();
+          const prefixUpper = String(emp.prefix || '').toUpperCase();
+          return roleUpper.includes('FLOOR') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
+        });
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const [assignedEmployee, setAssignedEmployee] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+      if (Array.isArray(stored)) {
+        const fe = stored.find(emp => {
+          const roleUpper = String(emp.role || '').toUpperCase();
+          const codeUpper = String(emp.employee_code || '').toUpperCase();
+          const prefixUpper = String(emp.prefix || '').toUpperCase();
+          return roleUpper.includes('FLOOR') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
+        });
+        if (fe) return `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
+      }
+    } catch (e) {}
+    return '';
+  });
+
   const [priority, setPriority] = useState('');
   const [productionLocation, setProductionLocation] = useState('');
   const [expectedStartDate, setExpectedStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -47,6 +105,9 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   const [processWorkPlan, setProcessWorkPlan] = useState([]);
 
   const handleAddWorkPlanStep = () => {
+    const defaultOp = floorEmployeesList.length > 0 
+      ? `${floorEmployeesList[0].employee_name || floorEmployeesList[0].name} (${floorEmployeesList[0].employee_code})`
+      : '';
     setProcessWorkPlan(prev => [
       ...prev,
       {
@@ -54,7 +115,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         stepNo: prev.length + 1,
         opName: '',
         machine: 'C - 1',
-        operator: 'Karthik',
+        operator: defaultOp,
         estTimeHours: '',
         estTimeMins: '',
         estTime: '',
@@ -144,18 +205,28 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
       return;
     }
 
+    if (!matCalc.isSufficient) {
+      setToastAlert({
+        type: 'error',
+        title: 'Insufficient Raw Material Stock',
+        message: `Work Order cannot be created! Required raw material: ${matCalc.physicalMatToIssue} ${matCalc.recipe.rawMaterialUnit}s (${matCalc.recipe.rawMaterialName}), but available stock is only ${matCalc.availableStock} ${matCalc.recipe.rawMaterialUnit}s (Shortage: ${matCalc.shortageQty} ${matCalc.recipe.rawMaterialUnit}s). Please order raw materials via PO / GRN first.`
+      });
+      return;
+    }
+
     try {
       const cutLenVal = cutLength ? parseFloat(String(cutLength).replace(/[^\d.]/g, '')) : 300;
-      const fgProductCode = selectedProductCode === 'MR100' && cutLenVal !== 100 
-        ? `FG-MR-${cutLenVal}MM` 
-        : selectedProductCode;
+      const matchedOpt = PRODUCT_CATALOG_OPTIONS.find(o => o.code === selectedProductCode);
+      const baseLabel = matchedOpt ? matchedOpt.label : 'Finished Good';
+      const fgProductCode = selectedProductCode || 'AR120';
+      const fgProductName = baseLabel;
       
       const newWO = prodModuleEngine.createWorkOrder({
         id: woNumber,
         date: woDate,
         productionHead: 'Senthil Kumar (Production Head)',
         finishedProductCode: fgProductCode,
-        finishedProductName: `Mini Rail ${cutLenVal} mm`,
+        finishedProductName: fgProductName,
         targetQty: Number(targetQty),
         cutLength: cutLength,
         productItems: productItems,
@@ -189,10 +260,10 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workOrderNo: newWO.id || woNumber,
-            productName: selectedProductCode || 'Mini Rail 100 mm',
+            productName: fgProductName || newWO.finishedProductName || 'Adhesive rail 120 mm',
             plannedQty: Number(targetQty),
             completedQty: 0,
-            status: 'In Progress',
+            status: 'PENDING_MATERIAL',
             targetDate: expectedCompletionDate || woDate
           })
         });
@@ -422,10 +493,18 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                           onChange={(e) => handleUpdateWorkPlanStep(step.id, 'operator', e.target.value)}
                           style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', color: '#475569', outline: 'none' }}
                         >
-                          <option value="Karthik" style={{ color: '#64748B' }}>Karthik</option>
-                          <option value="Arul" style={{ color: '#64748B' }}>Arul</option>
-                          <option value="Praveen" style={{ color: '#64748B' }}>Praveen</option>
-                          <option value="Manoj" style={{ color: '#64748B' }}>Manoj</option>
+                          {floorEmployeesList.length === 0 ? (
+                            <option value="" disabled style={{ color: '#94A3B8' }}>No Floor Employees Registered</option>
+                          ) : (
+                            floorEmployeesList.map(fe => {
+                              const label = `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
+                              return (
+                                <option key={fe.employee_code} value={label} style={{ color: '#334155' }}>
+                                  {label}
+                                </option>
+                              );
+                            })
+                          )}
                         </select>
                       </td>
 
@@ -634,31 +713,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       style={{ ...inputStyle, fontWeight: '600', color: item.productCode ? '#64748B' : '#94A3B8' }}
                     >
                       <option value="" disabled style={{ color: '#94A3B8' }}>Select Product</option>
-                      {[
-                        { label: "Double C Rail NEW", code: "CC4.8N", totalLen: 4800 },
-                        { label: "Double C Rail", code: "CC3.6", totalLen: 3600 },
-                        { label: "Strut Rail", code: "SR3.6", totalLen: 3600 },
-                        { label: "Mini Rail - 100mm", code: "MR100O", totalLen: 2414 },
-                        { label: "Mini Rail - 100mm (New)", code: "MR100N", totalLen: 2414 },
-                        { label: "Locking Nut", code: "LC", totalLen: 3000 },
-                        { label: "Mini Rail - 60mm", code: "MR60", totalLen: 2414 },
-                        { label: "Mini Rail - 40mm", code: "MR40", totalLen: 2414 },
-                        { label: "Adhesive rail 100 mm", code: "AR100", totalLen: 2414 },
-                        { label: "Adhesive rail 120 mm", code: "AR120", totalLen: 2414 },
-                        { label: "Mid Section", code: "MID-SEC", totalLen: 2730 },
-                        { label: "Top Section - 2 Mtr", code: "TOP-2M", totalLen: 2000 },
-                        { label: "Bottom Section - 2 Mtr", code: "BOT-2M", totalLen: 2000 },
-                        { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M", totalLen: 1500 },
-                        { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M", totalLen: 2400 },
-                        { label: "Mid Clamp - 35 mm", code: "MC35", totalLen: 2650 },
-                        { label: "Mid Clamp - 30 mm", code: "MC30", totalLen: 2650 },
-                        { label: "T Nut -10mm", code: "T10", totalLen: 2562 },
-                        { label: "Mid Clamp (Universal)", code: "UM", totalLen: 2650 },
-                        { label: "End Clamp 35mm (New)", code: "UE", totalLen: 2650 },
-                        { label: "End Clamp 35mm", code: "EC35", totalLen: 2650 },
-                        { label: "L Bracket", code: "ALB", totalLen: 2050 },
-                        { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580 }
-                      ].map((item, pIdx) => (
+                      {PRODUCT_CATALOG_OPTIONS.map((item, pIdx) => (
                         <option key={pIdx} value={item.code} style={{ color: '#64748B' }}>
                           {item.label}
                         </option>
@@ -799,8 +854,33 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                 <Cpu style={{ width: '14px', height: '14px' }} />
               </div>
               <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#64748B', margin: 0 }}>
-                Production Schedule
+                Assignment & Production Schedule
               </h3>
+            </div>
+
+            <div>
+              <label style={labelStyle}>ASSIGNED FLOOR EMPLOYEE (OPERATOR)</label>
+              <select
+                value={assignedEmployee}
+                onChange={(e) => setAssignedEmployee(e.target.value)}
+                style={{ ...inputStyle, color: assignedEmployee ? '#1E293B' : '#94A3B8' }}
+              >
+                {floorEmployeesList.length === 0 ? (
+                  <option value="" disabled style={{ color: '#94A3B8' }}>No Floor Employees Registered — Register FE Account First</option>
+                ) : (
+                  <>
+                    <option value="" disabled style={{ color: '#94A3B8' }}>Select Floor Employee</option>
+                    {floorEmployeesList.map(fe => {
+                      const label = `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
+                      return (
+                        <option key={fe.employee_code} value={label} style={{ color: '#0F172A' }}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </>
+                )}
+              </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1079,7 +1159,19 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
               type="button"
               onClick={() => {
                 if (!targetQty || Number(targetQty) <= 0) {
-                  alert('⚠️ Please enter a valid target quantity (> 0).');
+                  setToastAlert({
+                    type: 'error',
+                    title: 'Target Quantity Required',
+                    message: 'Please enter a valid target quantity (> 0).'
+                  });
+                  return;
+                }
+                if (matCalc && !matCalc.isSufficient) {
+                  setToastAlert({
+                    type: 'error',
+                    title: 'Insufficient Raw Material Stock',
+                    message: `Cannot proceed! Required raw material: ${matCalc.physicalMatToIssue} ${matCalc.recipe.rawMaterialUnit}s, but available stock is only ${matCalc.availableStock} ${matCalc.recipe.rawMaterialUnit}s (Shortage: ${matCalc.shortageQty} ${matCalc.recipe.rawMaterialUnit}s).`
+                  });
                   return;
                 }
                 setFormStep(2);

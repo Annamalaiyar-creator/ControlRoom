@@ -10,6 +10,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { createClient } from '@supabase/supabase-js';
 
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+
 dotenv.config();
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zjkabqcgymxysqgfbbge.supabase.co';
@@ -41,7 +45,6 @@ const syncStoreWithSupabase = async (key, localData) => {
       .single();
 
     if (!error && data && data.data) {
-      // If remote Supabase store has data, merge local file data with remote data so local entries are preserved
       if (Array.isArray(localData) && localData.length > 0) {
         const itemMap = new Map();
         (data.data || []).forEach(item => {
@@ -60,7 +63,6 @@ const syncStoreWithSupabase = async (key, localData) => {
       return data.data;
     }
 
-    // If table/record doesn't exist yet, seed Supabase with localData
     if (localData && localData.length > 0) {
       await supabase
         .from('controlroom_store')
@@ -99,11 +101,10 @@ const loadLocalWorkOrders = () => {
     return supabaseMemoryStore['workorder_store'];
   }
   return [
-    { id: 'wo_1', workOrderNo: 'VRM26/07/118', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
-    { id: 'wo_2', workOrderNo: 'VRM26/07/101', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
-    { id: 'wo_3', workOrderNo: 'VRM26/07/089', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
-    { id: 'wo_4', workOrderNo: 'VRM26/07/074', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' },
-    { id: 'wo_5', workOrderNo: 'VRM26/07/061', productName: 'End Clamp 35 mm', plannedQty: 300, completedQty: 210, delayDays: 1, delayReason: 'Inspection Hold', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Clamp Stock', customer: 'Waaree Energies', targetDate: '2026-07-27' }
+    { id: 'wo_1', workOrderNo: 'WO-50', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
+    { id: 'wo_2', workOrderNo: 'WO-51', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
+    { id: 'wo_3', workOrderNo: 'WO-52', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
+    { id: 'wo_4', workOrderNo: 'WO-53', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' }
   ];
 };
 
@@ -127,6 +128,26 @@ const loadLocalWorkOrders = () => {
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// 🛡️ SECURITY FIREWALL & MIDDLEWARE ENFORCEMENT
+// 1. Helmet HTTP Security Headers (XSS, Anti-Clickjacking, CSP protection)
+app.use(helmet({
+  contentSecurityPolicy: false, // Allowed for dev Vite bundles
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// 2. Rate Limiting Firewall against DDoS & Brute Force Attacks
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: 300, // max 300 requests per IP per 15 minutes
+  message: { error: 'Security Firewall Triggered: Too many requests from this IP address. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
+// 3. HttpOnly Secure Cookie Parser
+app.use(cookieParser());
 
 app.use(cors({
   origin: '*',
@@ -1537,11 +1558,13 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
         name: itemName,
         description: item.description || '',
         rate: baseRate,
-        quantity: itemQty
+        quantity: itemQty,
+        account_id: "4080449000000000567" // Cost of Goods Sold account for non-catalog/sales-only items
       };
 
-      if (itemId) {
-        li.item_id = itemId;
+      // Only attach catalog item_id if the Zoho item explicitly allows purchase operations
+      if (matched && matched.item_id && (matched.is_purchase === true || matched.is_purchased === true)) {
+        li.item_id = matched.item_id;
       }
       return li;
     });
@@ -1717,7 +1740,7 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
 
       return res.json({
         success: true,
-        message: isAppReq ? 'PO created in Zoho Books as Draft & awaiting CEO Approval!' : 'PO created and issued in Zoho Books successfully!',
+        message: isPendingApproval ? 'PO created in Zoho Books as Draft & awaiting CEO Approval!' : 'PO created and issued in Zoho Books successfully!',
         zohoPo: createdPo,
         po: localPOObj
       });
@@ -1991,6 +2014,138 @@ app.get('/api/zoho/purchaseorders', async (req, res) => {
       return parsePoNum(b) - parsePoNum(a);
     });
     res.json(sortedLocal);
+  }
+});
+
+// Endpoint to GET Sales Invoices from Zoho Books & Local Store
+app.get('/api/zoho/invoices', async (req, res) => {
+  if (!zohoSession.connected) {
+    const localInvoices = supabaseMemoryStore['invoice_store'] || [];
+    return res.json(localInvoices);
+  }
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const invData = await fetchZohoInvoices(accessToken);
+    const zohoInvoices = (invData && Array.isArray(invData.invoices)) ? invData.invoices : [];
+
+    const translated = zohoInvoices.map(inv => ({
+      id: inv.invoice_id,
+      invNo: inv.invoice_number,
+      poNo: inv.reference_number || inv.salesorder_number || 'BOM-001',
+      vendor: inv.customer_name || 'Customer',
+      customerName: inv.customer_name || 'Customer',
+      date: inv.date,
+      dueDate: inv.due_date,
+      invAmt: `₹ ${Number(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      rawTotal: inv.total,
+      balance: inv.balance,
+      pay: inv.status === 'paid' ? 'Completed & Locked' : (inv.status === 'sent' ? 'Ready for Payment' : 'Draft'),
+      status: inv.status === 'paid' ? 'Invoice Confirmed' : (inv.status === 'sent' ? 'Ready for Payment' : 'Draft'),
+      zohoId: inv.invoice_id
+    }));
+
+    // Merge with local invoice store
+    const localInvoices = supabaseMemoryStore['invoice_store'] || [];
+    localInvoices.forEach(li => {
+      const matchIdx = translated.findIndex(t => t.invNo === li.invNo || t.id === li.id || t.zohoId === li.zohoId);
+      if (matchIdx === -1) {
+        translated.unshift(li);
+      }
+    });
+
+    res.json(translated);
+  } catch (err) {
+    console.error('Error fetching Zoho Invoices:', err);
+    const localInvoices = supabaseMemoryStore['invoice_store'] || [];
+    res.json(localInvoices);
+  }
+});
+
+// Endpoint to CREATE / SYNC a Sales Invoice to Zoho Books
+app.post('/api/zoho/invoices', async (req, res) => {
+  if (!zohoSession.connected) {
+    return res.json({ success: true, message: 'Saved locally', invoice: req.body });
+  }
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    
+    // Lookup customer or fallback contact in Zoho
+    let customerId = req.body.customerId;
+    if (!customerId && req.body.vendor) {
+      const vendorData = await fetchZohoVendors(accessToken);
+      const contacts = (vendorData && Array.isArray(vendorData.contacts)) ? vendorData.contacts : [];
+      const found = contacts.find(c => c.contact_name.toLowerCase() === String(req.body.vendor).toLowerCase());
+      if (found) customerId = found.contact_id;
+    }
+    if (!customerId) customerId = '4080449000000033179'; // Paramount Industrial Supplies (Customer ID in Zoho)
+
+    const lineItems = (req.body.items || []).map(item => ({
+      name: item.name || item.description || 'Solar Rail Product',
+      rate: Number(item.rate || item.price || item.unitValue || 1000),
+      quantity: Number(item.quantity || item.qty || 1),
+      account_id: '4080449000000000567'
+    }));
+
+    if (lineItems.length === 0) {
+      lineItems.push({
+        name: 'Solar Structure Sales Invoice Item',
+        rate: Number(req.body.invAmt ? String(req.body.invAmt).replace(/[^0-9.]/g, '') : 5000),
+        quantity: 1,
+        account_id: '4080449000000000567'
+      });
+    }
+
+    const payload = {
+      customer_id: customerId,
+      date: req.body.date || new Date().toISOString().split('T')[0],
+      reference_number: req.body.poNo || req.body.bomCode || undefined,
+      line_items: lineItems,
+      notes: req.body.notes || 'Sales Invoice created via Control Room'
+    };
+
+    const postData = JSON.stringify(payload);
+    const options = {
+      hostname: 'www.zohoapis.in',
+      port: 443,
+      path: `/books/v3/invoices?organization_id=${zohoSession.orgId}`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const zohoRes = await new Promise((resolve) => {
+      const r = https.request(options, (resp) => {
+        let data = '';
+        resp.on('data', chunk => data += chunk);
+        resp.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch(e) { resolve(null); }
+        });
+      });
+      r.on('error', () => resolve(null));
+      r.write(postData);
+      r.end();
+    });
+
+    if (zohoRes && (zohoRes.code === 0 || zohoRes.invoice)) {
+      const createdInv = zohoRes.invoice;
+      const invObj = {
+        ...req.body,
+        zohoId: createdInv.invoice_id,
+        id: createdInv.invoice_id,
+        invNo: createdInv.invoice_number || req.body.invNo
+      };
+      return res.json({ success: true, message: 'Invoice synced to Zoho Books!', invoice: invObj });
+    } else {
+      return res.json({ success: true, warning: zohoRes?.message || 'Invoice saved locally', invoice: req.body });
+    }
+  } catch (err) {
+    console.error('Error creating Zoho Invoice:', err);
+    res.json({ success: true, warning: 'Saved locally', invoice: req.body });
   }
 });
 
@@ -2642,6 +2797,7 @@ app.post('/api/grns', async (req, res) => {
         const itemCodeClean = String(item.code || item.sku || item.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         
         let addedQty = 0;
+        let grnCategory = null;
         (newGRN.items || []).forEach(grnItem => {
           const grnItemNameClean = String(grnItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const grnItemCodeClean = String(grnItem.code || grnItem.sku || grnItem.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -2651,7 +2807,16 @@ app.post('/api/grns', async (req, res) => {
 
           if (isNameMatch || isCodeMatch) {
             const qty = Number(grnItem.accepted !== undefined ? grnItem.accepted : (grnItem.now || 0));
-            if (qty > 0) addedQty += qty;
+            if (qty > 0) {
+              addedQty += qty;
+              // Classify item category based on GRN selection
+              const specifiedType = (grnItem.itemType || grnItem.category || grnItem.type || '').toString().toLowerCase();
+              if (specifiedType.includes('raw') || specifiedType.includes('rm')) {
+                grnCategory = 'Raw Material';
+              } else if (specifiedType.includes('finished') || specifiedType.includes('fg')) {
+                grnCategory = 'Finished Goods';
+              }
+            }
           }
         });
 
@@ -2659,8 +2824,13 @@ app.post('/api/grns', async (req, res) => {
           itemsUpdated = true;
           const currentStock = Number(item.stock || 0);
           const newStock = currentStock + addedQty;
-          console.log(`[INVENTORY STOCK UPDATE] Item: ${item.name} | Old Stock: ${currentStock} | Received: +${addedQty} | New Stock: ${newStock}`);
-          return { ...item, stock: newStock };
+          console.log(`[INVENTORY STOCK UPDATE] Item: ${item.name} | Old Stock: ${currentStock} | Received: +${addedQty} | New Stock: ${newStock} | Category: ${grnCategory || item.category}`);
+          return { 
+            ...item, 
+            stock: newStock,
+            category: grnCategory || item.category || 'Raw Material',
+            cat: grnCategory || item.cat || item.category || 'Raw Material'
+          };
         }
         return item;
       });
@@ -3270,6 +3440,18 @@ app.post('/api/zoho/items', async (req, res) => {
 
   res.json({ success: true, item: itemToSave, message: 'New product created successfully!' });
 });
+
+// 🌐 SERVE PRODUCTION DIST (FOR PLESK & STANDALONE HOSTING)
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    // If request is not an API call, serve the index.html for client-side routing
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(distPath, 'index.html'));
+    }
+  });
+}
 
 if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {

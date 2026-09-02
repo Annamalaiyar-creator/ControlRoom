@@ -16,6 +16,7 @@ import { VRM_PRODUCTS } from '../utils/vrmProductsData';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 import NotificationToast from './NotificationToast';
 import { addLiveNotification } from './Header';
+import VRMTaxInvoicePrintTemplate from './VRMTaxInvoicePrintTemplate';
 
 
 const saveMediaToCache = (docKey, dataUrl) => {
@@ -1333,6 +1334,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   }, [activeTab]);
 
   const [invoicesList, setInvoicesList] = useState([]);
+  const [printTaxInvoiceModal, setPrintTaxInvoiceModal] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'Invoice Management') {
@@ -1350,6 +1352,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         }
       };
       fetchZohoInvoices();
+
+      const pollInterval = setInterval(() => {
+        fetchZohoInvoices();
+      }, 15000);
+
+      return () => clearInterval(pollInterval);
     }
   }, [activeTab]);
 
@@ -10777,11 +10785,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </thead>
                   <tbody>
                     {[
-                      { order: 'VRM/26/07/118', cust: 'ABC Solar Pvt Ltd', delay: 2, reason: 'Material Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
-                      { order: 'VRM/26/07/101', cust: 'Sun Power EPC', delay: 2, reason: 'Packing Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
-                      { order: 'VRM/26/07/089', cust: 'Green Infra Ltd', delay: 1, reason: 'Invoice Pending', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
-                      { order: 'VRM/26/07/074', cust: 'Bright Energy', delay: 1, reason: 'Vehicle Not Available', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
-                      { order: 'VRM/26/07/061', cust: 'Voltix Solutions', delay: 1, reason: 'QC Hold', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' }
+                      { order: 'WO-1', cust: 'ABC Solar Pvt Ltd', delay: 2, reason: 'Material Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
+                      { order: 'WO-2', cust: 'Sun Power EPC', delay: 2, reason: 'Packing Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
+                      { order: 'WO-3', cust: 'Green Infra Ltd', delay: 1, reason: 'Invoice Pending', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
+                      { order: 'WO-4', cust: 'Bright Energy', delay: 1, reason: 'Vehicle Not Available', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' }
                     ].map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{row.order}</td>
@@ -10996,11 +11003,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </thead>
                   <tbody>
                     {[
-                      { vNo: 'TN 09 AB 1234', trans: 'SRS Logistics', order: 'VRM/26/07/101', cust: 'Sun Power', disp: '23-Jul-2026', eta: '24-Jul-2026' },
-                      { vNo: 'TN 37 CD 5678', trans: 'VRM Transport', order: 'VRM/26/07/089', cust: 'Green Infra', disp: '23-Jul-2026', eta: '24-Jul-2026' },
-                      { vNo: 'KA 01 EF 9012', trans: 'Safe Way', order: 'VRM/26/07/074', cust: 'Bright Energy', disp: '23-Jul-2026', eta: '24-Jul-2026' },
-                      { vNo: 'AP 39 GH 3456', trans: 'SST Transport', order: 'VRM/26/07/061', cust: 'Voltix', disp: '23-Jul-2026', eta: '24-Jul-2026' },
-                      { vNo: 'TN 88 U 7890', trans: 'Speed Cargo', order: 'VRM/26/07/090', cust: 'KPR Mill', disp: '23-Jul-2026', eta: '25-Jul-2026' }
+                      { vNo: 'TN 09 AB 1234', trans: 'SRS Logistics', order: 'WO-2', cust: 'Sun Power', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'TN 37 CD 5678', trans: 'VRM Transport', order: 'WO-3', cust: 'Green Infra', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'KA 01 EF 9012', trans: 'Safe Way', order: 'WO-4', cust: 'Bright Energy', disp: '23-Jul-2026', eta: '24-Jul-2026' },
+                      { vNo: 'TN 88 U 7890', trans: 'Speed Cargo', order: 'WO-5', cust: 'KPR Mill', disp: '23-Jul-2026', eta: '25-Jul-2026' }
                     ].map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0E7490' }}>{row.vNo}</td>
@@ -11101,9 +11107,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </thead>
                   <tbody>
                     {[
-                      { order: 'VRM/26/07/089', cust: 'Green Infra', val: '12,48,000', reason: 'Payment Pending' },
-                      { order: 'VRM/26/07/074', cust: 'Bright Energy', val: '8,36,000', reason: 'Document Pending' },
-                      { order: 'VRM/26/07/061', cust: 'Voltix Solutions', val: '7,28,000', reason: 'QC Hold' }
+                      { order: 'WO-3', cust: 'Green Infra', val: '12,48,000', reason: 'Payment Pending' },
+                      { order: 'WO-4', cust: 'Bright Energy', val: '8,36,000', reason: 'Document Pending' }
                     ].map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '6px 10px', fontWeight: 'bold' }}>{row.order}</td>
@@ -11314,7 +11319,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     {/* Print button */}
                     <button
-                      onClick={() => window.print()}
+                      onClick={() => setPrintTaxInvoiceModal(inv)}
                       style={{
                         backgroundColor: '#FFFFFF',
                         border: '1px solid #CBD5E1',
@@ -11424,18 +11429,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                               { code: 'RM-007', name: 'Nut M8', cat: 'Fasteners', unit: 'Nos', stock: 1200, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '17 Aug 2026 05:10 PM', reserved: 400, openingStock: 1000, goodsReceived: 1000, issuedProd: 800, matReturn: 0, stockAdj: 0 },
                               { code: 'RM-008', name: 'Washer M8', cat: 'Fasteners', unit: 'Nos', stock: 500, minLevel: 1000, status: 'Low Stock', store: 'Store B', hsn: '7318', lastUpdated: '17 Aug 2026 03:30 PM', reserved: 100, openingStock: 800, goodsReceived: 200, issuedProd: 500, matReturn: 0, stockAdj: 0 },
                               { code: 'RM-009', name: 'Zinc Coating', cat: 'Coating', unit: 'Ltr', stock: 80, minLevel: 100, status: 'Low Stock', store: 'Main Store', hsn: '3208', lastUpdated: '16 Aug 2026 01:15 PM', reserved: 15, openingStock: 120, goodsReceived: 40, issuedProd: 80, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-010', name: 'Packing Material', cat: 'Packing', unit: 'Nos', stock: 3200, minLevel: 2000, status: 'In Stock', store: 'Store B', hsn: '3923', lastUpdated: '16 Aug 2026 10:00 AM', reserved: 500, openingStock: 2500, goodsReceived: 1500, issuedProd: 800, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-001', name: 'Column 110x55x30x2.5 (Length 3.2m)', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 100, goodsReceived: 80, issuedProd: 30, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-002', name: 'Rafter 100x50x20x2.0 (Length 2.4m)', cat: 'Steel', unit: 'Nos', stock: 120, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 60, issuedProd: 20, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-003', name: 'Purlin 80x40x15x1.8 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 350, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 40, openingStock: 250, goodsReceived: 180, issuedProd: 80, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-004', name: 'Bracing Angle 40x40x4 (Length 1.8m)', cat: 'Steel', unit: 'Nos', stock: 200, minLevel: 50, status: 'In Stock', store: 'Store B', hsn: '7216', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 25, openingStock: 150, goodsReceived: 90, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-006', name: 'End Clamp 35mm HDG with Fasteners', cat: 'Fasteners', unit: 'Nos', stock: 900, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 100, openingStock: 600, goodsReceived: 500, issuedProd: 200, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-007', name: 'Base Plate 200x200x8mm with Anchor Bolts', cat: 'Steel', unit: 'Set', stock: 180, minLevel: 40, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 100, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-008', name: 'Heavy Column 120x60x30x3.0 (Length 4.0m)', cat: 'Steel', unit: 'Nos', stock: 110, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 80, goodsReceived: 50, issuedProd: 20, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-009', name: 'Heavy Rafter 120x50x20x2.5 (Length 4.5m)', cat: 'Steel', unit: 'Nos', stock: 95, minLevel: 25, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 10, openingStock: 70, goodsReceived: 45, issuedProd: 20, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-010', name: 'Purlin 80x40x15x2.0 (Length 3.5m)', cat: 'Steel', unit: 'Nos', stock: 280, minLevel: 80, status: 'In Stock', store: 'Main Store', hsn: '7308', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 30, openingStock: 200, goodsReceived: 130, issuedProd: 50, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-011', name: 'Cross Bracing Pipe 42.4x2.6mm', cat: 'Steel', unit: 'Nos', stock: 160, minLevel: 40, status: 'In Stock', store: 'Store B', hsn: '7306', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 20, openingStock: 120, goodsReceived: 80, issuedProd: 40, matReturn: 0, stockAdj: 0 },
-                              { code: 'FG-HDG-012', name: 'Base Plate 250x250x10mm with M16 Anchors', cat: 'Steel', unit: 'Set', stock: 140, minLevel: 30, status: 'In Stock', store: 'Main Store', hsn: '7326', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 15, openingStock: 100, goodsReceived: 65, issuedProd: 25, matReturn: 0, stockAdj: 0 },
                               { code: 'MC30', name: 'Mid 30mm', cat: 'Fasteners', unit: 'Nos', stock: 1000, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 }
                             ];
                             const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
@@ -12659,20 +12652,33 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               actionText: '+ Create Work Order',
               searchPlaceholder: 'Search Work Orders (WO No, Product Name, Material)...',
               tabs: [
-                { id: 'All', label: 'All Work Orders', count: 142, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Pending', label: 'Draft / Pending', count: 18, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'InProgress', label: 'In Progress', count: 48, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Ready', label: 'Material Ready', count: 86, bg: '#dcfce7', fg: '#166534' },
-                { id: 'Overdue', label: 'Overdue Jobs', count: 8, bg: '#fee2e2', fg: '#dc2626' }
+                { id: 'All', label: 'All Work Orders', count: (prodModuleEngine.getWorkOrders() || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Draft / Pending', count: (prodModuleEngine.getWorkOrders() || []).filter(w => w.status === 'Draft' || w.status === 'Pending').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'InProgress', label: 'In Progress', count: (prodModuleEngine.getWorkOrders() || []).filter(w => w.status === 'In Progress' || w.status === 'RUNNING').length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Ready', label: 'Material Ready', count: (prodModuleEngine.getWorkOrders() || []).filter(w => w.status === 'Material Ready' || w.status === 'COMPLETED').length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'Overdue', label: 'Overdue Jobs', count: (prodModuleEngine.getWorkOrders() || []).filter(w => w.status === 'OVERDUE' || w.status === 'Overdue').length, bg: '#fee2e2', fg: '#dc2626' }
               ],
               headers: ['Work Order No.', 'Product Name', 'Raw Material Required', 'Planned Qty', 'Completed Qty', 'Warehouse Store', 'Status'],
-              rows: [
-                { code: 'WO-VRM-118', c2: 'Mini Rail 100 mm', c3: 'Raw Aluminum Coil 1.5mm', c4: '500 Nos', c5: '360 Nos', c6: 'RM Store #1', status: 'OVERDUE', stBg: '#fee2e2', stFg: '#dc2626', stBorder: '1px solid #fca5a5', tabGroup: 'Overdue' },
-                { code: 'WO-VRM-101', c2: 'Long Rail 3000 mm', c3: 'HDG Steel Profile Stock', c4: '200 Nos', c5: '120 Nos', c6: 'RM Store #2', status: 'OVERDUE', stBg: '#fee2e2', stFg: '#dc2626', stBorder: '1px solid #fca5a5', tabGroup: 'Overdue' },
-                { code: 'WO-VRM-089', c2: 'Mid Clamp 35 mm', c3: 'Alu Fastener Bar', c4: '1,500 Nos', c5: '1,100 Nos', c6: 'RM Store #1', status: 'IN PROGRESS', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'InProgress' },
-                { code: 'WO-VRM-074', c2: 'Alu. Bracket', c3: 'Alu Extrusion 6063-T6', c4: '400 Nos', c5: '260 Nos', c6: 'RM Store #3', status: 'IN PROGRESS', stBg: '#ffedd5', stFg: '#ea580c', stBorder: '1px solid #fed7aa', tabGroup: 'InProgress' },
-                { code: 'WO-VRM-061', c2: 'End Clamp 35 mm', c3: 'Alu Clamp Stock', c4: '300 Nos', c5: '210 Nos', c6: 'RM Store #1', status: 'MATERIAL READY', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Ready' }
-              ]
+              rows: (prodModuleEngine.getWorkOrders() || []).map(w => {
+                const isOverdue = w.status === 'OVERDUE' || w.status === 'Overdue';
+                const isInProgress = w.status === 'In Progress' || w.status === 'RUNNING';
+                const isReady = w.status === 'Material Ready' || w.status === 'COMPLETED' || w.status === 'Closed';
+                
+                return {
+                  ...w,
+                  code: w.id || w.workOrderNo,
+                  c2: w.finishedProductName || w.productName || 'Solar Mounting Rail',
+                  c3: w.rawMaterialName || w.rawMaterial || 'Raw Alu Coil',
+                  c4: `${(w.targetQty || w.plannedQty || 100).toLocaleString('en-IN')} Nos`,
+                  c5: `${(w.completedQty || 0).toLocaleString('en-IN')} Nos`,
+                  c6: w.productionLocation || w.warehouseStore || 'RM Store #1',
+                  status: (w.status || 'IN PROGRESS').toUpperCase(),
+                  stBg: isOverdue ? '#fee2e2' : (isInProgress ? '#ffedd5' : (isReady ? '#dcfce7' : '#f1f5f9')),
+                  stFg: isOverdue ? '#dc2626' : (isInProgress ? '#ea580c' : (isReady ? '#166534' : '#475569')),
+                  stBorder: isOverdue ? '1px solid #fca5a5' : (isInProgress ? '1px solid #fed7aa' : (isReady ? '1px solid #bbf7d0' : '1px solid #cbd5e1')),
+                  tabGroup: isOverdue ? 'Overdue' : (isInProgress ? 'InProgress' : (isReady ? 'Ready' : 'Pending'))
+                };
+              })
             },
             'Planning & Scheduling': {
               title: 'Production Planning & Shift Scheduling',
@@ -12961,6 +12967,15 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               ...vrmProductItems
             ];
 
+            const getDeletedMaterialCodes = () => {
+              try {
+                const raw = localStorage.getItem('controlroom_deleted_raw_materials');
+                return raw ? JSON.parse(raw) : [];
+              } catch (e) {
+                return [];
+              }
+            };
+
             const [materials, setMaterials] = useState(() => {
               const currentEngineStock = getEngineAluStock();
               const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngineStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngineStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
@@ -13000,11 +13015,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   });
                 });
               }
-              return Array.from(matMap.values());
+              const deletedCodes = getDeletedMaterialCodes();
+              return Array.from(matMap.values()).filter(m => !deletedCodes.includes(m.code));
             });
 
             useEffect(() => {
               const syncEngineInventory = () => {
+                const deletedCodes = getDeletedMaterialCodes();
                 const engineInv = prodModuleEngine.getInventory();
                 const matMap = new Map();
                 const currentEngStock = getEngineAluStock();
@@ -13032,14 +13049,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
                 (engineInv || []).forEach(item => {
                   const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
-                  const isSubProduct = Boolean(item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('300 mm'));
-                  const pCode = isSubProduct ? (item.parentCode || 'MR100N') : null;
+                  const isSubProduct = Boolean(item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('mm'));
+                  const pCode = isSubProduct ? (item.parentCode || mappedCode) : null;
                   const displayCode = pCode || mappedCode;
                   const mapKey = isSubProduct ? `${displayCode}_sub_${item.name}` : displayCode;
 
                   const existing = matMap.get(mapKey) || {};
                   const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
-                  // If existing (from localStorage controlroom_raw_materials_store) has a lower stock due to deduction, use the deducted stock
                   const stockVal = (existing.stock !== undefined)
                     ? Number(existing.stock)
                     : (engineStock !== null ? engineStock : 1000);
@@ -13060,7 +13076,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     store: item.bayLocation || existing.store || 'Main Store',
                     lastUpdated: existing.lastUpdated || 'Live Engine',
                     parentCode: pCode || existing.parentCode,
-                    parentName: isSubProduct ? (item.parentName || '100mm mini rail (new)') : existing.parentName
+                    parentName: isSubProduct ? (item.parentName || existing.parentName || 'Finished Product') : existing.parentName
                   });
                 });
 
@@ -13088,7 +13104,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     });
                   });
                 }
-                setMaterials(Array.from(matMap.values()));
+                const filteredMaterials = Array.from(matMap.values()).filter(m => {
+                  if (deletedCodes.includes(m.code)) return false;
+                  const codeUpper = String(m.code || '').toUpperCase();
+                  return !codeUpper.startsWith('FG-00') && !codeUpper.startsWith('FG-HDG') && !codeUpper.startsWith('FG-NEW');
+                });
+                setMaterials(filteredMaterials);
               };
 
               syncEngineInventory();
@@ -13117,6 +13138,8 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const [selectedRows, setSelectedRows] = useState([]);
             const [pageSize, setPageSize] = useState(10);
             const [goToPageInput, setGoToPageInput] = useState('');
+            const [showDeleteModal, setShowDeleteModal] = useState(false);
+            const [itemsPendingDelete, setItemsPendingDelete] = useState([]);
 
             const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
 
@@ -13308,15 +13331,12 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('rm-') ||
                                  mCode.includes('coil');
 
-                const isFGItem = mCode.startsWith('fg-') || mCat.includes('finished') || mName.includes('mini rail');
-
                 if (isRawMaterialDirectory) {
-                  // Raw Material Directory strictly shows ONLY Aluminum Length (2414 mm)
-                  const isAluLength2414 = mCode.includes('rm-alu-2414') || (mName.includes('aluminum length') && mName.includes('2414'));
-                  if (!isAluLength2414) return false;
+                  // Raw Material Directory strictly shows ONLY Raw Materials
+                  if (!isRawMat) return false;
                 } else {
-                  // Inventory Stores treats EVERYTHING as Finished Goods (hides raw material 2414mm length bars only)
-                  if (mCode.includes('rm-alu-2414') || mName.includes('aluminum length')) return false;
+                  // Inventory Stores strictly shows ONLY Finished Goods (hides all raw materials)
+                  if (isRawMat) return false;
                 }
 
                 const matchesSearch = !searchQuery || m.code.toLowerCase().includes(searchQuery.toLowerCase()) || m.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -14462,6 +14482,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
                           <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center', width: '90px' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -14546,6 +14567,62 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
                                   {m.status}
                                 </span>
+                              </td>
+
+                              {/* Row Action Buttons */}
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenStockAdj(m);
+                                    }}
+                                    title="Edit / Adjust Stock"
+                                    style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #E2E8F0',
+                                      backgroundColor: '#FFFFFF',
+                                      color: '#64748B',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.color = '#64748B'; }}
+                                  >
+                                    <Edit3 size={13} strokeWidth={2.2} />
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setItemsPendingDelete([m]);
+                                      setShowDeleteModal(true);
+                                    }}
+                                    title="Delete Material"
+                                    style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #FEE2E2',
+                                      backgroundColor: '#FFF5F5',
+                                      color: '#DC2626',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFF5F5'; }}
+                                  >
+                                    <Trash2 size={13} strokeWidth={2.2} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -14712,10 +14789,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
 
                     <button
                       onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected item(s)?`)) {
-                          setMaterials(materials.filter(m => !selectedRows.includes(m.code)));
-                          setSelectedRows([]);
-                        }
+                        const items = materials.filter(m => selectedRows.includes(m.code));
+                        setItemsPendingDelete(items.length > 0 ? items : selectedRows.map(c => ({ code: c, name: c })));
+                        setShowDeleteModal(true);
                       }}
                       style={{
                         backgroundColor: '#FEF2F2',
@@ -14755,6 +14831,187 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   </div>
                 )}
 
+                {/* CUSTOM CONTROLROOM DESIGN DELETE CONFIRMATION MODAL */}
+                {showDeleteModal && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 999999,
+                    fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif",
+                    animation: 'fadeIn 0.2s ease-out'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '20px',
+                      padding: '28px',
+                      maxWidth: '460px',
+                      width: '92%',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                      boxSizing: 'border-box'
+                    }}>
+                      {/* Top Header with Circular Red Warning Badge */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '18px' }}>
+                        <div style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '14px',
+                          backgroundColor: '#FEE2E2',
+                          color: '#DC2626',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          boxShadow: '0 4px 10px rgba(220, 38, 38, 0.15)'
+                        }}>
+                          <Trash2 size={24} strokeWidth={2.2} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: '0 0 4px 0' }}>
+                            {itemsPendingDelete.length > 1
+                              ? `Delete ${itemsPendingDelete.length} Materials`
+                              : 'Delete Raw Material'}
+                          </h3>
+                          <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: '500' }}>
+                            This item will be removed from your active stock register.
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Items Preview Box */}
+                      <div style={{
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        padding: '14px 16px',
+                        marginBottom: '20px',
+                        maxHeight: '160px',
+                        overflowY: 'auto'
+                      }}>
+                        {itemsPendingDelete.map((item, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '6px 0',
+                              borderBottom: i < itemsPendingDelete.length - 1 ? '1px solid #EEF2F6' : 'none'
+                            }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, paddingRight: '10px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {item.name || item.code}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace' }}>
+                                Code: {item.code}
+                              </span>
+                            </div>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              backgroundColor: '#ECFEFF',
+                              color: '#0E7490',
+                              border: '1px solid #A5F3FC',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              flexShrink: 0
+                            }}>
+                              {item.stock !== undefined ? `${item.stock} ${item.unit || ''}` : 'Active'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p style={{ fontSize: '12.5px', color: '#64748B', lineHeight: '1.45', margin: '0 0 24px 0' }}>
+                        Are you sure you want to proceed? Once confirmed, this material will be deleted from the Directory.
+                      </p>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDeleteModal(false);
+                            setItemsPendingDelete([]);
+                          }}
+                          style={{
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF',
+                            color: '#475569',
+                            height: '40px',
+                            padding: '0 20px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const codesToDelete = itemsPendingDelete.map(item => item.code);
+                            const currentDeleted = getDeletedMaterialCodes();
+                            const newDeleted = Array.from(new Set([...currentDeleted, ...codesToDelete]));
+                            try {
+                              localStorage.setItem('controlroom_deleted_raw_materials', JSON.stringify(newDeleted));
+                            } catch (e) {}
+
+                            const updatedMaterials = materials.filter(m => !codesToDelete.includes(m.code));
+                            setMaterials(updatedMaterials);
+                            setSelectedRows(prev => prev.filter(code => !codesToDelete.includes(code)));
+                            try {
+                              localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMaterials));
+                            } catch (e) {}
+
+                            // Notify engine inventory listeners
+                            window.dispatchEvent(new CustomEvent('controlroom_raw_materials_update'));
+
+                            setShowDeleteModal(false);
+                            setItemsPendingDelete([]);
+                            if (typeof showCustomAlert === 'function') {
+                              showCustomAlert(
+                                `${codesToDelete.length} material item(s) deleted successfully.`,
+                                'Item Deleted',
+                                'success'
+                              );
+                            }
+                          }}
+                          style={{
+                            border: 'none',
+                            backgroundColor: '#DC2626',
+                            color: '#FFFFFF',
+                            height: '40px',
+                            padding: '0 20px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#B91C1C'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#DC2626'; }}
+                        >
+                          Yes, Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             );
           };
@@ -14778,31 +15035,48 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             useEffect(() => {
               const applyWorkOrders = (workOrdersList) => {
                 if (workOrdersList && Array.isArray(workOrdersList)) {
-                  workOrdersList.forEach(sw => {
+                  // Filter out legacy VRM26 format work order entries (e.g., VRM26/07/061)
+                  const cleanWOs = workOrdersList.filter(sw => {
+                    const woId = sw.workOrderNo || sw.id || '';
+                    return !woId.startsWith('VRM26/07');
+                  });
+
+                  // Remove any existing legacy VRM26 work orders from prodModuleEngine
+                  prodModuleEngine.workOrders = prodModuleEngine.workOrders.filter(w => !String(w.id || '').startsWith('VRM26/07'));
+
+                  cleanWOs.reverse().forEach(sw => {
                     const woId = sw.workOrderNo || sw.id;
                     if (woId) {
-                      const existingWO = prodModuleEngine.getWorkOrderById(woId);
-                      if (existingWO) {
-                        existingWO.targetQty = Number(sw.plannedQty || sw.targetQty) || existingWO.targetQty;
-                        if (sw.status && sw.status !== 'IN_PROGRESS' && sw.status !== 'ACCEPTED') {
-                          existingWO.status = sw.status;
-                        }
+                      const existingIndex = prodModuleEngine.workOrders.findIndex(w => w.id === woId);
+                      const existingWO = existingIndex >= 0 ? prodModuleEngine.workOrders[existingIndex] : null;
+
+                      // Map server status string to internal state key
+                      let parsedStatus = sw.status;
+                      if (sw.status === 'In Progress' || sw.status === 'IN_PROGRESS') parsedStatus = 'IN_PROGRESS';
+                      else if (sw.status === 'Pending' || sw.status === 'PENDING_MATERIAL') parsedStatus = 'PENDING_MATERIAL';
+                      else if (sw.status === 'Completed' || sw.status === 'COMPLETED' || sw.status === 'COMPLETED_PENDING_VERIFICATION') parsedStatus = 'COMPLETED_PENDING_VERIFICATION';
+
+                      const formattedWO = {
+                        id: woId,
+                        date: sw.targetDate || sw.date || new Date().toISOString().split('T')[0],
+                        productionHead: 'Senthil Kumar (Production Head)',
+                        finishedProductCode: sw.productName || sw.finishedProductCode || 'MR100',
+                        finishedProductName: sw.productName || sw.finishedProductName || 'Mini Rail 100 mm',
+                        targetQty: Number(sw.plannedQty || sw.targetQty) || 500,
+                        cutLengthMm: 300,
+                        productItems: sw.productItems || (existingWO ? existingWO.productItems : []),
+                        unit: 'Pieces',
+                        rawMaterialName: sw.rawMaterial || sw.rawMaterialName || 'Raw Aluminum Coil 1.5mm',
+                        priority: sw.priority || (existingWO ? existingWO.priority : 'Normal'),
+                        assignedEmployee: sw.assignedEmployee || (existingWO ? existingWO.assignedEmployee : 'Floor Team'),
+                        status: (existingWO && existingWO.status && existingWO.status !== 'PENDING_MATERIAL') ? existingWO.status : (parsedStatus || 'PENDING_MATERIAL')
+                      };
+
+                      if (existingIndex >= 0) {
+                        const [oldWO] = prodModuleEngine.workOrders.splice(existingIndex, 1);
+                        prodModuleEngine.workOrders.unshift({ ...oldWO, ...formattedWO });
                       } else {
-                        prodModuleEngine.workOrders.unshift({
-                          id: woId,
-                          date: sw.targetDate || sw.date || new Date().toISOString().split('T')[0],
-                          productionHead: 'Senthil Kumar (Production Head)',
-                          finishedProductCode: sw.productName || sw.finishedProductCode || 'MR100',
-                          finishedProductName: sw.productName || sw.finishedProductName || 'Mini Rail 100 mm',
-                          targetQty: Number(sw.plannedQty || sw.targetQty) || 500,
-                          cutLengthMm: 300,
-                          productItems: [],
-                          unit: 'Pieces',
-                          rawMaterialName: sw.rawMaterial || sw.rawMaterialName || 'Raw Aluminum Coil 1.5mm',
-                          priority: 'Normal',
-                          assignedEmployee: 'Floor Team',
-                          status: sw.status === 'In Progress' ? 'IN_PROGRESS' : (sw.status === 'Pending' ? 'PENDING_MATERIAL' : (sw.status || 'PENDING_MATERIAL'))
-                        });
+                        prodModuleEngine.workOrders.unshift(formattedWO);
                       }
                     }
                   });
@@ -14853,14 +15127,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               const statusStr = (wo.status || 'PLANNED').toUpperCase();
 
               let formattedStatus = (wo.status || 'PLANNED').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-              if (statusStr === 'ACCEPTED') { formattedStatus = 'Accept / Work Start'; }
+              if (statusStr === 'ACCEPTED') { formattedStatus = 'Accepted / Ready'; }
+              else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { formattedStatus = 'Pending Verification'; }
+              else if (statusStr === 'PENDING_MATERIAL') { formattedStatus = 'Pending Material'; }
 
               if (statusStr === 'PENDING_MATERIAL') { stBg = '#FEF3C7'; stFg = '#D97706'; progress = 10; }
               else if (statusStr === 'MATERIAL_RESERVED') { stBg = '#E0F2FE'; stFg = '#0284C7'; progress = 25; }
               else if (statusStr === 'MATERIAL_ISSUED') { stBg = '#EDE9FE'; stFg = '#7C3AED'; progress = 35; }
               else if (statusStr === 'ACCEPTED') { stBg = '#E0E7FF'; stFg = '#4338CA'; progress = 45; }
               else if (statusStr === 'IN_PROGRESS') { stBg = '#DCFCE7'; stFg = '#16A34A'; progress = 75; }
-              else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { stBg = '#CFFAFE'; stFg = '#0E7490'; progress = 90; }
+              else if (statusStr === 'COMPLETED_PENDING_VERIFICATION') { stBg = '#E0F2FE'; stFg = '#0369A1'; progress = 90; }
               else if (statusStr === 'APPROVED_CLOSED') { stBg = '#DCFCE7'; stFg = '#15803D'; progress = 100; }
 
               let rawItems = wo.productItems;
@@ -14872,14 +15148,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 ? itemsList.reduce((acc, it) => acc + (Number(it.targetQty) || 0), 0)
                 : (Number(wo.targetQty) || 1);
 
-              const cutSummary = itemsList.length > 1
-                ? itemsList.map(it => `${it.targetQty || 1}x ${it.cutLength || 300}mm`).join(' + ')
-                : (wo.cutLengthMm ? `${wo.cutLengthMm} mm` : (wo.finishedProductName || 'Product'));
+              let displayProductName = wo.finishedProductName;
+              if (!displayProductName) {
+                if (itemsList.length > 1) {
+                  displayProductName = `Mini Rail (${itemsList.map(it => `${it.targetQty || 1}x ${it.cutLength || 300}mm`).join(' + ')})`;
+                } else if (itemsList.length === 1 && itemsList[0].cutLength) {
+                  displayProductName = `Mini Rail ${itemsList[0].cutLength} mm Height`;
+                } else {
+                  displayProductName = wo.cutLengthMm ? `Mini Rail (${wo.cutLengthMm} mm)` : 'Mini Rail Structure';
+                }
+              }
 
               return {
                 rawWO: wo,
                 woNo: wo.id,
-                product: cutSummary !== '' ? `Mini Rail (${cutSummary})` : (wo.finishedProductName || 'Mini Rail'),
+                product: displayProductName,
                 customer: wo.salesOrderNo ? `SO #${wo.salesOrderNo}` : 'Internal Stock',
                 line: wo.productionLine || 'Line A',
                 qty: `${calculatedTotalQty.toLocaleString()} Pcs`,
@@ -15397,6 +15680,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   onClick={() => {
                                     try {
                                       prodModuleEngine.acceptWorkOrder(selectedWoForAcceptanceModal.id);
+                                      setEngineTick(t => t + 1);
                                       alert(`✅ Work Order ${selectedWoForAcceptanceModal.id} has been ACCEPTED!`);
                                       setSelectedWoForAcceptanceModal(null);
                                       setSelectedRows([]);
@@ -15671,6 +15955,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             onClick={() => {
                               try {
                                 prodModuleEngine.acceptWorkOrder(selectedWoForAcceptanceModal.id);
+                                setEngineTick(t => t + 1);
                                 alert(`✅ Work Order ${selectedWoForAcceptanceModal.id} has been ACCEPTED by Floor Employee! Status is now ACCEPTED.`);
                                 setSelectedWoForAcceptanceModal(null);
                                 setSelectedRows([]);
@@ -15798,43 +16083,50 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           <Eye size={14} style={{ color: '#0F172A' }} /> View Details
                         </button>
 
-                        {/* ACCEPT WORK ORDER ACTION (ONLY IF NOT YET ACCEPTED / IN_PROGRESS) */}
-                        {!(selectedWoObjects[0]?.status === 'ACCEPTED' || selectedWoObjects[0]?.status === 'IN_PROGRESS' || selectedWoObjects[0]?.status === 'COMPLETED_PENDING_VERIFICATION') && (
-                          <button
-                            onClick={() => {
-                              const targetId = selectedRows[0];
-                              const allWOs = prodModuleEngine.getWorkOrders();
-                              const targetWO = allWOs.find(w => w.id === targetId) || allWOs[0];
-                              if (targetWO) {
-                                setSelectedWoForAcceptanceModal(targetWO);
-                              }
-                            }}
-                            style={{
-                              backgroundColor: '#FFFFFF',
-                              border: '1px solid #E2E8F0',
-                              color: '#7C3AED',
-                              borderRadius: '10px',
-                              padding: '6px 14px',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                          >
-                            <CheckCircle size={14} style={{ color: '#7C3AED' }} /> Accept WO
-                          </button>
-                        )}
+                        {/* ACCEPT WORK ORDER ACTION (SHOWN WHENEVER ORDER IS NOT YET ACCEPTED/IN_PROGRESS) */}
+                        {(() => {
+                          const targetWO = selectedWoObjects[0] || prodModuleEngine.getWorkOrderById(selectedRows[0]);
+                          const woSt = String(targetWO?.status || '').toUpperCase();
+                          const canAcceptOrder = !(woSt === 'ACCEPTED' || woSt === 'IN_PROGRESS' || woSt === 'COMPLETED_PENDING_VERIFICATION' || woSt === 'APPROVED_CLOSED');
+
+                          return canAcceptOrder ? (
+                            <button
+                              onClick={() => {
+                                const targetId = selectedRows[0];
+                                try {
+                                  prodModuleEngine.acceptWorkOrder(targetId);
+                                  setEngineTick(t => t + 1);
+                                  showCustomAlert(`✅ Work Order ${targetId} has been ACCEPTED!`, 'Work Order Accepted', 'success');
+                                  setSelectedRows([]);
+                                } catch (err) {
+                                  showCustomAlert(`❌ Error accepting Work Order: ${err.message}`, 'Acceptance Error', 'error');
+                                }
+                              }}
+                              style={{
+                                backgroundColor: '#7C3AED',
+                                border: 'none',
+                                color: '#FFFFFF',
+                                borderRadius: '10px',
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 6px rgba(124, 58, 237, 0.3)',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <CheckCircle size={14} style={{ color: '#FFFFFF' }} /> Accept WO
+                            </button>
+                          ) : null;
+                        })()}
 
                         {/* UPDATE STATUS ACTION */}
                         <button
                           onClick={() => {
-                            const targetWO = selectedWoObjects[0] || prodModuleEngine.getWorkOrders()[0];
+                            const targetWO = selectedWoObjects[0] || prodModuleEngine.getWorkOrderById(selectedRows[0]) || prodModuleEngine.getWorkOrders()[0];
                             if (targetWO) {
                               setSelectedWoForStatusUpdate(targetWO);
                               setActualGoodOutputVal(String(targetWO.targetQty || ''));
@@ -24630,6 +24922,14 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
           </>
         );
       })()}
+
+      {/* VRM TAX INVOICE PRINT MODAL TEMPLATE */}
+      {printTaxInvoiceModal && (
+        <VRMTaxInvoicePrintTemplate
+          invoiceData={printTaxInvoiceModal}
+          onClose={() => setPrintTaxInvoiceModal(null)}
+        />
+      )}
     </div>
   );
 }

@@ -32,14 +32,14 @@ function App() {
     setToastAlert({ message: msg, title, type });
   };
 
-  // Authentication & Role State (Persists logged-in session on page refresh)
+  // Authentication & Role State (Strict authentication guard - defaults to FALSE unless logged in)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const val = localStorage.getItem('controlroom_is_authenticated');
-    return val === null ? true : val === 'true';
+    return val === 'true';
   });
 
   const [userRole, setUserRole] = useState(() => {
-    return localStorage.getItem('controlroom_user_role') || 'Procurement Admin';
+    return localStorage.getItem('controlroom_user_role') || '';
   });
 
   // Active Tab State (Restores current active tab on page refresh)
@@ -114,12 +114,14 @@ function App() {
     fetchDashboardData();
   }, []);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !userRole) {
     return <LoginScreen onLoginSuccess={(role) => handleRoleSwitch(role)} />;
   }
 
   // Developer / Technical Admin Portal Dedicated Fullscreen Console
-  if (userRole === 'Technical Administrator' || activeTab === 'Developer Console' || activeTab === 'Developer Portal') {
+  const isDevRole = userRole === 'Technical Administrator' || userRole === 'Developer' || (userRole || '').startsWith('TA') || activeTab === 'Developer Console' || activeTab === 'Developer Portal';
+  
+  if (isDevRole) {
     return (
       <>
         <DeveloperPortalView 
@@ -163,8 +165,6 @@ function App() {
         <div className="content-pane procurement-layout">
           {(activeTab === 'Dashboard' || activeTab === 'Production Dashboard' || activeTab === 'Dispatch Dashboard' || activeTab === 'Supervisor Dashboard' || activeTab === 'Operator Workspace' || activeTab === 'Floor Employee') && (userRole.includes('Production') || userRole === 'Dispatch Head' || userRole === 'Floor Employee' || userRole === 'Machine Operator' || userRole === 'Production Head') ? (
             <ProductionAdminView activeTab={activeTab} userRole={userRole} />
-          ) : activeTab === 'Dashboard' || activeTab === 'Executive Dashboard' || activeTab === 'Procurement Dashboard' || activeTab === 'Finance & Accounts' || activeTab === 'Sales & CRM' || activeTab === 'Design & BOM Center' ? (
-            <DashboardFullReference userRole={userRole} />
           ) : (activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
             <PerformaInvoiceView 
               userRole={userRole}
@@ -181,7 +181,7 @@ function App() {
             <MaterialCalculationEngine onBack={() => handleTabChange('BOM')} />
           ) : (activeTab === 'Inventory Stock Conversion' || activeTab === 'Enter Coil Purchase (in Ton)' || activeTab === 'Inventory - (Auto Conversion)') ? (
             <InventoryAutoConversion />
-          ) : (
+          ) : (activeTab !== 'Dashboard' && activeTab !== 'Executive Dashboard' && activeTab !== 'Procurement Dashboard' && activeTab !== 'Finance & Accounts' && activeTab !== 'Sales & CRM' && activeTab !== 'Design & BOM Center') ? (
             <OtherViews 
               activeTab={activeTab} 
               onChangeTab={handleTabChange} 
@@ -189,6 +189,8 @@ function App() {
               convertingPiData={convertingPiData}
               onClearConvertingPiData={() => setConvertingPiData(null)}
             />
+          ) : (
+            <DashboardFullReference userRole={userRole} />
           )}
         </div>
       </main>
@@ -198,188 +200,43 @@ function App() {
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(8px)',
+          backgroundColor: '#F5F5FA',
+          zIndex: 999999,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999999
+          justifyContent: 'center'
         }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '20px',
-            width: '460px',
-            maxWidth: '92%',
-            padding: '32px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: '#2563EB',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 12px',
-                fontWeight: 'bold',
-                fontSize: '20px'
-              }}>
-                CR
-              </div>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#0F172A' }}>ControlRoom Portal Portal Login</h2>
-              <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748B' }}>
-                Select your administrative portal to sign in
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  handleRoleSwitch('Procurement Admin');
-                  setShowLoginModal(false);
-                }}
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px',
-                  border: userRole === 'Procurement Admin' ? '2px solid #2563EB' : '1px solid #E2E8F0',
-                  backgroundColor: userRole === 'Procurement Admin' ? '#EFF6FF' : '#F8FAFC',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#DBEAFE', color: '#2563EB',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <ShoppingCart style={{ width: '20px', height: '20px' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>Procurement Admin Portal</div>
-                  <div style={{ fontSize: '11px', color: '#64748B' }}>POs, Vendors, GRN, Invoices & Zoho Books</div>
-                </div>
-                <ArrowRight style={{ width: '16px', height: '16px', color: '#2563EB' }} />
-              </button>
-
-              <button
-                onClick={() => {
-                  handleRoleSwitch('Sales Head');
-                  setShowLoginModal(false);
-                }}
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px',
-                  border: userRole === 'Sales Head' ? '2px solid #059669' : '1px solid #E2E8F0',
-                  backgroundColor: userRole === 'Sales Head' ? '#ECFDF5' : '#F8FAFC',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#D1FAE5', color: '#059669',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <Receipt style={{ width: '20px', height: '20px' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>BOM & Sales Order Portal</div>
-                  <div style={{ fontSize: '11px', color: '#64748B' }}>Create & Manage BOMs, Customer Management</div>
-                </div>
-                <ArrowRight style={{ width: '16px', height: '16px', color: '#059669' }} />
-              </button>
-
-              <button
-                onClick={() => {
-                  handleRoleSwitch('Accounts Head');
-                  setShowLoginModal(false);
-                }}
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px',
-                  border: userRole === 'Accounts Head' ? '2px solid #D97706' : '1px solid #E2E8F0',
-                  backgroundColor: userRole === 'Accounts Head' ? '#FFFBEB' : '#F8FAFC',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEF3C7', color: '#D97706',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <Receipt style={{ width: '20px', height: '20px' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>Accounts & Invoice Portal</div>
-                  <div style={{ fontSize: '11px', color: '#64748B' }}>Invoice Ledger, Payments & Financial Reports</div>
-                </div>
-                <ArrowRight style={{ width: '16px', height: '16px', color: '#D97706' }} />
-              </button>
-
-              <button
-                onClick={() => {
-                  handleRoleSwitch('Production Admin');
-                  setShowLoginModal(false);
-                }}
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px',
-                  border: userRole === 'Production Admin' ? '2px solid #9333EA' : '1px solid #E2E8F0',
-                  backgroundColor: userRole === 'Production Admin' ? '#F3E8FF' : '#F8FAFC',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#F3E8FF', color: '#9333EA',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <Factory style={{ width: '20px', height: '20px' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0F172A' }}>Production Admin Portal</div>
-                  <div style={{ fontSize: '11px', color: '#64748B' }}>Work Orders, Job Cards, MRNs & Line Output</div>
-                </div>
-                <ArrowRight style={{ width: '16px', height: '16px', color: '#9333EA' }} />
-              </button>
-            </div>
-
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <button
               onClick={() => setShowLoginModal(false)}
               style={{
-                height: '36px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
+                position: 'absolute',
+                top: '20px',
+                right: '24px',
+                zIndex: 1000000,
                 backgroundColor: '#FFFFFF',
-                color: '#475569',
-                fontSize: '13px',
-                fontWeight: '600',
+                border: '1px solid #CBD5E1',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer',
-                marginTop: '4px'
+                fontWeight: '900',
+                color: '#64748B',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}
+              title="Close Portal Switcher"
             >
-              Cancel
+              ✕
             </button>
+            <LoginScreen 
+              onLoginSuccess={(role) => {
+                handleRoleSwitch(role);
+                setShowLoginModal(false);
+              }} 
+            />
           </div>
         </div>
       )}

@@ -60,8 +60,26 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
   const unreadNotifications = roleNotifications.filter(n => !readIds.includes(n.id));
   const unreadCount = unreadNotifications.length;
 
-  const userName = isProdAdmin ? 'Senthil Kumar' : 'Arun';
-  const avatarLetter = isProdAdmin ? 'S' : 'A';
+  // Map userRole or logged_user_name to person's actual name
+  const storedName = localStorage.getItem('controlroom_logged_user_name');
+  let userName = storedName;
+  if (!userName) {
+    if (userRole === 'Production Head') userName = 'Senthil Kumar';
+    else if (userRole === 'Technical Administrator' || userRole === 'CEO') userName = 'Annamalaiyar';
+    else if (userRole === 'Dispatch Head') userName = 'Karthik Raja';
+    else if (userRole === 'Floor Supervisor') userName = 'Murugan';
+    else if (userRole === 'Floor Employee') userName = 'Ramesh';
+    else if (userRole === 'Accounts Head') userName = 'Venkatesh';
+    else if (userRole === 'Accounts Executive') userName = 'Priya';
+    else if (userRole === 'Sales Head') userName = 'Vijay';
+    else if (userRole === 'Sales Executive') userName = 'Saravanan';
+    else if (userRole === 'Design Engineer') userName = 'Dinesh';
+    else if (userRole === 'Design Executive') userName = 'Kavitha';
+    else if (userRole === 'Invoice Executive') userName = 'Anand';
+    else if (userRole === 'BOM Executive') userName = 'Balaji';
+    else userName = 'Arun Kumar';
+  }
+  const avatarLetter = userName.charAt(0).toUpperCase();
 
   const markItemAsRead = (id, e) => {
     if (e) e.stopPropagation();

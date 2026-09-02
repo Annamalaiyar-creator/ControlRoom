@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 
 export default function DeveloperPortalView({ userRole, onSignOut, showCustomAlert }) {
+  // Sidebar Collapse state
+  const [isDevSidebarCollapsed, setIsDevSidebarCollapsed] = useState(false);
+
   // Navigation tab state
   const [activeDevTab, setActiveDevTab] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -291,45 +294,116 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
         </div>
       )}
 
-      {/* ─── TECHNICAL DEVELOPER SIDEBAR ─── */}
-      <aside style={{ width: '270px', backgroundColor: '#0F172A', borderRight: '1px solid #1E293B', display: 'flex', flexDirection: 'column', flexShrink: 0, marginTop: isMaintenanceMode ? '36px' : '0' }}>
+      {/* ─── TECHNICAL DEVELOPER SIDEBAR (INDEPENDENTLY SCROLLABLE WITH COLLAPSE TOGGLE) ─── */}
+      <aside style={{
+        width: isDevSidebarCollapsed ? '78px' : '270px',
+        backgroundColor: '#0F172A',
+        borderRight: '1px solid #1E293B',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        flexShrink: 0,
+        marginTop: isMaintenanceMode ? '36px' : '0',
+        transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        overflow: 'hidden'
+      }}>
         
-        {/* Brand Header */}
-        <div style={{ padding: '20px 18px', borderBottom: '1px solid #1E293B', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(14, 165, 233, 0.4)' }}>
-            <Code style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+        {/* Brand Header & Collapse Toggle Button */}
+        <div style={{
+          padding: isDevSidebarCollapsed ? '16px 8px' : '18px 16px',
+          borderBottom: '1px solid #1E293B',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isDevSidebarCollapsed ? 'center' : 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(14, 165, 233, 0.4)',
+              flexShrink: 0
+            }}>
+              <Code style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+            </div>
+            {!isDevSidebarCollapsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ fontSize: '15px', fontWeight: '900', color: '#F8FAFC', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>ControlRoom</div>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>DEV CONSOLE v2.4.1</div>
+              </div>
+            )}
           </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: '900', color: '#F8FAFC', letterSpacing: '-0.3px' }}>ControlRoom</div>
-            <div style={{ fontSize: '10px', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.5px' }}>DEV CONSOLE v2.4.1</div>
-          </div>
+
+          {/* Collapse toggle button matching Production design */}
+          <button
+            onClick={() => setIsDevSidebarCollapsed(!isDevSidebarCollapsed)}
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '8px',
+              border: '1px solid #334155',
+              backgroundColor: '#1E293B',
+              color: '#94A3B8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontSize: '13px',
+              fontWeight: '900',
+              lineHeight: 1,
+              transition: 'all 0.15s ease',
+              marginLeft: isDevSidebarCollapsed ? '0' : '6px'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#0284C7'; e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.borderColor = '#38BDF8'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#1E293B'; e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.borderColor = '#334155'; }}
+            title={isDevSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isDevSidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
 
-        {/* Sidebar Search */}
-        <div style={{ padding: '12px 14px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#64748B' }} />
-            <input
-              type="text"
-              placeholder="Filter dev tools..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%', height: '32px', borderRadius: '6px', backgroundColor: '#1E293B', border: '1px solid #334155', paddingLeft: '30px', paddingRight: '10px', fontSize: '12px', color: '#F1F5F9', outline: 'none' }}
-            />
+        {/* Sidebar Search (Visible when expanded) */}
+        {!isDevSidebarCollapsed && (
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid #1E293B' }}>
+            <div style={{ position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#64748B' }} />
+              <input
+                type="text"
+                placeholder="Filter dev tools..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%', height: '32px', borderRadius: '6px', backgroundColor: '#1E293B', border: '1px solid #334155', paddingLeft: '30px', paddingRight: '10px', fontSize: '12px', color: '#F1F5F9', outline: 'none' }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Navigation Categories */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 20px 10px' }}>
+        {/* Navigation Categories (ISOLATED INDEPENDENTLY SCROLLABLE AREA) */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: isDevSidebarCollapsed ? '10px 6px' : '10px',
+          boxSizing: 'border-box'
+        }}>
           {devSidebarCategories.map((cat, idx) => {
             const filteredItems = cat.items.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase()));
             if (filteredItems.length === 0) return null;
 
             return (
-              <div key={idx} style={{ marginTop: '14px' }}>
-                <div style={{ fontSize: '9.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.8px', padding: '4px 10px', marginBottom: '4px' }}>
-                  {cat.category}
-                </div>
+              <div key={idx} style={{ marginTop: idx === 0 ? '4px' : '14px' }}>
+                {!isDevSidebarCollapsed && (
+                  <div style={{ fontSize: '9.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.8px', padding: '4px 10px', marginBottom: '4px' }}>
+                    {cat.category}
+                  </div>
+                )}
                 {filteredItems.map(item => {
                   const IconComp = item.icon;
                   const isActive = activeDevTab === item.id;
@@ -337,12 +411,13 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                     <button
                       key={item.id}
                       onClick={() => setActiveDevTab(item.id)}
+                      title={isDevSidebarCollapsed ? item.label : undefined}
                       style={{
                         width: '100%',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 10px',
+                        justifyContent: isDevSidebarCollapsed ? 'center' : 'space-between',
+                        padding: isDevSidebarCollapsed ? '10px' : '8px 10px',
                         borderRadius: '6px',
                         backgroundColor: isActive ? '#0284C7' : 'transparent',
                         color: isActive ? '#FFFFFF' : '#94A3B8',
@@ -357,10 +432,10 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                       onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#94A3B8'; } }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <IconComp style={{ width: '16px', height: '16px', color: isActive ? '#FFFFFF' : '#64748B' }} />
-                        <span>{item.label}</span>
+                        <IconComp style={{ width: '16px', height: '16px', color: isActive ? '#FFFFFF' : '#64748B', flexShrink: 0 }} />
+                        {!isDevSidebarCollapsed && <span>{item.label}</span>}
                       </div>
-                      {item.badge && (
+                      {!isDevSidebarCollapsed && item.badge && (
                         <span style={{ backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '10px', fontWeight: '800', padding: '1px 6px', borderRadius: '10px' }}>
                           {item.badge}
                         </span>
@@ -374,24 +449,28 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
         </div>
 
         {/* Technical Developer Profile Footer */}
-        <div style={{ padding: '14px', borderTop: '1px solid #1E293B', backgroundColor: '#0B0F17' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: isDevSidebarCollapsed ? '10px 6px' : '14px', borderTop: '1px solid #1E293B', backgroundColor: '#0B0F17' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isDevSidebarCollapsed ? 'center' : 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0284C7', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '13px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#0284C7', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '13px', flexShrink: 0 }}>
                 A
               </div>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#F1F5F9' }}>Annamalaiyar</div>
-                <div style={{ fontSize: '10px', color: '#38BDF8' }}>Technical Lead Admin</div>
-              </div>
+              {!isDevSidebarCollapsed && (
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#F1F5F9' }}>Annamalaiyar</div>
+                  <div style={{ fontSize: '10px', color: '#38BDF8' }}>Technical Lead Admin</div>
+                </div>
+              )}
             </div>
-            <button
-              onClick={onSignOut}
-              style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px' }}
-              title="Sign Out Developer Console"
-            >
-              <LogOut style={{ width: '16px', height: '16px' }} />
-            </button>
+            {!isDevSidebarCollapsed && (
+              <button
+                onClick={onSignOut}
+                style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px' }}
+                title="Sign Out Developer Console"
+              >
+                <LogOut style={{ width: '16px', height: '16px' }} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -448,6 +527,42 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
           {activeDevTab === 'Dashboard' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
+              {/* WELCOME BANNER CARD FOR DEVELOPER CONSOLE */}
+              <div style={{
+                backgroundColor: '#0F172A',
+                borderRadius: '12px',
+                border: '1px solid #1E293B',
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#F8FAFC', margin: 0, letterSpacing: '-0.02em' }}>
+                      Welcome back, {localStorage.getItem('controlroom_logged_user_name') || userRole || 'Technical Administrator'}!
+                    </h2>
+                    <p style={{ fontSize: '13px', color: '#94A3B8', margin: '4px 0 0 0', fontWeight: '500' }}>
+                      System engineering console active — Full server infrastructure, API monitoring & database control.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Console Engine</div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38BDF8', boxShadow: '0 0 8px #38BDF8' }}></span>
+                      v2.4.1 Production
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Quick Actions Panel */}
               <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', padding: '16px 20px', border: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
@@ -890,8 +1005,150 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
             </div>
           )}
 
+          {/* 9. USER TECHNICAL CONTROL / USER MANAGEMENT */}
+          {activeDevTab === 'UserManagement' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#F8FAFC' }}>User Management & Employee Access Approval Control</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>Inspect registration access requests, grant developer authorization, and manage active/disabled employee accounts.</p>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', border: '1px solid #334155', padding: '16px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#0F172A', color: '#64748B', textAlign: 'left', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '12px 14px' }}>EMPLOYEE CODE</th>
+                      <th style={{ padding: '12px 14px' }}>EMPLOYEE NAME</th>
+                      <th style={{ padding: '12px 14px' }}>ROLE / TYPE</th>
+                      <th style={{ padding: '12px 14px' }}>EMAIL</th>
+                      <th style={{ padding: '12px 14px' }}>STATUS</th>
+                      <th style={{ padding: '12px 14px' }}>DEVELOPER ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]')).length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '28px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                          No employee accounts registered yet. When users sign up, their accounts will appear here.
+                        </td>
+                      </tr>
+                    ) : (
+                      (JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]')).map((emp, idx) => {
+                        const empCode = emp.employee_code || emp.code;
+                        const empStatus = emp.status || 'Active';
+                        const isPending = empStatus === 'Pending Approval';
+
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #334155', backgroundColor: isPending ? 'rgba(217, 119, 6, 0.08)' : 'transparent' }}>
+                          <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: '800', color: '#38BDF8' }}>{empCode}</td>
+                          <td style={{ padding: '12px 14px', fontWeight: '700', color: '#F8FAFC' }}>{emp.employee_name || emp.name}</td>
+                          <td style={{ padding: '12px 14px', color: '#CBD5E1' }}>{emp.role}</td>
+                          <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{emp.email}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{ 
+                              backgroundColor: empStatus === 'Disabled' ? '#7F1D1D' : isPending ? '#B45309' : '#065F46', 
+                              color: empStatus === 'Disabled' ? '#FCA5A5' : isPending ? '#FDE68A' : '#34D399', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '11px', 
+                              fontWeight: '800' 
+                            }}>
+                              {empStatus}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            {isPending ? (
+                              <button
+                                onClick={() => {
+                                  try {
+                                    const list = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+                                    const updated = list.map(e => (e.employee_code === empCode ? { ...e, status: 'Active' } : e));
+                                    localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                    if (showCustomAlert) showCustomAlert(`Access granted to Employee ${empCode} (${emp.role}). Account is now Active!`, 'Access Granted', 'success');
+                                  } catch(err) {}
+                                }}
+                                style={{ backgroundColor: '#059669', border: 'none', color: '#FFFFFF', padding: '6px 12px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                ✓ Grant Access (Approve)
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  try {
+                                    const list = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+                                    const updated = list.map(e => (e.employee_code === empCode ? { ...e, status: 'Disabled' } : e));
+                                    localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                    if (showCustomAlert) showCustomAlert(`Employee Account ${empCode} status updated to Disabled (Data Preserved).`, 'Account Disabled', 'warning');
+                                  } catch(err) {}
+                                }}
+                                style={{ backgroundColor: '#334155', border: 'none', color: '#F1F5F9', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                              >
+                                {empStatus === 'Disabled' ? 'Access Disabled' : 'Disable Access'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    }))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 10. ACTIVITY AUDIT LOGS WITH BEFORE/AFTER TRACKING */}
+          {activeDevTab === 'ActivityLogs' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#F8FAFC' }}>Developer Audit Trail & Before/After Change History</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>Complete audit logs tracking user activity, login attempts, and record field mutations.</p>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', border: '1px solid #334155', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#0F172A', color: '#64748B', textAlign: 'left', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '12px 14px' }}>TIMESTAMP</th>
+                      <th style={{ padding: '12px 14px' }}>EMPLOYEE CODE</th>
+                      <th style={{ padding: '12px 14px' }}>MODULE</th>
+                      <th style={{ padding: '12px 14px' }}>ACTION</th>
+                      <th style={{ padding: '12px 14px' }}>RECORD ID</th>
+                      <th style={{ padding: '12px 14px' }}>BEFORE VALUE</th>
+                      <th style={{ padding: '12px 14px' }}>AFTER VALUE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { time: '10:32 AM', code: 'AH-VRM001', module: 'Invoice', action: 'UPDATE', record: 'INV-1025', before: 'Amount: ₹85,000', after: 'Amount: ₹90,000' },
+                      { time: '10:10 AM', code: 'AH-VRM001', module: 'Invoice', action: 'UPDATE', record: 'INV-1025', before: 'Terms: 30 Days', after: 'Terms: 45 Days' },
+                      { time: '09:45 AM', code: 'SE-VRM001', module: 'Customer', action: 'UPDATE', record: 'CUST-304', before: 'Address: Chennai', after: 'Address: Kanchipuram' },
+                      { time: '09:20 AM', code: 'SE-VRM001', module: 'Customer', action: 'CREATE', record: 'CUST-304', before: '—', after: 'Customer: Vikram Solar' },
+                      { time: '08:50 AM', code: 'TA-VRM001', module: 'Auth', action: 'LOGIN', record: 'AUTH-001', before: 'Status: Offline', after: 'Status: Active Session' }
+                    ].map((log, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
+                        <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{log.time}</td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: '800', color: '#38BDF8' }}>{log.code}</td>
+                        <td style={{ padding: '12px 14px', color: '#CBD5E1' }}>{log.module}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ backgroundColor: '#0369A1', color: '#FFFFFF', padding: '2px 8px', borderRadius: '4px', fontSize: '10.5px', fontWeight: '800' }}>{log.action}</span>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#F8FAFC' }}>{log.record}</td>
+                        <td style={{ padding: '12px 14px', color: '#FCA5A5', fontFamily: 'monospace' }}>{log.before}</td>
+                        <td style={{ padding: '12px 14px', color: '#34D399', fontFamily: 'monospace' }}>{log.after}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* OTHER TABS GENERIC PLACEHOLDER */}
-          {!['Dashboard', 'Environments', 'ErrorLogs', 'BackgroundJobs', 'BackupRestore', 'Rollback', 'FeatureFlags', 'ActiveSessions'].includes(activeDevTab) && (
+          {!['Dashboard', 'Environments', 'ErrorLogs', 'BackgroundJobs', 'BackupRestore', 'Rollback', 'FeatureFlags', 'ActiveSessions', 'UserManagement', 'ActivityLogs'].includes(activeDevTab) && (
             <div style={{ backgroundColor: '#1E293B', padding: '40px', borderRadius: '10px', border: '1px solid #334155', textAlign: 'center' }}>
               <Code style={{ width: '40px', height: '40px', color: '#38BDF8', marginBottom: '12px' }} />
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#F8FAFC' }}>{activeDevTab} Module Active</h3>

@@ -44,6 +44,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
         { label: 'Items Directory', icon: Boxes },
         { label: 'Raw Material Directory', icon: Layers },
+        { label: 'Inventory Stores', icon: Warehouse },
         { label: 'Proforma Invoice', icon: FileText }
       ]
     },

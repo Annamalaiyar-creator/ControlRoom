@@ -1,5 +1,75 @@
 [
   {
+    "id": "GRN-1788333201133",
+    "grnNo": "GRN-2026-00112",
+    "poRef": "PO-00091",
+    "poNo": "PO-00091",
+    "poId": "4080449000000276001",
+    "vendor": "Annamalaiyar",
+    "date": "02 Sep 2026",
+    "challanNo": "DC-FG-001",
+    "receivedQty": 30,
+    "acceptedQty": 30,
+    "rejectedQty": 0,
+    "receivedBy": "Arun",
+    "inspectorName": "—",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "code": "MR100N",
+        "name": "100mm mini rail (new)",
+        "category": "Finished Goods",
+        "itemType": "Finished Goods",
+        "uom": "NOS",
+        "ordered": 30,
+        "prev": 0,
+        "remaining": 0,
+        "now": 30,
+        "accepted": 30,
+        "rejected": 0
+      }
+    ],
+    "documents": [],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
+    "id": "GRN-1788333195451",
+    "grnNo": "GRN-2026-00111",
+    "poRef": "PO-00090",
+    "poNo": "PO-00090",
+    "poId": "4080449000000274001",
+    "vendor": "Annamalaiyar",
+    "date": "02 Sep 2026",
+    "challanNo": "DC-RM-001",
+    "receivedQty": 50,
+    "acceptedQty": 50,
+    "rejectedQty": 0,
+    "receivedBy": "Arun",
+    "inspectorName": "—",
+    "inspectionRemarks": "—",
+    "items": [
+      {
+        "id": "PO-ITEM-0",
+        "code": "RM-ALU-2414",
+        "name": "Aluminum Length (2414 mm)",
+        "category": "Raw Material",
+        "itemType": "Raw Material",
+        "uom": "Length",
+        "ordered": 50,
+        "prev": 0,
+        "remaining": 0,
+        "now": 50,
+        "accepted": 50,
+        "rejected": 0
+      }
+    ],
+    "documents": [],
+    "status": "CLOSED / FULLY RECEIVED",
+    "zohoBillPosted": false
+  },
+  {
     "id": "GRN-1787815065382",
     "grnNo": "GRN-2026-00110",
     "poRef": "PO-00083",

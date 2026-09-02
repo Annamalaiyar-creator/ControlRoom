@@ -1,5 +1,89 @@
 [
   {
+    "id": "WO-57",
+    "workOrderNo": "WO-57",
+    "productName": "Adhesive rail 120 mm",
+    "plannedQty": 100,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "PENDING_MATERIAL",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-02"
+  },
+  {
+    "id": "WO-56",
+    "workOrderNo": "WO-56",
+    "productName": "Mid Clamp - 35 mm 47 mm",
+    "plannedQty": 54,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-02"
+  },
+  {
+    "id": "WO-55",
+    "workOrderNo": "WO-55",
+    "productName": "Mid Clamp - 35 mm 47 mm",
+    "plannedQty": 54,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-02"
+  },
+  {
+    "id": "WO-54",
+    "workOrderNo": "WO-54",
+    "productName": "Mid Clamp - 35 mm 47 mm",
+    "plannedQty": 54,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-03"
+  },
+  {
+    "id": "WO-4",
+    "workOrderNo": "WO-4",
+    "productName": "Adhesive rail 120 mm 300 mm",
+    "plannedQty": 8,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-02"
+  },
+  {
+    "id": "WO-3",
+    "workOrderNo": "WO-3",
+    "productName": "AR120",
+    "plannedQty": 8,
+    "completedQty": 0,
+    "delayDays": 0,
+    "delayReason": "Normal Production",
+    "status": "In Progress",
+    "statusColor": "#EA580C",
+    "rawMaterial": "Raw Alu Coil",
+    "customer": "Solar Client",
+    "targetDate": "2026-09-02"
+  },
+  {
     "id": "wo_1787979587391",
     "workOrderNo": "WO-2",
     "productName": "MR100",
@@ -43,7 +127,7 @@
   },
   {
     "id": "wo_1",
-    "workOrderNo": "VRM26/07/118",
+    "workOrderNo": "WO-50",
     "productName": "Mini Rail 100 mm",
     "plannedQty": 500,
     "completedQty": 360,
@@ -58,7 +142,7 @@
   },
   {
     "id": "wo_2",
-    "workOrderNo": "VRM26/07/101",
+    "workOrderNo": "WO-51",
     "productName": "Long Rail 3000 mm",
     "plannedQty": 200,
     "completedQty": 120,
@@ -73,7 +157,7 @@
   },
   {
     "id": "wo_3",
-    "workOrderNo": "VRM26/07/089",
+    "workOrderNo": "WO-52",
     "productName": "Mid Clamp 35 mm",
     "plannedQty": 1500,
     "completedQty": 1100,
@@ -88,7 +172,7 @@
   },
   {
     "id": "wo_4",
-    "workOrderNo": "VRM26/07/074",
+    "workOrderNo": "WO-53",
     "productName": "Alu. Bracket",
     "plannedQty": 400,
     "completedQty": 260,
@@ -100,20 +184,5 @@
     "customer": "Sterling & Wilson",
     "startDate": "2026-07-19",
     "targetDate": "2026-07-26"
-  },
-  {
-    "id": "wo_5",
-    "workOrderNo": "VRM26/07/061",
-    "productName": "End Clamp 35 mm",
-    "plannedQty": 300,
-    "completedQty": 210,
-    "delayDays": 1,
-    "delayReason": "Inspection Hold",
-    "status": "Pending",
-    "statusColor": "#D97706",
-    "rawMaterial": "Alu Clamp Stock",
-    "customer": "Waaree Energies",
-    "startDate": "2026-07-20",
-    "targetDate": "2026-07-27"
   }
 ]

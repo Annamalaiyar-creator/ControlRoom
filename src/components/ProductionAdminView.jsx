@@ -524,10 +524,68 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     return result.slice(0, 5);
   }, [realEngineWOs]);
 
+  // Get logged-in user profile details
+  const loggedEmail = localStorage.getItem('controlroom_logged_user') || 'production.head@vrm.com';
+  const roleName = userRole || 'Production Head';
+
   return (
     <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '4px' }}>
 
+      {/* PERSONALIZED WELCOME BANNER CARD */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        padding: '20px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Welcome back, {(() => {
+                const storedName = localStorage.getItem('controlroom_logged_user_name');
+                if (storedName) return storedName;
+                if (userRole === 'Production Head') return 'Senthil Kumar';
+                if (userRole === 'Dispatch Head') return 'Karthik Raja';
+                if (userRole === 'Floor Supervisor') return 'Murugan';
+                if (userRole === 'Floor Employee') return 'Ramesh';
+                if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+                return 'Senthil Kumar';
+              })()}!
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
+              Here is your plant output overview, work order progress & shift efficiency metrics for today.
+            </p>
+          </div>
+        </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plant Status</div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span>
+              Line 1 & 2 Active
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          position: 'absolute',
+          right: '-20px',
+          top: '-20px',
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(147, 51, 234, 0.05) 0%, rgba(255,255,255,0) 70%)',
+          pointerEvents: 'none'
+        }} />
+      </div>
 
       {/* ROW 1: KPI SUMMARY CARDS (5 CARDS FOR DISPATCH / 6 CARDS FOR FLOOR & PRODUCTION) */}
       <div style={{ display: 'grid', gridTemplateColumns: isDispatchView ? 'repeat(5, minmax(0, 1fr))' : 'repeat(6, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
@@ -1030,13 +1088,12 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                 </thead>
                 <tbody>
                   {(isDispatchView ? [
-                    { workOrderNo: 'VRM26/07/118', productName: 'ABC Solar Pvt Ltd', plannedQty: '500 Nos', delayDays: '2 Days', status: 'Overdue' },
-                    { workOrderNo: 'VRM26/07/101', productName: 'Sun Power EPC', plannedQty: '200 Nos', delayDays: '2 Days', status: 'Overdue' },
-                    { workOrderNo: 'VRM26/07/089', productName: 'Green Infra Ltd', plannedQty: '1500 Nos', delayDays: '1 Day', status: 'Pending' },
-                    { workOrderNo: 'VRM26/07/074', productName: 'Bright Energy', plannedQty: '400 Nos', delayDays: '1 Day', status: 'Pending' },
-                    { workOrderNo: 'VRM26/07/061', productName: 'Voltix Solutions', plannedQty: '300 Nos', delayDays: '1 Day', status: 'Pending' }
+                    { workOrderNo: 'WO-1', productName: 'ABC Solar Pvt Ltd', plannedQty: '500 Nos', delayDays: '2 Days', status: 'Overdue' },
+                    { workOrderNo: 'WO-2', productName: 'Sun Power EPC', plannedQty: '200 Nos', delayDays: '2 Days', status: 'Overdue' },
+                    { workOrderNo: 'WO-3', productName: 'Green Infra Ltd', plannedQty: '1500 Nos', delayDays: '1 Day', status: 'Pending' },
+                    { workOrderNo: 'WO-4', productName: 'Bright Energy', plannedQty: '400 Nos', delayDays: '1 Day', status: 'Pending' }
                   ] : displayOrders).map((ord, idx) => (
-                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 4 : displayOrders.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
+                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 3 : displayOrders.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
                       <td style={{ padding: '7px 10px', color: '#64748B', fontWeight: '600' }}>{ord.workOrderNo}</td>
                       <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{ord.productName}</td>
                       <td style={{ padding: '7px 10px', color: '#64748B' }}>{ord.plannedQty}</td>
@@ -1075,11 +1132,10 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                 </thead>
                 <tbody>
                   {(isDispatchView ? [
-                    { name: 'TN 09 AB 1234 (SRS Logistics)', plan: 'VRM/26/07/101', act: '23-Jul-2026', util: 92, label: '24-Jul-2026' },
-                    { name: 'TN 37 CD 5678 (VRM Transport)', plan: 'VRM/26/07/089', act: '23-Jul-2026', util: 88, label: '24-Jul-2026' },
-                    { name: 'KA 01 EF 9012 (Safe Way)', plan: 'VRM/26/07/074', act: '23-Jul-2026', util: 95, label: '24-Jul-2026' },
-                    { name: 'AP 39 GH 3456 (SST Transport)', plan: 'VRM/26/07/061', act: '23-Jul-2026', util: 84, label: '24-Jul-2026' },
-                    { name: 'TN 88 U 7890 (Speed Cargo)', plan: 'VRM/26/07/090', act: '23-Jul-2026', util: 90, label: '25-Jul-2026' }
+                    { name: 'TN 09 AB 1234 (SRS Logistics)', plan: 'WO-2', act: '23-Jul-2026', util: 92, label: '24-Jul-2026' },
+                    { name: 'TN 37 CD 5678 (VRM Transport)', plan: 'WO-3', act: '23-Jul-2026', util: 88, label: '24-Jul-2026' },
+                    { name: 'KA 01 EF 9012 (Safe Way)', plan: 'WO-4', act: '23-Jul-2026', util: 95, label: '24-Jul-2026' },
+                    { name: 'TN 88 U 7890 (Speed Cargo)', plan: 'WO-5', act: '23-Jul-2026', util: 90, label: '25-Jul-2026' }
                   ] : [
                     { name: 'CNC Cutting Machine', plan: '1,200', act: '1,102', util: 82 },
                     { name: 'Punching Machine - 1', plan: '1,000', act: '912', util: 76 },

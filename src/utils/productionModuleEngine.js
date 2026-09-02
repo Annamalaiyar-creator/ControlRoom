@@ -11,6 +11,7 @@
  */
 
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from './supabaseDataSync';
+import { stripDataUrlsFromRecord } from './mediaUtils';
 
 // Initial Manufacturing Recipes (BOMs)
 export const INITIAL_MANUFACTURING_RECIPES = [
@@ -302,10 +303,23 @@ class ProductionModuleEngine {
 
   saveToStorage() {
     try {
-      localStorage.setItem('vrm_prod_recipes', JSON.stringify(this.recipes));
-      localStorage.setItem('vrm_prod_inventory', JSON.stringify(this.inventory));
-      localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
-      localStorage.setItem('vrm_prod_ledger', JSON.stringify(this.ledger));
+      try {
+        localStorage.setItem('vrm_prod_recipes', JSON.stringify(this.recipes));
+        localStorage.setItem('vrm_prod_inventory', JSON.stringify(this.inventory));
+        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
+        localStorage.setItem('vrm_prod_ledger', JSON.stringify(this.ledger));
+      } catch (quotaErr) {
+        console.warn('localStorage quota warning in ProductionEngine. Cleaning up transient data URLs...');
+        // Safely strip data URLs from recipes if quota is exceeded
+        const cleanRecipes = this.recipes.map(r => stripDataUrlsFromRecord(r));
+        const cleanWOs = this.workOrders.map(w => stripDataUrlsFromRecord(w));
+        try {
+          localStorage.setItem('vrm_prod_recipes', JSON.stringify(cleanRecipes));
+          localStorage.setItem('vrm_prod_workorders', JSON.stringify(cleanWOs));
+        } catch (e) {
+          // Fallback silencer to prevent app crashes
+        }
+      }
 
       saveCloudStore('vrm_prod_recipes', this.recipes);
       saveCloudStore('vrm_prod_inventory', this.inventory);
@@ -484,6 +498,12 @@ class ProductionModuleEngine {
   // Create Work Order (Production Head)
   createWorkOrder(data) {
     const calc = this.calculateMaterialRequirement(data.finishedProductCode || 'MR100', data.targetQty || 1, data.cutLength || 300);
+
+    // Enforce strict raw material availability check: Do not create WO if raw material is insufficient
+    if (!calc.isSufficient) {
+      throw new Error(`Insufficient Raw Material: Cannot create Work Order. Required: ${calc.physicalMatToIssue} ${calc.recipe.rawMaterialUnit}s (${calc.recipe.rawMaterialName}), but available stock in Raw Material Store is only ${calc.availableStock} ${calc.recipe.rawMaterialUnit}s (Shortage: ${calc.shortageQty}).`);
+    }
+
     const recipe = calc.recipe || {
       productName: data.finishedProductCode || 'Mini Rail 100 mm',
       outputUnit: 'Pieces',
@@ -526,7 +546,14 @@ class ProductionModuleEngine {
       excessTheoreticalQty: calc.excessOutputPossible,
       priority: data.priority || 'Normal',
       productionLocation: data.productionLocation || 'CNC Line 01',
-      assignedEmployee: data.assignedEmployee || 'Floor Employee A (Karthik)',
+      assignedEmployee: data.assignedEmployee || (() => {
+        try {
+          const emps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+          const fe = emps.find(e => String(e.role || '').toUpperCase().includes('FLOOR') || (e.prefix || '').toUpperCase() === 'FE' || (e.employee_code || '').toUpperCase().startsWith('FE-'));
+          if (fe) return `${fe.employee_name || fe.name} (${fe.employee_code})`;
+        } catch (e) {}
+        return 'Unassigned';
+      })(),
       expectedStartDate: data.expectedStartDate || new Date().toISOString().split('T')[0],
       expectedCompletionDate: data.expectedCompletionDate || new Date().toISOString().split('T')[0],
       instructions: data.instructions || `Produce ${data.targetQty} ${calc.recipe.outputUnit} of ${calc.recipe.productName}`,
@@ -661,6 +688,16 @@ class ProductionModuleEngine {
     wo.acceptedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
     if (employeeName) wo.assignedEmployee = employeeName;
 
+    this.saveToStorage();
+    return wo;
+  }
+
+  // Generic Status Update
+  updateWorkOrderStatus(woId, newStatus) {
+    const wo = this.workOrders.find(w => w.id === woId);
+    if (!wo) throw new Error('Work Order not found');
+
+    wo.status = newStatus;
     this.saveToStorage();
     return wo;
   }
@@ -841,25 +878,24 @@ class ProductionModuleEngine {
       newStock: rawItem.physicalStock,
       user: wo.productionHead || 'Senthil Kumar (Production Head)',
       employee: wo.assignedEmployee || 'Karthi (Operator)',
-      reason: `Raw material issued & consumed by ${wo.assignedEmployee || 'Karthi'} for Work Order ${wo.id} (Manufacturing ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${wo.finishedProductName || 'Mini Rail 300 mm'})`,
+      reason: `Raw material issued & consumed by ${wo.assignedEmployee || 'Karthi'} for Work Order ${wo.id} (Manufacturing ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${wo.finishedProductName || 'Finished Product'})`,
       referenceDoc: wo.id
     });
 
     // 2. Finished Goods Stock Addition (Only Good Output)
-    // Subbranch shares the exact code of the main branch (MR100N / MR100)
-    const cutLen = wo.cutLengthMm || 300;
-    const parentMainCode = wo.parentCode || 'MR100N';
-    const targetFgCode = (wo.finishedProductCode === 'FG-MR-300MM' || wo.finishedProductCode?.includes('300')) 
-      ? parentMainCode 
-      : (wo.finishedProductCode || parentMainCode);
+    const cutLen = wo.cutLengthMm || wo.cutLength || 300;
+    const mainBranchCode = wo.finishedProductCode || wo.parentCode || 'AR120';
+    const mainBranchName = wo.finishedProductName || 'Finished Product';
     
-    const targetFgName = wo.finishedProductName && !wo.finishedProductName.includes('100 mm') 
-      ? wo.finishedProductName 
-      : `Mini Rail ${cutLen} mm`;
+    // Sub-branch material code is identical to main branch code
+    const targetFgCode = mainBranchCode;
+    // Sub-branch name format: Main Branch Name (Cut Length mm)
+    const targetFgName = mainBranchName.includes(`(${cutLen} mm)`) ? mainBranchName : `${mainBranchName} (${cutLen} mm)`;
 
     let fgItem = this.inventory.find(i => 
-      i.code.toUpperCase() === targetFgCode.toUpperCase() || 
-      (i.name && i.name.toLowerCase() === targetFgName.toLowerCase())
+      i.code.toUpperCase() === targetFgCode.toUpperCase() && 
+      i.parentCode === mainBranchCode &&
+      i.name && i.name.toLowerCase() === targetFgName.toLowerCase()
     );
 
     let fgPrevStock = 0;
@@ -867,12 +903,12 @@ class ProductionModuleEngine {
       fgPrevStock = fgItem.physicalStock;
       fgItem.physicalStock += wo.actualGoodOutput;
       fgItem.availableStock = fgItem.physicalStock - fgItem.reservedStock;
-      if (!fgItem.parentCode) fgItem.parentCode = parentMainCode;
     } else {
-      // Create new FG item dynamically in inventory catalog
+      // Create new FG sub-branch item dynamically in inventory catalog
       fgItem = {
         code: targetFgCode,
-        parentCode: parentMainCode,
+        parentCode: mainBranchCode,
+        parentName: mainBranchName,
         name: targetFgName,
         category: 'Finished Goods',
         unit: wo.unit || 'Pieces',
@@ -892,15 +928,15 @@ class ProductionModuleEngine {
     const fgTxnId = this.addLedgerEntry({
       type: 'PRODUCTION_RECEIPT',
       woId: wo.id,
-      itemCode: wo.finishedProductCode,
-      itemName: wo.finishedProductName,
+      itemCode: targetFgCode,
+      itemName: targetFgName,
       qty: +wo.actualGoodOutput,
       unit: wo.unit,
       previousStock: fgPrevStock,
       newStock: fgPrevStock + wo.actualGoodOutput,
       user: wo.productionHead || 'Senthil Kumar (Production Head)',
       employee: wo.assignedEmployee || 'Karthi (Operator)',
-      reason: `${wo.assignedEmployee || 'Karthi'} manufactured ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${wo.finishedProductName || 'Mini Rail 300 mm'} under Work Order ${wo.id} (Verified and approved into FG Inventory by ${wo.productionHead || 'Senthil Kumar'})`,
+      reason: `${wo.assignedEmployee || 'Karthi'} manufactured ${wo.actualGoodOutput} ${wo.unit || 'Pieces'} of ${targetFgName} under Work Order ${wo.id} (Verified and approved into FG Inventory by ${wo.productionHead || 'Senthil Kumar'})`,
       referenceDoc: wo.id
     });
 
