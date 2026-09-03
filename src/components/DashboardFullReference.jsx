@@ -6,7 +6,9 @@ import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 export default function DashboardFullReference({ userRole }) {
   const now = new Date();
-  const currentMonthCode = String(now.getMonth() + 1).padStart(2, '0'); // e.g. "08" for August
+  const monthListCodes = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const currentMonthIdx = now.getMonth();
+  const currentMonthCode = monthListCodes[currentMonthIdx]; // e.g. "SEP"
   const currentYearStr = String(now.getFullYear()); // e.g. "2026"
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthCode);
@@ -739,6 +741,11 @@ export default function DashboardFullReference({ userRole }) {
                 <option value="MAY">May</option>
                 <option value="JUN">Jun</option>
                 <option value="JUL">Jul</option>
+                <option value="AUG">Aug</option>
+                <option value="SEP">Sep</option>
+                <option value="OCT">Oct</option>
+                <option value="NOV">Nov</option>
+                <option value="DEC">Dec</option>
               </select>
             </div>
           </div>

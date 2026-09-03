@@ -1439,6 +1439,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     purchaseRate: '',
     unit: 'NOS',
     status: 'Active',
+    warehouse: 'Main Warehouse',
     description: '',
     purchaseDescription: '',
     productType: 'goods'
@@ -2787,7 +2788,9 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         >
                           <option value={5}>5</option>
                           <option value={10}>10</option>
+                          <option value={15}>15</option>
                           <option value={20}>20</option>
+                          <option value={25}>25</option>
                           <option value={50}>50</option>
                         </select>
                       </div>
@@ -3197,8 +3200,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           type="text"
                           value={vGST}
                           onChange={(e) => {
-                            const val = e.target.value.toUpperCase();
+                            const target = e.target;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const val = target.value.toUpperCase();
                             setVGST(val);
+                            requestAnimationFrame(() => {
+                              if (target && target.setSelectionRange) {
+                                target.setSelectionRange(start, end);
+                              }
+                            });
                             if (val.replace(/[^A-Z0-9]/gi, '').length >= 10) {
                               handleGstFetch(val);
                             }
@@ -3869,7 +3880,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '13px', color: '#64748b' }}>Rows per page:</span>
-                          {renderSelect(vRowsPerPage, (e) => { setVRowsPerPage(parseInt(e.target.value)); setVCurrentPage(1); }, [5, 10, 20, 50], { height: '32px', width: '70px' })}
+                          {renderSelect(vRowsPerPage, (e) => { setVRowsPerPage(parseInt(e.target.value)); setVCurrentPage(1); }, [5, 10, 15, 20, 25, 50], { height: '32px', width: '70px' })}
                         </div>
 
                         <div style={{ display: 'flex', gap: '6px' }}>
@@ -4228,6 +4239,29 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         value={editingVendor.phone}
                         onChange={(e) => setEditingVendor({ ...editingVendor, phone: e.target.value })}
                         style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>GST Number</label>
+                      <input
+                        type="text"
+                        value={editingVendor.gst || ''}
+                        onChange={(e) => {
+                          const target = e.target;
+                          const start = target.selectionStart;
+                          const end = target.selectionEnd;
+                          const val = target.value.toUpperCase();
+                          setEditingVendor({ ...editingVendor, gst: val });
+                          requestAnimationFrame(() => {
+                            if (target && target.setSelectionRange) {
+                              target.setSelectionRange(start, end);
+                            }
+                          });
+                        }}
+                        maxLength={15}
+                        placeholder="15-digit GSTIN"
+                        style={{ height: '36px', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', textTransform: 'uppercase' }}
                       />
                     </div>
 
@@ -7885,6 +7919,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
                   </select>
                 </div>
                 <span>Showing {(reorderPage - 1) * reorderRowsPerPage + 1} to {Math.min(reorderPage * reorderRowsPerPage, reorderAlerts.length)} of {reorderAlerts.length} entries</span>
@@ -9607,6 +9645,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Warehouse Location</label>
+                      <select
+                        value={newItemData.warehouse || 'Main Warehouse'}
+                        onChange={(e) => setNewItemData({ ...newItemData, warehouse: e.target.value })}
+                        style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white', outline: 'none' }}
+                      >
+                        <option value="Main Warehouse">Main Warehouse</option>
+                        <option value="Store B">Store B</option>
+                        <option value="Factory Floor">Factory Floor</option>
+                        <option value="Finished Goods Bay">Finished Goods Bay</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Catalog Status</label>
                       <select
                         value={newItemData.status}
@@ -9985,6 +10036,18 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 </div>
                 <button
                   onClick={() => {
+                    setNewItemData({
+                      name: '',
+                      sku: '',
+                      rate: '',
+                      purchaseRate: '',
+                      unit: 'NOS',
+                      status: 'Active',
+                      warehouse: 'Main Warehouse',
+                      description: '',
+                      purchaseDescription: '',
+                      productType: 'goods'
+                    });
                     setIsCreatingItem(true);
                     setCreateStatus(null);
                   }}
@@ -10076,25 +10139,6 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                       <option value="Inactive">Inactive</option>
                     </select>
                   </div>
-
-                  {/* Filters Button */}
-                  <button style={{
-                    height: '38px',
-                    padding: '0 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF',
-                    color: '#475569',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer'
-                  }}>
-                    <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
-                    Filters
-                  </button>
 
                   {/* Reset Button */}
                   <span
@@ -10455,6 +10499,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           >
                             <option value={5}>5</option>
                             <option value={10}>10</option>
+                            <option value={15}>15</option>
+                            <option value={20}>20</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
                           </select>
                           <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
                             Showing {filtered.length === 0 ? 0 : (itemsCurrentPage - 1) * itemsRowsPerPage + 1} to {Math.min(itemsCurrentPage * itemsRowsPerPage, filtered.length)} of {filtered.length} entries
@@ -13001,37 +13049,42 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
             const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
             const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
-            const vrmProductItems = (VRM_PRODUCTS || []).map(p => ({
-              code: p.code,
-              name: p.name,
-              cat: p.material || 'Solar Structure',
-              unit: p.uom || 'Nos',
-              stock: 1000,
-              minLevel: 200,
-              status: 'In Stock',
-              store: p.material === 'HDG' ? 'Main Store' : 'Store B',
-              hsn: '7308',
-              lastUpdated: 'VRM Catalog',
+            const ALUMINUM_PROFILES = [
+              { code: 'CC4.8N', name: 'Double C Rail NEW (CC4.8N)', cat: 'Aluminium', unit: 'Length', lengthMm: '4800', cutLength: '4800 mm', stock: 150, minLevel: 30, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'CC3.6', name: 'Double C Rail (CC3.6)', cat: 'Aluminium', unit: 'Length', lengthMm: '3600', cutLength: '3600 mm', stock: 220, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'SR3.6', name: 'Strut Rail (SR3.6)', cat: 'Aluminium', unit: 'Length', lengthMm: '3600', cutLength: '3600 mm', stock: 180, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MR100O', name: 'Mini Rail 100mm (MR100O)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '100 mm', stock: 260, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MR100N', name: 'Mini Rail 100mm New (MR100N)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '100 mm', stock: getEngineAluStock(), minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'LC', name: 'Locking Nut (LC)', cat: 'Aluminium', unit: 'Length', lengthMm: '3000', cutLength: '3000 mm', stock: 140, minLevel: 30, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MR60', name: 'Mini Rail 60mm (MR60)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '60 mm', stock: 190, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MR40', name: 'Mini Rail 40mm (MR40)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '40 mm', stock: 210, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'AR100', name: 'Adhesive Rail 100mm (AR100)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '100 mm', stock: 175, minLevel: 35, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'AR120', name: 'Adhesive Rail 120mm (AR120)', cat: 'Aluminium', unit: 'Length', lengthMm: '2414', cutLength: '120 mm', stock: 160, minLevel: 35, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MID-SEC', name: 'Mid Section (MID-SEC)', cat: 'Aluminium', unit: 'Length', lengthMm: '2730', cutLength: '2730 mm', stock: 130, minLevel: 25, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'TOP-2M', name: 'Top Section 2 Mtr (TOP-2M)', cat: 'Aluminium', unit: 'Length', lengthMm: '2000', cutLength: '2000 mm', stock: 240, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'BOT-2M', name: 'Bottom Section 2 Mtr (BOT-2M)', cat: 'Aluminium', unit: 'Length', lengthMm: '2000', cutLength: '2000 mm', stock: 230, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'TOP-1.5M', name: 'Top Section 1.5 Mtr (TOP-1.5M)', cat: 'Aluminium', unit: 'Length', lengthMm: '1500', cutLength: '1500 mm', stock: 210, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'BOT-2.4M', name: 'Bottom Section 2.4 Mtr (BOT-2.4M)', cat: 'Aluminium', unit: 'Length', lengthMm: '2400', cutLength: '2400 mm', stock: 195, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MC35', name: 'Mid Clamp 35mm (MC35)', cat: 'Aluminium', unit: 'Length', lengthMm: '2650', cutLength: '35 mm', stock: 320, minLevel: 60, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'MC30', name: 'Mid Clamp 30mm (MC30)', cat: 'Aluminium', unit: 'Length', lengthMm: '2650', cutLength: '30 mm', stock: 310, minLevel: 60, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'T10', name: 'T Nut 10mm (T10)', cat: 'Aluminium', unit: 'Length', lengthMm: '2562', cutLength: '10 mm', stock: 280, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'UM', name: 'Mid Clamp Universal (UM)', cat: 'Aluminium', unit: 'Length', lengthMm: '2650', cutLength: '2650 mm', stock: 250, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'UE', name: 'End Clamp 35mm New (UE)', cat: 'Aluminium', unit: 'Length', lengthMm: '2650', cutLength: '35 mm', stock: 340, minLevel: 60, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'EC35', name: 'End Clamp 35mm (EC35)', cat: 'Aluminium', unit: 'Length', lengthMm: '2650', cutLength: '35 mm', stock: 300, minLevel: 60, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'ALB', name: 'L Bracket (ALB)', cat: 'Aluminium', unit: 'Length', lengthMm: '2050', cutLength: '2050 mm', stock: 260, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' },
+              { code: 'T8', name: 'T Nut KMC 8mm (T8)', cat: 'Aluminium', unit: 'Length', lengthMm: '2580', cutLength: '8 mm', stock: 290, minLevel: 50, store: 'Main Store', hsn: '7604', status: 'In Stock' }
+            ];
+
+            const initialMaterials = ALUMINUM_PROFILES.map(p => ({
+              ...p,
+              lastUpdated: 'Live Store',
               reserved: 0,
-              openingStock: 1000,
+              openingStock: p.stock,
               goodsReceived: 0,
               issuedProd: 0,
               matReturn: 0,
               stockAdj: 0
             }));
-
-            const getEngineAluStock = () => {
-              const engineInv = prodModuleEngine.getInventory();
-              const aluItem = (engineInv || []).find(i => i.code === 'ALU-LEN-2414MM');
-              return aluItem ? Number(aluItem.physicalStock) : 100;
-            };
-
-            const initialMaterials = [
-              { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: getEngineAluStock(), lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: getEngineAluStock(), goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
-              { code: 'MR100N', name: '100mm mini rail (new)', cat: 'Finished Goods', unit: 'Nos', stock: 1200, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Main Catalog', reserved: 0, openingStock: 1200, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
-              { code: 'MR100N', parentCode: 'MR100N', name: 'Mini Rail 300 mm', cat: 'Finished Goods', unit: 'Pieces', stock: 360, minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Sub-Branch Cut', reserved: 0, openingStock: 360, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 },
-              ...vrmProductItems
-            ];
 
             const getDeletedMaterialCodes = () => {
               try {
@@ -14616,7 +14669,21 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   </div>
                                 ) : (
                                   <>
-                                    <strong style={{ color: '#0F172A' }}>{m.name}</strong> {activeTab === 'Raw Material Directory' && (m.lengthMm || '2414') ? <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>{m.lengthMm || '2414'} mm</span> : null}
+                                    <strong style={{ color: '#0F172A' }}>{m.name}</strong> 
+                                    {activeTab === 'Raw Material Directory' && (
+                                      <span style={{ marginLeft: '6px', display: 'inline-flex', gap: '4px' }}>
+                                        {m.lengthMm && (
+                                          <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>
+                                            Length: {m.lengthMm} mm
+                                          </span>
+                                        )}
+                                        {m.cutLength && (
+                                          <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '4px' }}>
+                                            Cut: {m.cutLength}
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
                                   </>
                                 )}
                               </td>
@@ -14710,6 +14777,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         >
                           <option value={5}>5</option>
                           <option value={10}>10</option>
+                          <option value={15}>15</option>
+                          <option value={20}>20</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
                         </select>
                       </div>
                       <span>| Showing {Math.min((currentPage - 1) * pageSize + 1, displayedMaterials.length)} to {Math.min(currentPage * pageSize, displayedMaterials.length)} of {displayedMaterials.length} entries</span>
@@ -22164,6 +22235,10 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                           >
                             <option value={5}>5</option>
                             <option value={10}>10</option>
+                            <option value={15}>15</option>
+                            <option value={20}>20</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
                           </select>
                         </div>
                         <span>Showing {filteredRows.length === 0 ? 0 : indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredRows.length)} of {filteredRows.length} entries</span>

@@ -60,37 +60,54 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
     { id: 1, productCode: '', cutLength: '', targetQty: '' }
   ]);
 
-  // Load real registered Floor Employees (strictly created FE accounts from controlroom_employees_list)
-  const [floorEmployeesList, setFloorEmployeesList] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
-      if (Array.isArray(stored)) {
-        return stored.filter(emp => {
-          const roleUpper = String(emp.role || '').toUpperCase();
-          const codeUpper = String(emp.employee_code || '').toUpperCase();
-          const prefixUpper = String(emp.prefix || '').toUpperCase();
-          return roleUpper.includes('FLOOR') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
-        });
-      }
-    } catch (e) {}
-    return [];
-  });
+  // Creator details dynamically derived from active logged-in session account
+  const loggedUserName = typeof window !== 'undefined'
+    ? (localStorage.getItem('controlroom_logged_user_name') || localStorage.getItem('controlroom_logged_user') || 'Production Head')
+    : 'Production Head';
+  const loggedUserRole = typeof window !== 'undefined'
+    ? (localStorage.getItem('controlroom_user_role') || 'Production Head')
+    : 'Production Head';
+  const creatorDisplay = `${loggedUserName} (${loggedUserRole})`;
 
-  const [assignedEmployee, setAssignedEmployee] = useState(() => {
+  // Helper to load real registered Floor Employees & Operators
+  const loadEmployees = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
-      if (Array.isArray(stored)) {
-        const fe = stored.find(emp => {
-          const roleUpper = String(emp.role || '').toUpperCase();
-          const codeUpper = String(emp.employee_code || '').toUpperCase();
-          const prefixUpper = String(emp.prefix || '').toUpperCase();
-          return roleUpper.includes('FLOOR') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
-        });
-        if (fe) return `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
-      }
-    } catch (e) {}
-    return '';
-  });
+      const cloudStored = JSON.parse(localStorage.getItem('controlroom_employees_store') || '[]');
+      const combined = [...(Array.isArray(stored) ? stored : []), ...(Array.isArray(cloudStored) ? cloudStored : [])];
+      
+      const empMap = new Map();
+      combined.forEach(emp => {
+        if (!emp) return;
+        const code = emp.employee_code || emp.code || emp.id;
+        if (code && !empMap.has(code)) {
+          empMap.set(code, emp);
+        }
+      });
+
+      const all = Array.from(empMap.values());
+      // Return employees, prioritizing floor employees / operators if available, or all registered employees
+      const filtered = all.filter(emp => {
+        const roleUpper = String(emp.role || '').toUpperCase();
+        const codeUpper = String(emp.employee_code || emp.code || '').toUpperCase();
+        const prefixUpper = String(emp.prefix || '').toUpperCase();
+        return roleUpper.includes('FLOOR') || roleUpper.includes('OPERATOR') || roleUpper.includes('PRODUCTION') || roleUpper.includes('TECHNICIAN') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
+      });
+
+      return filtered.length > 0 ? filtered : all;
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const [floorEmployeesList, setFloorEmployeesList] = useState(loadEmployees);
+
+  // Reload employee list on mount to catch any recently created accounts
+  useEffect(() => {
+    setFloorEmployeesList(loadEmployees());
+  }, []);
+
+  const [assignedEmployee, setAssignedEmployee] = useState('');
 
   const [priority, setPriority] = useState('');
   const [productionLocation, setProductionLocation] = useState('');
@@ -224,7 +241,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
       const newWO = prodModuleEngine.createWorkOrder({
         id: woNumber,
         date: woDate,
-        productionHead: 'Senthil Kumar (Production Head)',
+        productionHead: creatorDisplay,
         finishedProductCode: fgProductCode,
         finishedProductName: fgProductName,
         targetQty: Number(targetQty),
@@ -627,7 +644,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>CREATOR (PRODUCTION HEAD)</label>
-                <input type="text" value="Senthil Kumar (Production Head)" readOnly style={{ ...inputStyle, backgroundColor: '#F8FAFC' }} />
+                <input type="text" value={creatorDisplay} readOnly style={{ ...inputStyle, backgroundColor: '#F8FAFC', fontWeight: '700', color: '#1E293B' }} />
               </div>
               <div>
                 <label style={labelStyle}>PRIORITY</label>
@@ -856,31 +873,6 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
               <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#64748B', margin: 0 }}>
                 Assignment & Production Schedule
               </h3>
-            </div>
-
-            <div>
-              <label style={labelStyle}>ASSIGNED FLOOR EMPLOYEE (OPERATOR)</label>
-              <select
-                value={assignedEmployee}
-                onChange={(e) => setAssignedEmployee(e.target.value)}
-                style={{ ...inputStyle, color: assignedEmployee ? '#1E293B' : '#94A3B8' }}
-              >
-                {floorEmployeesList.length === 0 ? (
-                  <option value="" disabled style={{ color: '#94A3B8' }}>No Floor Employees Registered — Register FE Account First</option>
-                ) : (
-                  <>
-                    <option value="" disabled style={{ color: '#94A3B8' }}>Select Floor Employee</option>
-                    {floorEmployeesList.map(fe => {
-                      const label = `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
-                      return (
-                        <option key={fe.employee_code} value={label} style={{ color: '#0F172A' }}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </>
-                )}
-              </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
