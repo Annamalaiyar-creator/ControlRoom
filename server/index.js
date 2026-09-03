@@ -3432,16 +3432,29 @@ app.put('/api/zoho/items/:id', async (req, res) => {
 
 const createZohoItem = (accessToken, itemData) => {
   return new Promise((resolve, reject) => {
-    const payload = JSON.stringify({
-      name: itemData.name,
-      rate: itemData.rate || 0,
-      sku: itemData.sku || '',
-      description: itemData.description || '',
-      unit: itemData.unit || 'NOS',
-      purchase_rate: itemData.purchaseRate || 0,
-      purchase_description: itemData.purchaseDescription || '',
-      product_type: itemData.productType || 'goods'
-    });
+    const payloadObj = {
+      name: itemData.name ? itemData.name.trim() : '',
+      rate: Number(itemData.rate) || 0,
+      product_type: (itemData.productType === 'service' || itemData.productType === 'services') ? 'service' : 'goods'
+    };
+
+    if (itemData.sku && itemData.sku.trim() && itemData.sku !== '—') {
+      payloadObj.sku = itemData.sku.trim();
+    }
+    if (itemData.description && itemData.description.trim() && itemData.description !== '—') {
+      payloadObj.description = itemData.description.trim();
+    }
+    if (itemData.unit && itemData.unit.trim()) {
+      payloadObj.unit = itemData.unit.trim();
+    }
+    if (itemData.purchaseRate && Number(itemData.purchaseRate) > 0) {
+      payloadObj.purchase_rate = Number(itemData.purchaseRate);
+    }
+    if (itemData.purchaseDescription && itemData.purchaseDescription.trim() && itemData.purchaseDescription !== '—') {
+      payloadObj.purchase_description = itemData.purchaseDescription.trim();
+    }
+
+    const payload = JSON.stringify(payloadObj);
 
     const options = {
       hostname: 'www.zohoapis.in',
@@ -3461,6 +3474,7 @@ const createZohoItem = (accessToken, itemData) => {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
+          console.log(`[ZOHO ITEM CREATE] Result for "${payloadObj.name}":`, parsed.code === 0 ? 'Success' : parsed.message);
           resolve(parsed);
         } catch (e) {
           reject(e);
@@ -3492,12 +3506,13 @@ app.post('/api/zoho/items', async (req, res) => {
   };
 
   let itemToSave = fallbackItem;
+  let zohoError = null;
 
   if (zohoSession.connected) {
     try {
       const accessToken = await getZohoAccessToken();
       const data = await createZohoItem(accessToken, req.body);
-      if (data.code === 0 && data.item) {
+      if (data && data.code === 0 && data.item) {
         const created = data.item;
         itemToSave = {
           itemId: created.item_id,
@@ -3511,8 +3526,12 @@ app.post('/api/zoho/items', async (req, res) => {
           purchaseDescription: created.purchase_description || '—',
           productType: created.product_type || 'goods'
         };
+      } else if (data && data.code !== 0) {
+        zohoError = data.message || 'Zoho Books returned an error';
+        console.warn('Zoho returned error code when creating item:', data);
       }
     } catch (err) {
+      zohoError = err.message;
       console.error('Zoho item creation notice:', err.message);
     }
   }
@@ -3527,7 +3546,14 @@ app.post('/api/zoho/items', async (req, res) => {
     console.error('Failed to save newly created item to item_store:', e);
   }
 
-  res.json({ success: true, item: itemToSave, message: 'New product created successfully!' });
+  res.json({ 
+    success: true, 
+    item: itemToSave, 
+    zohoError,
+    message: itemToSave.itemId.startsWith('ITEM-') && zohoError 
+      ? `Product saved locally. Zoho Notice: ${zohoError}` 
+      : 'New product created successfully in Zoho Books!' 
+  });
 });
 
 // 🌐 SERVE PRODUCTION DIST (FOR PLESK & STANDALONE HOSTING)

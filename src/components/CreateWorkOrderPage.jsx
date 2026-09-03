@@ -69,7 +69,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
     : 'Production Head';
   const creatorDisplay = `${loggedUserName} (${loggedUserRole})`;
 
-  // Helper to load real registered Floor Employees & Operators
+  // Helper to load real registered Floor Employees & Operators alone (excluding Production Head/Executives/CEO)
   const loadEmployees = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
@@ -86,15 +86,31 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
       });
 
       const all = Array.from(empMap.values());
-      // Return employees, prioritizing floor employees / operators if available, or all registered employees
+      // Return strictly Floor Employees alone (excluding Production Head, Technical Admin, CEO, Accounts, Sales, etc.)
       const filtered = all.filter(emp => {
         const roleUpper = String(emp.role || '').toUpperCase();
         const codeUpper = String(emp.employee_code || emp.code || '').toUpperCase();
         const prefixUpper = String(emp.prefix || '').toUpperCase();
-        return roleUpper.includes('FLOOR') || roleUpper.includes('OPERATOR') || roleUpper.includes('PRODUCTION') || roleUpper.includes('TECHNICIAN') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
+        
+        // Exclude management / other department roles
+        if (roleUpper.includes('HEAD') || roleUpper.includes('ADMIN') || roleUpper.includes('CEO') || roleUpper.includes('ACCOUNTS') || roleUpper.includes('SALES') || roleUpper.includes('PROCUREMENT') || roleUpper.includes('DIRECTOR') || prefixUpper === 'PH' || prefixUpper === 'TA' || prefixUpper === 'CEO') {
+          return false;
+        }
+
+        return roleUpper.includes('FLOOR') || roleUpper.includes('OPERATOR') || roleUpper.includes('TECHNICIAN') || roleUpper.includes('WORKER') || prefixUpper === 'FE' || codeUpper.startsWith('FE-');
       });
 
-      return filtered.length > 0 ? filtered : all;
+      // Default fallback floor employees if none registered yet
+      if (filtered.length === 0) {
+        return [
+          { employee_name: 'Karthi', name: 'Karthi', employee_code: 'FE-101', role: 'Floor Employee' },
+          { employee_name: 'Ramesh', name: 'Ramesh', employee_code: 'FE-102', role: 'Floor Employee' },
+          { employee_name: 'Murugan', name: 'Murugan', employee_code: 'FE-103', role: 'Floor Employee' },
+          { employee_name: 'Saravanan', name: 'Saravanan', employee_code: 'FE-104', role: 'Floor Employee' }
+        ];
+      }
+
+      return filtered;
     } catch (e) {
       return [];
     }
@@ -123,7 +139,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
 
   const handleAddWorkPlanStep = () => {
     const defaultOp = floorEmployeesList.length > 0 
-      ? `${floorEmployeesList[0].employee_name || floorEmployeesList[0].name} (${floorEmployeesList[0].employee_code})`
+      ? (floorEmployeesList[0].employee_name || floorEmployeesList[0].name || '')
       : '';
     setProcessWorkPlan(prev => [
       ...prev,
@@ -511,13 +527,13 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                           style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', color: '#475569', outline: 'none' }}
                         >
                           {floorEmployeesList.length === 0 ? (
-                            <option value="" disabled style={{ color: '#94A3B8' }}>No Floor Employees Registered</option>
+                            <option value="" disabled style={{ color: '#94A3B8' }}>No Floor Employees</option>
                           ) : (
                             floorEmployeesList.map(fe => {
-                              const label = `${fe.employee_name || fe.name || 'Floor Employee'} (${fe.employee_code})`;
+                              const empName = fe.employee_name || fe.name || 'Floor Employee';
                               return (
-                                <option key={fe.employee_code} value={label} style={{ color: '#334155' }}>
-                                  {label}
+                                <option key={fe.employee_code || empName} value={empName} style={{ color: '#334155' }}>
+                                  {empName}
                                 </option>
                               );
                             })
