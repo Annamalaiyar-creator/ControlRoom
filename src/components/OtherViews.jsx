@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import CreateWorkOrderPage from './CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
+import { getSafeZohoItems, getSafeZohoVendors } from '../services/zohoSafeSync';
 import { VRM_HDG_PRESETS } from '../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../utils/vrmProductsData';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
@@ -1306,22 +1307,18 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
   const loadVendorsFromZoho = async () => {
     setVendorLoading(true);
     try {
-      const statusRes = await fetch('/api/zoho/status');
-      const statusData = await statusRes.json();
-      if (statusData.connected) {
-        const res = await fetch('/api/zoho/vendors');
-        const zohoVendors = await res.json();
-        if (Array.isArray(zohoVendors) && zohoVendors.length > 0) {
-          setVendorList(zohoVendors);
-        } else {
-          setVendorList([]);
-        }
+      const zohoVendors = await getSafeZohoVendors();
+      if (Array.isArray(zohoVendors) && zohoVendors.length > 0) {
+        setVendorList(zohoVendors);
       } else {
-        setVendorList([]);
+        const res = await fetch('/api/zoho/vendors').catch(() => null);
+        if (res && res.ok) {
+          const vData = await res.json().catch(() => []);
+          setVendorList(Array.isArray(vData) ? vData : []);
+        }
       }
     } catch (e) {
       console.error("Failed to load Zoho vendors", e);
-      setVendorList([]);
     } finally {
       setVendorLoading(false);
     }
@@ -1461,19 +1458,32 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
     const fetchZohoItems = async () => {
       try {
         setItemsLoading(true);
-        const response = await fetch('/api/zoho/items');
-        if (response.ok) {
-          const zohoItems = await response.json();
-          if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
-            setItemsList(prev => {
-              const itemMap = new Map();
-              (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
-              zohoItems.forEach(it => {
-                const key = it.code || it.sku || it.itemId || it.id || it.name;
-                if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
-              });
-              return Array.from(itemMap.values());
+        const zohoItems = await getSafeZohoItems();
+        if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
+          setItemsList(prev => {
+            const itemMap = new Map();
+            (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
+            zohoItems.forEach(it => {
+              const key = it.code || it.sku || it.itemId || it.id || it.name;
+              if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
             });
+            return Array.from(itemMap.values());
+          });
+        } else {
+          const response = await fetch('/api/zoho/items').catch(() => null);
+          if (response && response.ok) {
+            const zItems = await response.json().catch(() => []);
+            if (isMounted && Array.isArray(zItems) && zItems.length > 0) {
+              setItemsList(prev => {
+                const itemMap = new Map();
+                (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
+                zItems.forEach(it => {
+                  const key = it.code || it.sku || it.itemId || it.id || it.name;
+                  if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
+                });
+                return Array.from(itemMap.values());
+              });
+            }
           }
         }
       } catch (err) {

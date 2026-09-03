@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy, Tag, MoreHorizontal } from 'lucide-react';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
+import { getSafeZohoPOs, getSafeZohoVendors, getSafeZohoItems } from '../services/zohoSafeSync';
 import StatusBadge from './StatusBadge';
 import NotificationToast from './NotificationToast';
 
@@ -141,11 +142,16 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const fetchZohoPOs = async () => {
     setTableLoading(true);
     try {
-      const response = await fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 25000 });
-      if (response.ok) {
-        const zohoPOs = await response.json();
-        if (Array.isArray(zohoPOs)) {
-          setPoList(zohoPOs);
+      const safePOs = await getSafeZohoPOs();
+      if (Array.isArray(safePOs) && safePOs.length > 0) {
+        setPoList(safePOs);
+      } else {
+        const response = await fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 25000 }).catch(() => null);
+        if (response && response.ok) {
+          const zohoPOs = await response.json().catch(() => []);
+          if (Array.isArray(zohoPOs)) {
+            setPoList(zohoPOs);
+          }
         }
       }
     } catch (err) {
@@ -158,15 +164,28 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   useEffect(() => {
     const fetchZohoDropdowns = async () => {
       try {
-        const vRes = await fetchWithTimeout('/api/zoho/vendors', { timeout: 25000 });
-        if (vRes.ok) {
-          const vData = await vRes.json();
-          setZohoVendors(vData || []);
+        const [safeVendors, safeItems] = await Promise.all([
+          getSafeZohoVendors(),
+          getSafeZohoItems()
+        ]);
+        if (Array.isArray(safeVendors) && safeVendors.length > 0) {
+          setZohoVendors(safeVendors);
+        } else {
+          const vRes = await fetchWithTimeout('/api/zoho/vendors', { timeout: 25000 }).catch(() => null);
+          if (vRes && vRes.ok) {
+            const vData = await vRes.json().catch(() => []);
+            setZohoVendors(vData || []);
+          }
         }
-        const iRes = await fetchWithTimeout('/api/zoho/items', { timeout: 25000 });
-        if (iRes.ok) {
-          const iData = await iRes.json();
-          setZohoItems(iData || []);
+
+        if (Array.isArray(safeItems) && safeItems.length > 0) {
+          setZohoItems(safeItems);
+        } else {
+          const iRes = await fetchWithTimeout('/api/zoho/items', { timeout: 25000 }).catch(() => null);
+          if (iRes && iRes.ok) {
+            const iData = await iRes.json().catch(() => []);
+            setZohoItems(iData || []);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch dropdown resources from Zoho:", err);

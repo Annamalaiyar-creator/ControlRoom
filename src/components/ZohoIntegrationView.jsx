@@ -4,6 +4,7 @@ import {
   ShieldCheck, ArrowLeftRight, Search, Check, Sparkles, Sliders
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { getSafeZohoItems, getSafeZohoVendors, getSafeZohoPOs } from '../services/zohoSafeSync';
 
 const DEFAULT_ACTIVE_ORG_ID = '60082137608';
 const DEFAULT_ACTIVE_REFRESH_TOKEN = '1000.69cd7dbd3da3ab8f107f8addf5e9e04c.87b4757d889f6ebd95a1bf897147a1c7';
@@ -104,6 +105,16 @@ export default function ZohoIntegrationView() {
         console.warn('Supabase cloud config fetch check:', sbErr);
       }
 
+      let [safeItems, safeVendors, safePOs] = await Promise.all([
+        getSafeZohoItems(),
+        getSafeZohoVendors(),
+        getSafeZohoPOs()
+      ]);
+
+      let iCount = Array.isArray(safeItems) ? safeItems.length : 0;
+      let vCount = Array.isArray(safeVendors) ? safeVendors.length : 0;
+      let pCount = Array.isArray(safePOs) ? safePOs.length : 0;
+
       // 2. Query backend API if available
       const [statusRes, itemsRes, vendorsRes, poRes] = await Promise.all([
         fetch('/api/zoho/status').catch(() => null),
@@ -121,18 +132,17 @@ export default function ZohoIntegrationView() {
         }
       }
 
-      let iCount = 0, vCount = 0, pCount = 0;
       if (itemsRes && itemsRes.ok) {
         const items = await itemsRes.json().catch(() => []);
-        if (Array.isArray(items)) iCount = items.length;
+        if (Array.isArray(items) && items.length > 0) iCount = items.length;
       }
       if (vendorsRes && vendorsRes.ok) {
         const vendors = await vendorsRes.json().catch(() => []);
-        if (Array.isArray(vendors)) vCount = vendors.length;
+        if (Array.isArray(vendors) && vendors.length > 0) vCount = vendors.length;
       }
       if (poRes && poRes.ok) {
         const pos = await poRes.json().catch(() => []);
-        if (Array.isArray(pos)) pCount = pos.length;
+        if (Array.isArray(pos) && pos.length > 0) pCount = pos.length;
       }
 
       setCounts({ items: iCount, vendors: vCount, pos: pCount });
