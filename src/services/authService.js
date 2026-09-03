@@ -44,9 +44,10 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
   
   try {
     let existingEmps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
-    // Auto-seed official Production Head account (PH-VRM001) if not present
-    if (!existingEmps.some(e => (e.employee_code || '').toUpperCase() === 'PH-VRM001')) {
-      const phDefault = {
+    let modified = false;
+
+    const defaultAccounts = [
+      {
         id: 'EMP-PH-001',
         employee_name: 'Senthil Kumar',
         employee_code: 'PH-VRM001',
@@ -56,33 +57,152 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
         department: 'Production',
         status: 'Active',
         created_at: new Date().toISOString()
-      };
-      existingEmps.push(phDefault);
+      },
+      {
+        id: 'EMP-PR-001',
+        employee_name: 'Arun Kumar',
+        employee_code: 'PR-VRM001',
+        code: 'PR-VRM001',
+        role: 'Procurement Head',
+        email: 'procurement@vrm.com',
+        department: 'Procurement',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'EMP-CEO-001',
+        employee_name: 'Annamalaiyar',
+        employee_code: 'CEO-VRM001',
+        code: 'CEO-VRM001',
+        role: 'CEO',
+        email: 'ceo@vrm.com',
+        department: 'Executive Leadership',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'EMP-TA-001',
+        employee_name: 'Annamalaiyar',
+        employee_code: 'TA-VRM001',
+        code: 'TA-VRM001',
+        role: 'Technical Administrator',
+        email: 'admin@vrm.com',
+        department: 'System Engineering',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'EMP-AH-001',
+        employee_name: 'Venkatesh',
+        employee_code: 'AH-VRM001',
+        code: 'AH-VRM001',
+        role: 'Accounts Head',
+        email: 'accounts@vrm.com',
+        department: 'Accounts & Finance',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'EMP-SH-001',
+        employee_name: 'Vijay',
+        employee_code: 'SH-VRM001',
+        code: 'SH-VRM001',
+        role: 'Sales Head',
+        email: 'sales@vrm.com',
+        department: 'Sales & Business',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    defaultAccounts.forEach(acc => {
+      if (!existingEmps.some(e => (e.employee_code || e.code || '').toUpperCase() === acc.employee_code)) {
+        existingEmps.push(acc);
+        modified = true;
+      }
+    });
+
+    if (modified) {
       localStorage.setItem('controlroom_employees_list', JSON.stringify(existingEmps));
       const registeredCodes = JSON.parse(localStorage.getItem('controlroom_registered_codes') || '[]');
-      if (!registeredCodes.includes('PH-VRM001')) {
-        registeredCodes.push('PH-VRM001');
-        localStorage.setItem('controlroom_registered_codes', JSON.stringify(registeredCodes));
-      }
+      defaultAccounts.forEach(acc => {
+        if (!registeredCodes.includes(acc.employee_code)) {
+          registeredCodes.push(acc.employee_code);
+        }
+      });
+      localStorage.setItem('controlroom_registered_codes', JSON.stringify(registeredCodes));
     }
 
     accountRecord = existingEmps.find(e => 
-      (cleanEmpId && (e.employee_code || '').toUpperCase() === cleanEmpId.toUpperCase()) || 
+      (cleanEmpId && (e.employee_code || e.code || '').toUpperCase() === cleanEmpId.toUpperCase()) || 
       (cleanUsername && (e.email || '').toLowerCase() === cleanUsername)
     );
   } catch(e) {}
 
-  // Built-in fallback for PH-VRM001
-  if (!accountRecord && cleanEmpId.toUpperCase() === 'PH-VRM001') {
-    accountRecord = {
-      id: 'EMP-PH-001',
-      employee_name: 'Senthil Kumar',
-      employee_code: 'PH-VRM001',
-      role: 'Production Head',
-      email: 'production@vrm.com',
-      department: 'Production',
-      status: 'Active'
-    };
+  // Built-in fallbacks if storage was wiped
+  if (!accountRecord) {
+    const upperEmpId = cleanEmpId.toUpperCase();
+    if (upperEmpId === 'PR-VRM001' || cleanUsername === 'procurement@vrm.com' || upperEmpId.startsWith('PR')) {
+      accountRecord = {
+        id: 'EMP-PR-001',
+        employee_name: 'Arun Kumar',
+        employee_code: cleanEmpId || 'PR-VRM001',
+        role: 'Procurement Head',
+        email: cleanUsername || 'procurement@vrm.com',
+        department: 'Procurement',
+        status: 'Active'
+      };
+    } else if (upperEmpId === 'PH-VRM001' || cleanUsername === 'production@vrm.com' || upperEmpId.startsWith('PH')) {
+      accountRecord = {
+        id: 'EMP-PH-001',
+        employee_name: 'Senthil Kumar',
+        employee_code: cleanEmpId || 'PH-VRM001',
+        role: 'Production Head',
+        email: cleanUsername || 'production@vrm.com',
+        department: 'Production',
+        status: 'Active'
+      };
+    } else if (upperEmpId.startsWith('TA-') || upperEmpId === 'TA-VRM001' || cleanUsername === 'admin@vrm.com') {
+      accountRecord = {
+        id: 'EMP-TA-001',
+        employee_name: 'Annamalaiyar',
+        employee_code: cleanEmpId || 'TA-VRM001',
+        role: 'Technical Administrator',
+        email: cleanUsername || 'admin@vrm.com',
+        department: 'System Engineering',
+        status: 'Active'
+      };
+    } else if (upperEmpId.startsWith('CEO-') || upperEmpId === 'CEO-VRM001' || cleanUsername === 'ceo@vrm.com') {
+      accountRecord = {
+        id: 'EMP-CEO-001',
+        employee_name: 'Annamalaiyar',
+        employee_code: cleanEmpId || 'CEO-VRM001',
+        role: 'CEO',
+        email: cleanUsername || 'ceo@vrm.com',
+        department: 'Executive Leadership',
+        status: 'Active'
+      };
+    } else if (upperEmpId.startsWith('AH-') || cleanUsername === 'accounts@vrm.com') {
+      accountRecord = {
+        id: 'EMP-AH-001',
+        employee_name: 'Venkatesh',
+        employee_code: cleanEmpId || 'AH-VRM001',
+        role: 'Accounts Head',
+        email: cleanUsername || 'accounts@vrm.com',
+        department: 'Accounts & Finance',
+        status: 'Active'
+      };
+    } else if (upperEmpId.startsWith('SH-') || cleanUsername === 'sales@vrm.com') {
+      accountRecord = {
+        id: 'EMP-SH-001',
+        employee_name: 'Vijay',
+        employee_code: cleanEmpId || 'SH-VRM001',
+        role: 'Sales Head',
+        email: cleanUsername || 'sales@vrm.com',
+        department: 'Sales & Business',
+        status: 'Active'
+      };
+    }
   }
 
   if (!accountRecord) {
