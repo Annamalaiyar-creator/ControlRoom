@@ -13066,6 +13066,33 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
               return 250;
             };
 
+            const getCompletedGrnItems = () => {
+              try {
+                const grnsStr = localStorage.getItem('controlroom_central_grns_v2') || localStorage.getItem('goods_receipt_notes') || '[]';
+                const grns = JSON.parse(grnsStr);
+                if (!Array.isArray(grns)) return new Map();
+                const grnMap = new Map();
+                grns.forEach(grn => {
+                  const status = (grn.status || '').toLowerCase();
+                  if (status === 'verified' || status === 'completed' || status === 'received' || status === 'posted to inventory' || status === 'approved') {
+                    if (Array.isArray(grn.items) && grn.items.length > 0) {
+                      grn.items.forEach(it => {
+                        const code = it.materialCode || it.itemCode || it.code || it.itemId;
+                        if (code) grnMap.set(String(code).toUpperCase(), { ...it, grnNo: grn.grnNo, receivedQty: Number(it.receivedQty || it.qty || 0) });
+                      });
+                    } else if (grn.materialCode || grn.itemCode) {
+                      const code = grn.materialCode || grn.itemCode;
+                      grnMap.set(String(code).toUpperCase(), { ...grn, receivedQty: Number(grn.receivedQty || grn.qty || 0) });
+                    }
+                  }
+                });
+                return grnMap;
+              } catch (e) {
+                return new Map();
+              }
+            };
+
+
             const ALUMINUM_PROFILES = [
               { code: 'CC4.8N', name: 'Double C Rail NEW (CC4.8N)', cat: 'Aluminium', unit: 'Length', lengthMm: '4800', cutLength: '4800 mm', stock: 150, minLevel: 30, store: 'Main Store', hsn: '7604', status: 'In Stock' },
               { code: 'CC3.6', name: 'Double C Rail (CC3.6)', cat: 'Aluminium', unit: 'Length', lengthMm: '3600', cutLength: '3600 mm', stock: 220, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
@@ -13121,11 +13148,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 const mapKey = m.parentCode ? `${m.code}_sub_${m.name}` : m.code;
                 matMap.set(mapKey, m);
               });
+              // Only load items from itemsList if they are Aluminum OR have been received via completed GRN
+              const completedGrnMapInitial = getCompletedGrnItems();
               if (itemsList && itemsList.length > 0) {
                 itemsList.forEach(it => {
                   const key = it.code || it.sku || it.itemId || 'RM-VRM';
                   if (matMap.has(key)) return;
-                  const stockVal = Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
+                  const upperKey = String(key).toUpperCase();
+                  const isAluItem = (it.category || '').toLowerCase().includes('alu') || 
+                                    (it.material || '').toLowerCase().includes('alu') ||
+                                    (it.name || '').toLowerCase().includes('alu');
+                  const grnReceived = completedGrnMapInitial.get(upperKey);
+
+                  // STRICT REQUIREMENT: Only show Aluminum by default, or other raw materials if received via GRN
+                  if (!isAluItem && !grnReceived) return;
+
+                  const stockVal = grnReceived ? Number(grnReceived.receivedQty || 0) : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 0));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -13134,23 +13172,51 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   matMap.set(key, {
                     code: key,
                     name: it.name,
-                    cat: it.category || it.material || 'Aluminium',
+                    cat: it.category || it.material || (isAluItem ? 'Aluminium' : 'Raw Materials'),
                     unit: it.unit || it.uom || 'Nos',
                     stock: stockVal,
                     minLevel: minLvl,
                     status: statusText,
                     store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
                     hsn: '7604',
-                    lastUpdated: 'Live Store',
+                    lastUpdated: grnReceived ? 'Received via GRN' : 'Live Store',
                     reserved: 0,
                     openingStock: stockVal,
-                    goodsReceived: 0,
+                    goodsReceived: grnReceived ? Number(grnReceived.receivedQty || 0) : 0,
                     issuedProd: 0,
                     matReturn: 0,
-                    stockAdj: 0
+                    stockAdj: 0,
+                    grnNo: grnReceived ? grnReceived.grnNo : undefined
                   });
                 });
               }
+
+              // Also include any raw material items from completed GRNs even if not in itemsList
+              completedGrnMapInitial.forEach((grnItem, gCode) => {
+                if (!matMap.has(gCode) && !matMap.has(grnItem.materialCode || grnItem.itemCode)) {
+                  const itemKey = grnItem.materialCode || grnItem.itemCode || gCode;
+                  const recQty = Number(grnItem.receivedQty || 0);
+                  matMap.set(itemKey, {
+                    code: itemKey,
+                    name: grnItem.materialName || grnItem.itemName || itemKey,
+                    cat: grnItem.category || 'Raw Materials',
+                    unit: grnItem.unit || 'Nos',
+                    stock: recQty,
+                    minLevel: 50,
+                    status: recQty > 0 ? 'In Stock' : 'Out of Stock',
+                    store: 'Main Store',
+                    hsn: '7604',
+                    lastUpdated: 'Received via GRN',
+                    reserved: 0,
+                    openingStock: 0,
+                    goodsReceived: recQty,
+                    issuedProd: 0,
+                    matReturn: 0,
+                    stockAdj: 0,
+                    grnNo: grnItem.grnNo
+                  });
+                }
+              });
               const deletedCodes = getDeletedMaterialCodes();
               return Array.from(matMap.values()).filter(m => !deletedCodes.includes(m.code));
             });
@@ -13216,11 +13282,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                   });
                 });
 
+                // Only load items from itemsList if they are Aluminum OR have been received via completed GRN
+                const completedGrnMapSync = getCompletedGrnItems();
                 if (itemsList && itemsList.length > 0) {
                   itemsList.forEach(it => {
                     const key = it.code || it.sku || it.itemId || 'RM-VRM';
                     if (matMap.has(key)) return;
-                    const stockVal = Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 1000));
+                    const upperKey = String(key).toUpperCase();
+                    const isAluItem = (it.category || '').toLowerCase().includes('alu') || 
+                                      (it.material || '').toLowerCase().includes('alu') ||
+                                      (it.name || '').toLowerCase().includes('alu');
+                    const grnReceived = completedGrnMapSync.get(upperKey);
+
+                    // STRICT REQUIREMENT: Only show Aluminum by default, or other raw materials if received via GRN
+                    if (!isAluItem && !grnReceived) return;
+
+                    const stockVal = grnReceived ? Number(grnReceived.receivedQty || 0) : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 0));
                     const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                     let statusText = 'In Stock';
                     if (stockVal === 0) statusText = 'Out of Stock';
@@ -13229,17 +13306,46 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     matMap.set(key, {
                       code: key,
                       name: it.name,
-                      cat: it.category || it.material || 'Aluminium',
+                      cat: it.category || it.material || (isAluItem ? 'Aluminium' : 'Raw Materials'),
                       unit: it.unit || it.uom || 'Nos',
                       stock: stockVal,
                       minLevel: minLvl,
                       status: statusText,
                       store: it.location || (it.material === 'HDG' ? 'Store B' : 'Main Store'),
                       hsn: '7604',
-                      lastUpdated: 'Live Store'
+                      lastUpdated: grnReceived ? 'Received via GRN' : 'Live Store',
+                      goodsReceived: grnReceived ? Number(grnReceived.receivedQty || 0) : 0,
+                      grnNo: grnReceived ? grnReceived.grnNo : undefined
                     });
                   });
                 }
+
+                // Also include any raw material items from completed GRNs even if not in itemsList
+                completedGrnMapSync.forEach((grnItem, gCode) => {
+                  if (!matMap.has(gCode) && !matMap.has(grnItem.materialCode || grnItem.itemCode)) {
+                    const itemKey = grnItem.materialCode || grnItem.itemCode || gCode;
+                    const recQty = Number(grnItem.receivedQty || 0);
+                    matMap.set(itemKey, {
+                      code: itemKey,
+                      name: grnItem.materialName || grnItem.itemName || itemKey,
+                      cat: grnItem.category || 'Raw Materials',
+                      unit: grnItem.unit || 'Nos',
+                      stock: recQty,
+                      minLevel: 50,
+                      status: recQty > 0 ? 'In Stock' : 'Out of Stock',
+                      store: 'Main Store',
+                      hsn: '7604',
+                      lastUpdated: 'Received via GRN',
+                      reserved: 0,
+                      openingStock: 0,
+                      goodsReceived: recQty,
+                      issuedProd: 0,
+                      matReturn: 0,
+                      stockAdj: 0,
+                      grnNo: grnItem.grnNo
+                    });
+                  }
+                });
                 const filteredMaterials = Array.from(matMap.values()).filter(m => {
                   if (deletedCodes.includes(m.code)) return false;
                   const codeUpper = String(m.code || '').toUpperCase();
@@ -13253,9 +13359,13 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                 syncEngineInventory();
               });
               window.addEventListener('controlroom_raw_materials_update', syncEngineInventory);
+              window.addEventListener('controlroom_grn_completed', syncEngineInventory);
+              window.addEventListener('storage', syncEngineInventory);
               return () => {
                 unsubscribe();
                 window.removeEventListener('controlroom_raw_materials_update', syncEngineInventory);
+                window.removeEventListener('controlroom_grn_completed', syncEngineInventory);
+                window.removeEventListener('storage', syncEngineInventory);
               };
             }, [itemsList]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
@@ -13468,10 +13578,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                  mCode.includes('coil');
 
                 if (isRawMaterialDirectory) {
-                  // Raw Material Directory strictly shows ONLY Raw Materials
-                  if (!isRawMat) return false;
+                  // Raw Material Directory strictly shows ONLY Aluminum by default, 
+                  // or items that have been ordered via PO and received via GRN
+                  const isAlu = mCat.includes('alu') || 
+                                mName.includes('alu') || 
+                                mCode.includes('alu') ||
+                                ALUMINUM_PROFILES.some(p => p.code === m.code);
+                  const isGrnCompletedItem = (Number(m.goodsReceived) > 0) || Boolean(m.grnNo);
+                  if (!isAlu && !isGrnCompletedItem) return false;
                 } else {
-                  // Inventory Stores strictly shows ONLY Finished Goods (hides all raw materials)
+                  // Inventory Stores strictly shows ONLY Finished Goods (hides raw materials)
                   if (isRawMat) return false;
                 }
 
