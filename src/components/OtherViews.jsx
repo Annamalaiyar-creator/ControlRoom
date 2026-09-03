@@ -13049,6 +13049,23 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
             const [internalShowAddStockForm, setInternalShowAddStockForm] = useState(false);
             const isAddStockActive = externalShowForm !== undefined ? externalShowForm : internalShowAddStockForm;
             const setAddStockActive = externalSetShowForm || setInternalShowAddStockForm;
+
+            const getEngineAluStock = () => {
+              try {
+                if (typeof prodModuleEngine !== 'undefined' && prodModuleEngine.getInventory) {
+                  const inv = prodModuleEngine.getInventory();
+                  if (inv && inv['RM-ALU-2414'] !== undefined) return Number(inv['RM-ALU-2414']);
+                }
+                const saved = localStorage.getItem('controlroom_raw_materials_store');
+                if (saved) {
+                  const parsed = JSON.parse(saved);
+                  const found = parsed.find(m => m.code === 'RM-ALU-2414' || m.code === 'MR100N');
+                  if (found && found.stock !== undefined) return Number(found.stock);
+                }
+              } catch (e) {}
+              return 250;
+            };
+
             const ALUMINUM_PROFILES = [
               { code: 'CC4.8N', name: 'Double C Rail NEW (CC4.8N)', cat: 'Aluminium', unit: 'Length', lengthMm: '4800', cutLength: '4800 mm', stock: 150, minLevel: 30, store: 'Main Store', hsn: '7604', status: 'In Stock' },
               { code: 'CC3.6', name: 'Double C Rail (CC3.6)', cat: 'Aluminium', unit: 'Length', lengthMm: '3600', cutLength: '3600 mm', stock: 220, minLevel: 40, store: 'Main Store', hsn: '7604', status: 'In Stock' },
