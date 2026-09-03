@@ -43,12 +43,47 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
   let accountRecord = null;
   
   try {
-    const existingEmps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+    let existingEmps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+    // Auto-seed official Production Head account (PH-VRM001) if not present
+    if (!existingEmps.some(e => (e.employee_code || '').toUpperCase() === 'PH-VRM001')) {
+      const phDefault = {
+        id: 'EMP-PH-001',
+        employee_name: 'Senthil Kumar',
+        employee_code: 'PH-VRM001',
+        code: 'PH-VRM001',
+        role: 'Production Head',
+        email: 'production@vrm.com',
+        department: 'Production',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      };
+      existingEmps.push(phDefault);
+      localStorage.setItem('controlroom_employees_list', JSON.stringify(existingEmps));
+      const registeredCodes = JSON.parse(localStorage.getItem('controlroom_registered_codes') || '[]');
+      if (!registeredCodes.includes('PH-VRM001')) {
+        registeredCodes.push('PH-VRM001');
+        localStorage.setItem('controlroom_registered_codes', JSON.stringify(registeredCodes));
+      }
+    }
+
     accountRecord = existingEmps.find(e => 
       (cleanEmpId && (e.employee_code || '').toUpperCase() === cleanEmpId.toUpperCase()) || 
       (cleanUsername && (e.email || '').toLowerCase() === cleanUsername)
     );
   } catch(e) {}
+
+  // Built-in fallback for PH-VRM001
+  if (!accountRecord && cleanEmpId.toUpperCase() === 'PH-VRM001') {
+    accountRecord = {
+      id: 'EMP-PH-001',
+      employee_name: 'Senthil Kumar',
+      employee_code: 'PH-VRM001',
+      role: 'Production Head',
+      email: 'production@vrm.com',
+      department: 'Production',
+      status: 'Active'
+    };
+  }
 
   if (!accountRecord) {
     return { 

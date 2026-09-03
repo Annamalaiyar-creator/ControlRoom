@@ -186,13 +186,34 @@ export default function ProductionAdminView({ activeTab, userRole }) {
     const innerRadius = 58;
     const cornerRadius = 4;
 
-    // Proportional percentages for Work Order status distribution
-    const segments = [
-      { color: '#22C55E', pct: 0.52 }, // Completed (#22C55E - Green)
-      { color: '#0084FF', pct: 0.20 }, // In Progress (#0084FF - Blue)
-      { color: '#06B6D4', pct: 0.12 }, // Planned (#06B6D4 - Cyan)
-      { color: '#38BDF8', pct: 0.09 }, // Approved (#38BDF8 - Sky Blue)
-      { color: '#F43F5E', pct: 0.07 }  // Delayed (#F43F5E - Red)
+    // Proportional percentages calculated dynamically from realEngineWOs
+    const list = realEngineWOs || [];
+    const totalCount = list.length || 1;
+    let completedCount = 0;
+    let inProgressCount = 0;
+    let plannedCount = 0;
+    let approvedCount = 0;
+    let delayedCount = 0;
+
+    list.forEach(wo => {
+      const st = String(wo.status || '').toUpperCase();
+      if (st.includes('COMPLET') || st.includes('DONE')) completedCount++;
+      else if (st.includes('PROGRESS')) inProgressCount++;
+      else if (st.includes('APPROV')) approvedCount++;
+      else if (st.includes('DELAY') || st.includes('OVERDUE')) delayedCount++;
+      else plannedCount++;
+    });
+
+    const segments = list.length > 0 ? [
+      { color: '#22C55E', pct: completedCount / totalCount },
+      { color: '#0084FF', pct: inProgressCount / totalCount },
+      { color: '#06B6D4', pct: plannedCount / totalCount },
+      { color: '#38BDF8', pct: approvedCount / totalCount },
+      { color: '#F43F5E', pct: delayedCount / totalCount }
+    ] : [
+      { color: '#22C55E', pct: 0.50 },
+      { color: '#0084FF', pct: 0.25 },
+      { color: '#06B6D4', pct: 0.25 }
     ];
 
     let currentAngle = -Math.PI / 2;
@@ -505,23 +526,114 @@ export default function ProductionAdminView({ activeTab, userRole }) {
         };
       });
 
-    // Default sample delayed production orders if engine has fewer than 5 active delayed orders
-    const fallbackDelayed = [
-      { workOrderNo: 'WO-VRM-118', productName: 'Mini Rail 100 mm', plannedQty: '500 Nos', delayDays: '3 Days', status: 'Overdue', statusColor: '#DC2626' },
-      { workOrderNo: 'WO-VRM-105', productName: 'Aluminum Length (2414 mm)', plannedQty: '120 Lengths', delayDays: '2 Days', status: 'Overdue', statusColor: '#DC2626' },
-      { workOrderNo: 'WO-VRM-094', productName: 'Mini Rail 60 mm', plannedQty: '400 Nos', delayDays: '2 Days', status: 'Delayed', statusColor: '#D97706' },
-      { workOrderNo: 'WO-VRM-082', productName: 'UV Cable Tie 300mm', plannedQty: '1400 Nos', delayDays: '1 Day', status: 'Delayed', statusColor: '#D97706' },
-      { workOrderNo: 'WO-VRM-076', productName: 'End Clamp 35mm', plannedQty: '800 Nos', delayDays: '1 Day', status: 'Delayed', statusColor: '#D97706' }
-    ];
+    return delayedFromEngine.slice(0, 5);
+  }, [realEngineWOs]);
 
-    const result = [...delayedFromEngine];
-    fallbackDelayed.forEach(fb => {
-      if (result.length < 5 && !result.some(r => r.workOrderNo === fb.workOrderNo)) {
-        result.push(fb);
+  // Real Dynamic Production Statistics calculated from realEngineWOs
+  const dynamicStats = useMemo(() => {
+    const list = realEngineWOs || [];
+    let totalPlanQty = 0;
+    let totalGoodQty = 0;
+    let totalScrapQty = 0;
+    let totalDowntimeHrs = 0;
+
+    // By Product breakdown map
+    const productMap = {};
+    // By Machine utilization map
+    const machineMap = {};
+
+    list.forEach(wo => {
+      const plan = Number(wo.targetQty || wo.quantity || 0);
+      const isCompleted = String(wo.status || '').toUpperCase().includes('COMPLET') || String(wo.status || '').toUpperCase().includes('DONE');
+      const act = Number(wo.actualGoodOutput || (isCompleted ? plan : 0));
+      const scrap = Number(wo.scrapQty || wo.rejectedQty || 0);
+      const dt = Number(wo.downtimeHours || wo.delayHours || 0);
+
+      totalPlanQty += plan;
+      totalGoodQty += act;
+      totalScrapQty += scrap;
+      totalDowntimeHrs += dt;
+
+      // Group product
+      const pName = wo.finishedProductName || wo.productName || 'Solar Component';
+      if (!productMap[pName]) {
+        productMap[pName] = { name: pName, plan: 0, act: 0 };
       }
+      productMap[pName].plan += plan;
+      productMap[pName].act += act;
+
+      // Group machine
+      const mName = wo.machineName || wo.machineId || (wo.routing && wo.routing[0]?.workCenter) || 'CNC Cutting Machine';
+      if (!machineMap[mName]) {
+        machineMap[mName] = { name: mName, plan: 0, act: 0 };
+      }
+      machineMap[mName].plan += plan;
+      machineMap[mName].act += act;
     });
 
-    return result.slice(0, 5);
+    const achievePct = totalPlanQty > 0 ? ((totalGoodQty / totalPlanQty) * 100).toFixed(1) : (totalGoodQty > 0 ? '100.0' : '0.0');
+    const qualityYield = (totalGoodQty + totalScrapQty) > 0 ? ((totalGoodQty / (totalGoodQty + totalScrapQty)) * 100).toFixed(1) : '98.5';
+
+    // Formatted product rows
+    const productRows = Object.values(productMap).map(p => ({
+      name: p.name,
+      plan: `${p.plan.toLocaleString()} Nos`,
+      act: `${p.act.toLocaleString()} Nos`,
+      pct: p.plan > 0 ? Math.min(100, Math.round((p.act / p.plan) * 100)) : (p.act > 0 ? 100 : 0)
+    }));
+
+    // Formatted machine rows
+    const machineRows = Object.values(machineMap).map(m => ({
+      name: m.name,
+      plan: m.plan.toLocaleString(),
+      act: m.act.toLocaleString(),
+      util: m.plan > 0 ? Math.min(100, Math.round((m.act / m.plan) * 100)) : (m.act > 0 ? 85 : 75)
+    }));
+
+    return {
+      totalPlan: totalPlanQty > 0 ? totalPlanQty.toLocaleString() : '0',
+      totalProd: totalGoodQty > 0 ? totalGoodQty.toLocaleString() : '0',
+      planAchievement: `${achievePct}%`,
+      goodProd: totalGoodQty > 0 ? totalGoodQty.toLocaleString() : '0',
+      qualityYield: `${qualityYield}%`,
+      rejection: totalScrapQty > 0 ? totalScrapQty.toLocaleString() : '0',
+      downtime: totalDowntimeHrs > 0 ? `${totalDowntimeHrs.toFixed(1)} Hrs` : '0.0 Hrs',
+      productRows: productRows.length > 0 ? productRows : [
+        { name: 'Mini Rail 100 mm', plan: '0 Nos', act: '0 Nos', pct: 0 }
+      ],
+      machineRows: machineRows.length > 0 ? machineRows : [
+        { name: 'CNC Cutting Machine', plan: '0', act: '0', util: 0 }
+      ],
+      operatorRows: (() => {
+        const opMap = {};
+        list.forEach(wo => {
+          const opName = wo.operatorName || wo.supervisor || (wo.routing && wo.routing[0]?.operator) || 'Plant Operator';
+          const mach = wo.machineName || 'Production Line';
+          if (!opMap[opName]) {
+            opMap[opName] = { name: opName, machine: mach, total: 0, good: 0 };
+          }
+          opMap[opName].total += Number(wo.targetQty || 0);
+          opMap[opName].good += Number(wo.actualGoodOutput || wo.targetQty || 0);
+        });
+        const ops = Object.values(opMap).map(o => {
+          const effNum = o.total > 0 ? Math.min(100, Math.round((o.good / o.total) * 100)) : 95;
+          const grade = effNum >= 95 ? 'A+' : effNum >= 90 ? 'A' : 'B+';
+          const color = effNum >= 90 ? '#16A34A' : '#EAB308';
+          return {
+            name: o.name,
+            machine: o.machine,
+            eff: `${effNum}%`,
+            grade,
+            color
+          };
+        });
+        return ops.length > 0 ? ops : [
+          { name: 'Senthil Kumar', machine: 'Roll Forming', eff: '96.2%', grade: 'A+', color: '#16A34A' },
+          { name: 'Murugan', machine: 'CNC Cutting', eff: '94.0%', grade: 'A', color: '#16A34A' },
+          { name: 'Ramesh', machine: 'Punching Line', eff: '91.5%', grade: 'A', color: '#16A34A' }
+        ];
+      })()
+    };
   }, [realEngineWOs]);
 
   // Get logged-in user profile details
@@ -722,69 +834,69 @@ export default function ProductionAdminView({ activeTab, userRole }) {
         ] : [
           {
             title: 'TOTAL PLAN (NOS)',
-            value: '5,280',
-            trend: '10.4%',
+            value: dynamicStats.totalPlan,
+            trend: 'Live Target',
             trendUp: true,
             icon: ClipboardList,
             iconColor: '#16A34A',
             iconBg: '#F0FDF4',
-            bottomPrefix: 'Monthly target set at ',
-            bottomHighlight: '5,280 NOS'
+            bottomPrefix: 'Work orders planned: ',
+            bottomHighlight: `${dynamicStats.totalPlan} NOS`
           },
           {
             title: 'TOTAL PRODUCTION',
-            value: '4,862',
-            trend: '11.2%',
+            value: dynamicStats.totalProd,
+            trend: dynamicStats.planAchievement,
             trendUp: true,
             icon: TrendingUp,
             iconColor: '#0284C7',
             iconBg: '#F0F9FF',
-            bottomPrefix: 'This month, completed ',
-            bottomHighlight: '4,862 units'
+            bottomPrefix: 'Actual output: ',
+            bottomHighlight: `${dynamicStats.totalProd} units`
           },
           {
             title: 'PLAN ACHIEVEMENT',
-            value: '92.1%',
-            trend: '2.3%',
+            value: dynamicStats.planAchievement,
+            trend: 'Real-time',
             trendUp: true,
             icon: Percent,
             iconColor: '#8B5CF6',
             iconBg: '#F3E8FF',
-            bottomPrefix: 'On track for target, ',
-            bottomHighlight: '92.1% achieved'
+            bottomPrefix: 'Plant progress: ',
+            bottomHighlight: `${dynamicStats.planAchievement} achieved`
           },
           {
             title: 'GOOD PRODUCTION',
-            value: '4,746',
-            trend: '10.8%',
+            value: dynamicStats.goodProd,
+            trend: dynamicStats.qualityYield,
             trendUp: true,
             icon: CheckCircle2,
             iconColor: '#059669',
             iconBg: '#ECFDF5',
-            bottomPrefix: 'Quality yield rate ',
-            bottomHighlight: '97.6% passed'
+            bottomPrefix: 'Quality yield rate: ',
+            bottomHighlight: `${dynamicStats.qualityYield} passed`
           },
           {
             title: 'REJECTION (NOS)',
-            value: '116',
-            trend: '1.6%',
-            trendUp: true,
+            value: dynamicStats.rejection,
+            trend: 'Scrap logged',
+            trendUp: false,
             icon: XCircle,
             iconColor: '#DC2626',
             iconBg: '#FEF2F2',
-            bottomPrefix: 'Scrap reduction down by ',
-            bottomHighlight: '1.6%'
+            bottomPrefix: 'Total rejection: ',
+            bottomHighlight: `${dynamicStats.rejection} NOS`
           },
           {
             title: 'DOWNTIME (HRS)',
-            value: '31.6 Hrs',
-            trend: '8.5%',
+            value: dynamicStats.downtime,
+            trend: 'Live hours',
             trendUp: true,
             icon: Clock,
             iconColor: '#D97706',
             iconBg: '#FFF7ED',
-            bottomPrefix: 'Breakdown time reduced by ',
-            bottomHighlight: '8.5%'
+            bottomPrefix: 'Plant downtime: ',
+            bottomHighlight: dynamicStats.downtime
           }
         ]).map((kpi, kIdx) => {
           const IconComp = kpi.icon;
@@ -958,14 +1070,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     { name: 'Mid Clamp 35 mm', plan: '11', act: '22,600 Nos', pct: 94.5 },
                     { name: 'End Clamp 35 mm', plan: '6', act: '8,900 Nos', pct: 100 },
                     { name: 'Other Accessories', plan: '9', act: '6,420 Nos', pct: 96.0 }
-                  ] : [
-                    { name: 'Mini Rail 100 mm', plan: '1,500', act: '1,402', pct: 93.5 },
-                    { name: 'Mini Rail 60 mm', plan: '1,200', act: '1,102', pct: 91.8 },
-                    { name: 'Long Rail 3000 mm', plan: '600', act: '538', pct: 89.7 },
-                    { name: 'Mid Clamp 35 mm', plan: '1,300', act: '1,210', pct: 93.1 },
-                    { name: 'End Clamp 35 mm', plan: '400', act: '362', pct: 90.5 },
-                    { name: 'Other Accessories', plan: '280', act: '248', pct: 88.6 }
-                  ]).map((row, idx) => (
+                  ] : dynamicStats.productRows).map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{row.name}</td>
                       <td style={{ padding: '7px 10px', color: '#64748B' }}>{row.plan}</td>
@@ -981,10 +1086,10 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     </tr>
                   ))}
                   <tr style={{ fontWeight: '800', color: '#0F172A', borderTop: '1px solid #CBD5E1', backgroundColor: '#F8FAFC' }}>
-                    <td style={{ padding: '7px 10px' }}>Total Shift Output</td>
-                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '1,200 Nos' : isDispatchView ? '64' : '5,280'}</td>
-                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '942 Nos' : isDispatchView ? '63,870' : '4,862'}</td>
-                    <td style={{ padding: '7px 10px', color: '#0284C7' }}>{isFloorView ? '78.5%' : isDispatchView ? '96.4%' : '92.1%'}</td>
+                    <td style={{ padding: '7px 10px' }}>Total Output</td>
+                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '1,200 Nos' : isDispatchView ? '64' : `${dynamicStats.totalPlan} Nos`}</td>
+                    <td style={{ padding: '7px 10px' }}>{isFloorView ? '942 Nos' : isDispatchView ? '63,870' : `${dynamicStats.totalProd} Nos`}</td>
+                    <td style={{ padding: '7px 10px', color: '#0284C7' }}>{isFloorView ? '78.5%' : isDispatchView ? '96.4%' : dynamicStats.planAchievement}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1143,15 +1248,8 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     { name: 'TN 37 CD 5678 (VRM Transport)', plan: 'WO-3', act: '23-Jul-2026', util: 88, label: '24-Jul-2026' },
                     { name: 'KA 01 EF 9012 (Safe Way)', plan: 'WO-4', act: '23-Jul-2026', util: 95, label: '24-Jul-2026' },
                     { name: 'TN 88 U 7890 (Speed Cargo)', plan: 'WO-5', act: '23-Jul-2026', util: 90, label: '25-Jul-2026' }
-                  ] : [
-                    { name: 'CNC Cutting Machine', plan: '1,200', act: '1,102', util: 82 },
-                    { name: 'Punching Machine - 1', plan: '1,000', act: '912', util: 76 },
-                    { name: 'Punching Machine - 2', plan: '800', act: '678', util: 74 },
-                    { name: 'Drilling Machine', plan: '600', act: '546', util: 81 },
-                    { name: 'Tapping Machine', plan: '400', act: '322', util: 70 },
-                    { name: 'Roll Forming Line', plan: '1,280', act: '1,302', util: 79 }
-                  ]).map((m, idx) => (
-                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 4 : 5) ? 'none' : '1px solid #F1F5F9' }}>
+                  ] : dynamicStats.machineRows).map((m, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 4 : dynamicStats.machineRows.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
                       <td style={{ padding: '7px 10px', color: '#0F172A', fontWeight: '700' }}>{m.name}</td>
                       <td style={{ padding: '7px 10px', color: '#64748B' }}>{m.plan}</td>
                       <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{m.act}</td>
@@ -1241,15 +1339,8 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { name: 'R. Karthik', machine: 'CNC Cutting', eff: '94.1%', grade: 'A+', color: '#16A34A' },
-                      { name: 'M. Arul', machine: 'Punching - 1', eff: '92.4%', grade: 'A', color: '#16A34A' },
-                      { name: 'S. Praveen', machine: 'Punching - 2', eff: '88.0%', grade: 'B+', color: '#EAB308' },
-                      { name: 'K. Manoj', machine: 'Drilling', eff: '94.0%', grade: 'A', color: '#16A34A' },
-                      { name: 'P. Kumar', machine: 'Tapping', eff: '84.0%', grade: 'B', color: '#EAB308' },
-                      { name: 'V. Senthil', machine: 'Roll Forming', eff: '95.6%', grade: 'A+', color: '#16A34A' }
-                    ].map((op, idx) => (
-                      <tr key={idx} style={{ borderBottom: idx === 5 ? 'none' : '1px solid #F1F5F9' }}>
+                    {dynamicStats.operatorRows.map((op, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx === dynamicStats.operatorRows.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
                         <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{op.name}</td>
                         <td style={{ padding: '7px 10px', color: '#64748B' }}>{op.machine}</td>
                         <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{op.eff}</td>
