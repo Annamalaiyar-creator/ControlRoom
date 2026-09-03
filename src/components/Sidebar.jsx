@@ -151,6 +151,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Invoice Management', icon: Receipt },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
@@ -188,13 +189,14 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           ]
         }
       ];
-    } else if (role === 'Invoice Executive') {
+    } else if (role === 'Invoice Executive' || role === 'Billing') {
       sections = [
         {
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'Invoice Management', icon: Receipt },
+            { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
           ]
