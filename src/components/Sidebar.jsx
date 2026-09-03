@@ -195,7 +195,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Invoice Management', icon: Receipt },
+            { label: 'Billing', targetTab: 'Invoice Management', icon: Receipt },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
@@ -507,14 +507,15 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
             {/* Nav Items */}
             {sec.items.map((item, iIdx) => {
               const ItemIcon = item.icon;
-              const isActive = normalizeTab(item.label) === normalizeTab(activeTab);
+              const actualTarget = item.targetTab || item.label;
+              const isActive = normalizeTab(item.label) === normalizeTab(activeTab) || normalizeTab(actualTarget) === normalizeTab(activeTab);
 
               return (
                 <div 
                   key={iIdx}
                   title={collapsed ? item.label : undefined}
                   onClick={() => {
-                    const targetTab = item.label === 'Proforma Invoice' ? 'Performa Invoice' : item.label;
+                    const targetTab = actualTarget === 'Proforma Invoice' ? 'Performa Invoice' : actualTarget;
                     onChangeTab(targetTab);
                   }}
                   onMouseEnter={(e) => {

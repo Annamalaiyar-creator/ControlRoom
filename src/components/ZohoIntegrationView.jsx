@@ -290,6 +290,32 @@ export default function ZohoIntegrationView() {
               />
             </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                Client ID (Optional)
+              </label>
+              <input 
+                type="text" 
+                placeholder="1000.9U5BAN338075M5HBI3U8K1VBNKUU8K" 
+                value={formClientId} 
+                onChange={(e) => setFormClientId(e.target.value)} 
+                style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                Client Secret (Optional)
+              </label>
+              <input 
+                type="password" 
+                placeholder="e82079a5165e3b2e75fdc602f3e08fd38489d75f13" 
+                value={formClientSecret} 
+                onChange={(e) => setFormClientSecret(e.target.value)} 
+                style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+              />
+            </div>
+
             <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
               <button 
                 type="button" 

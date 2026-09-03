@@ -289,18 +289,21 @@ app.post('/api/zoho/credentials', (req, res) => {
     return res.status(400).json({ error: 'Organization ID and Refresh Token are required.' });
   }
 
+  const effectiveClientId = clientId ? clientId.trim() : (process.env.ZOHO_CLIENT_ID || '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K');
+  const effectiveClientSecret = clientSecret ? clientSecret.trim() : (process.env.ZOHO_CLIENT_SECRET || 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13');
+
   zohoSession.connected = true;
-  zohoSession.orgId = orgId;
-  zohoSession.apiToken = apiToken;
+  zohoSession.orgId = orgId.trim();
+  zohoSession.apiToken = apiToken.trim();
   zohoSession.accessToken = ''; // Reset token to force immediate re-authentication
   zohoSession.tokenExpiresAt = 0;
   
-  if (clientId) process.env.ZOHO_CLIENT_ID = clientId;
-  if (clientSecret) process.env.ZOHO_CLIENT_SECRET = clientSecret;
-  process.env.ZOHO_ORG_ID = orgId;
-  process.env.ZOHO_REFRESH_TOKEN = apiToken;
+  process.env.ZOHO_CLIENT_ID = effectiveClientId;
+  process.env.ZOHO_CLIENT_SECRET = effectiveClientSecret;
+  process.env.ZOHO_ORG_ID = orgId.trim();
+  process.env.ZOHO_REFRESH_TOKEN = apiToken.trim();
 
-  saveCredentialsToEnv(orgId, apiToken, clientId, clientSecret);
+  saveCredentialsToEnv(orgId.trim(), apiToken.trim(), effectiveClientId, effectiveClientSecret);
   
   res.json({ success: true, message: 'Zoho Account credentials updated successfully!' });
 });
