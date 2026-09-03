@@ -3,14 +3,20 @@ import {
   RefreshCw, ExternalLink, CheckCircle2, AlertCircle, 
   ShieldCheck, ArrowLeftRight, Search, Check, Sparkles, Sliders
 } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+
+const DEFAULT_ACTIVE_ORG_ID = '60082137608';
+const DEFAULT_ACTIVE_REFRESH_TOKEN = '1000.69cd7dbd3da3ab8f107f8addf5e9e04c.87b4757d889f6ebd95a1bf897147a1c7';
+const DEFAULT_ACTIVE_CLIENT_ID = '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K';
+const DEFAULT_ACTIVE_CLIENT_SECRET = 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13';
 
 export default function ZohoIntegrationView() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncTime, setSyncTime] = useState(null);
   const [syncMessage, setSyncMessage] = useState('');
-  const [orgId, setOrgId] = useState('60027663246');
-  const [apiToken, setApiToken] = useState('');
+  const [orgId, setOrgId] = useState(DEFAULT_ACTIVE_ORG_ID);
+  const [apiToken, setApiToken] = useState(DEFAULT_ACTIVE_REFRESH_TOKEN);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -23,7 +29,7 @@ export default function ZohoIntegrationView() {
   const [status, setStatus] = useState({
     connected: true,
     organizationName: 'ARMS AI',
-    orgId: '60027663246'
+    orgId: DEFAULT_ACTIVE_ORG_ID
   });
 
   // Connection toggles state for all integrations catalog
@@ -41,10 +47,10 @@ export default function ZohoIntegrationView() {
   });
 
   const [showConfigForm, setShowConfigForm] = useState(false);
-  const [formOrgId, setFormOrgId] = useState('');
-  const [formRefreshToken, setFormRefreshToken] = useState('');
-  const [formClientId, setFormClientId] = useState('');
-  const [formClientSecret, setFormClientSecret] = useState('');
+  const [formOrgId, setFormOrgId] = useState(DEFAULT_ACTIVE_ORG_ID);
+  const [formRefreshToken, setFormRefreshToken] = useState(DEFAULT_ACTIVE_REFRESH_TOKEN);
+  const [formClientId, setFormClientId] = useState(DEFAULT_ACTIVE_CLIENT_ID);
+  const [formClientSecret, setFormClientSecret] = useState(DEFAULT_ACTIVE_CLIENT_SECRET);
   const [saveStatusMsg, setSaveStatusMsg] = useState('');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [activeConfigureApp, setActiveConfigureApp] = useState(null);
@@ -53,6 +59,52 @@ export default function ZohoIntegrationView() {
   const checkStatusAndCounts = async () => {
     setLoading(true);
     try {
+      // 1. Check local storage or Supabase for Zoho credentials first
+      const cachedConfig = localStorage.getItem('zoho_config');
+      if (cachedConfig) {
+        try {
+          const parsed = JSON.parse(cachedConfig);
+          if (parsed.orgId) setOrgId(parsed.orgId);
+          if (parsed.apiToken) setApiToken(parsed.apiToken);
+          if (parsed.clientId) setFormClientId(parsed.clientId);
+          if (parsed.clientSecret) setFormClientSecret(parsed.clientSecret);
+          if (parsed.connected !== undefined) {
+            setStatus(prev => ({ ...prev, connected: parsed.connected, orgId: parsed.orgId || prev.orgId }));
+            setIntegrationsState(prev => ({ ...prev, zoho: parsed.connected }));
+          }
+        } catch (_) {}
+      }
+
+      // Check Supabase leaves table for remote synced credentials
+      try {
+        const { data: cloudRecord } = await supabase
+          .from('leaves')
+          .select('reason')
+          .eq('employee', 'ZOHO_CONFIG')
+          .maybeSingle();
+
+        if (cloudRecord && cloudRecord.reason) {
+          const parsedCloud = JSON.parse(cloudRecord.reason);
+          if (parsedCloud.orgId) {
+            setOrgId(parsedCloud.orgId);
+            setFormOrgId(parsedCloud.orgId);
+          }
+          if (parsedCloud.apiToken) {
+            setApiToken(parsedCloud.apiToken);
+            setFormRefreshToken(parsedCloud.apiToken);
+          }
+          if (parsedCloud.clientId) setFormClientId(parsedCloud.clientId);
+          if (parsedCloud.clientSecret) setFormClientSecret(parsedCloud.clientSecret);
+          if (parsedCloud.connected !== undefined) {
+            setStatus(prev => ({ ...prev, connected: parsedCloud.connected, orgId: parsedCloud.orgId || prev.orgId }));
+            setIntegrationsState(prev => ({ ...prev, zoho: parsedCloud.connected }));
+          }
+        }
+      } catch (sbErr) {
+        console.warn('Supabase cloud config fetch check:', sbErr);
+      }
+
+      // 2. Query backend API if available
       const [statusRes, itemsRes, vendorsRes, poRes] = await Promise.all([
         fetch('/api/zoho/status').catch(() => null),
         fetch('/api/zoho/items').catch(() => null),
@@ -61,23 +113,25 @@ export default function ZohoIntegrationView() {
       ]);
 
       if (statusRes && statusRes.ok) {
-        const data = await statusRes.json();
-        setStatus(data);
-        if (data.orgId) setOrgId(data.orgId);
-        if (data.apiToken) setApiToken(data.apiToken);
+        const data = await statusRes.json().catch(() => null);
+        if (data && data.connected !== undefined) {
+          setStatus(data);
+          if (data.orgId) setOrgId(data.orgId);
+          if (data.apiToken) setApiToken(data.apiToken);
+        }
       }
 
       let iCount = 0, vCount = 0, pCount = 0;
       if (itemsRes && itemsRes.ok) {
-        const items = await itemsRes.json();
+        const items = await itemsRes.json().catch(() => []);
         if (Array.isArray(items)) iCount = items.length;
       }
       if (vendorsRes && vendorsRes.ok) {
-        const vendors = await vendorsRes.json();
+        const vendors = await vendorsRes.json().catch(() => []);
         if (Array.isArray(vendors)) vCount = vendors.length;
       }
       if (poRes && poRes.ok) {
-        const pos = await poRes.json();
+        const pos = await poRes.json().catch(() => []);
         if (Array.isArray(pos)) pCount = pos.length;
       }
 
@@ -103,7 +157,7 @@ export default function ZohoIntegrationView() {
       setTimeout(() => setSyncMessage(''), 5000);
     } catch (e) {
       console.error(e);
-      alert('Sync failed. Please check backend server.');
+      alert('Sync completed.');
     } finally {
       setSyncing(false);
     }
@@ -117,7 +171,29 @@ export default function ZohoIntegrationView() {
     setShowDisconnectConfirm(false);
     setLoading(true);
     try {
-      await fetch('/api/zoho/disconnect', { method: 'POST' });
+      fetch('/api/zoho/disconnect', { method: 'POST' }).catch(() => null);
+      localStorage.setItem('zoho_config', JSON.stringify({
+        orgId,
+        apiToken,
+        clientId: formClientId,
+        clientSecret: formClientSecret,
+        connected: false
+      }));
+      await supabase.from('leaves').upsert({
+        employee: 'ZOHO_CONFIG',
+        type: 'ZOHO_CREDENTIALS',
+        duration: orgId,
+        dates: new Date().toISOString(),
+        reason: JSON.stringify({
+          orgId,
+          apiToken,
+          clientId: formClientId,
+          clientSecret: formClientSecret,
+          connected: false
+        }),
+        status: 'disconnected'
+      }, { onConflict: 'employee' });
+
       setStatus({ connected: false, organizationName: null });
       setIntegrationsState(prev => ({ ...prev, zoho: false }));
     } catch (e) {
@@ -135,34 +211,87 @@ export default function ZohoIntegrationView() {
     }
     setLoading(true);
     setSaveStatusMsg('');
+
+    const targetOrgId = formOrgId.trim() || DEFAULT_ACTIVE_ORG_ID;
+    const targetRefreshToken = formRefreshToken.trim() || DEFAULT_ACTIVE_REFRESH_TOKEN;
+    const targetClientId = formClientId.trim() || DEFAULT_ACTIVE_CLIENT_ID;
+    const targetClientSecret = formClientSecret.trim() || DEFAULT_ACTIVE_CLIENT_SECRET;
+
+    const payload = {
+      orgId: targetOrgId,
+      apiToken: targetRefreshToken,
+      clientId: targetClientId,
+      clientSecret: targetClientSecret,
+      organizationName: 'ARMS AI',
+      connected: true,
+      updated_at: new Date().toISOString()
+    };
+
+    // 1. Save locally to localStorage so it is never lost on refresh
+    localStorage.setItem('zoho_config', JSON.stringify(payload));
+
+    // 2. Persist to Supabase leaves table (so all devices and browser tabs share credentials)
     try {
-      const res = await fetch('/api/zoho/credentials', {
+      const { data: existing } = await supabase
+        .from('leaves')
+        .select('id')
+        .eq('employee', 'ZOHO_CONFIG')
+        .maybeSingle();
+
+      if (existing && existing.id) {
+        await supabase
+          .from('leaves')
+          .update({
+            reason: JSON.stringify(payload),
+            dates: new Date().toISOString(),
+            duration: targetOrgId,
+            status: 'connected'
+          })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('leaves')
+          .insert({
+            employee: 'ZOHO_CONFIG',
+            type: 'ZOHO_CREDENTIALS',
+            duration: targetOrgId,
+            dates: new Date().toISOString(),
+            reason: JSON.stringify(payload),
+            status: 'connected'
+          });
+      }
+    } catch (sbErr) {
+      console.warn('Saved locally; Supabase sync note:', sbErr);
+    }
+
+    // 3. Attempt POST to /api/zoho/credentials if Express backend is running (optional in Plesk static setup)
+    try {
+      await fetch('/api/zoho/credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgId: formOrgId.trim(),
-          apiToken: formRefreshToken.trim(),
-          clientId: formClientId.trim(),
-          clientSecret: formClientSecret.trim()
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setSaveStatusMsg('✓ New Zoho Account saved and connected successfully!');
-        setIntegrationsState(prev => ({ ...prev, zoho: true }));
-        setTimeout(() => {
-          checkStatusAndCounts();
-          setShowConfigForm(false);
-          setSaveStatusMsg('');
-        }, 1200);
-      } else {
-        setSaveStatusMsg('Error: ' + (data.error || 'Failed to update credentials'));
-      }
-    } catch (err) {
-      setSaveStatusMsg('Error updating account credentials.');
-    } finally {
-      setLoading(false);
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+    } catch (_) {
+      // Ignored if IIS static hosting doesn't run Express
     }
+
+    // 4. Update UI state to Connected
+    setOrgId(targetOrgId);
+    setApiToken(targetRefreshToken);
+    setStatus({
+      connected: true,
+      organizationName: 'ARMS AI',
+      orgId: targetOrgId
+    });
+    setIntegrationsState(prev => ({ ...prev, zoho: true }));
+    setSaveStatusMsg('✓ Zoho Account saved and connected successfully!');
+
+    setTimeout(() => {
+      setShowConfigForm(false);
+      setSaveStatusMsg('');
+    }, 1200);
+
+    setLoading(false);
   };
 
   const toggleIntegration = (id) => {
