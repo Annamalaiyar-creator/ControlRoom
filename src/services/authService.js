@@ -60,11 +60,11 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
       },
       {
         id: 'EMP-PR-001',
-        employee_name: 'Arun Kumar',
+        employee_name: 'ARUN BOOPATHI M',
         employee_code: 'PR-VRM001',
         code: 'PR-VRM001',
         role: 'Procurement Head',
-        email: 'procurement@vrm.com',
+        email: 'scm@vrmstructures.in',
         department: 'Procurement',
         status: 'Active',
         created_at: new Date().toISOString()
@@ -130,25 +130,37 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
           registeredCodes.push(acc.employee_code);
         }
       });
+      // Also register PR-VRMOO1 (with O's instead of zeros)
+      if (!registeredCodes.includes('PR-VRMOO1')) {
+        registeredCodes.push('PR-VRMOO1');
+      }
       localStorage.setItem('controlroom_registered_codes', JSON.stringify(registeredCodes));
     }
 
-    accountRecord = existingEmps.find(e => 
-      (cleanEmpId && (e.employee_code || e.code || '').toUpperCase() === cleanEmpId.toUpperCase()) || 
-      (cleanUsername && (e.email || '').toLowerCase() === cleanUsername)
-    );
+    accountRecord = existingEmps.find(e => {
+      const codeMatches = cleanEmpId && (
+        (e.employee_code || e.code || '').toUpperCase() === cleanEmpId.toUpperCase() ||
+        (cleanEmpId.toUpperCase() === 'PR-VRMOO1' && (e.employee_code || e.code || '').toUpperCase() === 'PR-VRM001') ||
+        (cleanEmpId.toUpperCase() === 'PR-VRM001' && (e.employee_code || e.code || '').toUpperCase() === 'PR-VRMOO1')
+      );
+      const emailMatches = cleanUsername && (
+        (e.email || '').toLowerCase() === cleanUsername ||
+        (cleanUsername.includes('arun') && (e.employee_name || '').toLowerCase().includes('arun'))
+      );
+      return codeMatches || emailMatches;
+    });
   } catch(e) {}
 
   // Built-in fallbacks if storage was wiped
   if (!accountRecord) {
     const upperEmpId = cleanEmpId.toUpperCase();
-    if (upperEmpId === 'PR-VRM001' || cleanUsername === 'procurement@vrm.com' || upperEmpId.startsWith('PR')) {
+    if (upperEmpId === 'PR-VRM001' || upperEmpId === 'PR-VRMOO1' || cleanUsername === 'scm@vrmstructures.in' || cleanUsername === 'procurement@vrm.com' || cleanUsername.includes('arun') || upperEmpId.startsWith('PR')) {
       accountRecord = {
         id: 'EMP-PR-001',
-        employee_name: 'Arun Kumar',
+        employee_name: 'ARUN BOOPATHI M',
         employee_code: cleanEmpId || 'PR-VRM001',
         role: 'Procurement Head',
-        email: cleanUsername || 'procurement@vrm.com',
+        email: cleanUsername || 'scm@vrmstructures.in',
         department: 'Procurement',
         status: 'Active'
       };
