@@ -14337,7 +14337,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                     </span>
                   </div>
 
-                  {userRole !== 'Production Head' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <button
                       onClick={handleOpenAddStock}
                       style={{
@@ -14375,7 +14375,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                         <Plus size={16} strokeWidth={2.5} />
                       </div>
                     </button>
-                  )}
+                  </div>
                 </div>
 
                 {/* 2. FILTERS & SEARCH ROW CARD (EXACT MATCH FOR BOM & PO DESIGN) */}

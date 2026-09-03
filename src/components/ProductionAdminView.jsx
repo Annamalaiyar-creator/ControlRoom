@@ -565,7 +565,14 @@ export default function ProductionAdminView({ activeTab, userRole }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', zIndex: 2 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Zoho Integration</div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#06B6D4', boxShadow: '0 0 8px #06B6D4' }}></span>
+              Connected & Synced
+            </div>
+          </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plant Status</div>
             <div style={{ fontSize: '13px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>

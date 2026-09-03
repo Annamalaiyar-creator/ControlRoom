@@ -89,6 +89,12 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Efficiency Reports', icon: Zap },
         { label: 'Downtime Analytics', icon: AlertTriangle }
       ]
+    },
+    {
+      category: 'SYSTEM & CONFIG',
+      items: [
+        { label: 'Zoho Integration', icon: GitBranch }
+      ]
     }
   ];
 
