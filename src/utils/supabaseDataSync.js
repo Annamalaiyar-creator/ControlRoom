@@ -59,6 +59,53 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
     }
   } catch (e) {}
 
+  // For employees_store, fetch directly from Supabase users table
+  if (storeKey === 'employees_store') {
+    try {
+      const { data: dbUsers, error: userErr } = await supabase
+        .from('users')
+        .select('*');
+
+      if (!userErr && Array.isArray(dbUsers) && dbUsers.length > 0) {
+        // Map database users to ControlRoom employee format
+        const remoteEmployees = dbUsers.map(u => {
+          // Check if custom metadata is encoded in department or fields
+          let role = u.role || 'Floor Employee';
+          let empCode = 'FE-VRM' + String(u.id).padStart(3, '0');
+          let status = 'Active';
+
+          if (u.department && u.department.includes(':::')) {
+            const parts = u.department.split(':::');
+            empCode = parts[0] || empCode;
+            role = parts[1] || role;
+            status = parts[2] || status;
+          } else if (u.department === 'pending' || u.role === 'pending') {
+            status = 'Pending Approval';
+          }
+
+          return {
+            id: u.id,
+            employee_code: empCode,
+            employee_name: u.name,
+            email: u.email,
+            password: u.password,
+            role: role,
+            department: u.department,
+            status: status
+          };
+        });
+
+        const merged = mergeDatasets(cachedLocal, remoteEmployees);
+        try {
+          localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
+          const codes = merged.map(e => e.employee_code || e.code).filter(Boolean);
+          localStorage.setItem('controlroom_registered_codes', JSON.stringify(codes));
+        } catch (e) {}
+        return merged;
+      }
+    } catch (err) {}
+  }
+
   // 1. Try fetching directly via Supabase client
   try {
     const { data, error } = await supabase
@@ -121,9 +168,56 @@ export function saveCloudStore(storeKey, storeData) {
   }
 
   // 2. Debounced save to Supabase cloud database & server API (500ms delay)
-  saveDebounceTimers[storeKey] = setTimeout(() => {
+  saveDebounceTimers[storeKey] = setTimeout(async () => {
     const dataToSave = pendingSaveData[storeKey];
     if (!dataToSave) return;
+
+    // Direct persistence for employees to Supabase users table
+    if (storeKey === 'employees_store' && Array.isArray(dataToSave)) {
+      try {
+        for (const emp of dataToSave) {
+          if (!emp || !emp.email) continue;
+          const cleanEmail = (emp.email || '').trim().toLowerCase();
+          const cleanCode = emp.employee_code || emp.code || 'FE-VRM001';
+          const cleanRole = emp.role || 'Floor Employee';
+          const cleanStatus = emp.status || 'Pending Approval';
+          // Store code, role, status in department field: CODE:::ROLE:::STATUS
+          const deptMeta = `${cleanCode}:::${cleanRole}:::${cleanStatus}`;
+
+          const { data: existing } = await supabase
+            .from('users')
+            .select('id, email')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+
+          if (existing && existing.id) {
+            await supabase
+              .from('users')
+              .update({
+                name: emp.employee_name || emp.name,
+                password: emp.password || '123456',
+                role: cleanRole,
+                department: deptMeta
+              })
+              .eq('id', existing.id);
+          } else {
+            await supabase
+              .from('users')
+              .insert({
+                name: emp.employee_name || emp.name,
+                email: cleanEmail,
+                password: emp.password || '123456',
+                role: cleanRole,
+                department: deptMeta,
+                annual_leave: 20,
+                sick_leave: 5
+              });
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing employees to users table:', err);
+      }
+    }
 
     try {
       supabase
@@ -144,7 +238,7 @@ export function saveCloudStore(storeKey, storeData) {
         body: JSON.stringify(dataToSave)
       }).catch(() => {});
     } catch (err) {}
-  }, 600);
+  }, 400);
 }
 
 /**
@@ -162,11 +256,14 @@ export function subscribeToCloudStore(storeKey, onUpdateCallback) {
         {
           event: '*',
           schema: 'public',
-          table: 'controlroom_store',
-          filter: `key=eq.${storeKey}`
+          table: storeKey === 'employees_store' ? 'users' : 'controlroom_store',
+          filter: storeKey === 'employees_store' ? undefined : `key=eq.${storeKey}`
         },
-        (payload) => {
-          if (payload && payload.new && payload.new.data) {
+        async (payload) => {
+          if (storeKey === 'employees_store') {
+            const list = await fetchCloudStore('employees_store', []);
+            onUpdateCallback(list);
+          } else if (payload && payload.new && payload.new.data) {
             try {
               localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(payload.new.data));
             } catch (e) {}
