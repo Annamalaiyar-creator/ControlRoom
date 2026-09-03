@@ -16,20 +16,19 @@ function mergeDatasets(localArray, remoteArray) {
   };
 
   const map = new Map();
-  // 1. Add all remote items
-  remoteArray.forEach(item => {
+  // 1. Add all local items first
+  localArray.forEach(item => {
     if (item) {
       const id = getId(item);
       map.set(id, item);
     }
   });
 
-  // 2. Add/overlay local items so locally created/edited data is strictly preserved
-  localArray.forEach(item => {
+  // 2. Overlay remote items on top so the database/server is the authoritative source of truth
+  remoteArray.forEach(item => {
     if (item) {
       const id = getId(item);
       if (map.has(id)) {
-        // Deep merge item properties preferring non-empty local fields
         map.set(id, { ...map.get(id), ...item });
       } else {
         map.set(id, item);
