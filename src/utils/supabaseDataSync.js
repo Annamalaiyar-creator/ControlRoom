@@ -67,33 +67,26 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
         .select('*');
 
       if (!userErr && Array.isArray(dbUsers) && dbUsers.length > 0) {
-        // Map database users to ControlRoom employee format
-        const remoteEmployees = dbUsers.map(u => {
-          // Check if custom metadata is encoded in department or fields
-          let role = u.role || 'Floor Employee';
-          let empCode = 'FE-VRM' + String(u.id).padStart(3, '0');
-          let status = 'Active';
-
-          if (u.department && u.department.includes(':::')) {
+        // Only map genuine ControlRoom registered employees (those with CODE:::ROLE:::STATUS metadata)
+        const remoteEmployees = dbUsers
+          .filter(u => u.department && u.department.includes(':::'))
+          .map(u => {
             const parts = u.department.split(':::');
-            empCode = parts[0] || empCode;
-            role = parts[1] || role;
-            status = parts[2] || status;
-          } else if (u.department === 'pending' || u.role === 'pending') {
-            status = 'Pending Approval';
-          }
+            const empCode = parts[0];
+            const role = parts[1] || u.role || 'Sales Executive';
+            const status = parts[2] || 'Pending Approval';
 
-          return {
-            id: u.id,
-            employee_code: empCode,
-            employee_name: u.name,
-            email: u.email,
-            password: u.password,
-            role: role,
-            department: u.department,
-            status: status
-          };
-        });
+            return {
+              id: u.id,
+              employee_code: empCode,
+              employee_name: u.name,
+              email: u.email,
+              password: u.password,
+              role: role,
+              department: u.department,
+              status: status
+            };
+          });
 
         const merged = mergeDatasets(cachedLocal, remoteEmployees);
         try {
