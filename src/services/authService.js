@@ -236,12 +236,20 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
   // Developer / Technical Administrator accounts (TA-VRM###) bypass access approval requirements
   const isDeveloper = finalRoleName === 'Technical Administrator' || upperCode.startsWith('TA-');
 
+  // Developer, Executive and Core Department Heads bypass access approval requirements
+  const isCoreOrLeadership = isDeveloper || 
+    finalRoleName === 'Procurement Head' || 
+    finalRoleName === 'Production Head' || 
+    finalRoleName === 'CEO' || 
+    upperCode.startsWith('PR-') || 
+    cleanUsername === 'scm@vrmstructures.in';
+
   // Check stored employee status list for access permission
   try {
     const existingEmps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
     const storedEmp = existingEmps.find(e => (e.employee_code || '').toUpperCase() === upperCode || (e.email || '').toLowerCase() === cleanUsername);
 
-    if (storedEmp && !isDeveloper) {
+    if (storedEmp && !isCoreOrLeadership) {
       if (storedEmp.status === 'Pending Approval') {
         return {
           success: false,

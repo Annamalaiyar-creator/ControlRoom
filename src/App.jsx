@@ -20,9 +20,101 @@ import ProductionAdminView from './components/ProductionAdminView';
 import LoginScreen from './components/LoginScreen';
 import DeveloperPortalView from './components/DeveloperPortalView';
 import NotificationToast from './components/NotificationToast';
-import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt } from 'lucide-react';
-import { useEffect } from 'react';
+import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt, RefreshCw } from 'lucide-react';
+import { useEffect, Component } from 'react';
 import { heartbeatActiveSession, registerActiveSession, revokeSession } from './services/sessionService';
+
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App render error caught by boundary:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#F8FAFC',
+          color: '#0F172A',
+          fontFamily: "'DM Sans', -apple-system, sans-serif",
+          padding: '24px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '32px',
+            maxWidth: '480px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.05)'
+          }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              ⚠️
+            </div>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>Dashboard Render Recovery</h2>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px', lineHeight: '1.5' }}>
+              The dashboard encountered a temporary loading issue. Click below to refresh your dashboard session.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.reload();
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#0E7490',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <RefreshCw size={14} /> Reload Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('controlroom_is_authenticated');
+                  localStorage.removeItem('controlroom_user_role');
+                  window.location.reload();
+                }}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#F1F5F9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Sign In Again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
   // Default sidebar collapsed to TRUE (closed/inside by default on loading)
@@ -270,4 +362,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppRoot() {
+  return (
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
+  );
+}

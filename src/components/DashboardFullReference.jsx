@@ -231,7 +231,8 @@ export default function DashboardFullReference({ userRole }) {
                 if (userRole === 'Design Executive') return 'Kavitha';
                 if (userRole === 'Invoice Executive') return 'Anand';
                 if (userRole === 'BOM Executive') return 'Balaji';
-                return 'Arun Kumar';
+                if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') return 'ARUN BOOPATHI M';
+                return 'ARUN BOOPATHI M';
               })()}!
             </h2>
             <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>

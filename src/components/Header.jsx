@@ -77,9 +77,11 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     else if (userRole === 'Design Executive') userName = 'Kavitha';
     else if (userRole === 'Invoice Executive') userName = 'Anand';
     else if (userRole === 'BOM Executive') userName = 'Balaji';
-    else userName = 'Arun Kumar';
+    else if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') userName = 'ARUN BOOPATHI M';
+    else userName = 'Arun Boopathi M';
   }
-  const avatarLetter = userName.charAt(0).toUpperCase();
+  const safeName = (userName && userName !== 'undefined' && userName !== 'null') ? userName : 'ARUN BOOPATHI M';
+  const avatarLetter = (safeName.charAt(0) || 'A').toUpperCase();
 
   const markItemAsRead = (id, e) => {
     if (e) e.stopPropagation();
