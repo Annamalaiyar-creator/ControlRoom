@@ -8,14 +8,46 @@ import { supabase } from '../supabaseClient';
  */
 
 export async function getSafeZohoItems() {
+  // Read local cache first
+  let localCached = [];
+  try {
+    const raw = localStorage.getItem('controlroom_item_store');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) localCached = parsed;
+    }
+  } catch (_) {}
+
+  const mergeWithLocal = (freshItems) => {
+    if (!Array.isArray(freshItems) || freshItems.length === 0) return localCached;
+    const map = new Map();
+    // Put fresh items first
+    freshItems.forEach(it => {
+      const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
+      if (key) map.set(key, it);
+    });
+    // Overlay local items so local custom items and their inactive/active status are preserved
+    localCached.forEach(it => {
+      const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
+      if (key) {
+        const existing = map.get(key) || {};
+        map.set(key, { ...existing, ...it });
+      }
+    });
+    const result = Array.from(map.values());
+    try {
+      localStorage.setItem('controlroom_item_store', JSON.stringify(result));
+    } catch (_) {}
+    return result;
+  };
+
   // 1. Try backend endpoint first
   try {
     const res = await fetch('/api/zoho/items');
     if (res.ok) {
       const data = await res.json().catch(() => null);
       if (Array.isArray(data) && data.length > 0) {
-        localStorage.setItem('controlroom_item_store', JSON.stringify(data));
-        return data;
+        return mergeWithLocal(data);
       }
     }
   } catch (_) {}
@@ -31,24 +63,14 @@ export async function getSafeZohoItems() {
     if (record && record.reason) {
       const parsed = JSON.parse(record.reason);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        localStorage.setItem('controlroom_item_store', JSON.stringify(parsed));
-        return parsed;
+        return mergeWithLocal(parsed);
       }
     }
   } catch (err) {
     console.warn('Supabase items fetch notice:', err);
   }
 
-  // 3. Fallback to localStorage
-  try {
-    const local = localStorage.getItem('controlroom_item_store');
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (_) {}
-
-  return [];
+  return localCached;
 }
 
 export async function getSafeZohoVendors() {

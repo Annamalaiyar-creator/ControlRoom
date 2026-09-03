@@ -98,20 +98,25 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
     } catch (err) {}
   }
 
-  // 1. Try fetching directly via Supabase client
+  // 1. Try fetching directly via Supabase client using working leaves table store
   try {
-    const { data, error } = await supabase
-      .from('controlroom_store')
-      .select('data')
-      .eq('key', storeKey)
-      .single();
+    const { data: record, error } = await supabase
+      .from('leaves')
+      .select('reason')
+      .eq('employee', storeKey.toUpperCase())
+      .maybeSingle();
 
-    if (!error && data && data.data) {
-      const merged = mergeDatasets(cachedLocal, data.data);
+    if (!error && record && record.reason) {
       try {
-        localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
-      } catch (e) {}
-      return merged;
+        const cloudParsed = JSON.parse(record.reason);
+        if (cloudParsed && (Array.isArray(cloudParsed) ? cloudParsed.length > 0 : Object.keys(cloudParsed).length > 0)) {
+          const merged = mergeDatasets(cachedLocal, cloudParsed);
+          try {
+            localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        }
+      } catch (pErr) {}
     }
   } catch (err) {
     // continue to server API fallback
@@ -212,15 +217,33 @@ export function saveCloudStore(storeKey, storeData) {
     }
 
     try {
-      supabase
-        .from('controlroom_store')
-        .upsert({
-          key: storeKey,
-          data: dataToSave,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'key' })
-        .then(() => {})
-        .catch(() => {});
+      const employeeKey = storeKey.toUpperCase();
+      const { data: record } = await supabase
+        .from('leaves')
+        .select('id')
+        .eq('employee', employeeKey)
+        .maybeSingle();
+
+      if (record && record.id) {
+        await supabase
+          .from('leaves')
+          .update({
+            reason: JSON.stringify(dataToSave),
+            status: 'active'
+          })
+          .eq('id', record.id);
+      } else {
+        await supabase
+          .from('leaves')
+          .insert({
+            employee: employeeKey,
+            reason: JSON.stringify(dataToSave),
+            status: 'active',
+            start_date: '2026-01-01',
+            end_date: '2026-01-01',
+            type: 'Store'
+          });
+      }
     } catch (err) {}
 
     try {

@@ -1523,13 +1523,27 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         body: JSON.stringify(payload)
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
       const createdItem = result.item || {
         itemId: 'ITEM-' + Date.now(),
         ...payload
       };
 
-      setItemsList(prev => [createdItem, ...prev]);
+      // 1. Immediately update React state
+      setItemsList(prev => {
+        const filtered = (prev || []).filter(i => (i.itemId || i.id || i.sku) !== (createdItem.itemId || createdItem.sku));
+        const updated = [createdItem, ...filtered];
+        // 2. Persist to localStorage immediately
+        try {
+          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+        } catch (e) {}
+        // 3. Persist directly to Supabase leaves cloud store (ITEM_STORE)
+        try {
+          saveCloudStore('item_store', updated);
+        } catch (e) {}
+        return updated;
+      });
+
       setCreateStatus({ type: 'success', text: result.message || 'Product created successfully and added to Zoho Books!' });
 
       setTimeout(() => {
@@ -1556,9 +1570,19 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         sku: newItemData.sku || '—',
         unit: newItemData.unit || 'NOS',
         description: newItemData.description || '—',
-        status: 'Active'
+        status: (newItemData.status && String(newItemData.status).toLowerCase() === 'inactive') ? 'Inactive' : 'Active'
       };
-      setItemsList(prev => [fallback, ...prev]);
+      setItemsList(prev => {
+        const filtered = (prev || []).filter(i => (i.itemId || i.id || i.sku) !== (fallback.itemId || fallback.sku));
+        const updated = [fallback, ...filtered];
+        try {
+          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+        } catch (e) {}
+        try {
+          saveCloudStore('item_store', updated);
+        } catch (e) {}
+        return updated;
+      });
       setCreateStatus({ type: 'success', text: 'Product created locally in Control Room.' });
       setTimeout(() => {
         setIsCreatingItem(false);
@@ -1575,6 +1599,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       setIsSavingItem(true);
       setItemSaveStatus(null);
 
+      const targetStatus = (editingItem.status && String(editingItem.status).toLowerCase() === 'inactive') ? 'Inactive' : 'Active';
       const payload = {
         name: editingItem.name,
         rate: Number(editingItem.rate) || 0,
@@ -1583,7 +1608,7 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         unit: editingItem.unit || 'NOS',
         purchaseRate: Number(editingItem.purchaseRate) || 0,
         purchaseDescription: editingItem.purchaseDescription || '',
-        status: editingItem.status || 'Active'
+        status: targetStatus
       };
 
       const res = await fetch(`/api/zoho/items/${editingItem.itemId}`, {
@@ -1598,7 +1623,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
         setItemSaveStatus({ type: 'warning', text: 'Saved locally in Control Room.' });
       }
 
-      setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? { ...it, ...editingItem, ...payload } : it));
+      setItemsList(prev => {
+        const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? { ...it, ...editingItem, ...payload } : it);
+        try {
+          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+        } catch (e) {}
+        try {
+          saveCloudStore('item_store', updated);
+        } catch (e) {}
+        return updated;
+      });
 
       setTimeout(() => {
         setEditingItem(null);
@@ -1606,7 +1640,16 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
       }, 900);
     } catch (err) {
       console.error("Error updating item:", err);
-      setItemsList(prev => prev.map(it => it.itemId === editingItem.itemId ? editingItem : it));
+      setItemsList(prev => {
+        const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? editingItem : it);
+        try {
+          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+        } catch (e) {}
+        try {
+          saveCloudStore('item_store', updated);
+        } catch (e) {}
+        return updated;
+      });
       setItemSaveStatus({ type: 'success', text: 'Item saved locally.' });
       setTimeout(() => {
         setEditingItem(null);
@@ -10093,7 +10136,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                   if (cat === 'goods' && item.productType !== 'goods') return false;
                                   if (cat === 'services' && item.productType !== 'service' && item.productType !== 'services') return false;
                                 }
-                                if (selectedItemStatus !== 'All Status' && selectedItemStatus !== item.status) return false;
+                                if (selectedItemStatus !== 'All Status') {
+                                  const itemSt = String(item.status || 'Active').toLowerCase();
+                                  const selSt = String(selectedItemStatus).toLowerCase();
+                                  if (itemSt !== selSt) return false;
+                                }
                                 return true;
                               });
                               const indexOfLastItemRow = itemsCurrentPage * itemsRowsPerPage;
@@ -10191,7 +10238,11 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                             if (cat === 'goods' && item.productType !== 'goods') return false;
                             if (cat === 'services' && item.productType !== 'service' && item.productType !== 'services') return false;
                           }
-                          if (selectedItemStatus !== 'All Status' && selectedItemStatus !== item.status) return false;
+                          if (selectedItemStatus !== 'All Status') {
+                            const itemSt = String(item.status || 'Active').toLowerCase();
+                            const selSt = String(selectedItemStatus).toLowerCase();
+                            if (itemSt !== selSt) return false;
+                          }
                           return true;
                         });
                         const indexOfLastItemRow = itemsCurrentPage * itemsRowsPerPage;
@@ -10249,17 +10300,22 @@ export default function OtherViews({ activeTab, onChangeTab, userRole = 'Sales E
                                     : (item.description || '—')}
                                 </td>
                                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                  <span style={{
-                                    padding: '3px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '11px',
-                                    fontWeight: '800',
-                                    backgroundColor: item.status === 'Active' ? '#DCFCE7' : '#FEE2E2',
-                                    color: item.status === 'Active' ? '#15803D' : '#B91C1C',
-                                    border: item.status === 'Active' ? '1px solid #86EFAC' : '1px solid #FCA5A5'
-                                  }}>
-                                    {item.status || 'Active'}
-                                  </span>
+                                  {(() => {
+                                    const isInactive = String(item.status || '').trim().toLowerCase() === 'inactive';
+                                    return (
+                                      <span style={{
+                                        padding: '3px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        backgroundColor: isInactive ? '#FEE2E2' : '#DCFCE7',
+                                        color: isInactive ? '#B91C1C' : '#15803D',
+                                        border: isInactive ? '1px solid #FCA5A5' : '1px solid #86EFAC'
+                                      }}>
+                                        {isInactive ? 'Inactive' : 'Active'}
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
                             );
