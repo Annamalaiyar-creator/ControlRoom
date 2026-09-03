@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, 
   Factory, 
@@ -24,7 +24,8 @@ import {
   Sparkles,
   Receipt
 } from 'lucide-react';
-import { authenticateUser } from '../services/authService';
+import { authenticateUser, syncEmployeesFromCloud } from '../services/authService';
+import { saveCloudStore } from '../utils/supabaseDataSync';
 
 export const USER_ROLES_CONFIG = [
   {
@@ -159,6 +160,11 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [successBannerRole, setSuccessBannerRole] = useState('');
 
+  // Synchronize registered employees list from server / cloud on component mount
+  useEffect(() => {
+    syncEmployeesFromCloud();
+  }, []);
+
   const handleVerifyCode = () => {
     setErrorMsg('');
     const code = String(empIdInput || '').trim().toUpperCase();
@@ -275,7 +281,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -344,17 +350,25 @@ export default function LoginScreen({ onLoginSuccess }) {
           last_login: new Date().toISOString()
         };
 
+        const updatedEmpsList = [...existingEmps, newEmpAccount];
+        const updatedCodesList = [...registeredCodes, cleanCode];
+
         try {
-          localStorage.setItem('controlroom_employees_list', JSON.stringify([...existingEmps, newEmpAccount]));
-          localStorage.setItem('controlroom_registered_codes', JSON.stringify([...registeredCodes, cleanCode]));
+          localStorage.setItem('controlroom_employees_list', JSON.stringify(updatedEmpsList));
+          localStorage.setItem('controlroom_registered_codes', JSON.stringify(updatedCodesList));
         } catch(quotaErr) {
           // If storage quota exceeded, clear stale temporary caches and retry
           try {
             localStorage.removeItem('controlroom_raw_materials_store');
-            localStorage.setItem('controlroom_employees_list', JSON.stringify([...existingEmps, newEmpAccount]));
-            localStorage.setItem('controlroom_registered_codes', JSON.stringify([...registeredCodes, cleanCode]));
+            localStorage.setItem('controlroom_employees_list', JSON.stringify(updatedEmpsList));
+            localStorage.setItem('controlroom_registered_codes', JSON.stringify(updatedCodesList));
           } catch(e) {}
         }
+
+        // Immediately persist to server and cloud database so Admin / Developer receives access requests in real-time
+        try {
+          saveCloudStore('employees_store', updatedEmpsList);
+        } catch (e) {}
       } catch(e) {}
 
       // Show "Account Created Successfully" banner then auto-redirect in 2-3 seconds
@@ -372,6 +386,11 @@ export default function LoginScreen({ onLoginSuccess }) {
       }, 2500);
       return;
     }
+
+    // Sync latest accounts from cloud database before authenticating to get latest approved status
+    try {
+      await syncEmployeesFromCloud();
+    } catch(e) {}
 
     const result = authenticateUser(empIdInput, usernameInput, passwordInput, selectedRoleObj);
 

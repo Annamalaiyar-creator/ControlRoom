@@ -8,6 +8,7 @@ import {
   ExternalLink, ChevronRight, AlertCircle, Sparkles, X, Check,
   Radio, BarChart2, RadioTower, Power, LogOut, Code, Info
 } from 'lucide-react';
+import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 
 export default function DeveloperPortalView({ userRole, onSignOut, showCustomAlert }) {
   // Sidebar Collapse state
@@ -91,11 +92,51 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
   ]);
 
   // Active Sessions State
+  // Active Sessions State
   const [activeSessions, setActiveSessions] = useState([
     { id: 'SES-001', user: 'Annamalaiyar (Developer)', device: 'MacBook Pro 16"', browser: 'Chrome 128.0 (macOS)', ip: '49.207.214.18', location: 'Chennai, India', loginTime: '26 Aug 2026 09:30 AM', lastActive: 'Just now', isCurrent: true },
     { id: 'SES-002', user: 'Senthil Kumar (Production Head)', device: 'Dell XPS 15', browser: 'Edge 127.0 (Windows 11)', ip: '182.74.92.10', location: 'Coimbatore, India', loginTime: '26 Aug 2026 10:00 AM', lastActive: '4 mins ago', isCurrent: false },
     { id: 'SES-003', user: 'Karthik (CNC Operator)', device: 'iPad Pro 11"', browser: 'Safari 17.5 (iPadOS)', ip: '182.74.92.12', location: 'Factory Shopfloor #1', loginTime: '26 Aug 2026 08:00 AM', lastActive: '12 mins ago', isCurrent: false }
   ]);
+
+  // Live Employee Access & Approval Control State
+  const [employeesList, setEmployeesList] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+
+  // Sync registered employee list from server & cloud database
+  const refreshEmployeesList = async () => {
+    setIsLoadingEmployees(true);
+    try {
+      const cloudData = await fetchCloudStore('employees_store', []);
+      if (Array.isArray(cloudData)) {
+        setEmployeesList(cloudData);
+        localStorage.setItem('controlroom_employees_list', JSON.stringify(cloudData));
+        const codes = cloudData.map(e => e.employee_code || e.code).filter(Boolean);
+        localStorage.setItem('controlroom_registered_codes', JSON.stringify(codes));
+      }
+    } catch (e) {
+      console.error('Error fetching employees from cloud:', e);
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshEmployeesList();
+  }, []);
+
+  // Also auto-refresh whenever the UserManagement tab is activated
+  useEffect(() => {
+    if (activeDevTab === 'UserManagement') {
+      refreshEmployeesList();
+    }
+  }, [activeDevTab]);
 
   // Trigger Live Health Check
   const handleCheckHealthAgain = () => {
@@ -1016,6 +1057,28 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
               </div>
 
               <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', border: '1px solid #334155', padding: '16px', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                  <button
+                    onClick={refreshEmployeesList}
+                    disabled={isLoadingEmployees}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#0F172A',
+                      border: '1px solid #334155',
+                      color: '#38BDF8',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RefreshCw size={13} className={isLoadingEmployees ? 'spin-icon' : ''} />
+                    {isLoadingEmployees ? 'Checking Live Server...' : 'Refresh Access Requests'}
+                  </button>
+                </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#0F172A', color: '#64748B', textAlign: 'left', borderBottom: '1px solid #334155' }}>
@@ -1028,14 +1091,14 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                     </tr>
                   </thead>
                   <tbody>
-                    {(JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]')).length === 0 ? (
+                    {employeesList.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ padding: '28px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
-                          No employee accounts registered yet. When users sign up, their accounts will appear here.
+                          No employee accounts registered yet. When users sign up, their access requests will appear here in real time.
                         </td>
                       </tr>
                     ) : (
-                      (JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]')).map((emp, idx) => {
+                      employeesList.map((emp, idx) => {
                         const empCode = emp.employee_code || emp.code;
                         const empStatus = emp.status || 'Active';
                         const isPending = empStatus === 'Pending Approval';
@@ -1061,11 +1124,12 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                           <td style={{ padding: '12px 14px' }}>
                             {isPending ? (
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   try {
-                                    const list = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
-                                    const updated = list.map(e => (e.employee_code === empCode ? { ...e, status: 'Active' } : e));
+                                    const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: 'Active' } : e));
+                                    setEmployeesList(updated);
                                     localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                    saveCloudStore('employees_store', updated);
                                     if (showCustomAlert) showCustomAlert(`Access granted to Employee ${empCode} (${emp.role}). Account is now Active!`, 'Access Granted', 'success');
                                   } catch(err) {}
                                 }}
@@ -1075,17 +1139,19 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                               </button>
                             ) : (
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   try {
-                                    const list = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
-                                    const updated = list.map(e => (e.employee_code === empCode ? { ...e, status: 'Disabled' } : e));
+                                    const nextStatus = empStatus === 'Disabled' ? 'Active' : 'Disabled';
+                                    const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: nextStatus } : e));
+                                    setEmployeesList(updated);
                                     localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
-                                    if (showCustomAlert) showCustomAlert(`Employee Account ${empCode} status updated to Disabled (Data Preserved).`, 'Account Disabled', 'warning');
+                                    saveCloudStore('employees_store', updated);
+                                    if (showCustomAlert) showCustomAlert(`Employee Account ${empCode} status updated to ${nextStatus}.`, `Account ${nextStatus}`, nextStatus === 'Active' ? 'success' : 'warning');
                                   } catch(err) {}
                                 }}
-                                style={{ backgroundColor: '#334155', border: 'none', color: '#F1F5F9', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                                style={{ backgroundColor: empStatus === 'Disabled' ? '#047857' : '#334155', border: 'none', color: '#F1F5F9', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
                               >
-                                {empStatus === 'Disabled' ? 'Access Disabled' : 'Disable Access'}
+                                {empStatus === 'Disabled' ? 'Re-enable Access' : 'Disable Access'}
                               </button>
                             )}
                           </td>

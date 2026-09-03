@@ -48,11 +48,11 @@ const syncStoreWithSupabase = async (key, localData) => {
       if (Array.isArray(localData) && localData.length > 0) {
         const itemMap = new Map();
         (data.data || []).forEach(item => {
-          const id = item?.id || item?.workOrderNo || item?.code;
+          const id = item?.employee_code || item?.id || item?.workOrderNo || item?.code || item?.email;
           if (id) itemMap.set(id, item);
         });
         localData.forEach(item => {
-          const id = item?.id || item?.workOrderNo || item?.code;
+          const id = item?.employee_code || item?.id || item?.workOrderNo || item?.code || item?.email;
           if (id) itemMap.set(id, { ...itemMap.get(id), ...item });
         });
         const mergedData = Array.from(itemMap.values());
@@ -118,6 +118,7 @@ const loadLocalWorkOrders = () => {
       syncStoreWithSupabase('item_store', []),
       syncStoreWithSupabase('grn_store', []),
       syncStoreWithSupabase('bom_store', []),
+      syncStoreWithSupabase('employees_store', []),
       syncStoreWithSupabase('workorder_store', initialWOs)
     ]);
     console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');

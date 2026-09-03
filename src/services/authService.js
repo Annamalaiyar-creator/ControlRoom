@@ -1,9 +1,25 @@
 import { USER_ROLES_CONFIG } from '../components/LoginScreen';
+import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 
 /**
  * ControlRoom Authentication & Login Service
  * Dedicated module for handling authentication, credential matching, session persistence, and role resolution.
  */
+
+// Synchronous cached memory copy & async cloud fetch
+export const syncEmployeesFromCloud = async () => {
+  try {
+    const list = await fetchCloudStore('employees_store', []);
+    if (Array.isArray(list) && list.length > 0) {
+      localStorage.setItem('controlroom_employees_list', JSON.stringify(list));
+      const registeredCodes = list.map(e => (e.employee_code || e.code)).filter(Boolean);
+      localStorage.setItem('controlroom_registered_codes', JSON.stringify(registeredCodes));
+    }
+    return list;
+  } catch(e) {
+    return JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+  }
+};
 
 export const authenticateUser = (empId, username, password, selectedRoleObj = null) => {
   const cleanEmpId = String(empId || '').trim();
