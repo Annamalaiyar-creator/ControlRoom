@@ -1123,36 +1123,107 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                           </td>
                           <td style={{ padding: '12px 14px' }}>
                             {isPending ? (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: 'Active' } : e));
-                                    setEmployeesList(updated);
-                                    localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
-                                    saveCloudStore('employees_store', updated);
-                                    if (showCustomAlert) showCustomAlert(`Access granted to Employee ${empCode} (${emp.role}). Account is now Active!`, 'Access Granted', 'success');
-                                  } catch(err) {}
-                                }}
-                                style={{ backgroundColor: '#059669', border: 'none', color: '#FFFFFF', padding: '6px 12px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                ✓ Grant Access (Approve)
-                              </button>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: 'Active' } : e));
+                                      setEmployeesList(updated);
+                                      localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                      saveCloudStore('employees_store', updated);
+                                      if (showCustomAlert) showCustomAlert(`Access granted to Employee ${empCode} (${emp.role}). Account is now Active!`, 'Access Granted', 'success');
+                                    } catch(err) {}
+                                  }}
+                                  style={{ 
+                                    backgroundColor: '#059669', 
+                                    border: 'none', 
+                                    color: '#FFFFFF', 
+                                    padding: '6px 12px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '11.5px', 
+                                    fontWeight: '800', 
+                                    cursor: 'pointer', 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '4px',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title="Approve access and activate account"
+                                >
+                                  ✓ Grant Access
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: 'Rejected' } : e));
+                                      setEmployeesList(updated);
+                                      localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                      saveCloudStore('employees_store', updated);
+                                      if (showCustomAlert) showCustomAlert(`Access request for Employee ${empCode} was rejected.`, 'Request Rejected', 'warning');
+                                    } catch(err) {}
+                                  }}
+                                  style={{ 
+                                    backgroundColor: '#DC2626', 
+                                    border: 'none', 
+                                    color: '#FFFFFF', 
+                                    padding: '6px 12px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '11.5px', 
+                                    fontWeight: '800', 
+                                    cursor: 'pointer', 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '4px',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title="Reject account access request"
+                                >
+                                  ✕ Reject
+                                </button>
+                              </div>
                             ) : (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const nextStatus = empStatus === 'Disabled' ? 'Active' : 'Disabled';
-                                    const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: nextStatus } : e));
-                                    setEmployeesList(updated);
-                                    localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
-                                    saveCloudStore('employees_store', updated);
-                                    if (showCustomAlert) showCustomAlert(`Employee Account ${empCode} status updated to ${nextStatus}.`, `Account ${nextStatus}`, nextStatus === 'Active' ? 'success' : 'warning');
-                                  } catch(err) {}
-                                }}
-                                style={{ backgroundColor: empStatus === 'Disabled' ? '#047857' : '#334155', border: 'none', color: '#F1F5F9', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
-                              >
-                                {empStatus === 'Disabled' ? 'Re-enable Access' : 'Disable Access'}
-                              </button>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {empStatus !== 'Active' ? (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: 'Active' } : e));
+                                        setEmployeesList(updated);
+                                        localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                        saveCloudStore('employees_store', updated);
+                                        if (showCustomAlert) showCustomAlert(`Access granted to Employee ${empCode}. Account is now Active!`, 'Access Granted', 'success');
+                                      } catch(err) {}
+                                    }}
+                                    style={{ backgroundColor: '#059669', border: 'none', color: '#FFFFFF', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                                  >
+                                    ✓ Grant Access
+                                  </button>
+                                ) : null}
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const nextStatus = empStatus === 'Active' ? 'Disabled' : 'Active';
+                                      const updated = employeesList.map(e => ((e.employee_code || e.code) === empCode ? { ...e, status: nextStatus } : e));
+                                      setEmployeesList(updated);
+                                      localStorage.setItem('controlroom_employees_list', JSON.stringify(updated));
+                                      saveCloudStore('employees_store', updated);
+                                      if (showCustomAlert) showCustomAlert(`Employee Account ${empCode} status updated to ${nextStatus}.`, `Account ${nextStatus}`, nextStatus === 'Active' ? 'success' : 'warning');
+                                    } catch(err) {}
+                                  }}
+                                  style={{ 
+                                    backgroundColor: empStatus === 'Disabled' || empStatus === 'Rejected' ? '#047857' : '#475569', 
+                                    border: 'none', 
+                                    color: '#F1F5F9', 
+                                    padding: '5px 10px', 
+                                    borderRadius: '5px', 
+                                    fontSize: '11px', 
+                                    fontWeight: '700', 
+                                    cursor: 'pointer' 
+                                  }}
+                                >
+                                  {empStatus === 'Disabled' || empStatus === 'Rejected' ? 'Re-enable Access' : 'Disable Access'}
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
