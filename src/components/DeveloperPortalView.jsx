@@ -9,6 +9,7 @@ import {
   Radio, BarChart2, RadioTower, Power, LogOut, Code, Info
 } from 'lucide-react';
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
+import { fetchLiveActiveSessions, revokeSession, revokeAllOtherSessions } from '../services/sessionService';
 
 export default function DeveloperPortalView({ userRole, onSignOut, showCustomAlert }) {
   // Sidebar Collapse state
@@ -91,13 +92,50 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
     { id: 'ERR-20488', timestamp: '25 Aug 2026 18:22:40', severity: 'Info', service: 'Auth Service', endpoint: '/api/auth/login', message: 'Suspicious login attempt blocked from IP 185.220.101.4', user: 'dev@vrm.com', status: 401, resolved: true, stack: 'SecurityAlert: 5 consecutive failed password attempts.' }
   ]);
 
-  // Active Sessions State
-  // Active Sessions State
-  const [activeSessions, setActiveSessions] = useState([
-    { id: 'SES-001', user: 'Annamalaiyar (Developer)', device: 'MacBook Pro 16"', browser: 'Chrome 128.0 (macOS)', ip: '49.207.214.18', location: 'Chennai, India', loginTime: '26 Aug 2026 09:30 AM', lastActive: 'Just now', isCurrent: true },
-    { id: 'SES-002', user: 'Senthil Kumar (Production Head)', device: 'Dell XPS 15', browser: 'Edge 127.0 (Windows 11)', ip: '182.74.92.10', location: 'Coimbatore, India', loginTime: '26 Aug 2026 10:00 AM', lastActive: '4 mins ago', isCurrent: false },
-    { id: 'SES-003', user: 'Karthik (CNC Operator)', device: 'iPad Pro 11"', browser: 'Safari 17.5 (iPadOS)', ip: '182.74.92.12', location: 'Factory Shopfloor #1', loginTime: '26 Aug 2026 08:00 AM', lastActive: '12 mins ago', isCurrent: false }
-  ]);
+  // Active Sessions State (Connected Live to Database)
+  const [activeSessions, setActiveSessions] = useState([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  const refreshLiveSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const liveList = await fetchLiveActiveSessions();
+      if (Array.isArray(liveList) && liveList.length > 0) {
+        setActiveSessions(liveList);
+      } else {
+        // Fallback with current administrator device if empty
+        const email = localStorage.getItem('controlroom_logged_user') || 'Admin';
+        const name = localStorage.getItem('controlroom_logged_user_name') || 'Annamalaiyar';
+        setActiveSessions([{
+          id: 'SES-ADMIN',
+          user: `${name} (Developer)`,
+          device: 'MacBook Pro / PC',
+          browser: 'Web Browser',
+          ip: 'Live Client',
+          location: 'Chennai, India',
+          loginTime: 'Today',
+          lastActive: 'Just now',
+          isCurrent: true
+        }]);
+      }
+    } catch (e) {
+      console.error('Error fetching live sessions:', e);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshLiveSessions();
+  }, []);
+
+  useEffect(() => {
+    if (activeDevTab === 'ActiveSessions') {
+      refreshLiveSessions();
+      const interval = setInterval(refreshLiveSessions, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [activeDevTab]);
 
   // Live Employee Access & Approval Control State
   const [employeesList, setEmployeesList] = useState(() => {
@@ -242,9 +280,10 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
 
   // Logout All Other Sessions
   const handleLogoutAllOtherSessions = () => {
-    trigger2FARequiredAction('Revoke All Other User & Device Sessions', () => {
-      setActiveSessions(prev => prev.filter(s => s.isCurrent));
-      if (showCustomAlert) showCustomAlert('All other active devices and user sessions have been terminated immediately.', 'Sessions Terminated', 'warning');
+    trigger2FARequiredAction('Revoke All Other User & Device Sessions', async () => {
+      await revokeAllOtherSessions();
+      await refreshLiveSessions();
+      if (showCustomAlert) showCustomAlert('All other active devices and user sessions have been terminated immediately from database.', 'Sessions Terminated', 'warning');
     });
   };
 
@@ -990,14 +1029,24 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#F8FAFC' }}>Active Device & Session Authorization Control</h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>Manage authenticated user sessions, IP bounds, and force emergency session terminations.</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94A3B8' }}>Manage authenticated user sessions, IP bounds, and force emergency session terminations in real time.</p>
                 </div>
-                <button
-                  onClick={handleLogoutAllOtherSessions}
-                  style={{ backgroundColor: '#DC2626', border: 'none', color: '#FFFFFF', padding: '8px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                >
-                  Logout All Other Devices
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={refreshLiveSessions}
+                    disabled={isLoadingSessions}
+                    style={{ backgroundColor: '#1E293B', border: '1px solid #334155', color: '#38BDF8', padding: '8px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RefreshCw size={13} className={isLoadingSessions ? 'spin-icon' : ''} />
+                    {isLoadingSessions ? 'Syncing...' : 'Refresh Sessions'}
+                  </button>
+                  <button
+                    onClick={handleLogoutAllOtherSessions}
+                    style={{ backgroundColor: '#DC2626', border: 'none', color: '#FFFFFF', padding: '8px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    Logout All Other Devices
+                  </button>
+                </div>
               </div>
 
               <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', border: '1px solid #334155', overflow: 'hidden' }}>
@@ -1014,32 +1063,43 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                     </tr>
                   </thead>
                   <tbody>
-                    {activeSessions.map(ses => (
-                      <tr key={ses.id} style={{ borderBottom: '1px solid #334155' }}>
-                        <td style={{ padding: '12px 14px', fontWeight: '700', color: '#F8FAFC' }}>
-                          {ses.user} {ses.isCurrent && <span style={{ color: '#34D399', fontSize: '10px', marginLeft: '6px' }}>(THIS DEVICE)</span>}
-                        </td>
-                        <td style={{ padding: '12px 14px', color: '#CBD5E1' }}>{ses.device} - {ses.browser}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#38BDF8' }}>{ses.ip}</td>
-                        <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{ses.location}</td>
-                        <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{ses.loginTime}</td>
-                        <td style={{ padding: '12px 14px', color: '#34D399', fontWeight: '700' }}>{ses.lastActive}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          {!ses.isCurrent && (
-                            <button
-                              onClick={() => {
-                                trigger2FARequiredAction(`Revoke Session ${ses.id}`, () => {
-                                  setActiveSessions(prev => prev.filter(s => s.id !== ses.id));
-                                });
-                              }}
-                              style={{ backgroundColor: '#7F1D1D', border: 'none', color: '#FCA5A5', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
-                            >
-                              Revoke Session
-                            </button>
-                          )}
+                    {activeSessions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: '#94A3B8' }}>
+                          No active sessions registered.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      activeSessions.map(ses => (
+                        <tr key={ses.id} style={{ borderBottom: '1px solid #334155' }}>
+                          <td style={{ padding: '12px 14px', fontWeight: '700', color: '#F8FAFC' }}>
+                            {ses.user} {ses.isCurrent && <span style={{ color: '#34D399', fontSize: '10px', marginLeft: '6px' }}>(THIS DEVICE)</span>}
+                            {ses.empCode && <div style={{ fontSize: '10.5px', color: '#38BDF8', fontFamily: 'monospace' }}>{ses.empCode}</div>}
+                          </td>
+                          <td style={{ padding: '12px 14px', color: '#CBD5E1' }}>{ses.device} - {ses.browser}</td>
+                          <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#38BDF8' }}>{ses.ip}</td>
+                          <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{ses.location}</td>
+                          <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{ses.loginTime}</td>
+                          <td style={{ padding: '12px 14px', color: '#34D399', fontWeight: '700' }}>{ses.lastActive}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            {!ses.isCurrent && (
+                              <button
+                                onClick={() => {
+                                  trigger2FARequiredAction(`Revoke Session ${ses.id}`, async () => {
+                                    await revokeSession(ses.id);
+                                    await refreshLiveSessions();
+                                    if (showCustomAlert) showCustomAlert(`Session for ${ses.user} has been terminated from the database.`, 'Session Terminated', 'warning');
+                                  });
+                                }}
+                                style={{ backgroundColor: '#7F1D1D', border: 'none', color: '#FCA5A5', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                              >
+                                Revoke Session
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

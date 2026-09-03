@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { authenticateUser, syncEmployeesFromCloud } from '../services/authService';
 import { saveCloudStore } from '../utils/supabaseDataSync';
+import { registerActiveSession } from '../services/sessionService';
 
 export const USER_ROLES_CONFIG = [
   {
@@ -232,6 +233,10 @@ export default function LoginScreen({ onLoginSuccess }) {
     localStorage.setItem('controlroom_logged_emp_id', empCode);
     localStorage.setItem('controlroom_logged_user', emailStr);
     localStorage.setItem('controlroom_logged_user_name', displayNameStr);
+
+    try {
+      registerActiveSession(emailStr, empCode, displayNameStr, roleName);
+    } catch (e) {}
 
     setShowSuccessBanner(false);
     setShow2FAModal(false);

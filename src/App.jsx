@@ -22,6 +22,7 @@ import DeveloperPortalView from './components/DeveloperPortalView';
 import NotificationToast from './components/NotificationToast';
 import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt } from 'lucide-react';
 import { useEffect } from 'react';
+import { heartbeatActiveSession, registerActiveSession, revokeSession } from './services/sessionService';
 
 function App() {
   // Default sidebar collapsed to TRUE (closed/inside by default on loading)
@@ -66,6 +67,12 @@ function App() {
   };
 
   const handleSignOut = () => {
+    try {
+      const sesId = localStorage.getItem('controlroom_device_session_id');
+      if (sesId) {
+        revokeSession(sesId);
+      }
+    } catch (e) {}
     localStorage.removeItem('controlroom_is_authenticated');
     localStorage.removeItem('controlroom_active_tab');
     setIsAuthenticated(false);
@@ -86,6 +93,25 @@ function App() {
     setSidebarCollapsed(nextState);
     localStorage.setItem('controlroom_sidebar_collapsed', String(nextState));
   };
+
+  // Heartbeat & session verification interval (checks every 25 seconds)
+  useEffect(() => {
+    if (isAuthenticated) {
+      const email = localStorage.getItem('controlroom_logged_user');
+      const empCode = localStorage.getItem('controlroom_logged_emp_id');
+      const name = localStorage.getItem('controlroom_logged_user_name');
+      const role = localStorage.getItem('controlroom_user_role');
+      if (email) {
+        registerActiveSession(email, empCode, name, role);
+      }
+
+      heartbeatActiveSession();
+      const interval = setInterval(() => {
+        heartbeatActiveSession();
+      }, 25000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {

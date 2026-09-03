@@ -1,5 +1,6 @@
 import { USER_ROLES_CONFIG } from '../components/LoginScreen';
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
+import { registerActiveSession, revokeSession } from './sessionService';
 
 /**
  * ControlRoom Authentication & Login Service
@@ -96,6 +97,9 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
     localStorage.setItem('controlroom_logged_emp_id', cleanEmpId);
     localStorage.setItem('controlroom_logged_user', cleanUsername);
     localStorage.setItem('controlroom_logged_user_name', finalDisplayName);
+
+    // Register active device session in cloud database
+    registerActiveSession(cleanUsername, cleanEmpId, finalDisplayName, finalRoleName);
   } catch (e) {
     console.error('Error saving login session to localStorage:', e);
   }
@@ -111,6 +115,10 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
 
 export const logoutUser = () => {
   try {
+    const sesId = localStorage.getItem('controlroom_device_session_id');
+    if (sesId) {
+      revokeSession(sesId);
+    }
     localStorage.removeItem('controlroom_is_authenticated');
     localStorage.removeItem('controlroom_user_role');
     localStorage.removeItem('controlroom_logged_user');
