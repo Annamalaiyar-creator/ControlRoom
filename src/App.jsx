@@ -66,47 +66,60 @@ class AppErrorBoundary extends Component {
             <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px', lineHeight: '1.5' }}>
               The dashboard encountered a temporary loading issue. Click below to refresh your dashboard session.
             </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  this.setState({ hasError: false });
-                  window.location.reload();
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#0E7490',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <RefreshCw size={14} /> Reload Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('controlroom_is_authenticated');
-                  localStorage.removeItem('controlroom_user_role');
-                  window.location.reload();
-                }}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#F1F5F9',
-                  color: '#475569',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Sign In Again
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    this.setState({ hasError: false });
+                    localStorage.removeItem('controlroom_active_tab');
+                    window.location.reload();
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#0E7490',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <RefreshCw size={14} /> Reset to Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('controlroom_is_authenticated');
+                    localStorage.removeItem('controlroom_user_role');
+                    localStorage.removeItem('controlroom_active_tab');
+                    window.location.reload();
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#F1F5F9',
+                    color: '#475569',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign In Again
+                </button>
+              </div>
+
+              {this.state.error && (
+                <details style={{ marginTop: '14px', textAlign: 'left', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#64748B' }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: '700', color: '#DC2626' }}>View Error Diagnostic Info</summary>
+                  <pre style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#991B1B' }}>
+                    {this.state.error.toString()}
+                  </pre>
+                </details>
+              )}
             </div>
           </div>
         </div>
