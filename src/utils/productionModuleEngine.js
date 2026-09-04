@@ -882,20 +882,15 @@ class ProductionModuleEngine {
       referenceDoc: wo.id
     });
 
-    // 2. Finished Goods Stock Addition (Only Good Output)
-    const cutLen = wo.cutLengthMm || wo.cutLength || 300;
+    // 2. Finished Goods Stock Addition (Only Good Output) directly into Main Branch item
     const mainBranchCode = wo.finishedProductCode || wo.parentCode || 'AR120';
     const mainBranchName = wo.finishedProductName || 'Finished Product';
-    
-    // Sub-branch material code is identical to main branch code
     const targetFgCode = mainBranchCode;
-    // Sub-branch name format: Main Branch Name (Cut Length mm)
-    const targetFgName = mainBranchName.includes(`(${cutLen} mm)`) ? mainBranchName : `${mainBranchName} (${cutLen} mm)`;
+    const targetFgName = mainBranchName;
 
     let fgItem = this.inventory.find(i => 
-      i.code.toUpperCase() === targetFgCode.toUpperCase() && 
-      i.parentCode === mainBranchCode &&
-      i.name && i.name.toLowerCase() === targetFgName.toLowerCase()
+      (i.code && i.code.toUpperCase() === targetFgCode.toUpperCase()) ||
+      (i.name && i.name.toLowerCase() === targetFgName.toLowerCase())
     );
 
     let fgPrevStock = 0;
@@ -904,11 +899,9 @@ class ProductionModuleEngine {
       fgItem.physicalStock += wo.actualGoodOutput;
       fgItem.availableStock = fgItem.physicalStock - fgItem.reservedStock;
     } else {
-      // Create new FG sub-branch item dynamically in inventory catalog
+      // Create new FG main branch item in inventory catalog
       fgItem = {
         code: targetFgCode,
-        parentCode: mainBranchCode,
-        parentName: mainBranchName,
         name: targetFgName,
         category: 'Finished Goods',
         unit: wo.unit || 'Pieces',

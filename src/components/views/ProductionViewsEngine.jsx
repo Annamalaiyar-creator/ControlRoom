@@ -2518,24 +2518,21 @@ export default function ProductionViewsEngine(props) {
                               currentMats = initialMaterials;
                             }
 
-                            // Dynamic Sub-Branch Aware Stock Deduction Algorithm
-                            // 1. If product has a matching sub-branch in Inventory for the requested MM cut length -> Deduct from that sub-branch
-                            // 2. If NO sub-branch exists for that cut length (or product has no sub-branches) -> Deduct directly from the main product
-                            const matchedDeductionsMap = new Map(); // pItem -> target material object
+                            // Direct Main Branch Stock Deduction Algorithm
+                            // Deduct directly from the main branch item matching code or name
+                            const matchedDeductionsMap = new Map(); // target material code/name -> pItem
 
                             packedItemsToDeduct.forEach(pItem => {
                               const pCode = (pItem.code || '').toUpperCase().trim();
                               const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
-                              const mmVal = (pItem.mm || pItem.lengthMm || pItem.cutLength || '').toString().toLowerCase().replace(/[^0-9]/g, '');
 
-                              // Find all candidates matching code or name
-                              const candidates = currentMats.filter(m => {
+                              // Find candidates matching code or name
+                              const target = currentMats.find(m => {
                                 const mCode = (m.code || '').toUpperCase().trim();
                                 const mName = (m.name || '').toLowerCase().trim();
-                                const mParent = (m.parentCode || '').toUpperCase().trim();
 
                                 if (pCode === 'MC30' && (mCode === 'MC30' || mName.includes('mid 30'))) return true;
-                                if (pCode && (mCode === pCode || mParent === pCode)) return true;
+                                if (pCode && mCode === pCode) return true;
                                 if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
 
                                 const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
@@ -2550,30 +2547,13 @@ export default function ProductionViewsEngine(props) {
                                 return false;
                               });
 
-                              if (candidates.length > 0) {
-                                let target = null;
-                                // Check if any candidate is a sub-branch matching the entered MM length
-                                if (mmVal) {
-                                  target = candidates.find(c => {
-                                    const cName = (c.name || '').toLowerCase();
-                                    const cCode = (c.code || '').toLowerCase();
-                                    return Boolean(c.parentCode) && (cName.includes(`${mmVal}mm`) || cName.includes(`${mmVal} mm`) || cCode.includes(mmVal));
-                                  });
-                                }
-                                // If no matching sub-branch found (or item has no sub-branches), pick main parent product
-                                if (!target) {
-                                  target = candidates.find(c => !c.parentCode) || candidates[0];
-                                }
-                                if (target) {
-                                  const targetMapKey = target.parentCode ? `${target.code}_sub_${target.name}` : (target.code || target.name);
-                                  matchedDeductionsMap.set(targetMapKey, pItem);
-                                }
+                              if (target) {
+                                matchedDeductionsMap.set(target.code || target.name, pItem);
                               }
                             });
 
                             let updatedMats = currentMats.map(m => {
-                              const mKey = m.parentCode ? `${m.code}_sub_${m.name}` : (m.code || m.name);
-                              const matchP = matchedDeductionsMap.get(mKey);
+                              const matchP = matchedDeductionsMap.get(m.code) || matchedDeductionsMap.get(m.name);
                               if (matchP) {
                                 const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
                                 const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
@@ -4769,24 +4749,28 @@ export default function ProductionViewsEngine(props) {
                 }
               });
 
-              const preparedList = materials.map(m => {
-                if (!m.parentCode && subTotalsMap.has(m.code)) {
-                  const subTotals = subTotalsMap.get(m.code);
-                  const aggregatedTotalStock = subTotals.stock;
-                  const aggregatedMinLevel = subTotals.minLevel || m.minLevel || 50;
-                  let calcStatus = 'In Stock';
-                  if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
-                  else if (aggregatedTotalStock <= aggregatedMinLevel) calcStatus = 'Low Stock';
+              // Prepare list: consolidate all sub-branches into their parent main branch item
+              // and strictly exclude standalone sub-branch rows so only main branch items are displayed.
+              const preparedList = materials
+                .filter(m => !m.parentCode)
+                .map(m => {
+                  if (subTotalsMap.has(m.code)) {
+                    const subTotals = subTotalsMap.get(m.code);
+                    const aggregatedTotalStock = (Number(m.stock || 0)) + subTotals.stock;
+                    const aggregatedMinLevel = subTotals.minLevel || m.minLevel || 50;
+                    let calcStatus = 'In Stock';
+                    if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
+                    else if (aggregatedTotalStock <= aggregatedMinLevel) calcStatus = 'Low Stock';
 
-                  return {
-                    ...m,
-                    stock: aggregatedTotalStock,
-                    minLevel: aggregatedMinLevel,
-                    status: calcStatus
-                  };
-                }
-                return m;
-              });
+                    return {
+                      ...m,
+                      stock: aggregatedTotalStock,
+                      minLevel: aggregatedMinLevel,
+                      status: calcStatus
+                    };
+                  }
+                  return m;
+                });
 
               return preparedList.filter(m => {
                 const mName = (m.name || '').toLowerCase();
@@ -4804,6 +4788,10 @@ export default function ProductionViewsEngine(props) {
                                  mCode.includes('alu-len') || 
                                  mCode.includes('rm-') ||
                                  mCode.includes('coil');
+
+                // Exclude any materials where the code contains 'ITEM' or is a generic placeholder
+                if (mCode.includes('item')) return false;
+                if (!m.code || m.code === '—' || mCode === 'rm-vrm' || mCode === 'mr100') return false;
 
                 if (isRawMaterialDirectory) {
                   // Raw Material Directory strictly shows ONLY Aluminum Length alone
@@ -4826,16 +4814,7 @@ export default function ProductionViewsEngine(props) {
                 const matchesStore = selectedStore === 'All Stores' || m.store === selectedStore;
                 const matchesStatus = selectedStatus === 'All Status' || m.status === selectedStatus;
                 return matchesSearch && matchesCat && matchesStore && matchesStatus;
-              }).sort((a, b) => {
-                const aParent = a.parentCode || a.code;
-                const bParent = b.parentCode || b.code;
-                if (aParent === bParent) {
-                  if (!a.parentCode) return -1;
-                  if (!b.parentCode) return 1;
-                  return a.code.localeCompare(b.code);
-                }
-                return aParent.localeCompare(bParent);
-              });
+              }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
             }, [materials, searchQuery, selectedCat, selectedStore, selectedStatus, activeTab]);
 
             // Low stock items
@@ -4924,6 +4903,18 @@ export default function ProductionViewsEngine(props) {
 
             const [receiptForm, setReceiptForm] = useState(getFreshReceiptForm);
             const [receiptItems, setReceiptItems] = useState(getFreshReceiptItems);
+            const [isMatDropdownOpen, setIsMatDropdownOpen] = useState(false);
+            const matDropdownRef = useRef(null);
+
+            useEffect(() => {
+              const handleClickOutside = (e) => {
+                if (matDropdownRef.current && !matDropdownRef.current.contains(e.target)) {
+                  setIsMatDropdownOpen(false);
+                }
+              };
+              document.addEventListener('mousedown', handleClickOutside);
+              return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
 
             const fileInputRef = useRef(null);
             const [isUploading, setIsUploading] = useState(false);
@@ -5101,10 +5092,14 @@ export default function ProductionViewsEngine(props) {
               const qtyVal = parseFloat(receiptItems[0]?.qty) || 0;
               const reservedVal = parseFloat(receiptForm.reservedStock) || 0;
               const minLevelVal = parseFloat(receiptForm.minLevel) || 10;
-              const unitVal = receiptItems[0]?.unit || 'Length';
+              const unitVal = receiptItems[0]?.unit || 'Numbers';
               const batchNoVal = (receiptForm.supplierInvNo || receiptItems[0]?.batchNo || '').trim();
               const notesVal = (receiptForm.remarks || '').trim();
 
+              if (!catVal) {
+                showCustomAlert('Please select a Category.', 'Category Required', 'warning');
+                return;
+              }
               if (!enteredMatName) {
                 showCustomAlert('Please enter a valid Material Description / Name.', 'Material Description Required', 'warning');
                 return;
@@ -5277,60 +5272,152 @@ export default function ProductionViewsEngine(props) {
                           Category <span style={{ color: '#DC2626' }}>*</span>
                         </label>
                         <select
-                          value={receiptForm.category || 'Aluminium'}
+                          value={receiptForm.category || ''}
                           onChange={(e) => setReceiptForm({ ...receiptForm, category: e.target.value })}
-                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: receiptForm.category ? '#0F172A' : '#94A3B8', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
                           onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                           onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
                         >
+                          <option value="" disabled>Select the Category</option>
                           <option value="Aluminium">Aluminium</option>
-                          <option value="Steel">Steel</option>
+                          <option value="Hot Dip Galvanized">Hot Dip Galvanized</option>
                           <option value="Fasteners">Fasteners</option>
-                          <option value="Coating">Coating</option>
-                          <option value="Packing">Packing</option>
+                          <option value="Inverter (Hybrid)">Inverter (Hybrid)</option>
+                          <option value="Inverter (On Grid)">Inverter (On Grid)</option>
+                          <option value="Module (DCR)">Module (DCR)</option>
+                          <option value="Module (Ndcr)">Module (Ndcr)</option>
+                          <option value="Galvalume">Galvalume</option>
+                          <option value="MS Material (Without Galvanized)">MS Material (Without Galvanized)</option>
+                          <option value="HR Coil">HR Coil</option>
+                          <option value="HR Sheet">HR Sheet</option>
+                          <option value="Dispenser Gun">Dispenser Gun</option>
+                          <option value="Adhesive Glue">Adhesive Glue</option>
+                          <option value="Lugs & Gland">Lugs & Gland</option>
+                          <option value="Square Tube">Square Tube</option>
+                          <option value="EPDM">EPDM</option>
+                          <option value="Cables">Cables</option>
+                          <option value="FRP">FRP</option>
                         </select>
                       </div>
 
-                      {/* 3. Material Description / Name */}
-                      <div style={{ gridColumn: 'span 2' }}>
+                      {/* 3. Material Description / Name (Searchable & Typable Combobox Dropdown) */}
+                      <div style={{ gridColumn: 'span 2', position: 'relative' }} ref={matDropdownRef}>
                         <label style={{ display: 'block', fontWeight: '700', color: '#334155', marginBottom: '7px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                           Material Description / Name <span style={{ color: '#DC2626' }}>*</span>
                         </label>
-                        <input
-                          type="text"
-                          list="material-names-list"
-                          value={receiptItems[0]?.material || ''}
-                          onChange={(e) => {
-                            const enteredVal = e.target.value;
-                            updateMaterialRow(receiptItems[0]?.id || 1, 'material', enteredVal);
-                            const matObj = materials.find(m => 
-                              m.name.toLowerCase() === enteredVal.toLowerCase() || 
-                              m.code.toLowerCase() === enteredVal.toLowerCase()
-                            );
-                            if (matObj) {
-                              if (matObj.unit) updateMaterialRow(receiptItems[0]?.id || 1, 'unit', matObj.unit);
-                              if (matObj.code) setReceiptForm(prev => ({ ...prev, materialCode: matObj.code, category: matObj.cat || prev.category }));
-                            }
-                          }}
-                          placeholder="Type or select material name (e.g. Structural Steel Beams)"
-                          style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '600', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
-                          onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
-                          onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
-                        />
-                        <datalist id="material-names-list">
-                          {activeTab === 'Raw Material Directory'
-                            ? materials.filter(m => (m.name || '').toLowerCase().includes('aluminum length') || (m.name || '').toLowerCase().includes('aluminium length') || (m.code || '').toLowerCase().includes('alu-2414')).map(m => (
-                                <option key={m.code} value={m.name}>
-                                  {m.code} (Current Stock: {m.stock} {m.unit || 'Units'})
-                                </option>
-                              ))
-                            : materials.map(m => (
-                                <option key={m.code} value={m.name}>
-                                  {m.code} (Current Stock: {m.stock} {m.unit || 'Units'})
-                                </option>
-                              ))
-                          }
-                        </datalist>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={receiptItems[0]?.material || ''}
+                            onFocus={() => setIsMatDropdownOpen(true)}
+                            onChange={(e) => {
+                              const enteredVal = e.target.value;
+                              updateMaterialRow(receiptItems[0]?.id || 1, 'material', enteredVal);
+                              setIsMatDropdownOpen(true);
+                              const matObj = materials.find(m => 
+                                m.name.toLowerCase() === enteredVal.toLowerCase() || 
+                                m.code.toLowerCase() === enteredVal.toLowerCase()
+                              );
+                              if (matObj) {
+                                if (matObj.unit) updateMaterialRow(receiptItems[0]?.id || 1, 'unit', matObj.unit);
+                                if (matObj.code) setReceiptForm(prev => ({ ...prev, materialCode: matObj.code, category: matObj.cat || prev.category }));
+                              }
+                            }}
+                            placeholder="Type or select material name (e.g. Structural Steel Beams)..."
+                            style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 40px 0 14px', fontSize: '13.5px', fontWeight: '600', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
+                            onFocusCapture={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                            onBlurCapture={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setIsMatDropdownOpen(!isMatDropdownOpen)}
+                            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '6px' }}
+                            title="Toggle Dropdown"
+                          >
+                            <ChevronDown size={18} style={{ transform: isMatDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+                          </button>
+                        </div>
+
+                        {/* Dropdown Options Menu */}
+                        {isMatDropdownOpen && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: '6px',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '12px',
+                            boxShadow: '0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05)',
+                            maxHeight: '260px',
+                            overflowY: 'auto',
+                            zIndex: 1000,
+                            padding: '6px'
+                          }}>
+                            {(() => {
+                              const searchFilter = (receiptItems[0]?.material || '').trim().toLowerCase();
+                              const availableList = materials.filter(m => {
+                                const mCode = String(m.code || '').toLowerCase();
+                                if (!m.code || m.code === '—' || mCode.includes('item') || mCode === 'rm-vrm' || mCode === 'mr100') return false;
+                                if (activeTab === 'Raw Material Directory') {
+                                  const isAlu = mCode === 'rm-alu-2414' || mCode.startsWith('alu-len') || (m.name || '').toLowerCase().includes('aluminum length') || (m.name || '').toLowerCase().includes('aluminium length');
+                                  if (!isAlu) return false;
+                                }
+                                if (searchFilter) {
+                                  return (m.name || '').toLowerCase().includes(searchFilter) || mCode.includes(searchFilter);
+                                }
+                                return true;
+                              });
+
+                              if (availableList.length === 0) {
+                                return (
+                                  <div style={{ padding: '12px 16px', fontSize: '13px', color: '#64748B', textAlign: 'center' }}>
+                                    No matching items found. You can type to create new: <strong style={{ color: '#0E7490' }}>"{receiptItems[0]?.material}"</strong>
+                                  </div>
+                                );
+                              }
+
+                              return availableList.map((m) => (
+                                <div
+                                  key={m.code}
+                                  onClick={() => {
+                                    updateMaterialRow(receiptItems[0]?.id || 1, 'material', m.name);
+                                    if (m.unit) updateMaterialRow(receiptItems[0]?.id || 1, 'unit', m.unit === 'Mtr' ? 'Meters' : m.unit === 'Nos' ? 'Numbers' : m.unit);
+                                    setReceiptForm(prev => ({
+                                      ...prev,
+                                      materialCode: m.code,
+                                      category: m.cat || prev.category || ''
+                                    }));
+                                    setIsMatDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    padding: '10px 14px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: '13px',
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <div>
+                                    <div style={{ fontWeight: '700', color: '#0F172A' }}>{m.name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                      Code: <span style={{ color: '#0E7490', fontWeight: '700' }}>{m.code}</span> • Cat: {m.cat || 'General'}
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '3px 8px', borderRadius: '6px', border: '1px solid #A5F3FC' }}>
+                                    Stock: {m.stock} {m.unit || 'Units'}
+                                  </div>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        )}
                       </div>
 
                       {/* 4. Unit of Measurement */}
@@ -5339,59 +5426,30 @@ export default function ProductionViewsEngine(props) {
                           Unit of Measurement <span style={{ color: '#DC2626' }}>*</span>
                         </label>
                         <select
-                          value={receiptItems[0]?.unit || 'Length'}
+                          value={receiptItems[0]?.unit || 'Numbers'}
                           onChange={(e) => {
                             const newUnit = e.target.value;
                             updateMaterialRow(receiptItems[0]?.id || 1, 'unit', newUnit);
                             // Set default dimension values per UOM
-                            let defaultDim = '2414';
-                            if (newUnit === 'KG') defaultDim = '1.0';
-                            else if (newUnit === 'Mtr') defaultDim = '1.0';
-                            else if (newUnit === 'Nos') defaultDim = '1';
-                            else if (newUnit === 'Set') defaultDim = '1';
+                            let defaultDim = newUnit === 'Meters' ? '1.0' : '1';
                             setReceiptForm(prev => ({ ...prev, lengthMm: defaultDim }));
                           }}
                           style={{ width: '100%', height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13.5px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
                           onFocus={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                           onBlur={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
                         >
-                          <option value="Length">Length (2414 mm Bar)</option>
-                          <option value="Bar">Bar (Standard Profile)</option>
-                          <option value="Nos">Nos / Pcs (Pieces)</option>
-                          <option value="KG">KG (Kilograms)</option>
-                          <option value="Mtr">Mtr (Meters)</option>
-                          <option value="Set">Set (Assembly Kit)</option>
+                          <option value="Numbers">Numbers (Nos / Pcs)</option>
+                          <option value="Meters">Meters (Mtr)</option>
                         </select>
                       </div>
 
                       {/* 5. Dynamic Unit Dimension / Value Container */}
                       {(() => {
-                        const currentUnit = receiptItems[0]?.unit || 'Length';
-                        let fieldLabel = 'Length Value / Dimension (mm)';
-                        let fieldPlaceholder = 'e.g. 2414';
-                        let unitBadge = 'mm Bar';
-
-                        if (currentUnit === 'KG') {
-                          fieldLabel = 'Weight Value per Unit (KG)';
-                          fieldPlaceholder = 'e.g. 1.5';
-                          unitBadge = 'KG / Unit';
-                        } else if (currentUnit === 'Mtr') {
-                          fieldLabel = 'Length Dimension per Unit (Meters)';
-                          fieldPlaceholder = 'e.g. 6.0';
-                          unitBadge = 'Meters';
-                        } else if (currentUnit === 'Nos') {
-                          fieldLabel = 'Quantity Pack Size (Pieces)';
-                          fieldPlaceholder = 'e.g. 1';
-                          unitBadge = 'Pcs / Box';
-                        } else if (currentUnit === 'Bar') {
-                          fieldLabel = 'Bar Cut Length / Profile Dimension (mm)';
-                          fieldPlaceholder = 'e.g. 2414';
-                          unitBadge = 'mm Profile';
-                        } else if (currentUnit === 'Set') {
-                          fieldLabel = 'Assembly Set Breakdown (Items)';
-                          fieldPlaceholder = 'e.g. 1';
-                          unitBadge = 'Items / Set';
-                        }
+                        const currentUnit = receiptItems[0]?.unit || 'Numbers';
+                        const isMeters = currentUnit === 'Meters';
+                        const fieldLabel = isMeters ? 'Length Dimension per Unit (Meters)' : 'Quantity Pack Size / Count (Numbers)';
+                        const fieldPlaceholder = isMeters ? 'e.g. 1.0' : 'e.g. 1';
+                        const unitBadge = isMeters ? 'Meters' : 'Numbers';
 
                         return (
                           <div>
@@ -5401,7 +5459,7 @@ export default function ProductionViewsEngine(props) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <input
                                 type="number"
-                                value={receiptForm.lengthMm !== undefined ? receiptForm.lengthMm : (currentUnit === 'Length' || currentUnit === 'Bar' ? '2414' : '1')}
+                                value={receiptForm.lengthMm !== undefined ? receiptForm.lengthMm : (isMeters ? '1.0' : '1')}
                                 onChange={(e) => setReceiptForm({ ...receiptForm, lengthMm: e.target.value })}
                                 placeholder={fieldPlaceholder}
                                 style={{ flex: 1, height: '44px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '14px', fontWeight: '700', color: '#0F172A', outline: 'none', backgroundColor: '#F8FAFC', transition: 'all 0.15s ease', boxSizing: 'border-box' }}
@@ -5734,7 +5792,7 @@ export default function ProductionViewsEngine(props) {
                         Item Audit Log & Production Traceability
                       </h1>
                       <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                        Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong> {selectedMat.parentCode && <span style={{ marginLeft: '8px', color: '#64748B' }}>(Main Branch Code: {selectedMat.parentCode})</span>}
+                        Material Description: <strong style={{ color: '#0F172A' }}>{selectedMat.name}</strong> | Item Code: <strong style={{ color: '#2563EB' }}>{selectedMat.code}</strong>
                       </p>
                     </div>
 
@@ -5947,70 +6005,86 @@ export default function ProductionViewsEngine(props) {
                       style={{ display: 'none' }}
                     />
 
-                    {/* Upload File Button */}
+                    {/* Upload File Button (Modern Sleek Enterprise Design) */}
                     <button
                       onClick={() => fileInputRef.current && fileInputRef.current.click()}
                       disabled={isUploading}
                       style={{
                         backgroundColor: '#FFFFFF',
-                        border: '1.5px solid #0E7490',
-                        color: '#0E7490',
-                        height: '40px',
-                        padding: '0 18px',
-                        borderRadius: '50px',
+                        border: '1px solid #CBD5E1',
+                        color: '#0F172A',
+                        height: '38px',
+                        padding: '0 14px',
+                        borderRadius: '10px',
                         fontSize: '13px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
                         cursor: isUploading ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                        transition: 'all 0.2s ease',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+                        transition: 'all 0.15s ease',
                         opacity: isUploading ? 0.7 : 1
                       }}
-                      onMouseEnter={(e) => { if (!isUploading) e.currentTarget.style.backgroundColor = '#ECFEFF'; }}
-                      onMouseLeave={(e) => { if (!isUploading) e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                      onMouseEnter={(e) => {
+                        if (!isUploading) {
+                          e.currentTarget.style.backgroundColor = '#F8FAFC';
+                          e.currentTarget.style.borderColor = '#0E7490';
+                          e.currentTarget.style.color = '#0E7490';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isUploading) {
+                          e.currentTarget.style.backgroundColor = '#FFFFFF';
+                          e.currentTarget.style.borderColor = '#CBD5E1';
+                          e.currentTarget.style.color = '#0F172A';
+                        }
+                      }}
                     >
-                      <Upload size={16} strokeWidth={2.2} />
-                      <span>{isUploading ? 'Uploading...' : 'Upload File (.xlsx / .csv)'}</span>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        backgroundColor: '#ECFEFF',
+                        color: '#0E7490',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Upload size={14} strokeWidth={2.2} />
+                      </div>
+                      <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
                     </button>
 
                     <button
                       onClick={handleOpenAddStock}
                       style={{
                         backgroundColor: '#0E7490',
-                        border: 'none',
+                        border: '1px solid #0E7490',
                         color: '#FFFFFF',
-                        height: '40px',
-                        padding: '0 6px 0 20px',
-                        borderRadius: '50px',
+                        height: '38px',
+                        padding: '0 16px',
+                        borderRadius: '10px',
                         fontSize: '13px',
                         fontWeight: '700',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
+                        gap: '8px',
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
-                        transition: 'all 0.2s ease',
-                        letterSpacing: '0.2px'
+                        boxShadow: '0 2px 6px rgba(14, 116, 144, 0.25)',
+                        transition: 'all 0.15s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#085D75';
+                        e.currentTarget.style.borderColor = '#085D75';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0E7490';
+                        e.currentTarget.style.borderColor = '#0E7490';
+                      }}
                     >
+                      <Plus size={15} strokeWidth={2.5} />
                       <span>{pageConfig.actionText}</span>
-                      <div style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#0E7490',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                      }}>
-                        <Plus size={16} strokeWidth={2.5} />
-                      </div>
                     </button>
                   </div>
                 </div>
@@ -6147,8 +6221,9 @@ export default function ProductionViewsEngine(props) {
                             </tr>
                           ))
                         ) : currentMaterialsPage.filter(m => {
-                          // Filter out generic/invalid Mini Rail item without proper code and MR100
-                          if (!m.code || m.code === '—' || m.code === 'RM-VRM' || m.code === 'MR100' || m.name?.trim().toLowerCase() === 'mini rail') return false;
+                          // Filter out items with ITEM in code, generic/invalid Mini Rail item without proper code and MR100
+                          const c = String(m.code || '').toLowerCase();
+                          if (!m.code || m.code === '—' || c.includes('item') || c === 'rm-vrm' || c === 'mr100' || m.name?.trim().toLowerCase() === 'mini rail') return false;
                           return true;
                         }).map((m, idx) => {
                           const isSelected = selectedRows.includes(m.code);
@@ -6181,33 +6256,18 @@ export default function ProductionViewsEngine(props) {
                                 onClick={() => handleOpenStockAdj(m)}
                                 style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                               >
-                                {m.parentCode ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '16px' }}>
-                                    <span style={{ color: '#0E7490', fontWeight: '800', fontSize: '13px' }}>└─</span>
-                                    <span style={{ color: '#0F172A', fontWeight: '700' }}>{m.parentCode || m.code}</span>
-                                  </div>
-                                ) : (
-                                  <span style={{ color: '#0E7490', fontWeight: '800' }}>{m.code}</span>
-                                )}
+                                <span style={{ color: '#0E7490', fontWeight: '800' }}>{m.code}</span>
                               </td>
                               <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
-                                {m.parentCode ? (
-                                  <div style={{ paddingLeft: '16px', color: '#334155', fontWeight: '600', fontSize: '12.5px' }}>
-                                    {m.name}
-                                  </div>
-                                ) : (
-                                  <>
-                                    <strong style={{ color: '#0F172A' }}>{m.name}</strong> 
-                                    {activeTab === 'Raw Material Directory' && (
-                                      <span style={{ marginLeft: '6px', display: 'inline-flex', gap: '4px' }}>
-                                        {m.lengthMm && (
-                                          <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>
-                                            Length: {m.lengthMm} mm
-                                          </span>
-                                        )}
+                                <strong style={{ color: '#0F172A' }}>{m.name}</strong> 
+                                {activeTab === 'Raw Material Directory' && (
+                                  <span style={{ marginLeft: '6px', display: 'inline-flex', gap: '4px' }}>
+                                    {m.lengthMm && (
+                                      <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>
+                                        Length: {m.lengthMm} mm
                                       </span>
                                     )}
-                                  </>
+                                  </span>
                                 )}
                               </td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.cat}</td>
