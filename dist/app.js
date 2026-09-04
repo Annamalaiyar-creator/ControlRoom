@@ -192,6 +192,13 @@ const server = http.createServer(async (req, res) => {
           console.log('[ZOHO STANDALONE CREATE]', JSON.stringify(zohoPayload));
           let zohoResult = await callZoho('POST', '/books/v3/purchaseorders', zohoPayload, token);
 
+          // If Zoho warns about auto-generation mismatch, retry letting Zoho assign its exact sequence number
+          if (zohoResult && zohoResult.code !== 0) {
+            console.warn(`[ZOHO RETRY WITHOUT MANUAL PO NO] ${zohoResult.message}`);
+            delete zohoPayload.purchaseorder_number;
+            zohoResult = await callZoho('POST', '/books/v3/purchaseorders', zohoPayload, token);
+          }
+
           if (zohoResult && (zohoResult.code === 0 || zohoResult.purchaseorder)) {
             const created = zohoResult.purchaseorder;
             res.writeHead(200, { 'Content-Type': 'application/json' });
