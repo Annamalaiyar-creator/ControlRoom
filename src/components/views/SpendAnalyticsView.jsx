@@ -20,7 +20,9 @@ export default function SpendAnalyticsView(props) {
   const {
     activeTab,
     onChangeTab,
-    userRole = 'Sales Executive'
+    userRole = 'Sales Executive',
+    convertingPiData = null,
+    onClearConvertingPiData
   } = props;
 
   // Common states

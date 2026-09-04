@@ -20,7 +20,9 @@ export default function VendorPerformanceView(props) {
   const {
     activeTab,
     onChangeTab,
-    userRole = 'Sales Executive'
+    userRole = 'Sales Executive',
+    convertingPiData = null,
+    onClearConvertingPiData
   } = props;
 
   // Common states
