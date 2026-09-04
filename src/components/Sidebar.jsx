@@ -25,7 +25,12 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     return () => unsubscribe();
   }, []);
 
-  const realWOCount = prodModuleEngine.getWorkOrders().length;
+  // Only count active/open work orders (decreases when a work order is completed / approved & closed)
+  const allWorkOrders = prodModuleEngine.getWorkOrders();
+  const realWOCount = allWorkOrders.filter(w => {
+    const status = String(w.status || '').toUpperCase();
+    return status !== 'APPROVED_CLOSED' && status !== 'COMPLETED' && status !== 'CLOSED' && status !== 'CANCELLED';
+  }).length;
   const realBOMCount = (() => {
     try {
       const boms = JSON.parse(localStorage.getItem('controlroom_bom_store') || '[]');
@@ -146,7 +151,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'Production Monitoring', icon: Activity },
-            { label: 'Work Orders', icon: ClipboardList }
+            { label: 'Work Orders', icon: ClipboardList, badge: realWOCount > 0 ? String(realWOCount) : undefined }
           ]
         }
       ];
@@ -201,7 +206,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'Billing', targetTab: 'Invoice Management', icon: Receipt },
-            { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
           ]
@@ -232,7 +236,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Work Orders', icon: Boxes, badge: '8' },
+            { label: 'Work Orders', icon: Boxes, badge: realWOCount > 0 ? String(realWOCount) : undefined },
             { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
             { label: 'Proforma Invoice', icon: FileText }
           ]

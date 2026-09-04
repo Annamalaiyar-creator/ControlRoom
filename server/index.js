@@ -3560,7 +3560,7 @@ app.post('/api/zoho/items', async (req, res) => {
 const distPath = path.resolve(process.cwd(), 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
+  app.get('/{0,}', (req, res) => {
     // If request is not an API call, serve the index.html for client-side routing
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(distPath, 'index.html'));

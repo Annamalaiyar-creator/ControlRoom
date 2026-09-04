@@ -1,0 +1,96 @@
+[
+  {
+    "id": 15,
+    "employee_code": "TA-VRM001",
+    "employee_name": "Ar.Annamalaiyar",
+    "email": "arannamalaiyar@gmail.com",
+    "password": "Efx@1234",
+    "role": "Technical Administrator",
+    "department": "TA-VRM001:::Technical Administrator:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 13,
+    "employee_code": "SE-VRM002",
+    "employee_name": "Mohith J V",
+    "email": "sales.s2@vrmstructures.in",
+    "password": "NewPwd",
+    "role": "Sales Executive",
+    "department": "SE-VRM002:::Sales Executive:::Disabled",
+    "status": "Disabled"
+  },
+  {
+    "id": 14,
+    "employee_code": "SE-VRM001",
+    "employee_name": "mohith j v",
+    "email": "sales.s4@vrmstructures.in",
+    "password": "NewPwd",
+    "role": "Sales Executive",
+    "department": "SE-VRM001:::Sales Executive:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 16,
+    "employee_code": "PR-VRMOO1",
+    "employee_name": "ARUN BOOPATHI M",
+    "email": "scm@vrmstructures.in",
+    "password": "SCM@2027",
+    "role": "Procurement Head",
+    "department": "PR-VRMOO1:::Procurement Head:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 17,
+    "employee_code": "PH-VRM001",
+    "employee_name": "Purshottam",
+    "email": "productionhead@gmail.com",
+    "password": "12345",
+    "role": "Production Head",
+    "department": "PH-VRM001:::Production Head:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 18,
+    "employee_code": "DH-VRM001",
+    "employee_name": "Kalpana",
+    "email": "dispatchhead@gmail.com",
+    "password": "12345",
+    "role": "Dispatch Head",
+    "department": "DH-VRM001:::Dispatch Head:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 19,
+    "employee_code": "FE-VRM001",
+    "employee_name": "Ashok",
+    "email": "flooremployee@gmail.com",
+    "password": "12345",
+    "role": "Floor Employee",
+    "department": "FE-VRM001:::Floor Employee:::Active",
+    "status": "Active"
+  },
+  {
+    "id": 20,
+    "employee_code": "PR-VRM002",
+    "employee_name": "Ar Annamalaiyar",
+    "email": "maniskremo@gmail.com",
+    "password": "12345",
+    "role": "Procurement Head",
+    "department": "PR-VRM002:::Procurement Head:::Active",
+    "status": "Active"
+  },
+  {
+    "employee_code": "BI-VRM002",
+    "employee_name": "Ar.Annamalaiyar",
+    "email": "billing@vrmstructures.com",
+    "password": "12345",
+    "prefix": "BI",
+    "role": "Billing",
+    "dashboard_type": "Billing",
+    "status": "Active",
+    "created_at": "2026-09-04T05:25:44.795Z",
+    "last_login": "2026-09-04T05:25:44.795Z",
+    "id": 21,
+    "department": "BI-VRM002:::Billing:::Pending Approval"
+  }
+]

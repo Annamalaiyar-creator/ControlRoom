@@ -204,6 +204,79 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
     setProductItems(prev => prev.map((item, idx) => idx === 0 ? { ...item, productCode: val } : item));
   };
 
+  const getItemCutYieldRule = (pCode, pCutLen) => {
+    if (!pCode) return null;
+    const catalogItem = PRODUCT_CATALOG_OPTIONS.find(p => p.code === pCode);
+    const rawLen = catalogItem?.totalLen || 2414;
+    const parsedCutLen = parseFloat(String(pCutLen || '').replace(/[^\d.]/g, ''));
+    if (!parsedCutLen || parsedCutLen <= 0) return null;
+    const bladeKerf = 2;
+    const pieces = Math.max(1, Math.floor((rawLen + bladeKerf) / (parsedCutLen + bladeKerf)));
+    return {
+      rawLen,
+      cutLen: parsedCutLen,
+      pieces,
+      label: catalogItem?.label || pCode
+    };
+  };
+
+  // Multi-Material Calculation across all configured product rows
+  const multiMatBreakdown = (() => {
+    if (!productItems || productItems.length === 0) return [];
+    
+    // Group products by their raw material length profile
+    const groups = new Map();
+    productItems.forEach((item, idx) => {
+      if (!item.productCode) return;
+      const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === item.productCode);
+      const rawLen = cat?.totalLen || 2414;
+      const parsedCut = parseFloat(String(item.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+      const parsedQty = parseFloat(item.targetQty || '') || 0;
+      if (parsedCut <= 0 || parsedQty <= 0) return;
+
+      const bladeKerf = 2;
+      const piecesPerBar = Math.max(1, Math.floor((rawLen + bladeKerf) / (parsedCut + bladeKerf)));
+      const barsNeeded = Math.ceil(parsedQty / piecesPerBar);
+
+      const key = `${rawLen}`;
+      if (!groups.has(key)) {
+        // Find matching raw stock in inventory
+        const invMatch = (prodModuleEngine.inventory || []).find(i => 
+          i.code === `ALU-LEN-${rawLen}MM` || (rawLen === 2414 && i.code === 'ALU-LEN-2414MM')
+        );
+        const availStock = invMatch ? invMatch.availableStock : (rawLen === 2414 ? 100 : (rawLen === 2650 ? 80 : 50));
+
+        groups.set(key, {
+          rawLengthMm: rawLen,
+          rawMaterialName: `Aluminium Raw Bar (${rawLen} mm)`,
+          availableStock: availStock,
+          totalBarsRequired: 0,
+          items: []
+        });
+      }
+
+      const group = groups.get(key);
+      group.totalBarsRequired += barsNeeded;
+      group.items.push({
+        index: idx + 1,
+        productCode: item.productCode,
+        productLabel: cat?.label || item.productCode,
+        cutLength: parsedCut,
+        targetQty: parsedQty,
+        piecesPerBar,
+        barsNeeded
+      });
+    });
+
+    return Array.from(groups.values()).map(g => ({
+      ...g,
+      isSufficient: g.availableStock >= g.totalBarsRequired,
+      shortageQty: Math.max(0, g.totalBarsRequired - g.availableStock)
+    }));
+  })();
+
+  const allMaterialsSufficient = multiMatBreakdown.length === 0 || multiMatBreakdown.every(m => m.isSufficient);
+
   // Recalculate material requirements across all product items in the Work Order
   useEffect(() => {
     if (productItems && productItems.length > 0) {
@@ -234,6 +307,18 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         type: 'error',
         title: 'Material Calculation Error',
         message: 'Unable to calculate material requirement for selected product.'
+      });
+      return;
+    }
+
+    // Validate raw material sufficiency across all profiles
+    if (!allMaterialsSufficient) {
+      const shortages = multiMatBreakdown.filter(m => !m.isSufficient);
+      const shortageMsg = shortages.map(s => `${s.rawLengthMm}mm Bar (Shortage: ${s.shortageQty} Bars)`).join(', ');
+      setToastAlert({
+        type: 'error',
+        title: 'Insufficient Raw Material Stock',
+        message: `Work Order cannot be created! Shortages detected in: ${shortageMsg}. Please order raw materials via PO / GRN first.`
       });
       return;
     }
@@ -791,15 +876,41 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
               ))}
             </div>
 
-            {/* RECIPE BADGE BANNER & AI PROFIT OPTIMIZER RECOMMENDATION */}
+            {/* RECIPE BADGE BANNER FOR EACH CONFIGURED PRODUCT ITEM */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {productItems.map((pItem, pIdx) => {
+                const yieldRule = getItemCutYieldRule(pItem.productCode, pItem.cutLength);
+                if (!yieldRule) return null;
+                return (
+                  <div
+                    key={pItem.id || pIdx}
+                    style={{
+                      backgroundColor: '#F0FDF4',
+                      border: '1px solid #BBF7D0',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                  >
+                    <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
+                    <div style={{ fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
+                      {productItems.length > 1 && (
+                        <span style={{ fontWeight: '700', marginRight: '6px', color: '#15803D' }}>
+                          [{yieldRule.label}]:
+                        </span>
+                      )}
+                      <strong>Cut Yield Rule:</strong> 1 Raw Bar ({yieldRule.rawLen} mm) ÷ {yieldRule.cutLen} mm Cut Length = <strong>{yieldRule.pieces} Pieces per Raw Bar</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* AI PROFIT OPTIMIZER RECOMMENDATION */}
             {Boolean(selectedProductCode && cutLength && matCalc) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <CheckCircle style={{ width: '16px', height: '16px', color: '#16A34A', flexShrink: 0 }} />
-                  <div style={{ fontSize: '12px', color: '#166534', lineHeight: '1.4' }}>
-                    <strong>Cut Yield Rule:</strong> 1 Raw Bar ({matCalc.rawLengthMm || 2414} mm) ÷ {matCalc.cutLenMm || 400} mm Cut Length = <strong>{matCalc.piecesPerLength} Pieces per Raw Bar</strong>
-                  </div>
-                </div>
 
                 {/* AI PROFIT OPTIMIZATION & MANDATORY KERF LOSS RECOMMENDATION */}
                 {matCalc.isWholeUnitConstraint && matCalc.excessOutputPossible > 0 && (
@@ -927,6 +1038,44 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
               </span>
             </div>
 
+            {/* MULTI-MATERIAL BREAKDOWN IF MULTIPLE PROFILE LENGTHS ARE CONFIGURED */}
+            {multiMatBreakdown.length > 1 && (
+              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #DCFCE7', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', letterSpacing: '0.3px' }}>
+                    MULTI-MATERIAL REQUISITION ({multiMatBreakdown.length} RAW PROFILES)
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#DCFCE7', color: '#15803D', padding: '2px 6px', borderRadius: '4px' }}>
+                    SEPARATE BARS
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {multiMatBreakdown.map((mat, mIdx) => (
+                    <div key={mIdx} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '12px', color: '#0F172A' }}>
+                          Profile #{mIdx + 1}: {mat.rawLengthMm} mm Raw Bar
+                        </strong>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: mat.isSufficient ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {mat.isSufficient ? '✓ In Stock' : '⚠️ Shortage'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Required to Issue: <strong style={{ color: '#0E7490' }}>{mat.totalBarsRequired} Bars</strong></span>
+                        <span>In Stock: <strong>{mat.availableStock} Bars</strong></span>
+                      </div>
+
+                      <div style={{ fontSize: '10.5px', color: '#64748B', backgroundColor: '#F8FAFC', padding: '4px 6px', borderRadius: '4px' }}>
+                        Used for: {mat.items.map(it => `${it.productLabel} (${it.targetQty} pcs @ ${it.cutLength}mm)`).join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {matCalc ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
@@ -934,10 +1083,13 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                 <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>THEORETICAL REQUIREMENT</span>
                   <div style={{ fontSize: '17px', fontWeight: '800', color: '#334155' }}>
-                    {matCalc.exactRequiredMatQty.toFixed(2)} {matCalc.recipe.rawMaterialUnit}s
+                    {multiMatBreakdown.length > 1
+                      ? `${multiMatBreakdown.reduce((sum, m) => sum + m.totalBarsRequired, 0)} Raw Bars (${multiMatBreakdown.map(m => `${m.totalBarsRequired}x ${m.rawLengthMm}mm`).join(' + ')})`
+                      : `${matCalc.exactRequiredMatQty.toFixed(2)} ${matCalc.recipe.rawMaterialUnit}s`
+                    }
                   </div>
                   <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Raw Material: <strong style={{ color: '#475569' }}>{matCalc.recipe.rawMaterialName}</strong>
+                    Raw Material: <strong style={{ color: '#475569' }}>{multiMatBreakdown.length > 1 ? `${multiMatBreakdown.length} Raw Profiles` : matCalc.recipe.rawMaterialName}</strong>
                   </span>
                 </div>
 
@@ -962,7 +1114,10 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                     )}
                   </div>
                   <div style={{ fontSize: '18px', fontWeight: '800', color: matCalc.isWholeUnitConstraint ? '#C2410C' : '#475569' }}>
-                    {matCalc.physicalMatToIssue} {matCalc.recipe.rawMaterialUnit}
+                    {multiMatBreakdown.length > 1
+                      ? `${multiMatBreakdown.reduce((sum, m) => sum + m.totalBarsRequired, 0)} Raw Bars (${multiMatBreakdown.map(m => `${m.totalBarsRequired}x ${m.rawLengthMm}mm`).join(' + ')})`
+                      : `${matCalc.physicalMatToIssue} ${matCalc.recipe.rawMaterialUnit}`
+                    }
                   </div>
 
                   {matCalc.isWholeUnitConstraint && (
@@ -1114,47 +1269,6 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                     </div>
                   </div>
                 )}
-
-                {/* STOCK AVAILABILITY CHECK */}
-                <div style={{
-                  backgroundColor: matCalc.isSufficient ? '#ECFDF5' : '#FEF2F2',
-                  border: `1px solid ${matCalc.isSufficient ? '#A7F3D0' : '#FECACA'}`,
-                  borderRadius: '10px',
-                  padding: '12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: matCalc.isSufficient ? '#047857' : '#B91C1C' }}>
-                      STOCK AVAILABILITY
-                    </span>
-                    <span style={{ fontSize: '10.5px', fontWeight: '900', color: matCalc.isSufficient ? '#047857' : '#B91C1C', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {matCalc.isSufficient ? (
-                        <>
-                          <CheckCircle style={{ width: '13px', height: '13px', color: '#047857' }} /> AVAILABLE
-                        </>
-                      ) : (
-                        <>
-                          <AlertTriangle style={{ width: '13px', height: '13px', color: '#B91C1C' }} /> INSUFFICIENT
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11.5px', marginTop: '2px' }}>
-                    <div>
-                      <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>AVAILABLE STOCK</span>
-                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>{matCalc.availableStock} {matCalc.recipe.rawMaterialUnit}</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>SHORTAGE QTY</span>
-                      <strong style={{ fontSize: '14px', color: matCalc.isSufficient ? '#047857' : '#DC2626' }}>
-                        {matCalc.shortageQty} {matCalc.recipe.rawMaterialUnit}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
 
               </div>
             ) : (
