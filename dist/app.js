@@ -213,7 +213,41 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      // Default Health/Status check
+      // If not an API request, serve the static frontend files
+      const fs = require('fs');
+      const path = require('path');
+
+      let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+      
+      // If file exists, serve it with proper content type
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeTypes = {
+          '.html': 'text/html',
+          '.js': 'application/javascript',
+          '.css': 'text/css',
+          '.json': 'application/json',
+          '.svg': 'image/svg+xml',
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.woff': 'font/woff',
+          '.woff2': 'font/woff2'
+        };
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType });
+        return fs.createReadStream(filePath).pipe(res);
+      }
+
+      // If it's a route and not /api/, fallback to index.html for SPA routing
+      if (!pathname.startsWith('/api')) {
+        const indexHtmlPath = path.join(__dirname, 'index.html');
+        if (fs.existsSync(indexHtmlPath)) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          return fs.createReadStream(indexHtmlPath).pipe(res);
+        }
+      }
+
+      // Default Health/Status check for /api
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: 'Control Room Zoho Service is Online', time: new Date().toISOString() }));
     } catch (err) {
