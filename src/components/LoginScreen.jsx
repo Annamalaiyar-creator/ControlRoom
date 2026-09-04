@@ -565,10 +565,10 @@ export default function LoginScreen({ onLoginSuccess }) {
                 </div>
               )}
 
-              {/* Employee Code Input + Verify Button (in Sign Up Mode) */}
+              {/* Employee Code Input + Verify Button (in Sign Up Mode, Optional in Sign In) */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#0F172A', marginBottom: '4px' }}>
-                  Employee Code
+                  Employee Code {isSignUpMode ? '' : <span style={{ fontWeight: '400', color: '#94A3B8' }}>(Optional if using email)</span>}
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input 
@@ -580,7 +580,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                       setDetectedRole(null);
                       setErrorMsg('');
                     }}
-                    placeholder="Enter your Employee Code"
+                    placeholder={isSignUpMode ? "Enter your Employee Code" : "Enter Employee Code (Optional)"}
                     style={{
                       flex: 1,
                       height: '38px',

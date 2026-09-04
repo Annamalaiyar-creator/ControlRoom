@@ -57,28 +57,44 @@ export default function DashboardFullReference({ userRole }) {
     });
   }, []);
 
+  const MONTH_CODE_TO_NUM = {
+    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04',
+    'MAY': '05', 'JUN': '06', 'JUL': '07', 'AUG': '08',
+    'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+  };
+
   // Filter POs by selected Month and Year
+  const targetMonthNum = MONTH_CODE_TO_NUM[selectedMonth] || selectedMonth;
   const filteredPOs = poData.filter((po) => {
     if (!po.poDate) return false;
-    const parts = po.poDate.split('-'); // e.g. "2026-07-15"
+    const parts = po.poDate.split('-'); // e.g. "2026-09-02"
     if (parts.length < 2) return false;
     const poYr = parts[0];
     const poMo = parts[1];
-    return poYr === selectedYear && poMo === selectedMonth;
+    return poYr === selectedYear && (poMo === targetMonthNum || poMo === selectedMonth);
   });
 
   // Calculate live KPI metrics for selected Month/Year
-  const parseAmt = (amtStr) => {
+  const parseAmt = (amtStr, po = null) => {
+    if (po && Array.isArray(po.items) && po.items.length > 0) {
+      const itemsSum = po.items.reduce((sum, item) => {
+        const rate = Number(item.rate || item.unitPrice || item.price || 0);
+        const qty = Number(item.qty || item.quantity || 1);
+        const tax = Number(item.tax || 18);
+        return sum + (rate * qty * (1 + tax / 100));
+      }, 0);
+      if (itemsSum > 0) return itemsSum;
+    }
     if (!amtStr) return 0;
-    const clean = amtStr.replace(/[^0-9.]/g, '');
+    const clean = String(amtStr).replace(/[^0-9.]/g, '');
     return parseFloat(clean) || 0;
   };
 
-  const totalValueNum = filteredPOs.reduce((acc, po) => acc + parseAmt(po.amount), 0);
+  const totalValueNum = filteredPOs.reduce((acc, po) => acc + parseAmt(po.amount, po), 0);
   const totalValueCr = (totalValueNum / 10000000).toFixed(2);
   const posRaisedCount = filteredPOs.length;
   const draftCount = filteredPOs.filter((po) => po.status === 'Draft' || po.statusType === 'draft').length;
-  const approvedCount = filteredPOs.filter((po) => po.status === 'Approved' || po.statusType === 'approved').length;
+  const approvedCount = filteredPOs.filter((po) => po.status === 'Approved' || po.status === 'OPEN' || po.statusType === 'approved').length;
 
   // Helper & calculations for TODAY'S SNAPSHOT (Live Zoho Data)
   const isToday = (dateStr) => {
@@ -744,9 +760,6 @@ export default function DashboardFullReference({ userRole }) {
                 <option value="JUL">Jul</option>
                 <option value="AUG">Aug</option>
                 <option value="SEP">Sep</option>
-                <option value="OCT">Oct</option>
-                <option value="NOV">Nov</option>
-                <option value="DEC">Dec</option>
               </select>
             </div>
           </div>
@@ -779,7 +792,7 @@ export default function DashboardFullReference({ userRole }) {
                 <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
               </div>
 
-              {/* Bars Row */}
+              {/* Bars Row - Only Jan through Sep (current month in 2026) */}
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', paddingBottom: '28px', gap: '8px', zIndex: 1 }}>
                 {[
                   { month: 'Jan', valCr: '1.20', count: '45', code: 'JAN', pct: 0.32 },
@@ -790,10 +803,7 @@ export default function DashboardFullReference({ userRole }) {
                   { month: 'Jun', valCr: '3.65', count: '148', code: 'JUN', pct: 0.70 },
                   { month: 'Jul', valCr: '3.84', count: '160', code: 'JUL', pct: 0.94 },
                   { month: 'Aug', valCr: '3.90', count: '165', code: 'AUG', pct: 0.88 },
-                  { month: 'Sep', valCr: '4.15', count: '172', code: 'SEP', pct: 1.10 },
-                  { month: 'Oct', valCr: '4.50', count: '185', code: 'OCT', pct: 1.28 },
-                  { month: 'Nov', valCr: '4.20', count: '178', code: 'NOV', pct: 0.98 },
-                  { month: 'Dec', valCr: '4.40', count: '182', code: 'DEC', pct: 1.15 }
+                  { month: 'Sep', valCr: '4.15', count: '172', code: 'SEP', pct: 1.10 }
                 ].map((d, idx) => {
                   const isSelected = d.code === selectedMonth;
                   const isHovered = hoveredBarIdx === idx;
@@ -1156,122 +1166,6 @@ export default function DashboardFullReference({ userRole }) {
                 </div>
               </>
             )}
-          </div>
-        </div>
-
-        {/* CRITICAL KEY ALERTS */}
-        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ position: 'relative', display: 'flex', height: '10px', width: '10px' }}>
-                <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '50%', backgroundColor: '#EF4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }}></span>
-                <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '10px', width: '10px', backgroundColor: '#DC2626' }}></span>
-              </span>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CRITICAL KEY ALERTS</span>
-            </div>
-            {dismissedAlerts.length < 3 && localStorage.getItem('controlroom_notifications_read') !== 'true' ? (
-              <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '3px 10px', borderRadius: '12px', border: '1px solid #FEE2E2' }}>
-                {3 - dismissedAlerts.length} ACTIVE NOTIFICATIONS
-              </span>
-            ) : (
-              <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#059669', backgroundColor: '#ECFDF5', padding: '3px 10px', borderRadius: '12px', border: '1px solid #A7F3D0' }}>
-                ALL READ & DISMISSED
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            
-            {/* ALERT 1 */}
-            {!dismissedAlerts.includes(1) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
-              <div style={{ position: 'relative', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#0284C7', color: '#FFFFFF', padding: '2px 12px', borderRadius: '12px', fontSize: '10.5px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)' }}>
-                  <Sparkles style={{ width: '11px', height: '11px' }} /> Pending
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #BAE6FD', backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
-                    <Clock style={{ width: '22px', height: '22px', color: '#0284C7' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>3 Pending Quality Approvals</span>
-                    <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>Your data is being processed. Awaiting lab verification certificate.</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                  <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
-                    Inspect
-                  </button>
-                  <button 
-                    onClick={() => handleDismissAlert(1)}
-                    style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ALERT 2 */}
-            {!dismissedAlerts.includes(2) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
-              <div style={{ position: 'relative', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#F59E0B', color: '#FFFFFF', padding: '2px 12px', borderRadius: '12px', fontSize: '10.5px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.25)' }}>
-                  <Filter style={{ width: '11px', height: '11px' }} /> Warning
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #FDE68A', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
-                    <Zap style={{ width: '22px', height: '22px', color: '#D97706' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>Incomplete Setup & Material Shortage</span>
-                    <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>Stock below critical safety threshold. Some fields are missing. Please review and try again.</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                  <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
-                    Create PO
-                  </button>
-                  <button 
-                    onClick={() => handleDismissAlert(2)}
-                    style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ALERT 3 */}
-            {!dismissedAlerts.includes(3) && localStorage.getItem('controlroom_notifications_read') !== 'true' && (
-              <div style={{ position: 'relative', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1.5px solid #CBD5E1', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.8)' }}>
-                    <Clock style={{ width: '22px', height: '22px', color: '#475569' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>Update Made by "Xchyler"</span>
-                    <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '500' }}>A change was made to "BO-T" file & 14 Overdue POs.</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                  <button style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '6px 14px', borderRadius: '20px', border: 'none', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(15,23,42,0.15)' }}>
-                    View Changes
-                  </button>
-                  <button 
-                    onClick={() => handleDismissAlert(3)}
-                    style={{ backgroundColor: 'transparent', color: '#475569', border: 'none', fontWeight: '600', fontSize: '11.5px', cursor: 'pointer' }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(dismissedAlerts.length >= 3 || localStorage.getItem('controlroom_notifications_read') === 'true') && (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: '600' }}>
-                All notifications have been marked read and dismissed.
-              </div>
-            )}
-
           </div>
         </div>
 

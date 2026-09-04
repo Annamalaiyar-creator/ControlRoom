@@ -67,7 +67,6 @@ export default function ProductionViewsEngine(props) {
     setProdActiveSubTab('All');
     setProdSearchQueryText('');
     setProdFilterStatusSelect('All');
-    if (typeof setCurrentPage === 'function') setCurrentPage(1);
   }, [activeTab]);
 
   const [showBOMForm, setShowBOMForm] = useState(false);

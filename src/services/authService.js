@@ -27,12 +27,8 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
   const cleanUsername = String(username || '').trim().toLowerCase();
   const cleanPassword = String(password || '');
 
-  if (!cleanEmpId) {
-    return { success: false, error: 'Please enter your Employee ID (e.g. EMP-101).' };
-  }
-
-  if (!cleanUsername) {
-    return { success: false, error: 'Please enter your email.' };
+  if (!cleanUsername && !cleanEmpId) {
+    return { success: false, error: 'Please enter your email or Employee ID.' };
   }
 
   if (!cleanPassword) {
