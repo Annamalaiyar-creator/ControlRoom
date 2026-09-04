@@ -216,96 +216,147 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
           </div>
         </div>
 
-        {/* Card B: Interactive Sales Funnel */}
+        {/* Card B: 3D Layered Sales Funnel matching User Reference */}
         <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
-              My Sales Funnel — This Month
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                My Sales Funnel — This Month
+              </div>
+              <span style={{ fontSize: '11px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', padding: '2px 8px', borderRadius: '12px' }}>
+                Conversion: 44.4%
+              </span>
             </div>
 
-            {/* 4 Pipeline Stage Blocks */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-              {/* Stage 1: Offers */}
-              <div style={{
-                backgroundColor: '#0284C7',
-                borderRadius: '12px',
-                padding: '16px 12px',
-                color: '#FFFFFF',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.2)'
-              }}>
-                <div style={{ fontSize: '26px', fontWeight: '900', lineHeight: '1' }}>36</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Offers</div>
-                <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '2px 6px' }}>₹ 1.74 Cr</div>
-              </div>
+            {/* 3D Conical Stacked Funnel Graphic matching the reference image */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px 0 6px 0' }}>
+              <svg viewBox="0 0 540 300" style={{ width: '100%', maxWidth: '480px', height: 'auto', overflow: 'visible', filter: 'drop-shadow(0 8px 16px rgba(15, 23, 42, 0.08))' }}>
+                <defs>
+                  {/* Layer 1 Gradient: Offers / Primary Teal */}
+                  <linearGradient id="funnelGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#38BDF8" />
+                    <stop offset="100%" stopColor="#0284C7" />
+                  </linearGradient>
+                  <linearGradient id="funnelTop1" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#0369A1" />
+                    <stop offset="100%" stopColor="#0284C7" />
+                  </linearGradient>
 
-              {/* Stage 2: Qualified */}
-              <div style={{
-                backgroundColor: '#0E7490',
-                borderRadius: '12px',
-                padding: '16px 12px',
-                color: '#FFFFFF',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                boxShadow: '0 4px 12px rgba(14, 116, 144, 0.2)'
-              }}>
-                <div style={{ fontSize: '26px', fontWeight: '900', lineHeight: '1' }}>25</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Qualified</div>
-                <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '2px 6px' }}>₹ 1.24 Cr</div>
-              </div>
+                  {/* Layer 2 Gradient: Qualified / Cyan-Teal */}
+                  <linearGradient id="funnelGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#22D3EE" />
+                    <stop offset="100%" stopColor="#0E7490" />
+                  </linearGradient>
+                  <linearGradient id="funnelTop2" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#0891B2" />
+                    <stop offset="100%" stopColor="#0E7490" />
+                  </linearGradient>
 
-              {/* Stage 3: Proforma Invoice */}
-              <div style={{
-                backgroundColor: '#16A34A',
-                borderRadius: '12px',
-                padding: '16px 12px',
-                color: '#FFFFFF',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.2)'
-              }}>
-                <div style={{ fontSize: '26px', fontWeight: '900', lineHeight: '1' }}>18</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Proforma Invoice</div>
-                <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '2px 6px' }}>₹ 82.0 L</div>
-              </div>
+                  {/* Layer 3 Gradient: Proforma Invoice / Emerald Green */}
+                  <linearGradient id="funnelGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#4ADE80" />
+                    <stop offset="100%" stopColor="#16A34A" />
+                  </linearGradient>
+                  <linearGradient id="funnelTop3" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#15803D" />
+                    <stop offset="100%" stopColor="#16A34A" />
+                  </linearGradient>
 
-              {/* Stage 4: Invoiced */}
-              <div style={{
-                backgroundColor: '#EA580C',
-                borderRadius: '12px',
-                padding: '16px 12px',
-                color: '#FFFFFF',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                boxShadow: '0 4px 12px rgba(234, 88, 12, 0.2)'
-              }}>
-                <div style={{ fontSize: '26px', fontWeight: '900', lineHeight: '1' }}>16</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoiced</div>
-                <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '2px 6px' }}>₹ 68.5 L</div>
-              </div>
+                  {/* Layer 4 Gradient: Invoiced / Amber-Orange */}
+                  <linearGradient id="funnelGrad4" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#FBBF24" />
+                    <stop offset="100%" stopColor="#EA580C" />
+                  </linearGradient>
+                  <linearGradient id="funnelTop4" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#C2410C" />
+                    <stop offset="100%" stopColor="#EA580C" />
+                  </linearGradient>
+                </defs>
+
+                {/* ===== TIER 1: OFFERS (Top Wide Rim) ===== */}
+                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
+                  {/* Top 3D Oval Rim */}
+                  <ellipse cx="270" cy="24" rx="230" ry="20" fill="url(#funnelTop1)" stroke="#BAE6FD" strokeWidth="1" />
+                  {/* Frustum Body */}
+                  <path d="M 40 24 L 85 82 A 185 16 0 0 0 455 82 L 500 24 A 230 20 0 0 1 40 24 Z" fill="url(#funnelGrad1)" />
+                  {/* Bottom Rim Highlight */}
+                  <ellipse cx="270" cy="82" rx="185" ry="16" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                  {/* Text Information */}
+                  <text x="270" y="52" textAnchor="middle" fill="#FFFFFF" fontSize="15" fontWeight="900" letterSpacing="1px" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    1. OFFERS — 36 DEALS
+                  </text>
+                  <text x="270" y="70" textAnchor="middle" fill="#E0F2FE" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    Total Quotations: ₹ 1.74 Cr
+                  </text>
+                </g>
+
+                {/* ===== TIER 2: QUALIFIED ===== */}
+                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
+                  {/* Top 3D Oval Rim */}
+                  <ellipse cx="270" cy="88" rx="180" ry="15" fill="url(#funnelTop2)" stroke="#A5F3FC" strokeWidth="0.8" />
+                  {/* Frustum Body */}
+                  <path d="M 90 88 L 130 148 A 140 13 0 0 0 410 148 L 450 88 A 180 15 0 0 1 90 88 Z" fill="url(#funnelGrad2)" />
+                  {/* Bottom Rim Highlight */}
+                  <ellipse cx="270" cy="148" rx="140" ry="13" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                  {/* Text Information */}
+                  <text x="270" y="116" textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    2. QUALIFIED LEADS — 25 DEALS
+                  </text>
+                  <text x="270" y="134" textAnchor="middle" fill="#CFFAFE" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    Pipeline Value: ₹ 1.24 Cr
+                  </text>
+                </g>
+
+                {/* ===== TIER 3: PROFORMA INVOICE ===== */}
+                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
+                  {/* Top 3D Oval Rim */}
+                  <ellipse cx="270" cy="154" rx="135" ry="12" fill="url(#funnelTop3)" stroke="#BBF7D0" strokeWidth="0.8" />
+                  {/* Frustum Body */}
+                  <path d="M 135 154 L 175 214 A 95 10 0 0 0 365 214 L 405 154 A 135 12 0 0 1 135 154 Z" fill="url(#funnelGrad3)" />
+                  {/* Bottom Rim Highlight */}
+                  <ellipse cx="270" cy="214" rx="95" ry="10" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                  {/* Text Information */}
+                  <text x="270" y="182" textAnchor="middle" fill="#FFFFFF" fontSize="13.5" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    3. PROFORMA INVOICE (PI) — 18
+                  </text>
+                  <text x="270" y="200" textAnchor="middle" fill="#DCFCE7" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    PI Value: ₹ 82.0 L
+                  </text>
+                </g>
+
+                {/* ===== TIER 4: INVOICED (Base) ===== */}
+                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
+                  {/* Top 3D Oval Rim */}
+                  <ellipse cx="270" cy="220" rx="90" ry="9" fill="url(#funnelTop4)" stroke="#FED7AA" strokeWidth="0.8" />
+                  {/* Frustum Body */}
+                  <path d="M 180 220 L 205 278 A 65 7 0 0 0 335 278 L 360 220 A 90 9 0 0 1 180 220 Z" fill="url(#funnelGrad4)" />
+                  {/* Bottom Base Oval */}
+                  <ellipse cx="270" cy="278" rx="65" ry="7" fill="#C2410C" stroke="#FED7AA" strokeWidth="1" />
+                  {/* Text Information */}
+                  <text x="270" y="248" textAnchor="middle" fill="#FFFFFF" fontSize="13" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    4. INVOICED — 16
+                  </text>
+                  <text x="270" y="265" textAnchor="middle" fill="#FFEDD5" fontSize="11.5" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    ₹ 68.5 L (Realized)
+                  </text>
+                </g>
+              </svg>
             </div>
           </div>
 
           <div style={{
-            marginTop: '16px',
+            marginTop: '10px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '10px 14px',
             backgroundColor: '#F8FAFC',
-            borderRadius: '8px',
+            borderRadius: '10px',
             border: '1px solid #E2E8F0',
             fontSize: '12px',
-            color: '#334155'
+            color: '#334155',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <span>Offer-to-Invoice conversion: <strong style={{ color: '#0E7490' }}>44.4%</strong></span>
             <span>•</span>
