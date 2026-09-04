@@ -1749,6 +1749,16 @@ export default function ProductionViewsEngine(props) {
   // Invoice State
   const [viewingInvoiceModal, setViewingInvoiceModal] = useState(null);
   const [invoiceModalActiveTab, setInvoiceModalActiveTab] = useState('Invoice Items');
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [invoiceEditForm, setInvoiceEditForm] = useState({
+    invNo: '',
+    date: '',
+    vendor: '',
+    billingAddress: '',
+    deliveryAddress: '',
+    paymentType: '',
+    items: []
+  });
   const [closeInvoiceReasonModal, setCloseInvoiceReasonModal] = useState(null);
   const [closeReasonText, setCloseReasonText] = useState('');
   const [pendingDcModal, setPendingDcModal] = useState(null);
@@ -2122,24 +2132,13 @@ export default function ProductionViewsEngine(props) {
           // If viewing an individual Invoice in full screen
           if (activeTab === 'Invoice Management' && viewingInvoiceModal) {
             const inv = viewingInvoiceModal;
-            const invNoText = inv.invNo || inv.code || 'INV-00027';
+            const invNoText = isEditingInvoice ? (invoiceEditForm.invNo || inv.invNo || inv.code || 'INV-00027') : (inv.invNo || inv.code || 'INV-00027');
             const bomRefText = inv.poNo || inv.c3 || 'BOM-00007';
-            const customerText = inv.vendor || inv.c2 || 'ABC Industries';
-            const invDateText = inv.date || inv.c4 || '21 May 2025';
-            const paymentTypeText = inv.paymentType || '100% Advance';
+            const customerText = isEditingInvoice ? (invoiceEditForm.vendor || inv.vendor || inv.c2 || 'ABC Industries') : (inv.vendor || inv.c2 || 'ABC Industries');
+            const invDateText = isEditingInvoice ? (invoiceEditForm.date || inv.date || inv.c4 || '21 May 2025') : (inv.date || inv.c4 || '21 May 2025');
+            const paymentTypeText = isEditingInvoice ? (invoiceEditForm.paymentType || inv.paymentType || '100% Advance') : (inv.paymentType || '100% Advance');
             const isFullAdvance = paymentTypeText === '100% Advance';
             const is50Percent = paymentTypeText === '50% Advance / 50% Dispatch';
-
-            const totalAmtRaw = typeof inv.invAmt === 'number'
-              ? inv.invAmt
-              : parseFloat((inv.invAmt || inv.c5 || '76523').toString().replace(/[^0-9.]/g, '')) || 17400;
-
-            const subtotal = totalAmtRaw / 1.18;
-            const taxGst = totalAmtRaw - subtotal;
-
-            const advanceAmt = isFullAdvance ? totalAmtRaw : (is50Percent ? totalAmtRaw * 0.5 : totalAmtRaw);
-            const balanceAmt = isFullAdvance ? 0 : (is50Percent ? totalAmtRaw * 0.5 : 0);
-            const paymentStatusText = inv.pay || (balanceAmt === 0 ? 'Verified & Paid (100%)' : 'Ready for Payment');
 
             // Look up matching BOM from bomStore to sync items & dispatch checkboxes
             const matchingBom = bomStore.find(b =>
@@ -2158,7 +2157,7 @@ export default function ProductionViewsEngine(props) {
                 ? inv.items
                 : null;
 
-            const itemsList = rawItems ? rawItems.map((it, idx) => {
+            const baseItemsList = rawItems ? rawItems.map((it, idx) => {
               let selectedState = undefined;
 
               // 1. Check matchingBom dispatchPacking verification checklist by index or name
@@ -2202,12 +2201,117 @@ export default function ProductionViewsEngine(props) {
               { code: 'PRD-002', name: 'Mini Rail 100 mm', desc: 'Aluminum Mounting Rail', uom: 'Nos', bomQty: 12, invQty: 12, rate: 250.00, discount: 0, tax: 18, amt: 3000.00 * 1.18, selected: false }
             ];
 
+            // Use invoiceEditForm.items if in edit mode and items are present
+            const itemsList = (isEditingInvoice && invoiceEditForm.items && invoiceEditForm.items.length > 0)
+              ? invoiceEditForm.items
+              : baseItemsList;
+
+            const computedSubtotal = itemsList.reduce((acc, it) => acc + ((it.qty || it.invQty || it.bomQty || 1) * (it.rate || 0)), 0);
+            const computedTaxGst = computedSubtotal * 0.18;
+            const computedGrandTotal = computedSubtotal + computedTaxGst;
+
+            const totalAmtRaw = isEditingInvoice
+              ? computedGrandTotal
+              : (typeof inv.invAmt === 'number'
+                ? inv.invAmt
+                : parseFloat((inv.invAmt || inv.c5 || '76523').toString().replace(/[^0-9.]/g, '')) || computedGrandTotal || 17400);
+
+            const subtotal = isEditingInvoice ? computedSubtotal : (totalAmtRaw / 1.18);
+            const taxGst = isEditingInvoice ? computedTaxGst : (totalAmtRaw - subtotal);
+
+            const advanceAmt = isFullAdvance ? totalAmtRaw : (is50Percent ? totalAmtRaw * 0.5 : totalAmtRaw);
+            const balanceAmt = isFullAdvance ? 0 : (is50Percent ? totalAmtRaw * 0.5 : 0);
+            const paymentStatusText = inv.pay || (balanceAmt === 0 ? 'Verified & Paid (100%)' : 'Ready for Payment');
+
+            const handleStartEditingInvoice = () => {
+              const bAddrInit = inv.billingAddress || matchingBom?.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai';
+              const dAddrInit = inv.deliveryAddress || matchingBom?.deliveryAddress || bAddrInit;
+              setInvoiceEditForm({
+                invNo: invNoText,
+                date: invDateText,
+                vendor: customerText,
+                billingAddress: bAddrInit,
+                deliveryAddress: dAddrInit,
+                paymentType: paymentTypeText,
+                items: baseItemsList.map(it => ({ ...it }))
+              });
+              setIsEditingInvoice(true);
+            };
+
+            const handleSaveInvoiceEdits = () => {
+              const updatedInvAmt = `₹ ${computedGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+              const updatedInvoiceRecord = {
+                ...inv,
+                invNo: invoiceEditForm.invNo || invNoText,
+                code: invoiceEditForm.invNo || invNoText,
+                vendor: invoiceEditForm.vendor || customerText,
+                customerName: invoiceEditForm.vendor || customerText,
+                date: invoiceEditForm.date || invDateText,
+                paymentType: invoiceEditForm.paymentType || paymentTypeText,
+                billingAddress: invoiceEditForm.billingAddress,
+                deliveryAddress: invoiceEditForm.deliveryAddress,
+                invAmt: updatedInvAmt,
+                items: invoiceEditForm.items,
+                lastModifiedAt: new Date().toISOString()
+              };
+
+              setViewingInvoiceModal(updatedInvoiceRecord);
+
+              setInvoiceList(prev => {
+                const updated = prev.map(item =>
+                  (item.invNo === inv.invNo || item.code === inv.code || item.bomCode === inv.bomCode)
+                    ? { ...item, ...updatedInvoiceRecord }
+                    : item
+                );
+                try {
+                  localStorage.setItem("controlroom_invoice_store", JSON.stringify(updated));
+                  saveCloudStore("invoice_store", updated);
+                } catch (e) { }
+                return updated;
+              });
+
+              // Also sync customer name, paymentType, and addresses back to matching BOM
+              const targetCode = inv.poNo || inv.code || bomRefText;
+              setBomStore(prev => {
+                const updatedBoms = prev.map(b => (
+                  b.bomCode === targetCode ||
+                  b.salesOrderNo === targetCode ||
+                  b.code === targetCode ||
+                  (inv.invNo && b.bomCode && inv.invNo.endsWith(b.bomCode.replace('BOM-', '')))
+                ) ? {
+                  ...b,
+                  customerName: invoiceEditForm.vendor || b.customerName,
+                  paymentType: invoiceEditForm.paymentType || b.paymentType,
+                  billingAddress: invoiceEditForm.billingAddress || b.billingAddress,
+                  deliveryAddress: invoiceEditForm.deliveryAddress || b.deliveryAddress,
+                  grandTotal: computedGrandTotal,
+                  invoiceNo: invoiceEditForm.invNo || b.invoiceNo
+                } : b);
+                try {
+                  localStorage.setItem("controlroom_bom_store", JSON.stringify(updatedBoms));
+                  saveCloudStore("bom_store", updatedBoms);
+                } catch (e) { }
+                return updatedBoms;
+              });
+
+              setIsEditingInvoice(false);
+              addLiveNotification({
+                title: 'Invoice Details Updated',
+                message: `Invoice ${invoiceEditForm.invNo || invNoText} successfully updated and saved!`,
+                type: 'success',
+                category: 'Invoice'
+              });
+            };
+
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Back Header Bar */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <button
-                    onClick={() => setViewingInvoiceModal(null)}
+                    onClick={() => {
+                      setIsEditingInvoice(false);
+                      setViewingInvoiceModal(null);
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -2267,6 +2371,71 @@ export default function ProductionViewsEngine(props) {
                     >
                       <Download style={{ width: '15px', height: '15px', color: '#475569' }} /> Download
                     </button>
+
+                    {/* Edit Invoice & Save Buttons */}
+                    {isEditingInvoice ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => setIsEditingInvoice(false)}
+                          style={{
+                            backgroundColor: '#F1F5F9',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '8px',
+                            padding: '0 14px',
+                            height: '38px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          ✕ Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveInvoiceEdits}
+                          style={{
+                            backgroundColor: '#0E7490',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0 18px',
+                            height: '38px',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                          }}
+                        >
+                          💾 Save Changes
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleStartEditingInvoice}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          border: '1px solid #0E7490',
+                          borderRadius: '8px',
+                          padding: '0 16px',
+                          height: '38px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          color: '#0E7490',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Edit3 style={{ width: '15px', height: '15px', color: '#0E7490' }} /> Edit Invoice
+                      </button>
+                    )}
 
                     {/* Confirm Invoice primary button */}
                     {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed', 'Fully Dispatched & Delivered'].includes(inv.status) ? (
@@ -2621,7 +2790,25 @@ export default function ProductionViewsEngine(props) {
                       <div>
                         <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>Invoice Number</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
+                          {isEditingInvoice ? (
+                            <input
+                              type="text"
+                              value={invoiceEditForm.invNo || ''}
+                              onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, invNo: e.target.value }))}
+                              style={{
+                                fontSize: '18px',
+                                fontWeight: '800',
+                                color: '#0F172A',
+                                border: '1px solid #0E7490',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                width: '220px',
+                                outline: 'none'
+                              }}
+                            />
+                          ) : (
+                            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
+                          )}
                           {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
                             <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
                               ✓ INVOICE COMPLETED & LOCKED
@@ -2643,11 +2830,47 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Invoice Date</div>
-                        <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
+                        {isEditingInvoice ? (
+                          <input
+                            type="text"
+                            value={invoiceEditForm.date || ''}
+                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, date: e.target.value }))}
+                            style={{
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              padding: '3px 8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#1E293B',
+                              width: '100%',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        ) : (
+                          <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
+                        )}
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Customer</div>
-                        <strong style={{ color: '#2563EB' }}>{customerText}</strong>
+                        {isEditingInvoice ? (
+                          <input
+                            type="text"
+                            value={invoiceEditForm.customerName || ''}
+                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, customerName: e.target.value }))}
+                            style={{
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              padding: '3px 8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#2563EB',
+                              width: '100%',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        ) : (
+                          <strong style={{ color: '#2563EB' }}>{customerText}</strong>
+                        )}
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Due Date</div>
@@ -2655,7 +2878,29 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Payment Type</div>
-                        <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
+                        {isEditingInvoice ? (
+                          <select
+                            value={invoiceEditForm.paymentType || '100% Advance'}
+                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, paymentType: e.target.value }))}
+                            style={{
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              padding: '3px 8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#1E293B',
+                              width: '100%',
+                              boxSizing: 'border-box',
+                              backgroundColor: '#FFFFFF'
+                            }}
+                          >
+                            <option value="100% Advance">100% Advance</option>
+                            <option value="50% Advance, 50% Before Dispatch">50% Advance, 50% Before Dispatch</option>
+                            <option value="Net 30 Days">Net 30 Days (Credit)</option>
+                          </select>
+                        ) : (
+                          <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2797,13 +3042,164 @@ export default function ProductionViewsEngine(props) {
                                         ✓ Packed
                                       </span>
                                     </td>
-                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 1}`}</td>
-                                    <td style={{ padding: '10px', fontWeight: '700', color: '#0F172A' }}>{it.name}</td>
-                                    <td style={{ padding: '10px', color: '#64748B' }}>{it.desc || it.category || 'High grade component'}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.uom || 'Nos'}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#166534' }}>{it.bomQty || it.qty}</td>
-                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>₹ {parseFloat(it.rate || 0).toFixed(2)}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.tax || 18}%</td>
+                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="text"
+                                          value={it.code || ''}
+                                          onChange={(e) => {
+                                            const newCode = e.target.value;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => (x.code === it.code && i === idx) || i === idx);
+                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], code: newCode };
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                        />
+                                      ) : (
+                                        it.code || `PRD-00${idx + 1}`
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', fontWeight: '700', color: '#0F172A' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="text"
+                                          value={it.name || ''}
+                                          onChange={(e) => {
+                                            const newName = e.target.value;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], name: newName };
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '100%', minWidth: '130px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                        />
+                                      ) : (
+                                        it.name
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', color: '#64748B' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="text"
+                                          value={it.desc || it.category || ''}
+                                          onChange={(e) => {
+                                            const newDesc = e.target.value;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], desc: newDesc };
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '100%', minWidth: '100px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                        />
+                                      ) : (
+                                        it.desc || it.category || 'High grade component'
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="text"
+                                          value={it.uom || 'Nos'}
+                                          onChange={(e) => {
+                                            const newUom = e.target.value;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], uom: newUom };
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                        />
+                                      ) : (
+                                        it.uom || 'Nos'
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#166534' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="number"
+                                          value={it.bomQty || it.invQty || it.qty || 1}
+                                          onChange={(e) => {
+                                            const newQty = parseFloat(e.target.value) || 0;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) {
+                                                const rate = parseFloat(updated[targetIndex].rate || 0);
+                                                const tax = parseFloat(updated[targetIndex].tax || 18);
+                                                const sub = newQty * rate;
+                                                const tot = sub + (sub * tax / 100);
+                                                updated[targetIndex] = { ...updated[targetIndex], qty: newQty, bomQty: newQty, invQty: newQty, amt: tot };
+                                              }
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '60px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                        />
+                                      ) : (
+                                        it.bomQty || it.qty
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="number"
+                                          value={it.rate !== undefined ? it.rate : 0}
+                                          onChange={(e) => {
+                                            const newRate = parseFloat(e.target.value) || 0;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) {
+                                                const qty = parseFloat(updated[targetIndex].bomQty || updated[targetIndex].qty || 1);
+                                                const tax = parseFloat(updated[targetIndex].tax || 18);
+                                                const sub = qty * newRate;
+                                                const tot = sub + (sub * tax / 100);
+                                                updated[targetIndex] = { ...updated[targetIndex], rate: newRate, amt: tot };
+                                              }
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '80px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                        />
+                                      ) : (
+                                        `₹ ${parseFloat(it.rate || 0).toFixed(2)}`
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                      {isEditingInvoice ? (
+                                        <input
+                                          type="number"
+                                          value={it.tax !== undefined ? it.tax : 18}
+                                          onChange={(e) => {
+                                            const newTax = parseFloat(e.target.value) || 0;
+                                            setInvoiceEditForm(prev => {
+                                              const updated = [...(prev.items || [])];
+                                              const targetIndex = updated.findIndex((x, i) => i === idx);
+                                              if (targetIndex >= 0) {
+                                                const qty = parseFloat(updated[targetIndex].bomQty || updated[targetIndex].qty || 1);
+                                                const rate = parseFloat(updated[targetIndex].rate || 0);
+                                                const sub = qty * rate;
+                                                const tot = sub + (sub * newTax / 100);
+                                                updated[targetIndex] = { ...updated[targetIndex], tax: newTax, amt: tot };
+                                              }
+                                              return { ...prev, items: updated };
+                                            });
+                                          }}
+                                          style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                        />
+                                      ) : (
+                                        `${it.tax || 18}%`
+                                      )}
+                                    </td>
                                     <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#166534' }}>
                                       ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </td>
@@ -2993,7 +3389,25 @@ export default function ProductionViewsEngine(props) {
                               </div>
                             </div>
                             <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
-                              {bAddr}
+                              {isEditingInvoice ? (
+                                <textarea
+                                  value={invoiceEditForm.billingAddress || ''}
+                                  onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, billingAddress: e.target.value }))}
+                                  rows={3}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #CBD5E1',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#1E293B',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                              ) : (
+                                bAddr
+                              )}
                             </div>
                           </div>
 
@@ -3016,7 +3430,25 @@ export default function ProductionViewsEngine(props) {
                               )}
                             </div>
                             <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
-                              {dAddr}
+                              {isEditingInvoice ? (
+                                <textarea
+                                  value={invoiceEditForm.deliveryAddress || ''}
+                                  onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, deliveryAddress: e.target.value }))}
+                                  rows={3}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #CBD5E1',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#1E293B',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                              ) : (
+                                dAddr
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3466,9 +3898,10 @@ export default function ProductionViewsEngine(props) {
                 { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).length, bg: '#F1F5F9', fg: '#334155' },
                 { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted).length, bg: '#F1F5F9', fg: '#475569' }
+                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
               rows: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).map(b => {
@@ -3476,7 +3909,7 @@ export default function ProductionViewsEngine(props) {
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
                 const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
-                const isClosed = b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted;
+                const isClosed = b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered';
                 const isReissued = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
 
                 let statusLabel = 'PENDING DISPATCH PACKING';
@@ -3502,7 +3935,7 @@ export default function ProductionViewsEngine(props) {
                   stBg = '#DBEAFE';
                   stFg = '#1E40AF';
                   stBorder = '1px solid #93C5FD';
-                  tabGroup = 'Packed';
+                  tabGroup = 'AwaitingLoading';
                 } else if (isFullyPacked || b.status === 'Packed & Ready for Dispatch') {
                   statusLabel = 'PACKED & READY FOR DISPATCH';
                   stBg = '#DCFCE7';
@@ -13258,7 +13691,10 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td
                                 onClick={() => {
-                                  if (activeTab === 'Dispatch Orders') {
+                                  if (activeTab === 'Invoice Management') {
+                                    setViewingInvoiceModal(row);
+                                    setIsEditingInvoice(false);
+                                  } else if (activeTab === 'Dispatch Orders') {
                                     setQuickPreviewRecord(row);
                                   } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
                                     const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
@@ -13273,7 +13709,10 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td
                                 onClick={() => {
-                                  if (activeTab === 'Dispatch Orders') {
+                                  if (activeTab === 'Invoice Management') {
+                                    setViewingInvoiceModal(row);
+                                    setIsEditingInvoice(false);
+                                  } else if (activeTab === 'Dispatch Orders') {
                                     setQuickPreviewRecord(row);
                                   } else if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
                                     const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
@@ -13526,6 +13965,18 @@ export default function ProductionViewsEngine(props) {
                         } else if (activeTab === 'Invoice Management') {
                           setViewingInvoiceModal(targetRow);
                           setInvoiceModalActiveTab('Invoice Items');
+                          setIsEditingInvoice(true);
+                          setInvoiceEditForm({
+                            invNo: targetRow.invNo || targetRow.code || '',
+                            customerName: targetRow.customerName || targetRow.vendor || 'Customer',
+                            date: targetRow.date || new Date().toLocaleDateString('en-GB'),
+                            paymentType: targetRow.paymentType || '100% Advance',
+                            billingAddress: targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                            deliveryAddress: targetRow.deliveryAddress || targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                            items: (targetRow.items && targetRow.items.length > 0)
+                              ? targetRow.items.map(it => ({ ...it }))
+                              : [{ code: 'PRD-001', name: 'Standard Component', qty: 1, bomQty: 1, invQty: 1, rate: 1000, tax: 18, amt: 1180, selected: true }]
+                          });
                         } else if (activeTab === 'Dispatch Orders') {
                           if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
                             setVehicleLoadingModal(targetRow);
