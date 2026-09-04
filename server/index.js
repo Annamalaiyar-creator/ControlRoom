@@ -3127,34 +3127,50 @@ app.get('/api/zoho/invoices', async (req, res) => {
   }
 });
 
-const fetchZohoItems = (accessToken) => {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'www.zohoapis.in',
-      port: 443,
-      path: `/books/v3/items?organization_id=${zohoSession.orgId}`,
-      method: 'GET',
-      headers: {
-        'Authorization': `Zoho-oauthtoken ${accessToken}`
-      }
-    };
+const fetchZohoItems = async (accessToken) => {
+  let allItems = [];
+  let page = 1;
+  let hasMore = true;
 
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          resolve(parsed);
-        } catch (e) {
-          reject(e);
+  while (hasMore && page <= 10) {
+    const pageData = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'www.zohoapis.in',
+        port: 443,
+        path: `/books/v3/items?organization_id=${zohoSession.orgId}&per_page=200&page=${page}`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`
         }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed);
+          } catch (e) {
+            reject(e);
+          }
+        });
       });
+
+      req.on('error', (e) => reject(e));
+      req.end();
     });
 
-    req.on('error', (e) => reject(e));
-    req.end();
-  });
+    if (pageData && Array.isArray(pageData.items)) {
+      allItems.push(...pageData.items);
+      hasMore = pageData.page_context ? Boolean(pageData.page_context.has_more_page) : false;
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return { items: allItems };
 };
 
 // Real-time synchronization endpoint retrieving live items catalog from Zoho Books
@@ -3182,19 +3198,35 @@ app.get('/api/zoho/items', async (req, res) => {
           const localMatch = localMap.get(keyId) || (keySku && localMap.get(keySku)) || (keyName && localMap.get(keyName));
 
           return {
+            id: item.item_id || item.id,
             itemId: item.item_id || item.id,
+            code: item.sku || item.item_id || '—',
             name: item.name,
             rate: item.rate || 0,
+            price: item.rate || 0,
             sku: item.sku || '—',
             status: localMatch?.status ? localMatch.status : (item.status === 'active' ? 'Active' : 'Inactive'),
-            description: item.description || '—',
-            unit: item.unit || 'NOS'
+            description: item.description || localMatch?.description || '—',
+            purchaseRate: item.purchase_rate || localMatch?.purchaseRate || 0,
+            purchaseDescription: item.purchase_description || localMatch?.purchaseDescription || '',
+            productType: item.product_type || localMatch?.productType || 'goods',
+            unit: item.unit || localMatch?.unit || 'NOS',
+            uom: item.unit || localMatch?.uom || 'NOS',
+            material: localMatch?.material || 'General Component',
+            category: localMatch?.category || 'General',
+            stock: localMatch?.stock !== undefined ? localMatch.stock : (item.initial_stock || 0),
+            reorderLevel: localMatch?.reorderLevel || 100
           };
         });
 
-        const zohoKeys = new Set(translatedZoho.map(z => String(z.sku || z.itemId).toLowerCase()));
-        const uniqueLocal = localItems.filter(l => !zohoKeys.has(String(l.sku || l.itemId).toLowerCase()));
-        return res.json([...uniqueLocal, ...translatedZoho]);
+        const zohoKeys = new Set(translatedZoho.map(z => String(z.sku || z.itemId || z.name).toLowerCase()));
+        const uniqueLocal = localItems.filter(l => !zohoKeys.has(String(l.sku || l.itemId || l.name).toLowerCase()));
+        const mergedAll = [...uniqueLocal, ...translatedZoho];
+
+        // Save fresh merged items back to server local store & Supabase
+        saveLocalItems(mergedAll);
+
+        return res.json(mergedAll);
       }
     }
   } catch (err) {

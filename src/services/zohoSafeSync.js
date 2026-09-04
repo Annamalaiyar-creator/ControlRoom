@@ -21,13 +21,13 @@ export async function getSafeZohoItems() {
   const mergeWithLocal = (freshItems) => {
     if (!Array.isArray(freshItems) || freshItems.length === 0) return localCached;
     const map = new Map();
-    // Put fresh items first
-    freshItems.forEach(it => {
+    // 1. Index local items first
+    localCached.forEach(it => {
       const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
       if (key) map.set(key, it);
     });
-    // Overlay local items so local custom items and their inactive/active status are preserved
-    localCached.forEach(it => {
+    // 2. Overlay fresh items from Zoho on top so fresh Zoho updates (name, rate, status, sku, description, unit) reflect immediately
+    freshItems.forEach(it => {
       const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
       if (key) {
         const existing = map.get(key) || {};

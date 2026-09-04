@@ -1332,48 +1332,47 @@ export default function ItemsDirectoryView(props) {
   const [selectedItemStatus, setSelectedItemStatus] = useState('All Status');
   const [itemsLoading, setItemsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchZohoItems = async () => {
+  const fetchZohoItems = useCallback(async (forceRefresh = false) => {
+    try {
+      setItemsLoading(true);
+      if (forceRefresh) {
+        setIsSyncingZohoItems(true);
+      }
+      let freshData = null;
+      // If forcing refresh or standard fetch, query live backend /api/zoho/items
       try {
-        setItemsLoading(true);
-        const zohoItems = await getSafeZohoItems();
-        if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
-          setItemsList(prev => {
-            const itemMap = new Map();
-            (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
-            zohoItems.forEach(it => {
-              const key = it.code || it.sku || it.itemId || it.id || it.name;
-              if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
-            });
-            return Array.from(itemMap.values());
-          });
-        } else {
-          const response = await fetch('/api/zoho/items').catch(() => null);
-          if (response && response.ok) {
-            const zItems = await response.json().catch(() => []);
-            if (isMounted && Array.isArray(zItems) && zItems.length > 0) {
-              setItemsList(prev => {
-                const itemMap = new Map();
-                (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
-                zItems.forEach(it => {
-                  const key = it.code || it.sku || it.itemId || it.id || it.name;
-                  if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
-                });
-                return Array.from(itemMap.values());
-              });
-            }
+        const response = await fetch('/api/zoho/items', { cache: 'no-store' }).catch(() => null);
+        if (response && response.ok) {
+          const zItems = await response.json().catch(() => null);
+          if (Array.isArray(zItems) && zItems.length > 0) {
+            freshData = zItems;
+            try {
+              localStorage.setItem('controlroom_item_store', JSON.stringify(zItems));
+            } catch (_) {}
           }
         }
       } catch (err) {
-        console.error("Error fetching Zoho Items:", err);
-      } finally {
-        if (isMounted) setItemsLoading(false);
+        console.warn("Live Zoho fetch notice:", err);
       }
-    };
-    fetchZohoItems();
-    return () => { isMounted = false; };
+
+      if (!freshData) {
+        freshData = await getSafeZohoItems();
+      }
+
+      if (Array.isArray(freshData) && freshData.length > 0) {
+        setItemsList(freshData);
+      }
+    } catch (err) {
+      console.error("Error fetching Zoho Items:", err);
+    } finally {
+      setItemsLoading(false);
+      setIsSyncingZohoItems(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchZohoItems(false);
+  }, [fetchZohoItems]);
 
   const handleCreateProductInZoho = async () => {
     if (!newItemData.name || !newItemData.name.trim()) {
@@ -2577,58 +2576,88 @@ export default function ItemsDirectoryView(props) {
                   <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>Items & Materials Catalog</h2>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>Browse and manage your active item catalog synced with Zoho Books.</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setNewItemData({
-                      name: '',
-                      sku: '',
-                      rate: '',
-                      purchaseRate: '',
-                      unit: 'NOS',
-                      status: 'Active',
-                      warehouse: 'Main Warehouse',
-                      description: '',
-                      purchaseDescription: '',
-                      productType: 'goods'
-                    });
-                    setIsCreatingItem(true);
-                    setCreateStatus(null);
-                  }}
-                  style={{
-                    backgroundColor: '#0E7490',
-                    border: 'none',
-                    color: '#FFFFFF',
-                    height: '40px',
-                    padding: '0 6px 0 20px',
-                    borderRadius: '50px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
-                    transition: 'all 0.2s ease',
-                    letterSpacing: '0.2px'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
-                >
-                  <span>Add New Product</span>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#0E7490',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}>
-                    <ArrowRight size={16} strokeWidth={2.5} />
-                  </div>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => fetchZohoItems(true)}
+                    disabled={isSyncingZohoItems || itemsLoading}
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      border: '1px solid #CBD5E1',
+                      color: '#334155',
+                      height: '40px',
+                      padding: '0 16px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: (isSyncingZohoItems || itemsLoading) ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease',
+                      opacity: (isSyncingZohoItems || itemsLoading) ? 0.7 : 1
+                    }}
+                    onMouseEnter={(e) => { if (!isSyncingZohoItems && !itemsLoading) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                    onMouseLeave={(e) => { if (!isSyncingZohoItems && !itemsLoading) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                    title="Fetch and synchronize latest items catalog directly from Zoho Books"
+                  >
+                    <RefreshCw size={15} style={{ color: '#0E7490', animation: isSyncingZohoItems ? 'spin 1s linear infinite' : 'none' }} />
+                    <span>{isSyncingZohoItems ? 'Syncing...' : 'Sync with Zoho'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setNewItemData({
+                        name: '',
+                        sku: '',
+                        rate: '',
+                        purchaseRate: '',
+                        unit: 'NOS',
+                        status: 'Active',
+                        warehouse: 'Main Warehouse',
+                        description: '',
+                        purchaseDescription: '',
+                        productType: 'goods'
+                      });
+                      setIsCreatingItem(true);
+                      setCreateStatus(null);
+                    }}
+                    style={{
+                      backgroundColor: '#0E7490',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      height: '40px',
+                      padding: '0 6px 0 20px',
+                      borderRadius: '50px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                      transition: 'all 0.2s ease',
+                      letterSpacing: '0.2px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                  >
+                    <span>Add New Product</span>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0E7490',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      <ArrowRight size={16} strokeWidth={2.5} />
+                    </div>
+                  </button>
+                </div>
               </div>
               <div className="section-card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px', flexWrap: 'wrap', alignItems: 'center' }}>
