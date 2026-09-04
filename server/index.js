@@ -1739,10 +1739,13 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
     saveLocalPOs(localPOs);
 
     // Create Purchase Order in Zoho Books (Zoho creates it as Draft by default)
+    console.log('[ZOHO PO CREATE] Sending payload to Zoho Books:', JSON.stringify(payload, null, 2));
     let result = await createZohoPurchaseOrder(accessToken, payload);
+    console.log('[ZOHO PO CREATE] Initial response from Zoho Books:', JSON.stringify(result, null, 2));
     
     // If Zoho returns any error code, strip custom purchaseorder_number & non-essential fields and retry
     if (result && result.code && result.code !== 0) {
+      console.warn(`[ZOHO PO CREATE RETRY] Code ${result.code}: ${result.message}. Retrying with minimal payload...`);
       delete payload.purchaseorder_number;
       delete payload.discount;
       delete payload.discount_type;
@@ -1751,7 +1754,19 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
       delete payload.reference_number;
       if (payload.delivery_address) payload.delivery_address = payload.delivery_address.slice(0, 60);
       if (payload.billing_address) payload.billing_address = payload.billing_address.slice(0, 60);
+      
+      // If error mentions account or item, remove account_id or ensure standard account
+      if (payload.line_items && Array.isArray(payload.line_items)) {
+        payload.line_items = payload.line_items.map(li => {
+          const cleanLi = { name: li.name, rate: li.rate, quantity: li.quantity };
+          if (li.description) cleanLi.description = li.description;
+          if (li.item_id) cleanLi.item_id = li.item_id;
+          return cleanLi;
+        });
+      }
+
       result = await createZohoPurchaseOrder(accessToken, payload);
+      console.log('[ZOHO PO CREATE] Retry response from Zoho Books:', JSON.stringify(result, null, 2));
     }
 
     if (result && (result.code === 0 || result.purchaseorder)) {

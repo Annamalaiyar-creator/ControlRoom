@@ -530,10 +530,14 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
       }).then(res => res.json()).then(data => {
         if (data.success && data.po) {
           setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
+          showCustomAlert(data.message || 'Purchase Order created successfully in Zoho Books!', 'PO Created', 'success');
+        } else if (data.message) {
+          showCustomAlert(data.message, 'Zoho Sync Notice', 'warning');
         }
         fetchZohoPOs();
       }).catch(err => {
         console.error('Failed to sync PO update:', err);
+        showCustomAlert('Network error syncing with Zoho: ' + err.message, 'Sync Error', 'error');
         fetchZohoPOs();
       });
     } else {
@@ -546,10 +550,14 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
       }).then(res => res.json()).then(data => {
         if (data.success && data.po) {
           setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
+          showCustomAlert(data.message || 'Purchase Order created successfully in Zoho Books!', 'PO Created', 'success');
+        } else if (data.message) {
+          showCustomAlert(data.message, 'Zoho Sync Notice', 'warning');
         }
         fetchZohoPOs();
       }).catch(err => {
         console.error('Failed to sync PO:', err);
+        showCustomAlert('Network error syncing with Zoho: ' + err.message, 'Sync Error', 'error');
         fetchZohoPOs();
       });
     }
