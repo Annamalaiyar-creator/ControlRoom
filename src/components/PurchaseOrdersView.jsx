@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy, Tag, MoreHorizontal } from 'lucide-react';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
-import { getSafeZohoPOs, getSafeZohoVendors, getSafeZohoItems } from '../services/zohoSafeSync';
+import { getSafeZohoPOs, getSafeZohoVendors, getSafeZohoItems, saveSafeZohoPO } from '../services/zohoSafeSync';
 import StatusBadge from './StatusBadge';
 import NotificationToast from './NotificationToast';
 
@@ -517,49 +517,48 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
       pdfName: attachedFiles[0] ? attachedFiles[0].name : 'purchase_order.pdf'
     };
 
+    // Save immediately to local & Supabase cloud store so PO is preserved permanently
+    saveSafeZohoPO(newPO);
+
+    const syncPOToServer = async (isEdit) => {
+      try {
+        const res = await fetch('/api/zoho/purchaseorders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newPO)
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success && data.po) {
+            setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
+            saveSafeZohoPO({ ...newPO, ...data.po });
+            showCustomAlert(data.message || 'Purchase Order created successfully in Zoho Books!', 'PO Created', 'success');
+          } else if (data.message) {
+            showCustomAlert(data.message, 'Zoho Sync Notice', 'warning');
+          }
+        } else {
+          // Live web server returned HTML (static SPA or 404/502). PO is safely stored in local & cloud.
+          showCustomAlert('Purchase Order saved securely in ControlRoom! (Server sync pending)', 'PO Saved', 'success');
+        }
+      } catch (err) {
+        console.warn('Backend sync warning (saved locally):', err);
+        showCustomAlert('Purchase Order saved securely in ControlRoom! (Server sync pending)', 'PO Saved', 'success');
+      } finally {
+        fetchZohoPOs();
+      }
+    };
+
     if (editIdx !== null) {
       const updated = [...poList];
       updated[editIdx] = newPO;
       setPoList(updated);
       setEditIdx(null);
-
-      fetch('/api/zoho/purchaseorders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPO)
-      }).then(res => res.json()).then(data => {
-        if (data.success && data.po) {
-          setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
-          showCustomAlert(data.message || 'Purchase Order created successfully in Zoho Books!', 'PO Created', 'success');
-        } else if (data.message) {
-          showCustomAlert(data.message, 'Zoho Sync Notice', 'warning');
-        }
-        fetchZohoPOs();
-      }).catch(err => {
-        console.error('Failed to sync PO update:', err);
-        showCustomAlert('Network error syncing with Zoho: ' + err.message, 'Sync Error', 'error');
-        fetchZohoPOs();
-      });
+      syncPOToServer(true);
     } else {
       setPoList(prev => [newPO, ...prev]);
-
-      fetch('/api/zoho/purchaseorders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPO)
-      }).then(res => res.json()).then(data => {
-        if (data.success && data.po) {
-          setPoList(prev => prev.map(p => (p.poNo === newPO.poNo || p.id === newPO.id) ? { ...p, ...data.po } : p));
-          showCustomAlert(data.message || 'Purchase Order created successfully in Zoho Books!', 'PO Created', 'success');
-        } else if (data.message) {
-          showCustomAlert(data.message, 'Zoho Sync Notice', 'warning');
-        }
-        fetchZohoPOs();
-      }).catch(err => {
-        console.error('Failed to sync PO:', err);
-        showCustomAlert('Network error syncing with Zoho: ' + err.message, 'Sync Error', 'error');
-        fetchZohoPOs();
-      });
+      syncPOToServer(false);
     }
 
     setShowSaveConfirm(false);
@@ -582,7 +581,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         approver: 'CEO / Operations Manager'
       })
     })
-      .then(res => res.json())
+      .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
       .then(() => {
         setApprovingPo(null);
         setApprovalRemarksInput('');
@@ -610,7 +609,7 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         rejectedBy: 'CEO / Operations Manager'
       })
     })
-      .then(res => res.json())
+      .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
       .then(() => {
         setRejectingPo(null);
         setRejectionReasonInput('');

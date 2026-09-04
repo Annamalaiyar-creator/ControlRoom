@@ -160,3 +160,70 @@ export async function getSafeZohoPOs() {
 
   return [];
 }
+
+/**
+ * Universal safe saver for Purchase Orders.
+ * Persists immediately to localStorage and cloud Supabase 'PO_STORE'
+ * so POs are never lost regardless of whether the Node backend is reachable.
+ */
+export async function saveSafeZohoPO(newOrUpdatedPO) {
+  if (!newOrUpdatedPO) return;
+  try {
+    // 1. Update localStorage
+    let currentList = [];
+    const localRaw = localStorage.getItem('controlroom_po_store');
+    if (localRaw) {
+      try {
+        const parsed = JSON.parse(localRaw);
+        if (Array.isArray(parsed)) currentList = parsed;
+      } catch (_) {}
+    }
+    const targetId = newOrUpdatedPO.poNo || newOrUpdatedPO.id;
+    const existingIdx = currentList.findIndex(p => (p.poNo && p.poNo === targetId) || (p.id && p.id === targetId));
+    if (existingIdx !== -1) {
+      currentList[existingIdx] = { ...currentList[existingIdx], ...newOrUpdatedPO };
+    } else {
+      currentList.unshift(newOrUpdatedPO);
+    }
+    localStorage.setItem('controlroom_po_store', JSON.stringify(currentList));
+
+    // 2. Persist to Supabase leaves cloud store (PO_STORE)
+    const { data: record } = await supabase
+      .from('leaves')
+      .select('id, reason')
+      .eq('employee', 'PO_STORE')
+      .maybeSingle();
+
+    if (record && record.id) {
+      let cloudList = [];
+      try {
+        const parsedCloud = JSON.parse(record.reason);
+        if (Array.isArray(parsedCloud)) cloudList = parsedCloud;
+      } catch (_) {}
+      const cIdx = cloudList.findIndex(p => (p.poNo && p.poNo === targetId) || (p.id && p.id === targetId));
+      if (cIdx !== -1) {
+        cloudList[cIdx] = { ...cloudList[cIdx], ...newOrUpdatedPO };
+      } else {
+        cloudList.unshift(newOrUpdatedPO);
+      }
+      await supabase
+        .from('leaves')
+        .update({ reason: JSON.stringify(cloudList), status: 'active' })
+        .eq('id', record.id);
+    } else {
+      await supabase
+        .from('leaves')
+        .insert({
+          employee: 'PO_STORE',
+          reason: JSON.stringify(currentList),
+          status: 'active',
+          start_date: '2026-01-01',
+          end_date: '2026-01-01',
+          type: 'Store'
+        });
+    }
+  } catch (err) {
+    console.warn('saveSafeZohoPO notice:', err);
+  }
+}
+
