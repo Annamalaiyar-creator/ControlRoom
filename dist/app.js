@@ -201,12 +201,32 @@ const server = http.createServer(async (req, res) => {
 
           if (zohoResult && (zohoResult.code === 0 || zohoResult.purchaseorder)) {
             const created = zohoResult.purchaseorder;
+            const targetPoId = created ? created.purchaseorder_id : null;
+
+            // In Zoho Books, new POs default to 'draft'. If approval is not required or user didn't ask for approval,
+            // automatically issue/open the PO so status transitions to OPEN immediately!
+            if (targetPoId) {
+              try {
+                await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetPoId)}/status/issued`, null, token);
+              } catch (_) {
+                try {
+                  await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetPoId)}/status/open`, null, token);
+                } catch (_) {}
+              }
+            }
+
             res.writeHead(200, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
               success: true,
-              message: 'Purchase Order created in Zoho Books successfully!',
-              po: { ...body, id: created ? created.purchaseorder_id : body.poNo, poNo: created ? created.purchaseorder_number : body.poNo },
-              zohoPo: created
+              message: 'Purchase Order created and issued in Zoho Books successfully!',
+              po: { 
+                ...body, 
+                id: targetPoId || body.poNo, 
+                poNo: created ? created.purchaseorder_number : body.poNo,
+                status: 'OPEN',
+                statusType: 'approved'
+              },
+              zohoPo: { ...created, status: 'open' }
             }));
           } else {
             console.warn('[ZOHO CREATE WARNING]', zohoResult);
