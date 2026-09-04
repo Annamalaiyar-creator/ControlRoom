@@ -106,9 +106,6 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
 
       {/* ROW 1: 8 SELECTED PERIOD PERFORMANCE CARDS */}
       <div>
-        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px' }}>
-          Selected Period Performance — {selectedPeriod}
-        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px', width: '100%' }}>
           {/* Card 1: Target */}
           <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
