@@ -3054,7 +3054,11 @@ export default function ItemsDirectoryView(props) {
                         if (cat === 'goods' && item.productType !== 'goods') return false;
                         if (cat === 'services' && item.productType !== 'service' && item.productType !== 'services') return false;
                       }
-                      if (selectedItemStatus !== 'All Status' && selectedItemStatus !== item.status) return false;
+                      if (selectedItemStatus !== 'All Status') {
+                        const itemSt = String(item.status || 'Active').toLowerCase();
+                        const selSt = String(selectedItemStatus).toLowerCase();
+                        if (itemSt !== selSt) return false;
+                      }
                       return true;
                     });
 
