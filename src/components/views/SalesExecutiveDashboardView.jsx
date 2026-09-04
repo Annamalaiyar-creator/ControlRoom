@@ -4,7 +4,7 @@ import {
   FileText, Calendar, Filter, ChevronDown, ArrowUpRight, ArrowDownRight,
   Clock, ShieldAlert, Sparkles, RefreshCw, Layers, DollarSign, ChevronRight,
   ChevronLeft, Edit3, Trash2, X, MoreHorizontal, ExternalLink, ArrowRight,
-  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart
+  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart, Tag
 } from 'lucide-react';
 
 export default function SalesExecutiveDashboardView({ userRole = 'Sales Executive', onNavigateTab }) {
@@ -81,7 +81,8 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
     { name: 'Accessories', actual: 2.5, target: 2.0, actualStr: '₹ 2.5L', targetStr: '₹ 2.0L' }
   ];
 
-  // Trend data
+  // Trend data: Apr - Oct (Actual vs Target)
+  const [hoveredTrendMonth, setHoveredTrendMonth] = useState(null);
   const trendData = [
     { month: 'Apr', actual: 42, target: 45 },
     { month: 'May', actual: 48, target: 49 },
@@ -168,9 +169,9 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
       </div>
 
       {/* ROW 2: MONTH TARGET RUN RATE & SALES FUNNEL */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '16px', width: '100%', alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '16px', width: '100%', alignItems: 'start' }}>
         {/* Card A: Target Progress & Run Rate */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
               Month Target Progress and Required Run Rate
@@ -228,119 +229,84 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
               </span>
             </div>
 
-            {/* 3D Conical Stacked Funnel Graphic matching the reference image */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px 0 6px 0' }}>
-              <svg viewBox="0 0 540 300" style={{ width: '100%', maxWidth: '480px', height: 'auto', overflow: 'visible', filter: 'drop-shadow(0 8px 16px rgba(15, 23, 42, 0.08))' }}>
-                <defs>
-                  {/* Layer 1 Gradient: Offers / Primary Teal */}
-                  <linearGradient id="funnelGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#38BDF8" />
-                    <stop offset="100%" stopColor="#0284C7" />
-                  </linearGradient>
-                  <linearGradient id="funnelTop1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#0369A1" />
-                    <stop offset="100%" stopColor="#0284C7" />
-                  </linearGradient>
-
-                  {/* Layer 2 Gradient: Qualified / Cyan-Teal */}
-                  <linearGradient id="funnelGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#22D3EE" />
-                    <stop offset="100%" stopColor="#0E7490" />
-                  </linearGradient>
-                  <linearGradient id="funnelTop2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#0891B2" />
-                    <stop offset="100%" stopColor="#0E7490" />
-                  </linearGradient>
-
-                  {/* Layer 3 Gradient: Proforma Invoice / Emerald Green */}
-                  <linearGradient id="funnelGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#4ADE80" />
-                    <stop offset="100%" stopColor="#16A34A" />
-                  </linearGradient>
-                  <linearGradient id="funnelTop3" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#15803D" />
-                    <stop offset="100%" stopColor="#16A34A" />
-                  </linearGradient>
-
-                  {/* Layer 4 Gradient: Invoiced / Amber-Orange */}
-                  <linearGradient id="funnelGrad4" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#FBBF24" />
-                    <stop offset="100%" stopColor="#EA580C" />
-                  </linearGradient>
-                  <linearGradient id="funnelTop4" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#C2410C" />
-                    <stop offset="100%" stopColor="#EA580C" />
-                  </linearGradient>
-                </defs>
-
-                {/* ===== TIER 1: OFFERS (Top Wide Rim) ===== */}
-                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-                  {/* Top 3D Oval Rim */}
-                  <ellipse cx="270" cy="24" rx="230" ry="20" fill="url(#funnelTop1)" stroke="#BAE6FD" strokeWidth="1" />
-                  {/* Frustum Body */}
-                  <path d="M 40 24 L 85 82 A 185 16 0 0 0 455 82 L 500 24 A 230 20 0 0 1 40 24 Z" fill="url(#funnelGrad1)" />
-                  {/* Bottom Rim Highlight */}
-                  <ellipse cx="270" cy="82" rx="185" ry="16" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                  {/* Text Information */}
-                  <text x="270" y="52" textAnchor="middle" fill="#FFFFFF" fontSize="15" fontWeight="900" letterSpacing="1px" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    1. OFFERS — 36 DEALS
-                  </text>
-                  <text x="270" y="70" textAnchor="middle" fill="#E0F2FE" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    Total Quotations: ₹ 1.74 Cr
-                  </text>
-                </g>
-
-                {/* ===== TIER 2: QUALIFIED ===== */}
-                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-                  {/* Top 3D Oval Rim */}
-                  <ellipse cx="270" cy="88" rx="180" ry="15" fill="url(#funnelTop2)" stroke="#A5F3FC" strokeWidth="0.8" />
-                  {/* Frustum Body */}
-                  <path d="M 90 88 L 130 148 A 140 13 0 0 0 410 148 L 450 88 A 180 15 0 0 1 90 88 Z" fill="url(#funnelGrad2)" />
-                  {/* Bottom Rim Highlight */}
-                  <ellipse cx="270" cy="148" rx="140" ry="13" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                  {/* Text Information */}
-                  <text x="270" y="116" textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    2. QUALIFIED LEADS — 25 DEALS
-                  </text>
-                  <text x="270" y="134" textAnchor="middle" fill="#CFFAFE" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    Pipeline Value: ₹ 1.24 Cr
-                  </text>
-                </g>
-
-                {/* ===== TIER 3: PROFORMA INVOICE ===== */}
-                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-                  {/* Top 3D Oval Rim */}
-                  <ellipse cx="270" cy="154" rx="135" ry="12" fill="url(#funnelTop3)" stroke="#BBF7D0" strokeWidth="0.8" />
-                  {/* Frustum Body */}
-                  <path d="M 135 154 L 175 214 A 95 10 0 0 0 365 214 L 405 154 A 135 12 0 0 1 135 154 Z" fill="url(#funnelGrad3)" />
-                  {/* Bottom Rim Highlight */}
-                  <ellipse cx="270" cy="214" rx="95" ry="10" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                  {/* Text Information */}
-                  <text x="270" y="182" textAnchor="middle" fill="#FFFFFF" fontSize="13.5" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    3. PROFORMA INVOICE (PI) — 18
-                  </text>
-                  <text x="270" y="200" textAnchor="middle" fill="#DCFCE7" fontSize="12" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    PI Value: ₹ 82.0 L
-                  </text>
-                </g>
-
-                {/* ===== TIER 4: INVOICED (Base) ===== */}
-                <g className="funnel-tier" style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-                  {/* Top 3D Oval Rim */}
-                  <ellipse cx="270" cy="220" rx="90" ry="9" fill="url(#funnelTop4)" stroke="#FED7AA" strokeWidth="0.8" />
-                  {/* Frustum Body */}
-                  <path d="M 180 220 L 205 278 A 65 7 0 0 0 335 278 L 360 220 A 90 9 0 0 1 180 220 Z" fill="url(#funnelGrad4)" />
-                  {/* Bottom Base Oval */}
-                  <ellipse cx="270" cy="278" rx="65" ry="7" fill="#C2410C" stroke="#FED7AA" strokeWidth="1" />
-                  {/* Text Information */}
-                  <text x="270" y="248" textAnchor="middle" fill="#FFFFFF" fontSize="13" fontWeight="900" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    4. INVOICED — 16
-                  </text>
-                  <text x="270" y="265" textAnchor="middle" fill="#FFEDD5" fontSize="11.5" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
-                    ₹ 68.5 L (Realized)
-                  </text>
-                </g>
-              </svg>
+            {/* Clean Flat 2D Sales Funnel matching Control Room Design System */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0' }}>
+              {[
+                {
+                  label: 'OFFERS',
+                  count: '36 Deals',
+                  value: '₹ 1.74 Cr',
+                  pct: '100%',
+                  bgColor: '#EDE9FE',
+                  barColor: '#8B5CF6',
+                  textColor: '#5B21B6',
+                  width: '100%'
+                },
+                {
+                  label: 'QUALIFIED',
+                  count: '25 Deals',
+                  value: '₹ 1.24 Cr',
+                  pct: '69.4%',
+                  bgColor: '#FCE7F3',
+                  barColor: '#EC4899',
+                  textColor: '#9D174D',
+                  width: '84%'
+                },
+                {
+                  label: 'PROFORMA INVOICE',
+                  count: '18 PIs',
+                  value: '₹ 82.0 L',
+                  pct: '50.0%',
+                  bgColor: '#FFE4E6',
+                  barColor: '#F43F5E',
+                  textColor: '#9F1239',
+                  width: '68%'
+                },
+                {
+                  label: 'INVOICED',
+                  count: '16 Invoices',
+                  value: '₹ 68.5 L',
+                  pct: '44.4%',
+                  bgColor: '#FEF9C3',
+                  barColor: '#EAB308',
+                  textColor: '#854D0E',
+                  width: '52%'
+                }
+              ].map((tier, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                  <div
+                    style={{
+                      width: tier.width,
+                      backgroundColor: tier.barColor,
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      padding: '10px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.01)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '0.5px' }}>
+                        {tier.label}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px' }}>
+                        {tier.count}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800' }}>
+                        {tier.value}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -366,129 +332,337 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
       </div>
 
       {/* ROW 3: SALES TREND, PRODUCT PERFORMANCE, TOP 10 CUSTOMERS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px', width: '100%', alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px', width: '100%', alignItems: 'start' }}>
         {/* Card A: Actual vs Target Trend Chart */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              My Sales Trend — Actual vs Target
+        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              MY SALES TREND
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', fontWeight: '700' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0284C7' }}>
-                <span style={{ width: '10px', height: '10px', backgroundColor: '#0284C7', borderRadius: '2px' }}></span> Actual sales
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#F59E0B' }}>
-                <span style={{ width: '10px', height: '3px', backgroundColor: '#F59E0B', borderRadius: '1px' }}></span> Target
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#0284C7', fontSize: '11px', fontWeight: '700' }}>
+                <span style={{ width: '10px', height: '10px', backgroundColor: '#0284C7', borderRadius: '3px' }}></span> Actual sales
               </span>
             </div>
           </div>
 
-          {/* Bar & Target Chart Graphic */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', minHeight: '180px', padding: '10px 10px 0 10px', borderBottom: '1px solid #E2E8F0', position: 'relative' }}>
-            {trendData.map((d, idx) => {
-              const heightPct = (d.actual / 80) * 100;
-              const targetTop = 100 - (d.target / 80) * 100;
+          {/* Chart Canvas with Y-Axis, Rounded Stadium Bars, and Hover-only Tooltip */}
+          <div style={{ display: 'flex', position: 'relative' }}>
+            {/* Y-Axis Labels (0, 20L, 40L, 60L, 80L) */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              paddingRight: '12px',
+              fontSize: '11px',
+              fontWeight: '600',
+              color: '#94A3B8',
+              height: '180px',
+              userSelect: 'none',
+              textAlign: 'right',
+              minWidth: '32px'
+            }}>
+              <span>80 L</span>
+              <span>60 L</span>
+              <span>40 L</span>
+              <span>20 L</span>
+              <span>0 L</span>
+            </div>
+
+            {/* Bars Area with Background Dashed Gridlines */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              {/* Horizontal Gridlines */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '180px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} style={{ width: '100%', borderBottom: '1px dashed #E2E8F0' }}></div>
+                ))}
+              </div>
+
+              {/* Bar Columns Container */}
+              <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', position: 'relative', zIndex: 4, padding: '0 4px' }}>
+                {trendData.map((d) => {
+                  const heightPct = (d.actual / 80) * 100;
+                  const isHovered = hoveredTrendMonth === d.month;
+
+                  return (
+                    <div
+                      key={d.month}
+                      onMouseEnter={() => setHoveredTrendMonth(d.month)}
+                      onMouseLeave={() => setHoveredTrendMonth(null)}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        height: '100%',
+                        justifyContent: 'flex-end',
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {/* Tooltip visible ONLY on hover */}
+                      {isHovered && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: `${heightPct + 10}%`,
+                          zIndex: 20,
+                          backgroundColor: '#0F172A',
+                          color: '#FFFFFF',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.3)',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          fontSize: '11px',
+                          fontWeight: '700'
+                        }}>
+                          <span style={{ color: '#FFFFFF' }}>₹ {d.actual} L</span>
+                          {/* Tooltip triangle beak */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-4px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 0,
+                            height: 0,
+                            borderLeft: '4px solid transparent',
+                            borderRight: '4px solid transparent',
+                            borderTop: '4px solid #0F172A'
+                          }} />
+                        </div>
+                      )}
+
+                      {/* Smooth Stadium-Rounded Bar */}
+                      <div
+                        style={{
+                          width: '28px',
+                          maxWidth: '75%',
+                          height: `${heightPct}%`,
+                          backgroundColor: isHovered ? '#0284C7' : '#0284C7',
+                          backgroundImage: isHovered
+                            ? 'linear-gradient(180deg, #38BDF8 0%, #0284C7 100%)'
+                            : 'linear-gradient(180deg, #0284C7 0%, #0369A1 100%)',
+                          borderRadius: '14px',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isHovered
+                            ? '0 6px 14px rgba(2, 132, 199, 0.4)'
+                            : '0 1px 3px rgba(0,0,0,0.06)',
+                          transform: isHovered ? 'translateY(-2px)' : 'translateY(0)'
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Baseline */}
+              <div style={{ width: '100%', height: '2px', backgroundColor: '#E2E8F0', marginTop: '4px' }}></div>
+
+              {/* Month X-Axis Labels */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', paddingLeft: '4px', paddingRight: '4px', fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
+                {trendData.map(d => {
+                  const isHovered = hoveredTrendMonth === d.month;
+                  return (
+                    <span
+                      key={d.month}
+                      onMouseEnter={() => setHoveredTrendMonth(d.month)}
+                      onMouseLeave={() => setHoveredTrendMonth(null)}
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        color: isHovered ? '#0284C7' : '#64748B',
+                        fontWeight: isHovered ? '800' : '600',
+                        transition: 'color 0.2s ease'
+                      }}
+                    >
+                      {d.month}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card B: Product Sale Comparison (matching user reference design) */}
+        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          {/* Header without icon */}
+          <div style={{ marginBottom: '18px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              PRODUCT SALE COMPARISON
+            </span>
+          </div>
+
+          {/* Background vertical subtle gridlines */}
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} style={{ height: '100%', borderRight: '1px dashed #F1F5F9' }}></div>
+              ))}
+            </div>
+
+            {/* SVG Pattern Definition for striped/hatched bars */}
+            <svg width="0" height="0" style={{ position: 'absolute' }}>
+              <defs>
+                <pattern id="diagonalHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="#94A3B8" strokeWidth="2.5" strokeOpacity="0.55" />
+                </pattern>
+              </defs>
+            </svg>
+
+            {/* List of Products */}
+            {productPerformance.map((p, idx) => {
+              const maxVal = 35.0;
+              const pct = (p.actual / maxVal) * 100;
+              const isTop = idx === 0;
+
               return (
-                <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
-                  {/* Target Dot */}
-                  <div style={{
-                    position: 'absolute',
-                    top: `${targetTop}%`,
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: '#F59E0B',
-                    border: '2px solid #FFFFFF',
-                    boxShadow: '0 0 4px rgba(245, 158, 11, 0.6)',
-                    zIndex: 3
-                  }} />
+                <div key={idx} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* Title & Sales Value */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#1E293B' }}>
+                      {p.name}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#94A3B8' }}>
+                      {p.actualStr}
+                    </span>
+                  </div>
 
-                  {/* Value Above Bar */}
-                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>
-                    {d.actual}L
-                  </span>
-
-                  {/* Actual Sales Bar */}
-                  <div style={{
-                    width: '70%',
-                    height: `${heightPct}%`,
-                    backgroundColor: '#0284C7',
-                    borderRadius: '6px 6px 0 0',
-                    transition: 'all 0.2s ease'
-                  }}></div>
+                  {/* Horizontal Bar */}
+                  <div style={{ width: '100%', height: '10px', position: 'relative' }}>
+                    {isTop ? (
+                      /* Top item: Same Vibrant Blue Gradient Bar as MY SALES TREND */
+                      <div
+                        style={{
+                          width: `${pct}%`,
+                          height: '10px',
+                          borderRadius: '5px',
+                          background: 'linear-gradient(90deg, #38BDF8 0%, #0284C7 60%, #0369A1 100%)',
+                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                          transition: 'width 0.3s ease'
+                        }}
+                      />
+                    ) : (
+                      /* Other items: Diagonal Patterned Hatched Bar */
+                      <svg width={`${pct}%`} height="10" style={{ display: 'block', overflow: 'hidden', borderRadius: '5px' }}>
+                        <rect
+                          width="100%"
+                          height="10"
+                          rx="5"
+                          ry="5"
+                          fill="url(#diagonalHatch)"
+                        />
+                      </svg>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
-            {trendData.map(d => <span key={d.month} style={{ flex: 1, textAlign: 'center' }}>{d.month}</span>)}
-          </div>
         </div>
 
-        {/* Card B: Product Performance — Value vs Target */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Product Performance
-              </span>
-              <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>Value vs Target</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {productPerformance.map((p, idx) => {
-                const maxVal = 40;
-                const actPct = (p.actual / maxVal) * 100;
-                const tgtPct = (p.target / maxVal) * 100;
-
-                return (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px' }}>
-                      <span style={{ fontWeight: '700', color: '#334155' }}>{p.name}</span>
-                      <span style={{ color: '#0E7490', fontWeight: '800' }}>{p.actualStr} / <span style={{ color: '#64748B', fontWeight: '500' }}>{p.targetStr}</span></span>
-                    </div>
-                    {/* Dual Progress Stack */}
-                    <div style={{ width: '100%', height: '8px', backgroundColor: '#F1F5F9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                      <div style={{ width: `${tgtPct}%`, height: '100%', backgroundColor: '#FED7AA', position: 'absolute', top: 0, left: 0 }}></div>
-                      <div style={{ width: `${actPct}%`, height: '100%', backgroundColor: '#0284C7', position: 'absolute', top: 0, left: 0, borderRadius: '4px' }}></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Card C: Top 10 Customers Month Sales Contribution (Styled like PO Ageing Summary table) */}
+        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+          {/* Card Title */}
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '16px' }}>
+            TOP 10 CUSTOMERS — MONTH SALES
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', fontSize: '10.5px', fontWeight: '700', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
-            <span style={{ color: '#0284C7' }}>■ Actual value</span>
-            <span style={{ color: '#F97316' }}>■ Target value</span>
+          {/* Table Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.4fr 1fr 1fr',
+            paddingBottom: '10px',
+            borderBottom: '1px solid #E2E8F0',
+            fontSize: '11px',
+            fontWeight: '700',
+            color: '#64748B',
+            textTransform: 'none'
+          }}>
+            <div>Customer</div>
+            <div style={{ textAlign: 'right' }}>Sales Value</div>
+            <div style={{ textAlign: 'right' }}>% Share</div>
           </div>
-        </div>
 
-        {/* Card C: Top 10 Customers Month Sales Contribution */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              Top 10 Customers — Month Sales
-            </div>
+          {/* Table Rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '205px', overflowY: 'auto' }}>
+            {topCustomers.map((c, idx) => {
+              // Color gradient pills matching the reference screenshot indicator dots
+              const dotColors = [
+                '#10B981', // green
+                '#22C55E', // lime green
+                '#84CC16', // light olive
+                '#EAB308', // amber
+                '#F59E0B', // orange
+                '#F97316', // bright orange
+                '#EA580C', // deep orange
+                '#EF4444', // coral red
+                '#DC2626', // red
+                '#B91C1C'  // deep red
+              ];
+              const indicatorColor = dotColors[idx] || '#64748B';
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '210px', overflowY: 'auto' }}>
-              {topCustomers.map(c => (
-                <div key={c.rank} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px', borderRadius: '6px', fontSize: '11.5px', borderBottom: '1px solid #F8FAFC' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#94A3B8', fontSize: '10.5px' }}>{c.rank}</span>
-                    <strong style={{ color: '#1E293B' }}>{c.name}</strong>
+              return (
+                <div
+                  key={c.rank}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 1fr 1fr',
+                    alignItems: 'center',
+                    padding: '8px 0',
+                    borderBottom: '1px solid #F8FAFC',
+                    fontSize: '12px',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                >
+                  {/* Customer with Pill Indicator */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <div style={{
+                      width: '6px',
+                      height: '14px',
+                      borderRadius: '3px',
+                      backgroundColor: indicatorColor,
+                      flexShrink: 0
+                    }} />
+                    <span style={{ fontWeight: '600', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.name}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontWeight: '700', color: '#0E7490' }}>{c.value}</span>
-                    <span style={{ fontSize: '10.5px', color: '#64748B', width: '36px', textAlign: 'right' }}>{c.share}</span>
+
+                  {/* Value */}
+                  <div style={{ textAlign: 'right', fontWeight: '600', color: '#1E293B' }}>
+                    {c.value}
+                  </div>
+
+                  {/* % Share */}
+                  <div style={{ textAlign: 'right', fontWeight: '500', color: '#64748B' }}>
+                    {c.share}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
-          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E2E8F0', fontSize: '11px', color: '#16A34A', fontWeight: '700', textAlign: 'right' }}>
-            Top 10 contribution: 83.1% of monthly sales
+          {/* Summary Total Row matching reference */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.4fr 1fr 1fr',
+            alignItems: 'center',
+            paddingTop: '12px',
+            marginTop: 'auto',
+            borderTop: '2px solid #0F172A',
+            fontSize: '12px',
+            fontWeight: '800',
+            color: '#0F172A'
+          }}>
+            <div>Total (Top 10)</div>
+            <div style={{ textAlign: 'right', color: '#0284C7' }}>₹ 59.8 L</div>
+            <div style={{ textAlign: 'right', color: '#0F172A' }}>83.1%</div>
           </div>
         </div>
       </div>
@@ -497,8 +671,8 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
       <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '16px', width: '100%', alignItems: 'start' }}>
         {/* Table: Follow-up and Opportunity List */}
         <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#0F172A', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#0F172A', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               Follow-up and Opportunity List — Selected Period
             </span>
             <span style={{ fontSize: '11px', color: '#38BDF8', fontWeight: '700' }}>
@@ -884,7 +1058,7 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         flexDirection: 'column',
         gap: '10px'
       }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
           Selected Period Quick Summary — {selectedPeriod}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', textAlign: 'center' }}>
