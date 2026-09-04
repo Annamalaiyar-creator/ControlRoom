@@ -17,6 +17,7 @@ import InventoryAutoConversion from './components/InventoryAutoConversion';
 import CreateWorkOrderPage from './components/CreateWorkOrderPage';
 
 import ProductionAdminView from './components/ProductionAdminView';
+import SalesExecutiveDashboardView from './components/views/SalesExecutiveDashboardView';
 import LoginScreen from './components/LoginScreen';
 import DeveloperPortalView from './components/DeveloperPortalView';
 import NotificationToast from './components/NotificationToast';
@@ -320,6 +321,8 @@ function App() {
               convertingPiData={convertingPiData}
               onClearConvertingPiData={() => setConvertingPiData(null)}
             />
+          ) : (activeTab === 'Dashboard' && (userRole === 'Sales Executive' || userRole === 'Sales Head')) ? (
+            <SalesExecutiveDashboardView userRole={userRole} onNavigateTab={handleTabChange} />
           ) : (
             <DashboardFullReference userRole={userRole} />
           )}
