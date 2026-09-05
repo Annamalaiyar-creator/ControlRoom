@@ -206,7 +206,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'Billing', targetTab: 'Invoice Management', icon: Receipt },
-            { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
           ]
         },
