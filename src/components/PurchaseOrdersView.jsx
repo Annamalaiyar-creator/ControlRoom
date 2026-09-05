@@ -88,11 +88,25 @@ const TERMS_PRESETS = [
   }
 ];
 
-export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo, targetPoTab, clearTargetPoTab }) {
+export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo, targetPoTab, clearTargetPoTab, onNavigateTab }) {
   const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handlePushToGrn = (poTarget) => {
+    if (!poTarget) return;
+    const poNo = poTarget.poNo || poTarget.id;
+    try {
+      localStorage.setItem('controlroom_push_to_grn_po', poNo);
+    } catch (_) {}
+    if (typeof onNavigateTab === 'function') {
+      onNavigateTab('Goods Receipt Note');
+    } else {
+      localStorage.setItem('controlroom_active_tab', 'Goods Receipt Note');
+      window.location.reload();
+    }
+  };
 
   // Confirmation and edit states
   const [deleteIdx, setDeleteIdx] = useState(null); // Row index to delete
@@ -1594,39 +1608,88 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPOs.length}</strong> Selected
                 </span>
 
-                {!isExecutiveOrMD && !isAccounts && (
-                  <button
-                    onClick={() => {
-                      if (selectedPOs.length > 1) {
-                        alert('You cannot edit multiple items at once.');
-                      } else if (selectedPOs.length === 1) {
-                        const targetPoNo = selectedPOs[0];
-                        const idx = poList.findIndex(p => p.poNo === targetPoNo);
-                        const targetPo = poList[idx] || { poNo: targetPoNo, vendor: '' };
-                        handleStartEdit(targetPo, idx >= 0 ? idx : 0);
-                      }
-                    }}
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#1E293B',
-                      borderRadius: '10px',
-                      padding: '6px 14px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                  >
-                    <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
-                  </button>
-                )}
+                {/* Edit Info: Only available BEFORE MD approval (Draft / Pending Approval). Once MD approved, Edit is disabled/disappeared */}
+                {!isExecutiveOrMD && !isAccounts && (() => {
+                  // Check if any selected PO has already been approved by MD or progressed further
+                  const canEdit = selectedPOs.length > 0 && selectedPOs.every(poNo => {
+                    const target = poList.find(p => p.poNo === poNo || p.id === poNo);
+                    if (!target) return false;
+                    const st = String(target.status || '').trim();
+                    const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                    return isDraftOrPending;
+                  });
+
+                  if (!canEdit) return null;
+
+                  return (
+                    <button
+                      onClick={() => {
+                        if (selectedPOs.length > 1) {
+                          alert('You cannot edit multiple items at once.');
+                        } else if (selectedPOs.length === 1) {
+                          const targetPoNo = selectedPOs[0];
+                          const idx = poList.findIndex(p => p.poNo === targetPoNo);
+                          const targetPo = poList[idx] || { poNo: targetPoNo, vendor: '' };
+                          handleStartEdit(targetPo, idx >= 0 ? idx : 0);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                    </button>
+                  );
+                })()}
+
+                {/* Push to GRN Button: Appears in floating action bar for any PO with status "Proceed PO" */}
+                {selectedPOs.length === 1 && (() => {
+                  const target = poList.find(p => p.poNo === selectedPOs[0] || p.id === selectedPOs[0]);
+                  if (!target) return null;
+                  const st = String(target.status || '').trim();
+                  const isProceedPo = st === 'Proceed PO' || st === 'PROCEED PO' || target.statusType === 'proceed_po';
+
+                  if (!isProceedPo) return null;
+
+                  return (
+                    <button
+                      onClick={() => handlePushToGrn(target)}
+                      style={{
+                        backgroundColor: '#0E7490',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '6px 16px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 4px rgba(14, 116, 144, 0.3)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0891B2'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                    >
+                      <Boxes size={14} style={{ color: '#FFFFFF' }} /> Push to GRN
+                    </button>
+                  );
+                })()}
 
                 {!isExecutiveOrMD && !isAccounts && (
                   <button
@@ -1689,6 +1752,60 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFBEB'}
                           >
                             <CreditCard size={14} style={{ color: '#D97706' }} /> Verify Payment
+                          </button>
+                        );
+                      }
+
+                      if (st === 'Payment Processed' || target.statusType === 'payment_processed') {
+                        return (
+                          <button
+                            onClick={() => setProceedingPo(target)}
+                            style={{
+                              backgroundColor: '#0E7490',
+                              border: 'none',
+                              color: '#FFFFFF',
+                              borderRadius: '10px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 2px rgba(14, 116, 144, 0.25)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0891B2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                          >
+                            <Send size={14} style={{ color: '#FFFFFF' }} /> Proceed PO (Ready for GRN)
+                          </button>
+                        );
+                      }
+
+                      if (st === 'Proceed PO' || st === 'PROCEED PO' || target.statusType === 'proceed_po') {
+                        return (
+                          <button
+                            onClick={() => handlePushToGrn(target)}
+                            style={{
+                              backgroundColor: '#0E7490',
+                              border: 'none',
+                              color: '#FFFFFF',
+                              borderRadius: '10px',
+                              padding: '6px 16px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 4px rgba(14, 116, 144, 0.3)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0891B2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                          >
+                            <Boxes size={14} style={{ color: '#FFFFFF' }} /> Push to GRN
                           </button>
                         );
                       }
@@ -1994,6 +2111,20 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           );
                         }
 
+                        if (st === 'Proceed PO' || st === 'PROCEED PO' || target.statusType === 'proceed_po') {
+                          return (
+                            <button
+                              onClick={() => {
+                                handlePushToGrn(target);
+                                setShowFloatingMenu(false);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#ECFEFF', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <Boxes size={14} style={{ color: '#0E7490' }} /> Push to GRN
+                            </button>
+                          );
+                        }
+
                         return null;
                       })()}
 
@@ -2208,8 +2339,30 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
                     if (isProceedPo) {
                       return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ECFEFF', border: '1px solid #0E7490', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
-                          <CheckCircle size={14} /> Ready for GRN Process
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ECFEFF', border: '1px solid #0E7490', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
+                            <CheckCircle size={14} /> Ready for GRN Process
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handlePushToGrn(currentPoObj)}
+                            style={{
+                              backgroundColor: '#0E7490',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px 18px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              color: 'white',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                            }}
+                          >
+                            <Boxes size={15} /> Push to GRN
+                          </button>
                         </div>
                       );
                     }
@@ -2821,19 +2974,41 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {(st === 'Proceed PO' || currentPoObj?.status === 'Proceed PO') ? (
-                            <div style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              backgroundColor: '#ECFEFF',
-                              border: '1px solid #0E7490',
-                              borderRadius: '8px',
-                              padding: '6px 14px',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              color: '#0E7490'
-                            }}>
-                              <CheckCircle size={14} style={{ color: '#0E7490' }} /> Ready for GRN Process
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                backgroundColor: '#ECFEFF',
+                                border: '1px solid #0E7490',
+                                borderRadius: '8px',
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                color: '#0E7490'
+                              }}>
+                                <CheckCircle size={14} style={{ color: '#0E7490' }} /> Ready for GRN Process
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePushToGrn(currentPoObj)}
+                                style={{
+                                  backgroundColor: '#0E7490',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '7px 18px',
+                                  fontSize: '13px',
+                                  fontWeight: '700',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                                }}
+                              >
+                                <Boxes size={15} /> Push to GRN
+                              </button>
                             </div>
                           ) : (st === 'Payment Processed' || currentPoObj?.status === 'Payment Processed') ? (
                             <>

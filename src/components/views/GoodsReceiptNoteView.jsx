@@ -488,6 +488,18 @@ export default function GoodsReceiptNoteView(props) {
       .then(data => {
         if (Array.isArray(data)) {
           setLivePOs(data);
+
+          // Check if user clicked "Push to GRN" from Purchase Orders view
+          try {
+            const pushPo = localStorage.getItem('controlroom_push_to_grn_po');
+            if (pushPo) {
+              localStorage.removeItem('controlroom_push_to_grn_po');
+              resetCreateGRNForm();
+              loadPOItems(pushPo, data);
+              setIsViewOnlyMode(false);
+              setShowCreateGRN(true);
+            }
+          } catch (_) {}
         }
       })
       .catch(err => console.error('Error fetching live POs:', err));

@@ -322,6 +322,7 @@ function App() {
               clearTargetPo={() => setTargetPoNo(null)} 
               targetPoTab={targetPoTab}
               clearTargetPoTab={() => setTargetPoTab(null)}
+              onNavigateTab={handleTabChange}
             />
           ) : activeTab === 'Zoho Integration' ? (
             <ZohoIntegrationView />
