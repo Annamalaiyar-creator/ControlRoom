@@ -625,12 +625,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                      <th style={{ padding: '12px 14px', width: '30px' }}>
+                      <th style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                         <input
                           type="checkbox"
                           onChange={(e) => handleSelectAll(e, filteredPIList)}
                           checked={filteredPIList.length > 0 && filteredPIList.every(pi => selectedPIs.includes(pi.piNo))}
-                          style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                          style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                         />
                       </th>
                       <th style={{ padding: '12px 14px' }}>PI No.</th>
@@ -666,17 +666,16 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             style={{
                               borderBottom: '1px solid #F1F5F9',
                               transition: 'all 0.15s ease',
-                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
-                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent'
                             }}
                             className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
                           >
-                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <td style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => handleSelectRow(pi.piNo)}
-                                style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                               />
                             </td>
                             <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>

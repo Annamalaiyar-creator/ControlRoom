@@ -2320,10 +2320,10 @@ export default function MaterialReorderView(props) {
               <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                    <th style={{ padding: '12px 14px', width: '30px' }}>
+                    <th style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                       <input
                         type="checkbox"
-                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                         checked={currentReorderRows.length > 0 && currentReorderRows.every(r => selectedReorders.includes(r.id))}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -2356,15 +2356,14 @@ export default function MaterialReorderView(props) {
                         style={{
                           borderBottom: '1px solid #F1F5F9',
                           transition: 'all 0.15s ease',
-                          backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
-                          borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                          backgroundColor: isChecked ? '#ECFEFF' : 'transparent'
                         }}
                         className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
                       >
-                        <td style={{ padding: '12px 14px', width: '30px' }}>
+                        <td style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                           <input
                             type="checkbox"
-                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                             checked={isChecked}
                             onChange={() => {
                               if (selectedReorders.includes(row.id)) {
