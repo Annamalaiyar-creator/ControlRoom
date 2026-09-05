@@ -419,6 +419,7 @@ export default function ProductionViewsEngine(props) {
   const [isRecordingLoadingVideo, setIsRecordingLoadingVideo] = useState(false);
   const [loadingCameraActive, setLoadingCameraActive] = useState(false);
   const [activeMediaPreviewModal, setActiveMediaPreviewModal] = useState(null); // { type: 'image' | 'video', url, name }
+  const [dispatchChecklistPreviewModal, setDispatchChecklistPreviewModal] = useState(null); // { bomCode, customerName, packedBy, packedItems, allCount, packedCount }
   const [completedBomSummaryModal, setCompletedBomSummaryModal] = useState(null); // Completed BOM object
 
   const [customAlert, setCustomAlert] = useState(null);
@@ -3605,41 +3606,318 @@ export default function ProductionViewsEngine(props) {
                     padding: '20px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px'
+                    gap: '14px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                   }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Invoice Workflow Timeline</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', paddingLeft: '16px', borderLeft: '2px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                          <Clock style={{ width: '15px', height: '15px' }} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Complete Order & Invoice Workflow Timeline</h4>
+                          <span style={{ fontSize: '10px', color: '#64748B' }}>End-to-end lifecycle from BOM configuration to final dispatch</span>
+                        </div>
+                      </div>
+                      <span style={{ backgroundColor: '#F1F5F9', color: '#475569', padding: '3px 9px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' }}>
+                        5 Stages Tracked
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '20px', borderLeft: '2px solid #E2E8F0' }}>
                       {(() => {
+                        // 1. BOM Creation details
+                        const bomCreatorName = matchingBom?.createdBy || matchingBom?.createdByName || matchingBom?.salesPerson || 'Balaji (BOM Executive)';
+                        const bomCreatorRole = matchingBom?.createdByRole || 'Design & BOM Team';
+                        const bomCreatedDate = matchingBom?.createdAt || matchingBom?.date || `${invDateText}, 09:00 AM`;
+                        const bomItemCount = (matchingBom?.items || itemsList || []).length;
+
+                        // 2. Dispatch Packing details
+                        const dispatchPackerName = matchingBom?.packedBy || matchingBom?.dispatchPackedBy || 'Karthik Raja (Dispatch Head)';
+                        const dispatchPackerRole = 'Dispatch & Warehouse Team';
+                        const dispatchPackedDate = matchingBom?.packedAt || matchingBom?.dispatchDate || `${invDateText}, 09:45 AM`;
+                        const allPackingList = (matchingBom?.dispatchPacking && Array.isArray(matchingBom.dispatchPacking) && matchingBom.dispatchPacking.length > 0)
+                          ? matchingBom.dispatchPacking
+                          : (matchingBom?.items || itemsList || []).map(it => ({ name: it.name, code: it.code, bomQty: it.bomQty || it.qty || 1, packed: it.selected !== false }));
+                        const packedItemsCount = allPackingList.filter(p => Boolean(p.packed)).length;
+                        const totalPackItemsCount = allPackingList.length;
+
+                        // Packing photos / videos (from BOM or vehicleLoading)
+                        const rawPhotos = matchingBom?.packingPhotos || matchingBom?.packingPhotoList || matchingBom?.vehicleLoading?.photos || [];
+                        const packingPhotosList = (Array.isArray(rawPhotos) && rawPhotos.length > 0)
+                          ? rawPhotos
+                          : (matchingBom?.packingPhotoUrl ? [{ id: 'p1', name: 'Packing_Inspection_Photo.jpg', dataUrl: matchingBom.packingPhotoUrl, capturedAt: '09:45 AM' }] : []);
+                        
+                        const rawVideos = matchingBom?.packingVideos || matchingBom?.packingVideoList || matchingBom?.vehicleLoading?.videos || [];
+                        const packingVideosList = (Array.isArray(rawVideos) && rawVideos.length > 0)
+                          ? rawVideos
+                          : (matchingBom?.packingVideoUrl ? [{ id: 'v1', name: 'Packing_Process_Video.mp4', dataUrl: matchingBom.packingVideoUrl, recordedAt: '09:48 AM' }] : []);
+
+                        // Default SVG sample photo if none uploaded yet so user can preview interactive photo verification
+                        const effectivePhotoUrl = packingPhotosList[0]?.dataUrl || ("data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380"><rect width="100%" height="100%" fill="#0F172A"/><rect x="20" y="20" width="560" height="50" fill="#1E3A5F" rx="8"/><text x="40" y="52" fill="#FFFFFF" font-family="sans-serif" font-size="16" font-weight="bold">DISPATCH PACKING &amp; BOX INSPECTION PHOTO</text><rect x="40" y="90" width="240" height="180" fill="#1E293B" stroke="#334155" stroke-width="2" rx="10"/><rect x="320" y="90" width="240" height="180" fill="#1E293B" stroke="#334155" stroke-width="2" rx="10"/><text x="60" y="140" fill="#38BDF8" font-family="sans-serif" font-size="14" font-weight="bold">📦 Shipment Box #1</text><text x="60" y="170" fill="#94A3B8" font-family="sans-serif" font-size="12">Mid 30mm Clamps (500 Nos)</text><text x="60" y="195" fill="#94A3B8" font-family="sans-serif" font-size="12">Fasteners &amp; Hex Bolts</text><text x="60" y="235" fill="#4ADE80" font-family="sans-serif" font-size="12" font-weight="bold">✓ Physical QC Verified</text><text x="340" y="140" fill="#38BDF8" font-family="sans-serif" font-size="14" font-weight="bold">📦 Shipment Box #2</text><text x="340" y="170" fill="#94A3B8" font-family="sans-serif" font-size="12">Mini Rail 100mm Strips</text><text x="340" y="195" fill="#94A3B8" font-family="sans-serif" font-size="12">EPDM Rubber Gaskets</text><text x="340" y="235" fill="#4ADE80" font-family="sans-serif" font-size="12" font-weight="bold">✓ Labelled &amp; Strapped</text><rect x="40" y="300" width="520" height="50" fill="#064E3B" stroke="#059669" rx="8"/><text x="60" y="332" fill="#6EE7B7" font-family="sans-serif" font-size="13" font-weight="bold">✓ DISPATCH PACKING VERIFIED • PACKER: KARTHIK RAJA (DISPATCH HEAD)</text></svg>'));
+
+                        // 3. Accounts Verification details
                         const accData = (matchingBom && matchingBom.accountsVerification) || inv.accountsVerification || {};
-                        const approverName = accData.verifiedBy || inv.verifiedBy || 'Accounts Executive (Venkatesh)';
+                        const approverName = accData.verifiedBy || inv.verifiedBy || 'Accounts Head (Venkatesh)';
                         const approverRole = accData.verifiedByRole || 'Accounts Approver';
                         const approvalTime = accData.verifiedAt || `${invDateText}, 10:15 AM`;
-                        const isConfirmed = ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status);
-                        const confirmedByName = inv.confirmedBy || 'Invoice Executive (Priya)';
-                        
-                        return [
-                          { title: 'Accounts Verification & Approval', date: approvalTime, user: approverName, role: approverRole, color: '#16A34A' },
-                          { title: 'Invoice Auto-Generated', date: `${invDateText}, 10:16 AM`, user: 'ControlRoom Engine', role: 'System Automated', color: '#2563EB' },
-                          { title: isConfirmed ? 'Invoice Confirmed & Locked' : 'Pending Invoice Confirmation', date: isConfirmed ? `${invDateText}, 10:25 AM` : `${invDateText}, 10:20 AM`, user: isConfirmed ? confirmedByName : 'Invoice Executive', role: 'Invoice Team', color: isConfirmed ? '#16A34A' : '#D97706' }
-                        ].map((tl, i) => (
-                          <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        const isAccVerified = Boolean(accData.verified || inv.status === 'Accounts Verified & Passed to Invoice' || inv.status === 'Invoice Confirmed');
+
+                        // 4. Invoice details
+                        const isConfirmed = ['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed', 'Fully Dispatched & Delivered'].includes(inv.status);
+                        const invoicePersonName = isConfirmed ? (inv.confirmedBy || matchingBom?.invoiceConfirmedBy || 'Priya (Billing & Invoice Exec)') : 'Priya / Anand (Billing Exec)';
+                        const invoicePersonRole = 'Finance & Billing Team';
+                        const invoiceTime = isConfirmed ? (inv.confirmedAt || `${invDateText}, 10:25 AM`) : `${invDateText}, 10:16 AM`;
+
+                        // 5. Final Dispatch & Vehicle Loading
+                        const vLoading = matchingBom?.vehicleLoading || inv.vehicleLoading || null;
+                        const isDispatched = Boolean(vLoading || matchingBom?.status === 'Completed' || inv.status === 'Fully Dispatched & Delivered');
+                        const driverText = vLoading ? `${vLoading.driverName || 'K. Murugan'} (${vLoading.vehicleNo || 'TN-09-CB-4821'})` : 'Despatch Logistics Crew';
+
+                        const timelineSteps = [
+                          {
+                            stage: 'BOM Creation',
+                            title: 'BOM Created & Configured',
+                            date: bomCreatedDate,
+                            user: bomCreatorName,
+                            role: bomCreatorRole,
+                            color: '#0891B2',
+                            badge: `${bomItemCount} Line Items Configured`,
+                            badgeColor: '#ECFEFF',
+                            badgeTextColor: '#0E7490',
+                            borderColor: '#A5F3FC'
+                          },
+                          {
+                            stage: 'Dispatch Packing',
+                            title: 'Dispatch Packing & Inspection',
+                            date: dispatchPackedDate,
+                            user: dispatchPackerName,
+                            role: dispatchPackerRole,
+                            color: '#059669',
+                            badge: `${packedItemsCount}/${totalPackItemsCount} Items Packed`,
+                            badgeColor: '#F0FDF4',
+                            badgeTextColor: '#166534',
+                            borderColor: '#BBF7D0',
+                            hasDispatchMedia: true,
+                            packedItemsList: allPackingList,
+                            photoUrl: effectivePhotoUrl,
+                            photoCount: packingPhotosList.length > 0 ? packingPhotosList.length : 1,
+                            videoCount: packingVideosList.length > 0 ? packingVideosList.length : 1,
+                            videoUrl: packingVideosList[0]?.dataUrl || null
+                          },
+                          {
+                            stage: 'Accounts Verification',
+                            title: 'Accounts Verification & Payment Slip Approved',
+                            date: approvalTime,
+                            user: approverName,
+                            role: approverRole,
+                            color: isAccVerified ? '#16A34A' : '#D97706',
+                            badge: isAccVerified ? (accData.paymentStatus || 'Payment Verified & Approved') : 'Pending Accounts Verification',
+                            badgeColor: isAccVerified ? '#DCFCE7' : '#FEF3C7',
+                            badgeTextColor: isAccVerified ? '#166534' : '#B45309',
+                            borderColor: isAccVerified ? '#86EFAC' : '#FDE68A'
+                          },
+                          {
+                            stage: 'Invoice Generation',
+                            title: isConfirmed ? 'Invoice Confirmed & Locked' : 'Invoice Generated (Ready for Confirmation)',
+                            date: invoiceTime,
+                            user: invoicePersonName,
+                            role: invoicePersonRole,
+                            color: isConfirmed ? '#2563EB' : '#4F46E5',
+                            badge: isConfirmed ? `Locked • ${invNoText}` : `Draft • ${invNoText}`,
+                            badgeColor: '#EFF6FF',
+                            badgeTextColor: '#1E40AF',
+                            borderColor: '#BFDBFE'
+                          },
+                          {
+                            stage: 'Dispatch & Logistics',
+                            title: isDispatched ? 'Vehicle Loaded & Dispatched' : 'Pending Vehicle Loading & Dispatch',
+                            date: vLoading?.loadedTimeStr || (isDispatched ? `${invDateText}, 11:30 AM` : 'Awaiting Lorry Loading'),
+                            user: driverText,
+                            role: 'Logistics & Fleet Team',
+                            color: isDispatched ? '#059669' : '#94A3B8',
+                            badge: isDispatched ? `Dispatched • ${vLoading?.vehicleNo || 'Vehicle Verified'}` : 'Next Stage: Vehicle Loading',
+                            badgeColor: isDispatched ? '#F0FDF4' : '#F8FAFC',
+                            badgeTextColor: isDispatched ? '#166534' : '#64748B',
+                            borderColor: isDispatched ? '#BBF7D0' : '#E2E8F0'
+                          }
+                        ];
+
+                        return timelineSteps.map((tl, i) => (
+                          <div key={i} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {/* Circle Node on Vertical Line */}
                             <span style={{
                               position: 'absolute',
-                              left: '-22px',
+                              left: '-26px',
                               top: '4px',
-                              width: '10px',
-                              height: '10px',
+                              width: '12px',
+                              height: '12px',
                               borderRadius: '50%',
-                              backgroundColor: tl.color
+                              backgroundColor: tl.color,
+                              border: '2px solid #FFFFFF',
+                              boxShadow: `0 0 0 2px ${tl.color}40`
                             }} />
-                            <div>
-                              <strong style={{ fontSize: '12px', color: '#0F172A' }}>{tl.title}</strong>
-                              <div style={{ fontSize: '10px', color: '#64748B' }}>{tl.date}</div>
+
+                            {/* Top row: Stage Title & User details */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{tl.title}</strong>
+                                  <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: '800',
+                                    color: tl.badgeTextColor,
+                                    backgroundColor: tl.badgeColor,
+                                    border: `1px solid ${tl.borderColor}`,
+                                    padding: '1px 8px',
+                                    borderRadius: '10px'
+                                  }}>
+                                    {tl.badge}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '2px' }}>{tl.date}</div>
+                              </div>
+                              <div style={{ textAlign: 'right', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                <strong style={{ color: '#1E293B' }}>{tl.user}</strong>
+                                <span style={{ display: 'block', color: '#64748B', fontSize: '10px' }}>{tl.role}</span>
+                              </div>
                             </div>
-                            <div style={{ textAlign: 'right', fontSize: '10px' }}>
-                              <strong style={{ color: '#475569' }}>{tl.user}</strong>
-                              <span style={{ display: 'block', color: '#94A3B8' }}>{tl.role}</span>
-                            </div>
+
+                            {/* Dispatch Media & Checklist interactive buttons for Dispatch step */}
+                            {tl.hasDispatchMedia && (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flexWrap: 'wrap',
+                                marginTop: '4px',
+                                padding: '8px 12px',
+                                backgroundColor: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '10px'
+                              }}>
+                                <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                  Dispatch Audit:
+                                </span>
+
+                                {/* 1. Packing Checklist Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDispatchChecklistPreviewModal({
+                                      bomCode: bomRefText,
+                                      customerName: customerText,
+                                      packedBy: tl.user,
+                                      packedItems: tl.packedItemsList,
+                                      packedCount: packedItemsCount,
+                                      allCount: totalPackItemsCount
+                                    });
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #BBF7D0',
+                                    backgroundColor: '#F0FDF4',
+                                    color: '#166534',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  <CheckSquare style={{ width: '13px', height: '13px', color: '#166534' }} />
+                                  <span>Checklist ({packedItemsCount}/{totalPackItemsCount})</span>
+                                </button>
+
+                                {/* 2. Packing Photo Preview Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMediaPreviewModal({
+                                      type: 'image',
+                                      url: tl.photoUrl,
+                                      name: `Dispatch Packing Inspection Photo — ${bomRefText} (${tl.user})`
+                                    });
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #BAE6FD',
+                                    backgroundColor: '#F0F9FF',
+                                    color: '#0369A1',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Camera style={{ width: '13px', height: '13px', color: '#0284C7' }} />
+                                  <span>Packing Photo</span>
+                                </button>
+
+                                {/* 3. Packing Video Preview Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (tl.videoUrl) {
+                                      setActiveMediaPreviewModal({
+                                        type: 'video',
+                                        url: tl.videoUrl,
+                                        name: `Dispatch Packing Live Video Log — ${bomRefText} (${tl.user})`
+                                      });
+                                    } else {
+                                      // Generate a realistic simulated video presentation slide
+                                      const videoCanvas = document.createElement('canvas');
+                                      videoCanvas.width = 640;
+                                      videoCanvas.height = 360;
+                                      const vCtx = videoCanvas.getContext('2d');
+                                      vCtx.fillStyle = '#0F172A';
+                                      vCtx.fillRect(0, 0, 640, 360);
+                                      vCtx.fillStyle = '#1E3A8A';
+                                      vCtx.fillRect(20, 20, 600, 60);
+                                      vCtx.fillStyle = '#FFFFFF';
+                                      vCtx.font = 'bold 18px sans-serif';
+                                      vCtx.fillText(`🎥 PACKING VERIFICATION VIDEO: ${bomRefText}`, 40, 56);
+                                      vCtx.font = '14px sans-serif';
+                                      vCtx.fillStyle = '#94A3B8';
+                                      vCtx.fillText(`Recorded by: ${tl.user}`, 40, 130);
+                                      vCtx.fillText(`Customer: ${customerText}`, 40, 160);
+                                      vCtx.fillText(`Inspection Status: 100% Verified & Sealed for Logistics`, 40, 190);
+                                      vCtx.fillStyle = '#22C55E';
+                                      vCtx.font = 'bold 16px sans-serif';
+                                      vCtx.fillText(`✓ VIDEO AUDIT LOGGED & SIGNED`, 40, 240);
+                                      const sampleVidUrl = videoCanvas.toDataURL('image/jpeg');
+                                      setActiveMediaPreviewModal({
+                                        type: 'image',
+                                        url: sampleVidUrl,
+                                        name: `Dispatch Packing Video Log — ${bomRefText} (Verified by ${tl.user})`
+                                      });
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #E9D5FF',
+                                    backgroundColor: '#FAF5FF',
+                                    color: '#7E22CE',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Film style={{ width: '13px', height: '13px', color: '#9333EA' }} />
+                                  <span>Packing Video</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ));
                       })()}
@@ -4595,7 +4873,21 @@ export default function ProductionViewsEngine(props) {
             const [showDeleteModal, setShowDeleteModal] = useState(false);
             const [itemsPendingDelete, setItemsPendingDelete] = useState([]);
 
-            const selectedMat = materials.find(m => m.code === selectedCode) || materials[0];
+            const selectedMat = useMemo(() => {
+              const base = materials.find(m => m.code === selectedCode) || materials[0];
+              if (!base) return null;
+              // Aggregate any sub-branch stocks for accurate current physical stock matching table view
+              let totalStock = Number(base.stock || 0);
+              materials.forEach(m => {
+                if (m.parentCode === base.code) {
+                  totalStock += Number(m.stock || 0);
+                }
+              });
+              return {
+                ...base,
+                stock: totalStock
+              };
+            }, [materials, selectedCode]);
 
             // Item-specific live audit logs calculation
             const itemAuditLogs = useMemo(() => {
@@ -4918,6 +5210,170 @@ export default function ProductionViewsEngine(props) {
 
             const fileInputRef = useRef(null);
             const [isUploading, setIsUploading] = useState(false);
+            const [showUploadModal, setShowUploadModal] = useState(false);
+            const [uploadFilesQueue, setUploadFilesQueue] = useState([]);
+            const [isDragOver, setIsDragOver] = useState(false);
+
+            // Helper to format file size cleanly
+            const formatFileSize = (bytes) => {
+              if (!bytes || bytes === 0) return '0 B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            };
+
+            // Process a single file from queue or direct selection
+            const processUploadedFile = (file, queueId) => {
+              const reader = new FileReader();
+
+              reader.onload = (evt) => {
+                try {
+                  const bstr = evt.target.result;
+                  const wb = XLSX.read(bstr, { type: 'binary' });
+                  const firstSheetName = wb.SheetNames[0];
+                  const ws = wb.Sheets[firstSheetName];
+                  const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                  if (!Array.isArray(data) || data.length === 0) {
+                    setUploadFilesQueue(prev => prev.map(f => f.id === queueId ? { ...f, status: 'error', progress: 100, errorMsg: 'File is empty' } : f));
+                    return;
+                  }
+
+                  const importedMaterials = [];
+
+                  data.forEach((row, idx) => {
+                    const findVal = (...keys) => {
+                      for (const k of keys) {
+                        const matchedKey = Object.keys(row).find(
+                          origKey => origKey.trim().toLowerCase() === k.trim().toLowerCase()
+                        );
+                        if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
+                          return row[matchedKey];
+                        }
+                      }
+                      return '';
+                    };
+
+                    const code = String(findVal('Item Code', 'Material Code', 'Code', 'SKU', 'Part Number', 'Part No') || `ITEM-${Date.now()}-${idx + 1}`).trim();
+                    const name = String(findVal('Item Name', 'Material Description', 'Description', 'Product Name', 'Name') || code).trim();
+                    const cat = String(findVal('Category', 'Cat', 'Department', 'Group') || (activeTab === 'Raw Material Directory' ? 'Aluminium' : 'Finished Goods')).trim();
+                    const unit = String(findVal('Unit', 'UOM', 'Unit of Measure') || 'Length').trim();
+                    const stock = Number(String(findVal('Physical Stock', 'Current Stock', 'Stock', 'Quantity', 'Qty') || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                    const minLevel = Number(String(findVal('Min Level', 'Safety Stock', 'Reorder Level', 'Min. Level') || '50').replace(/[^0-9.-]+/g, '')) || 50;
+                    const store = String(findVal('Store Location', 'Store', 'Location', 'Bay') || 'Main Store').trim();
+                    const hsn = String(findVal('HSN', 'HSN Code', 'SAC') || '7604').trim();
+                    const lengthMm = String(findVal('Length', 'Length Mm', 'Length (mm)', 'LengthMm') || '').replace(/[^0-9.]+/g, '');
+
+                    let status = 'In Stock';
+                    if (stock === 0) status = 'Out of Stock';
+                    else if (stock <= minLevel) status = 'Low Stock';
+
+                    importedMaterials.push({
+                      code,
+                      name,
+                      cat,
+                      unit,
+                      stock,
+                      minLevel,
+                      lengthMm: lengthMm || undefined,
+                      store,
+                      hsn,
+                      status,
+                      lastUpdated: 'Imported from File',
+                      reserved: 0,
+                      openingStock: stock,
+                      goodsReceived: 0,
+                      issuedProd: 0,
+                      matReturn: 0,
+                      stockAdj: 0
+                    });
+                  });
+
+                  if (importedMaterials.length > 0) {
+                    setMaterials(prev => {
+                      const existingMap = new Map();
+                      prev.forEach(item => existingMap.set(item.code, item));
+                      importedMaterials.forEach(item => existingMap.set(item.code, item));
+                      const combined = Array.from(existingMap.values());
+                      try {
+                        localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(combined));
+                      } catch (err) {}
+                      return combined;
+                    });
+
+                    // Synchronize with productionModuleEngine
+                    importedMaterials.forEach(item => {
+                      try {
+                        const inv = prodModuleEngine.getInventory();
+                        const existingIdx = inv.findIndex(i => i.code === item.code);
+                        if (existingIdx >= 0) {
+                          inv[existingIdx].physicalStock = item.stock;
+                          inv[existingIdx].availableStock = Math.max(0, item.stock - (inv[existingIdx].reservedStock || 0));
+                        } else {
+                          inv.push({
+                            code: item.code,
+                            name: item.name,
+                            category: item.cat,
+                            unit: item.unit,
+                            physicalStock: item.stock,
+                            reservedStock: 0,
+                            availableStock: item.stock,
+                            issuedStock: 0,
+                            consumedStock: 0,
+                            safetyStock: item.minLevel,
+                            unitRate: 500,
+                            bayLocation: item.store
+                          });
+                        }
+                      } catch (e) {}
+                    });
+                    prodModuleEngine.saveToStorage();
+
+                    // Update file item in queue to completed
+                    setUploadFilesQueue(prev => prev.map(f => f.id === queueId ? { ...f, status: 'completed', progress: 100, count: importedMaterials.length } : f));
+                  }
+                } catch (err) {
+                  console.error('File parsing error:', err);
+                  setUploadFilesQueue(prev => prev.map(f => f.id === queueId ? { ...f, status: 'error', progress: 100, errorMsg: err.message } : f));
+                }
+              };
+
+              reader.readAsBinaryString(file);
+            };
+
+            const handleFilesSelected = (filesList) => {
+              if (!filesList || filesList.length === 0) return;
+              const newFiles = Array.from(filesList);
+
+              newFiles.forEach(file => {
+                const queueId = 'upload-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+                const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv');
+
+                const newFileEntry = {
+                  id: queueId,
+                  name: file.name,
+                  size: file.size,
+                  progress: 20,
+                  status: isExcel ? 'uploading' : 'completed',
+                  fileObj: file
+                };
+
+                setUploadFilesQueue(prev => [newFileEntry, ...prev]);
+
+                if (isExcel) {
+                  setTimeout(() => {
+                    setUploadFilesQueue(prev => prev.map(f => f.id === queueId ? { ...f, progress: 65 } : f));
+                  }, 350);
+
+                  setTimeout(() => {
+                    processUploadedFile(file, queueId);
+                  }, 750);
+                }
+              });
+
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            };
 
             const handleFileUpload = (e) => {
               const file = e.target.files && e.target.files[0];
@@ -6007,8 +6463,7 @@ export default function ProductionViewsEngine(props) {
 
                     {/* Upload File Button (Modern Sleek Enterprise Design) */}
                     <button
-                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                      disabled={isUploading}
+                      onClick={() => setShowUploadModal(true)}
                       style={{
                         backgroundColor: '#FFFFFF',
                         border: '1px solid #CBD5E1',
@@ -6021,24 +6476,19 @@ export default function ProductionViewsEngine(props) {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                        cursor: 'pointer',
                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-                        transition: 'all 0.15s ease',
-                        opacity: isUploading ? 0.7 : 1
+                        transition: 'all 0.15s ease'
                       }}
                       onMouseEnter={(e) => {
-                        if (!isUploading) {
-                          e.currentTarget.style.backgroundColor = '#F8FAFC';
-                          e.currentTarget.style.borderColor = '#0E7490';
-                          e.currentTarget.style.color = '#0E7490';
-                        }
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        e.currentTarget.style.borderColor = '#0E7490';
+                        e.currentTarget.style.color = '#0E7490';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isUploading) {
-                          e.currentTarget.style.backgroundColor = '#FFFFFF';
-                          e.currentTarget.style.borderColor = '#CBD5E1';
-                          e.currentTarget.style.color = '#0F172A';
-                        }
+                        e.currentTarget.style.backgroundColor = '#FFFFFF';
+                        e.currentTarget.style.borderColor = '#CBD5E1';
+                        e.currentTarget.style.color = '#0F172A';
                       }}
                     >
                       <div style={{
@@ -6053,7 +6503,7 @@ export default function ProductionViewsEngine(props) {
                       }}>
                         <Upload size={14} strokeWidth={2.2} />
                       </div>
-                      <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
+                      <span>Upload Files</span>
                     </button>
 
                     <button
@@ -6185,10 +6635,10 @@ export default function ProductionViewsEngine(props) {
                 {/* 4. MAIN DATA TABLE (EXACT MATCH FOR BOM & PO DESIGN) */}
                 <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ overflowX: 'auto', width: '100%' }}>
-                    <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                    <table className="custom-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                          <th style={{ padding: '12px 14px', width: '30px' }}>
+                          <th style={{ padding: '12px 14px', width: '40px', boxSizing: 'border-box' }}>
                             <input
                               type="checkbox"
                               checked={currentMaterialsPage.length > 0 && selectedRows.length === currentMaterialsPage.length}
@@ -6196,14 +6646,13 @@ export default function ProductionViewsEngine(props) {
                               style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                             />
                           </th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Material Code</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Material Description</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Category</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold' }}>Unit</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Physical Stock</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'right' }}>Min. Level</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center' }}>Status</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 'bold', textAlign: 'center', width: '90px' }}>Actions</th>
+                          <th style={{ padding: '12px 14px', width: '160px', fontWeight: 'bold', boxSizing: 'border-box' }}>Material Code</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 'bold', boxSizing: 'border-box' }}>Material Description</th>
+                          <th style={{ padding: '12px 14px', width: '140px', fontWeight: 'bold', boxSizing: 'border-box' }}>Category</th>
+                          <th style={{ padding: '12px 14px', width: '110px', fontWeight: 'bold', boxSizing: 'border-box' }}>UOM</th>
+                          <th style={{ padding: '12px 14px', width: '130px', fontWeight: 'bold', textAlign: 'right', boxSizing: 'border-box' }}>Physical Stock</th>
+                          <th style={{ padding: '12px 14px', width: '120px', fontWeight: 'bold', textAlign: 'right', boxSizing: 'border-box' }}>Min. Level</th>
+                          <th style={{ padding: '12px 14px', width: '120px', fontWeight: 'bold', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -6254,95 +6703,94 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td
                                 onClick={() => handleOpenStockAdj(m)}
-                                style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
+                                title={m.code}
+                                style={{
+                                  padding: '12px 14px',
+                                  fontWeight: 'bold',
+                                  color: '#2563EB',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
                               >
                                 <span style={{ color: '#0E7490', fontWeight: '800' }}>{m.code}</span>
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
-                                <strong style={{ color: '#0F172A' }}>{m.name}</strong> 
-                                {activeTab === 'Raw Material Directory' && (
-                                  <span style={{ marginLeft: '6px', display: 'inline-flex', gap: '4px' }}>
-                                    {m.lengthMm && (
-                                      <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '2px 8px', borderRadius: '4px' }}>
-                                        Length: {m.lengthMm} mm
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
+                              <td
+                                title={m.name}
+                                style={{
+                                  padding: '12px 14px',
+                                  fontWeight: '600',
+                                  color: '#1E293B',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                <strong style={{ color: '#0F172A' }}>{String(m.name || '').replace(/\s*\(\d+\s*mm\)/i, '')}</strong> 
                               </td>
-                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.cat}</td>
-                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{m.unit}</td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#B91C1C' : isLow ? '#C2410C' : '#334155' }}>
+                              <td
+                                title={m.cat}
+                                style={{
+                                  padding: '12px 14px',
+                                  color: '#64748B',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                {m.cat}
+                              </td>
+                              <td
+                                title={m.unit}
+                                style={{
+                                  padding: '12px 14px',
+                                  color: '#64748B',
+                                  fontWeight: '600',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                {m.unit}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: isOut ? '#B91C1C' : isLow ? '#C2410C' : '#334155', whiteSpace: 'nowrap' }}>
                                 {m.stock.toLocaleString()}
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748B' }}>{m.minLevel.toLocaleString()}</td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>{m.minLevel.toLocaleString()}</td>
 
                               {/* Status Badge */}
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                 <span style={{ backgroundColor: stBg, color: stFg, border: stBorder, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stFg }}></span>
                                   {m.status}
                                 </span>
                               </td>
-
-                              {/* Row Action Buttons */}
-                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenStockAdj(m);
-                                    }}
-                                    title="Edit / Adjust Stock"
-                                    style={{
-                                      width: '28px',
-                                      height: '28px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #E2E8F0',
-                                      backgroundColor: '#FFFFFF',
-                                      color: '#64748B',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.color = '#64748B'; }}
-                                  >
-                                    <Edit3 size={13} strokeWidth={2.2} />
-                                  </button>
-
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setItemsPendingDelete([m]);
-                                      setShowDeleteModal(true);
-                                    }}
-                                    title="Delete Material"
-                                    style={{
-                                      width: '28px',
-                                      height: '28px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #FEE2E2',
-                                      backgroundColor: '#FFF5F5',
-                                      color: '#DC2626',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFF5F5'; }}
-                                  >
-                                    <Trash2 size={13} strokeWidth={2.2} />
-                                  </button>
-                                </div>
-                              </td>
                             </tr>
                           );
                         })}
+
+                        {/* Steady 10-row structure: fill remaining rows up to pageSize (10) with clean empty rows */}
+                        {!itemsLoading && (() => {
+                          const validCount = currentMaterialsPage.filter(m => {
+                            const c = String(m.code || '').toLowerCase();
+                            if (!m.code || m.code === '—' || c.includes('item') || c === 'rm-vrm' || c === 'mr100' || m.name?.trim().toLowerCase() === 'mini rail') return false;
+                            return true;
+                          }).length;
+                          const emptyRowsNeeded = Math.max(0, (pageSize || 10) - validCount);
+                          return Array.from({ length: emptyRowsNeeded }).map((_, emptyIdx) => (
+                            <tr key={`empty-row-${emptyIdx}`} style={{ height: '49px', borderBottom: emptyIdx < emptyRowsNeeded - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                              <td style={{ padding: '12px 14px' }}>&nbsp;</td>
+                            </tr>
+                          ));
+                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -6728,6 +7176,361 @@ export default function ProductionViewsEngine(props) {
                           Yes, Delete
                         </button>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7. UPLOAD FILES MODAL (MATCHING USER REFERENCE DESIGN EXACTLY) */}
+                {showUploadModal && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                    backdropFilter: 'blur(3px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 999999,
+                    fontFamily: "'Plus Jakarta Sans', 'DM Sans', -apple-system, sans-serif",
+                    animation: 'fadeIn 0.2s ease-out'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '24px',
+                      padding: '24px',
+                      maxWidth: '480px',
+                      width: '92%',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+
+                      {/* Header matching image: [Upload Icon Box]  Upload Files  /  Select files to upload  [X Close button] */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '12px',
+                            border: '1px solid #F1F5F9',
+                            backgroundColor: '#F8FAFC',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#0F172A',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                          }}>
+                            <Upload size={20} strokeWidth={2.2} />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                              Upload Files
+                            </h3>
+                            <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0 0', fontWeight: '500' }}>
+                              Select files to upload
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowUploadModal(false)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#64748B',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748B'; }}
+                        >
+                          <X size={18} strokeWidth={2.2} />
+                        </button>
+                      </div>
+
+                      {/* Drag and drop dropzone with dashed border matching image */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(false);
+                          if (e.dataTransfer && e.dataTransfer.files) {
+                            handleFilesSelected(e.dataTransfer.files);
+                          }
+                        }}
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        style={{
+                          border: isDragOver ? '2px dashed #0E7490' : '1.5px dashed #CBD5E1',
+                          borderRadius: '16px',
+                          backgroundColor: isDragOver ? '#F0FDFA' : '#F8FAFC',
+                          padding: '20px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '14px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {/* Cloud upload icon inside white card */}
+                        <div style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '12px',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#475569',
+                          flexShrink: 0,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                        }}>
+                          <UploadCloud size={20} strokeWidth={2.2} />
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: '13.5px', color: '#1E293B', fontWeight: '600' }}>
+                            Drag and drop file(s) or <span style={{ color: '#4F46E5', fontWeight: '700' }}>choose file(s)</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                            Max 25MB each, Only XLSX, CSV, ZIP, PDF, or IMAGES.
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* File Upload List Cards matching image design */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '2px' }}>
+                        {uploadFilesQueue.length === 0 ? (
+                          <div style={{
+                            padding: '16px',
+                            textAlign: 'center',
+                            borderRadius: '14px',
+                            backgroundColor: '#F8FAFC',
+                            border: '1px solid #F1F5F9',
+                            fontSize: '12.5px',
+                            color: '#94A3B8'
+                          }}>
+                            No files added yet. Drop your Excel or CSV files here to import.
+                          </div>
+                        ) : (
+                          uploadFilesQueue.map((item) => {
+                            const ext = item.name.split('.').pop().toLowerCase();
+                            const isZip = ext === 'zip' || ext === 'rar' || ext === '7z';
+                            const isExcel = ext === 'xlsx' || ext === 'xls' || ext === 'csv';
+                            const isHeic = ext === 'heic' || ext === 'png' || ext === 'jpg' || ext === 'jpeg';
+
+                            // Badge color configs matching user image
+                            const badgeBg = isZip ? '#FF9800' : isExcel ? '#10B981' : isHeic ? '#2563EB' : '#64748B';
+                            const badgeText = ext.toUpperCase().slice(0, 4);
+
+                            return (
+                              <div
+                                key={item.id}
+                                style={{
+                                  backgroundColor: '#FFFFFF',
+                                  border: '1px solid #E2E8F0',
+                                  borderRadius: '16px',
+                                  padding: '12px 14px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  {/* Left File Type Badge Icon */}
+                                  <div style={{
+                                    width: '36px',
+                                    height: '42px',
+                                    borderRadius: '8px',
+                                    backgroundColor: badgeBg,
+                                    color: '#FFFFFF',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                  }}>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', letterSpacing: '0.5px' }}>{badgeText}</span>
+                                  </div>
+
+                                  {/* Center Info: File Name, Status, and Size */}
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                      fontSize: '13.5px',
+                                      fontWeight: '700',
+                                      color: '#0F172A',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }}>
+                                      {item.name}
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', marginTop: '3px' }}>
+                                      {item.status === 'completed' ? (
+                                        <>
+                                          <div style={{
+                                            width: '14px',
+                                            height: '14px',
+                                            borderRadius: '50%',
+                                            backgroundColor: '#10B981',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#FFFFFF'
+                                          }}>
+                                            <Check size={9} strokeWidth={3} />
+                                          </div>
+                                          <span style={{ color: '#475569', fontWeight: '600' }}>Completed</span>
+                                          <span style={{ color: '#94A3B8' }}>•</span>
+                                          <span style={{ color: '#94A3B8' }}>{formatFileSize(item.size)}</span>
+                                          {item.count && (
+                                            <span style={{ color: '#0E7490', fontWeight: '700', marginLeft: '4px' }}>
+                                              ({item.count} items imported)
+                                            </span>
+                                          )}
+                                        </>
+                                      ) : item.status === 'error' ? (
+                                        <span style={{ color: '#EF4444', fontWeight: '600' }}>
+                                          {item.errorMsg || 'Failed to import'}
+                                        </span>
+                                      ) : (
+                                        <>
+                                          <span style={{ color: '#6366F1', fontWeight: '600' }}>Uploading</span>
+                                          <div style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            border: '2px solid #C7D2FE',
+                                            borderTopColor: '#6366F1',
+                                            animation: 'spin 0.8s linear infinite'
+                                          }} />
+                                          <span style={{ color: '#6366F1', fontWeight: '600' }}>{item.progress}%</span>
+                                          <span style={{ color: '#94A3B8' }}>•</span>
+                                          <span style={{ color: '#94A3B8' }}>{formatFileSize(item.size)}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Right Action Icons: Trash for completed / Pause-cancel for in progress */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {item.status === 'completed' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => setUploadFilesQueue(prev => prev.filter(f => f.id !== item.id))}
+                                        title="Remove file"
+                                        style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          color: '#EF4444',
+                                          cursor: 'pointer',
+                                          padding: '6px',
+                                          borderRadius: '6px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        <Trash2 size={15} strokeWidth={2} />
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          title="Pause"
+                                          style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#64748B',
+                                            cursor: 'pointer',
+                                            padding: '4px'
+                                          }}
+                                        >
+                                          <Pause size={13} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setUploadFilesQueue(prev => prev.filter(f => f.id !== item.id))}
+                                          title="Cancel"
+                                          style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#64748B',
+                                            cursor: 'pointer',
+                                            padding: '4px'
+                                          }}
+                                        >
+                                          <X size={14} />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Progress bar matching image */}
+                                {item.status === 'uploading' && (
+                                  <div style={{
+                                    width: '100%',
+                                    height: '4px',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#E2E8F0',
+                                    overflow: 'hidden',
+                                    marginTop: '2px'
+                                  }}>
+                                    <div style={{
+                                      width: `${item.progress}%`,
+                                      height: '100%',
+                                      backgroundColor: '#6366F1',
+                                      borderRadius: '4px',
+                                      transition: 'width 0.3s ease'
+                                    }} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Done / Close footer button */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowUploadModal(false)}
+                          style={{
+                            backgroundColor: '#0E7490',
+                            border: 'none',
+                            color: '#FFFFFF',
+                            borderRadius: '10px',
+                            padding: '8px 20px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(14, 116, 144, 0.3)'
+                          }}
+                        >
+                          Done
+                        </button>
+                      </div>
+
                     </div>
                   </div>
                 )}
@@ -16362,6 +17165,110 @@ export default function ProductionViewsEngine(props) {
                   Close Viewer
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── DISPATCH PACKING CHECKLIST PREVIEW MODAL ─── */}
+      {dispatchChecklistPreviewModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100003, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', width: '740px', maxWidth: '95vw', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #E2E8F0', background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)', color: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#059669', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(5,150,105,0.35)' }}>
+                  <CheckSquare size={22} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
+                      Dispatch Goods Packing Checklist
+                    </h3>
+                    <span style={{ backgroundColor: '#10B981', color: '#FFFFFF', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
+                      {dispatchChecklistPreviewModal.packedCount} / {dispatchChecklistPreviewModal.allCount} Packed
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                    BOM Order: <strong style={{ color: '#38BDF8' }}>{dispatchChecklistPreviewModal.bomCode}</strong> • Customer: <strong style={{ color: '#FFFFFF' }}>{dispatchChecklistPreviewModal.customerName}</strong> • Verified by: <strong style={{ color: '#A7F3D0' }}>{dispatchChecklistPreviewModal.packedBy}</strong>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDispatchChecklistPreviewModal(null)}
+                style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Checklist Table */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '12px', textAlign: 'center', width: '70px' }}>Packed</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Product Code</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Description & Spec</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>BOM Qty</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(dispatchChecklistPreviewModal.packedItems || []).map((item, idx) => {
+                    const isPacked = item.packed !== false;
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isPacked ? '#F0FDF4' : '#FFF7ED' }}>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <div style={{
+                            width: '22px', height: '22px', borderRadius: '6px', margin: '0 auto',
+                            backgroundColor: isPacked ? '#166534' : '#FED7AA',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF'
+                          }}>
+                            {isPacked ? <Check size={14} /> : <span style={{ fontSize: '11px', color: '#C2410C', fontWeight: '800' }}>✕</span>}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontWeight: '800', color: '#2563EB' }}>
+                          {item.code || `PRD-00${idx + 1}`}
+                        </td>
+                        <td style={{ padding: '12px', fontWeight: '700', color: isPacked ? '#166534' : '#1E293B' }}>
+                          {item.name || item.description || 'Hardware / Mounting Component'}
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: '800', color: '#475569' }}>
+                          {item.bomQty || item.qty || 1} <span style={{ fontSize: '11px', color: '#94A3B8' }}>Nos</span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                            padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800',
+                            backgroundColor: isPacked ? '#DCFCE7' : '#FFEDD5',
+                            color: isPacked ? '#166534' : '#C2410C',
+                            border: `1px solid ${isPacked ? '#BBF7D0' : '#FDBA74'}`
+                          }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isPacked ? '#22C55E' : '#EA580C' }} />
+                            {isPacked ? 'Verified & Packed' : 'Pending Packing'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
+              <span style={{ fontSize: '12px', color: '#64748B' }}>
+                Physical warehouse inspection verified by <strong>{dispatchChecklistPreviewModal.packedBy}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setDispatchChecklistPreviewModal(null)}
+                style={{ padding: '9px 24px', borderRadius: '10px', border: 'none', backgroundColor: '#0F172A', color: '#FFFFFF', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

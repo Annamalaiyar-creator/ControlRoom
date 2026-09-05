@@ -83,12 +83,11 @@ export default function POStatusOverview({
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        padding: '24px', 
+        padding: '14px 18px', 
         backgroundColor: '#FFFFFF',
         border: '1px solid #EAEFEF',
-        borderRadius: '24px',
-        justifyContent: 'space-between',
-        height: '100%',
+        borderRadius: '20px',
+        gap: '10px',
         boxSizing: 'border-box',
         boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -106,11 +105,11 @@ export default function POStatusOverview({
       </div>
 
       {/* Main Body Split: LEFT Normal Pie Chart + RIGHT Legend List */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', padding: '12px 0', gap: '16px', minWidth: 0 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', padding: '4px 0', gap: '14px', minWidth: 0 }}>
         
         {/* LEFT SIDE: Normal Pie / Donut SVG with Center Counter */}
-        <div style={{ position: 'relative', width: '150px', height: '150px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="150" height="150" viewBox="0 0 220 220" style={{ width: '100%', height: '100%' }}>
+        <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="130" height="130" viewBox="0 0 220 220" style={{ width: '100%', height: '100%' }}>
             {segmentPaths}
           </svg>
 

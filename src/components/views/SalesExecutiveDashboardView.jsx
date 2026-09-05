@@ -101,108 +101,153 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
   }, [followupPage, followupRowsPerPage]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, boxSizing: 'border-box', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', minWidth: 0, boxSizing: 'border-box', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
+      {/* PERSONALIZED WELCOME BANNER CARD */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E2E8F0',
+        padding: '12px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Welcome back, {userRole === 'Sales Head' ? 'Vijay' : 'Saravanan'}!
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
+              Here is your sales performance, active quotations & revenue conversion metrics for today.
+            </p>
+          </div>
+        </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sales Target Pace</div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span>
+              96% Target Achieved
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          position: 'absolute',
+          right: '-20px',
+          top: '-20px',
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(14, 116, 144, 0.06) 0%, rgba(255,255,255,0) 70%)',
+          pointerEvents: 'none'
+        }} />
+      </div>
 
       {/* ROW 1: 8 SELECTED PERIOD PERFORMANCE CARDS */}
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px', width: '100%' }}>
           {/* Card 1: Target */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Target</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A' }}>₹ 75.0 L</div>
-            <span style={{ fontSize: '11px', color: '#94A3B8' }}>Selected period</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Target</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>₹ 75.0 L</div>
+            <span style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: '500' }}>Selected period</span>
           </div>
 
           {/* Card 2: Achieved Sales */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Achieved Sales</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#16A34A' }}>₹ 72.0 L</div>
-            <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', width: 'fit-content' }}>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Achieved Sales</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#16A34A' }}>₹ 72.0 L</div>
+            <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '800', backgroundColor: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', width: 'fit-content' }}>
               96% achieved
             </span>
           </div>
 
           {/* Card 3: Offer Value */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Offer Value</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0284C7' }}>₹ 1.74 Cr</div>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>36 quotations</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Offer Value</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284C7' }}>₹ 1.74 Cr</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>36 quotations</span>
           </div>
 
           {/* Card 4: Conversion */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Conversion</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0E7490' }}>41.4%</div>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>Value based</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Conversion</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>41.4%</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Value based</span>
           </div>
 
           {/* Card 5: Proforma Invoice */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Proforma Invoice</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#2563EB' }}>₹ 82.0 L</div>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>18 proforma invoices</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Proforma Invoice</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#2563EB' }}>₹ 82.0 L</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>18 proforma invoices</span>
           </div>
 
           {/* Card 6: Invoiced */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Invoiced</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#EA580C' }}>₹ 68.5 L</div>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>16 invoices</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Invoiced</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#EA580C' }}>₹ 68.5 L</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>16 invoices</span>
           </div>
 
           {/* Card 7: Collections */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Collections</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#059669' }}>₹ 54.2 L</div>
-            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>79.1% realised</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Collections</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>₹ 54.2 L</div>
+            <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '600' }}>79.1% realised</span>
           </div>
 
           {/* Card 8: Calls Completed */}
-          <div className="section-card" style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Calls Completed</span>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#8B5CF6' }}>186</div>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>Out: 142 • In: 44</span>
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Calls Completed</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#8B5CF6' }}>186</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Out: 142 • In: 44</span>
           </div>
         </div>
       </div>
 
       {/* ROW 2: MONTH TARGET RUN RATE & SALES FUNNEL */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '16px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '12px', width: '100%', alignItems: 'stretch' }}>
         {/* Card A: Target Progress & Run Rate */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
               Month Target Progress and Required Run Rate
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ backgroundColor: '#F8FAFC', padding: '12px 8px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', display: 'block' }}>Monthly Target</span>
-                <strong style={{ fontSize: '20px', color: '#0F172A', fontWeight: '800' }}>₹ 75.0 L</strong>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', textAlign: 'center', marginBottom: '10px' }}>
+              <div style={{ backgroundColor: '#F8FAFC', padding: '8px 6px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '600', display: 'block' }}>Monthly Target</span>
+                <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '900' }}>₹ 75.0 L</strong>
               </div>
-              <div style={{ backgroundColor: '#F0FDF4', padding: '12px 8px', borderRadius: '10px', border: '1px solid #BBF7D0' }}>
-                <span style={{ fontSize: '11px', color: '#166534', fontWeight: '600', display: 'block' }}>Achieved</span>
-                <strong style={{ fontSize: '20px', color: '#16A34A', fontWeight: '800' }}>₹ 72.0 L</strong>
+              <div style={{ backgroundColor: '#F0FDF4', padding: '8px 6px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+                <span style={{ fontSize: '10.5px', color: '#166534', fontWeight: '600', display: 'block' }}>Achieved</span>
+                <strong style={{ fontSize: '16px', color: '#16A34A', fontWeight: '900' }}>₹ 72.0 L</strong>
               </div>
-              <div style={{ backgroundColor: '#FFFBEB', padding: '12px 8px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
-                <span style={{ fontSize: '11px', color: '#92400E', fontWeight: '600', display: 'block' }}>Balance</span>
-                <strong style={{ fontSize: '20px', color: '#D97706', fontWeight: '800' }}>₹ 3.0 L</strong>
+              <div style={{ backgroundColor: '#FFFBEB', padding: '8px 6px', borderRadius: '8px', border: '1px solid #FDE68A' }}>
+                <span style={{ fontSize: '10.5px', color: '#92400E', fontWeight: '600', display: 'block' }}>Balance</span>
+                <strong style={{ fontSize: '16px', color: '#D97706', fontWeight: '900' }}>₹ 3.0 L</strong>
               </div>
             </div>
 
             {/* Visual Progress Bar */}
-            <div style={{ width: '100%', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ width: '100%', height: '20px', backgroundColor: '#E2E8F0', borderRadius: '10px', overflow: 'hidden', position: 'relative' }}>
               <div style={{
                 width: '96%',
                 height: '100%',
                 backgroundColor: '#16A34A',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#FFFFFF',
-                fontSize: '11px',
+                fontSize: '10.5px',
                 fontWeight: '800',
                 letterSpacing: '0.5px'
               }}>
@@ -211,26 +256,26 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
             </div>
           </div>
 
-          <div style={{ marginTop: '16px', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '12px', color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={16} style={{ color: '#0E7490' }} />
+          <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={14} style={{ color: '#0E7490' }} />
             <span>Required daily sales: <strong style={{ color: '#0E7490' }}>₹ 1.0 L</strong> for the remaining 3 working days</span>
           </div>
         </div>
 
         {/* Card B: 3D Layered Sales Funnel matching User Reference */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 My Sales Funnel — This Month
               </div>
-              <span style={{ fontSize: '11px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', padding: '2px 8px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '10.5px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', padding: '2px 8px', borderRadius: '12px' }}>
                 Conversion: 44.4%
               </span>
             </div>
 
             {/* Clean Flat 2D Sales Funnel matching Control Room Design System */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 0' }}>
               {[
                 {
                   label: 'OFFERS',
@@ -250,27 +295,27 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                   bgColor: '#FCE7F3',
                   barColor: '#EC4899',
                   textColor: '#9D174D',
-                  width: '84%'
+                  width: '88%'
                 },
                 {
-                  label: 'PROFORMA INVOICE',
-                  count: '18 PIs',
+                  label: 'PROFORMA INVOICES',
+                  count: '18 Deals',
                   value: '₹ 82.0 L',
                   pct: '50.0%',
-                  bgColor: '#FFE4E6',
-                  barColor: '#F43F5E',
-                  textColor: '#9F1239',
-                  width: '68%'
+                  bgColor: '#E0F2FE',
+                  barColor: '#0284C7',
+                  textColor: '#0369A1',
+                  width: '74%'
                 },
                 {
                   label: 'INVOICED',
-                  count: '16 Invoices',
+                  count: '16 Deals',
                   value: '₹ 68.5 L',
                   pct: '44.4%',
-                  bgColor: '#FEF9C3',
-                  barColor: '#EAB308',
-                  textColor: '#854D0E',
-                  width: '52%'
+                  bgColor: '#DCFCE7',
+                  barColor: '#16A34A',
+                  textColor: '#15803D',
+                  width: '60%'
                 }
               ].map((tier, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
@@ -280,7 +325,7 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                       backgroundColor: tier.barColor,
                       color: '#FFFFFF',
                       borderRadius: '8px',
-                      padding: '10px 16px',
+                      padding: '8px 14px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -291,16 +336,16 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.01)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '0.5px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px' }}>
                         {tier.label}
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '10px' }}>
                         {tier.count}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '800' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>
                         {tier.value}
                       </span>
                     </div>
@@ -311,18 +356,18 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
           </div>
 
           <div style={{
-            marginTop: '10px',
+            marginTop: '8px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '10px 14px',
+            padding: '8px 12px',
             backgroundColor: '#F8FAFC',
-            borderRadius: '10px',
+            borderRadius: '8px',
             border: '1px solid #E2E8F0',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#334155',
             flexWrap: 'wrap',
-            gap: '8px'
+            gap: '6px'
           }}>
             <span>Offer-to-Invoice conversion: <strong style={{ color: '#0E7490' }}>44.4%</strong></span>
             <span>•</span>
@@ -332,16 +377,16 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
       </div>
 
       {/* ROW 3: SALES TREND, PRODUCT PERFORMANCE, TOP 10 CUSTOMERS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px', width: '100%', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', width: '100%', alignItems: 'stretch' }}>
         {/* Card A: Actual vs Target Trend Chart */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               MY SALES TREND
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#0284C7', fontSize: '11px', fontWeight: '700' }}>
-                <span style={{ width: '10px', height: '10px', backgroundColor: '#0284C7', borderRadius: '3px' }}></span> Actual sales
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#0284C7', borderRadius: '2px' }}></span> Actual sales
               </span>
             </div>
           </div>
@@ -353,14 +398,14 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              paddingRight: '12px',
-              fontSize: '11px',
+              paddingRight: '10px',
+              fontSize: '10px',
               fontWeight: '600',
               color: '#94A3B8',
-              height: '180px',
+              height: '160px',
               userSelect: 'none',
               textAlign: 'right',
-              minWidth: '32px'
+              minWidth: '28px'
             }}>
               <span>80 L</span>
               <span>60 L</span>
@@ -372,14 +417,14 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
             {/* Bars Area with Background Dashed Gridlines */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
               {/* Horizontal Gridlines */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '180px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
                 {[...Array(5)].map((_, i) => (
                   <div key={i} style={{ width: '100%', borderBottom: '1px dashed #E2E8F0' }}></div>
                 ))}
               </div>
 
               {/* Bar Columns Container */}
-              <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', position: 'relative', zIndex: 4, padding: '0 4px' }}>
+              <div style={{ height: '160px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', position: 'relative', zIndex: 4, padding: '0 4px' }}>
                 {trendData.map((d) => {
                   const heightPct = (d.actual / 80) * 100;
                   const isHovered = hoveredTrendMonth === d.month;
@@ -490,16 +535,16 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         </div>
 
         {/* Card B: Product Sale Comparison (matching user reference design) */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', position: 'relative', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           {/* Header without icon */}
-          <div style={{ marginBottom: '18px' }}>
+          <div style={{ marginBottom: '12px' }}>
             <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               PRODUCT SALE COMPARISON
             </span>
           </div>
 
           {/* Background vertical subtle gridlines */}
-          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
               {[...Array(5)].map((_, i) => (
                 <div key={i} style={{ height: '100%', borderRight: '1px dashed #F1F5F9' }}></div>
@@ -522,26 +567,26 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
               const isTop = idx === 0;
 
               return (
-                <div key={idx} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div key={idx} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {/* Title & Sales Value */}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#1E293B' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#1E293B' }}>
                       {p.name}
                     </span>
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#94A3B8' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#94A3B8' }}>
                       {p.actualStr}
                     </span>
                   </div>
 
                   {/* Horizontal Bar */}
-                  <div style={{ width: '100%', height: '10px', position: 'relative' }}>
+                  <div style={{ width: '100%', height: '8px', position: 'relative' }}>
                     {isTop ? (
                       /* Top item: Same Vibrant Blue Gradient Bar as MY SALES TREND */
                       <div
                         style={{
                           width: `${pct}%`,
-                          height: '10px',
-                          borderRadius: '5px',
+                          height: '8px',
+                          borderRadius: '4px',
                           background: 'linear-gradient(90deg, #38BDF8 0%, #0284C7 60%, #0369A1 100%)',
                           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
                           transition: 'width 0.3s ease'
@@ -549,12 +594,12 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                       />
                     ) : (
                       /* Other items: Diagonal Patterned Hatched Bar */
-                      <svg width={`${pct}%`} height="10" style={{ display: 'block', overflow: 'hidden', borderRadius: '5px' }}>
+                      <svg width={`${pct}%`} height="8" style={{ display: 'block', overflow: 'hidden', borderRadius: '4px' }}>
                         <rect
                           width="100%"
-                          height="10"
-                          rx="5"
-                          ry="5"
+                          height="8"
+                          rx="4"
+                          ry="4"
                           fill="url(#diagonalHatch)"
                         />
                       </svg>
@@ -567,9 +612,9 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         </div>
 
         {/* Card C: Top 10 Customers Month Sales Contribution (Styled like PO Ageing Summary table) */}
-        <div className="section-card" style={{ padding: '20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           {/* Card Title */}
-          <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
             TOP 10 CUSTOMERS — MONTH SALES
           </div>
 
@@ -577,9 +622,9 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1.4fr 1fr 1fr',
-            paddingBottom: '10px',
+            paddingBottom: '8px',
             borderBottom: '1px solid #E2E8F0',
-            fontSize: '11px',
+            fontSize: '10.5px',
             fontWeight: '700',
             color: '#64748B',
             textTransform: 'none'
@@ -598,14 +643,14 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                 '#22C55E', // lime green
                 '#84CC16', // light olive
                 '#EAB308', // amber
-                '#F59E0B', // orange
-                '#F97316', // bright orange
-                '#EA580C', // deep orange
-                '#EF4444', // coral red
-                '#DC2626', // red
-                '#B91C1C'  // deep red
+                '#F59E0B', // amber-orange
+                '#F97316', // orange
+                '#EF4444', // red
+                '#EC4899', // pink
+                '#8B5CF6', // violet
+                '#6366F1'  // indigo
               ];
-              const indicatorColor = dotColors[idx] || '#64748B';
+              const dotColor = dotColors[idx] || '#64748B';
 
               return (
                 <div
@@ -616,17 +661,17 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                     alignItems: 'center',
                     padding: '8px 0',
                     borderBottom: '1px solid #F8FAFC',
-                    fontSize: '12px',
-                    transition: 'background-color 0.15s ease'
+                    fontSize: '11.5px',
+                    lineHeight: '1.3'
                   }}
                 >
-                  {/* Customer with Pill Indicator */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <div style={{
-                      width: '6px',
-                      height: '14px',
-                      borderRadius: '3px',
-                      backgroundColor: indicatorColor,
+                  {/* Customer with Dot Indicator */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, paddingRight: '4px' }}>
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: dotColor,
                       flexShrink: 0
                     }} />
                     <span style={{ fontWeight: '600', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -653,8 +698,8 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
             display: 'grid',
             gridTemplateColumns: '1.4fr 1fr 1fr',
             alignItems: 'center',
-            paddingTop: '12px',
-            marginTop: 'auto',
+            paddingTop: '10px',
+            marginTop: '8px',
             borderTop: '2px solid #0F172A',
             fontSize: '12px',
             fontWeight: '800',

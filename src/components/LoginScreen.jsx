@@ -400,6 +400,16 @@ export default function LoginScreen({ onLoginSuccess }) {
       return;
     }
 
+    if (!empIdInput.trim()) {
+      setErrorMsg('Please enter your Employee Code.');
+      return;
+    }
+
+    if (!passwordInput.trim()) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
     // Sync latest accounts from cloud database before authenticating to get latest approved status
     try {
       await syncEmployeesFromCloud();
@@ -565,14 +575,15 @@ export default function LoginScreen({ onLoginSuccess }) {
                 </div>
               )}
 
-              {/* Employee Code Input + Verify Button (in Sign Up Mode, Optional in Sign In) */}
+              {/* Employee Code Input + Verify Button */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#0F172A', marginBottom: '4px' }}>
-                  Employee Code {isSignUpMode ? '' : <span style={{ fontWeight: '400', color: '#94A3B8' }}>(Optional if using email)</span>}
+                  Employee Code <span style={{ color: '#EF4444', fontWeight: '700' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input 
                     type="text"
+                    required
                     value={empIdInput}
                     onChange={(e) => {
                       setEmpIdInput(e.target.value);
@@ -580,7 +591,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                       setDetectedRole(null);
                       setErrorMsg('');
                     }}
-                    placeholder={isSignUpMode ? "Enter your Employee Code" : "Enter Employee Code (Optional)"}
+                    placeholder="Enter Employee Code"
                     style={{
                       flex: 1,
                       height: '38px',

@@ -844,6 +844,7 @@ table td {
 
 .custom-table {
   width: 100% !important;
+  table-layout: fixed !important;
   border-collapse: collapse !important;
   text-align: left !important;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -858,6 +859,9 @@ table td {
   color: #64748B !important;
   border: 1px solid #E2E8F0 !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
 }
 
 .custom-table td {
@@ -867,6 +871,19 @@ table td {
   color: #1E293B !important;
   vertical-align: middle !important;
   transition: background-color 0.15s ease !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+}
+
+.custom-table td strong,
+.custom-table td span,
+.custom-table td a,
+.custom-table td div {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 

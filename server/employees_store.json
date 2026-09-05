@@ -1,96 +1,94 @@
 [
   {
-    "id": 15,
     "employee_code": "TA-VRM001",
     "employee_name": "Ar.Annamalaiyar",
     "email": "arannamalaiyar@gmail.com",
     "password": "Efx@1234",
+    "prefix": "TA",
     "role": "Technical Administrator",
-    "department": "TA-VRM001:::Technical Administrator:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 13,
-    "employee_code": "SE-VRM002",
-    "employee_name": "Mohith J V",
-    "email": "sales.s2@vrmstructures.in",
-    "password": "NewPwd",
-    "role": "Sales Executive",
-    "department": "SE-VRM002:::Sales Executive:::Disabled",
-    "status": "Disabled"
-  },
-  {
-    "id": 14,
-    "employee_code": "SE-VRM001",
-    "employee_name": "mohith j v",
-    "email": "sales.s4@vrmstructures.in",
-    "password": "NewPwd",
-    "role": "Sales Executive",
-    "department": "SE-VRM001:::Sales Executive:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 16,
-    "employee_code": "PR-VRMOO1",
-    "employee_name": "ARUN BOOPATHI M",
-    "email": "scm@vrmstructures.in",
-    "password": "SCM@2027",
-    "role": "Procurement Head",
-    "department": "PR-VRMOO1:::Procurement Head:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 17,
-    "employee_code": "PH-VRM001",
-    "employee_name": "Purshottam",
-    "email": "productionhead@gmail.com",
-    "password": "12345",
-    "role": "Production Head",
-    "department": "PH-VRM001:::Production Head:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 18,
-    "employee_code": "DH-VRM001",
-    "employee_name": "Kalpana",
-    "email": "dispatchhead@gmail.com",
-    "password": "12345",
-    "role": "Dispatch Head",
-    "department": "DH-VRM001:::Dispatch Head:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 19,
-    "employee_code": "FE-VRM001",
-    "employee_name": "Ashok",
-    "email": "flooremployee@gmail.com",
-    "password": "12345",
-    "role": "Floor Employee",
-    "department": "FE-VRM001:::Floor Employee:::Active",
-    "status": "Active"
-  },
-  {
-    "id": 20,
-    "employee_code": "PR-VRM002",
-    "employee_name": "Ar Annamalaiyar",
-    "email": "maniskremo@gmail.com",
-    "password": "12345",
-    "role": "Procurement Head",
-    "department": "PR-VRM002:::Procurement Head:::Active",
-    "status": "Active"
-  },
-  {
-    "employee_code": "BI-VRM002",
-    "employee_name": "Ar.Annamalaiyar",
-    "email": "billing@vrmstructures.com",
-    "password": "12345",
-    "prefix": "BI",
-    "role": "Billing",
-    "dashboard_type": "Billing",
+    "dashboard_type": "Technical Administrator",
     "status": "Active",
-    "created_at": "2026-09-04T05:25:44.795Z",
-    "last_login": "2026-09-04T05:25:44.795Z",
-    "id": 21,
-    "department": "BI-VRM002:::Billing:::Pending Approval"
+    "created_at": "2026-09-02T16:38:06.097Z",
+    "last_login": "2026-09-02T16:38:06.097Z"
+  },
+  {
+    "employee_code": "SE-VRM001",
+    "employee_name": "Mohit JV",
+    "email": "sales.s4@vrmstructures.in",
+    "password": "vrm@2018",
+    "prefix": "SE",
+    "role": "Sales Executive",
+    "dashboard_type": "Sales Executive",
+    "status": "Active",
+    "created_at": "2026-09-02T16:43:30.266Z",
+    "last_login": "2026-09-02T16:43:30.266Z"
+  },
+  {
+    "employee_code": "PR-VRM001",
+    "employee_name": "Arun",
+    "email": "arun@vrmstructures.in",
+    "password": "arun2002",
+    "prefix": "PR",
+    "role": "Procurement Head",
+    "dashboard_type": "Procurement Head",
+    "status": "Active",
+    "created_at": "2026-09-02T17:27:06.399Z",
+    "last_login": "2026-09-02T17:27:06.400Z"
+  },
+  {
+    "id": "EMP-PH-001",
+    "employee_name": "Senthil Kumar",
+    "employee_code": "PH-VRM001",
+    "code": "PH-VRM001",
+    "role": "Production Head",
+    "email": "production@vrm.com",
+    "department": "Production",
+    "status": "Active",
+    "created_at": "2026-09-05T05:59:14.828Z"
+  },
+  {
+    "id": "EMP-CEO-001",
+    "employee_name": "Annamalaiyar",
+    "employee_code": "CEO-VRM001",
+    "code": "CEO-VRM001",
+    "role": "CEO",
+    "email": "ceo@vrm.com",
+    "department": "Executive Leadership",
+    "status": "Active",
+    "created_at": "2026-09-05T05:59:14.828Z"
+  },
+  {
+    "id": "EMP-AH-001",
+    "employee_name": "Venkatesh",
+    "employee_code": "AH-VRM001",
+    "code": "AH-VRM001",
+    "role": "Accounts Head",
+    "email": "accounts@vrm.com",
+    "department": "Accounts & Finance",
+    "status": "Active",
+    "created_at": "2026-09-05T05:59:14.828Z"
+  },
+  {
+    "id": "EMP-SH-001",
+    "employee_name": "Vijay",
+    "employee_code": "SH-VRM001",
+    "code": "SH-VRM001",
+    "role": "Sales Head",
+    "email": "sales@vrm.com",
+    "department": "Sales & Business",
+    "status": "Active",
+    "created_at": "2026-09-05T05:59:14.828Z"
+  },
+  {
+    "employee_code": "SE-VRM005",
+    "employee_name": "Admin User",
+    "email": "admin@gmail.com",
+    "password": "password",
+    "prefix": "SE",
+    "role": "Sales Executive",
+    "dashboard_type": "Sales Executive",
+    "status": "Pending Approval",
+    "created_at": "2026-09-05T06:26:37.330Z",
+    "last_login": "2026-09-05T06:26:37.330Z"
   }
 ]

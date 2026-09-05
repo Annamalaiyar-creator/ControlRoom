@@ -46,13 +46,13 @@ export default function DailyProductionTrendChart({ title = "DAILY PRODUCTION TR
     <div 
       className="section-card" 
       style={{ 
-        padding: '24px', 
+        padding: '14px 18px', 
         backgroundColor: '#FFFFFF',
         border: '1px solid #EAEFEF',
-        borderRadius: '24px',
+        borderRadius: '20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: '10px',
         boxSizing: 'border-box',
         boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",

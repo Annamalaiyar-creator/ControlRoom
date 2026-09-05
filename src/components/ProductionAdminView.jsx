@@ -641,14 +641,14 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   const roleName = userRole || 'Production Head';
 
   return (
-    <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '4px' }}>
+    <div ref={containerRef} style={{ fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingTop: '0px' }}>
 
       {/* PERSONALIZED WELCOME BANNER CARD */}
       <div style={{
         backgroundColor: '#FFFFFF',
         borderRadius: '16px',
         border: '1px solid #E2E8F0',
-        padding: '20px 24px',
+        padding: '12px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -905,13 +905,12 @@ export default function ProductionAdminView({ activeTab, userRole }) {
               key={kIdx}
               style={{
                 backgroundColor: '#FFFFFF',
-                borderRadius: '20px',
+                borderRadius: '16px',
                 border: '1px solid #EAEFEF',
-                padding: '16px',
+                padding: '12px 14px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '16px',
+                gap: '8px',
                 boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
                 transition: 'all 0.2s ease',
                 minWidth: 0,
@@ -919,10 +918,10 @@ export default function ProductionAdminView({ activeTab, userRole }) {
               }}
             >
               {/* Top Main Section */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
                 <span
                   style={{
-                    fontSize: '11.5px',
+                    fontSize: '11px',
                     fontWeight: '800',
                     color: '#64748B',
                     letterSpacing: '0.04em',
@@ -935,8 +934,8 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                   {kpi.title}
                 </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px', lineHeight: '1.1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px', lineHeight: '1.1' }}>
                     {kpi.value}
                   </span>
 
@@ -945,20 +944,20 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '2px',
-                      fontSize: '11.5px',
+                      fontSize: '11px',
                       fontWeight: '800',
                       color: kpi.trendUp ? '#059669' : '#DC2626',
                       backgroundColor: kpi.trendUp ? '#ECFDF5' : '#FEF2F2',
                       border: kpi.trendUp ? '1px solid #A7F3D0' : '1px solid #FECACA',
-                      padding: '2px 7.5px',
-                      borderRadius: '8px',
+                      padding: '1.5px 6px',
+                      borderRadius: '6px',
                       lineHeight: '1.2'
                     }}
                   >
                     {kpi.trendUp ? (
-                      <ArrowUpRight style={{ width: '13px', height: '13px' }} />
+                      <ArrowUpRight style={{ width: '12px', height: '12px' }} />
                     ) : (
-                      <ArrowDownRight style={{ width: '13px', height: '13px' }} />
+                      <ArrowDownRight style={{ width: '12px', height: '12px' }} />
                     )}
                     {kpi.trend}
                   </span>
@@ -970,12 +969,12 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                 style={{
                   backgroundColor: '#F8FAFC',
                   border: '1px solid #F1F5F9',
-                  borderRadius: '12px',
-                  padding: '9px 12px',
-                  fontSize: '11.5px',
+                  borderRadius: '10px',
+                  padding: '6px 10px',
+                  fontSize: '11px',
                   fontWeight: '500',
                   color: '#64748B',
-                  lineHeight: '1.4',
+                  lineHeight: '1.3',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
@@ -992,7 +991,7 @@ export default function ProductionAdminView({ activeTab, userRole }) {
       </div>
 
       {/* 2 CONTINUOUS FLEX COLUMNS LAYOUT (ORIGINAL SCRIPT DESIGN) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '16px', width: '100%', boxSizing: 'border-box', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '12px', width: '100%', boxSizing: 'border-box', alignItems: 'start' }}>
 
         {/* ==================== LEFT CONTINUOUS FLEX COLUMN ==================== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>

@@ -1,5 +1,2741 @@
 [
   {
+    "bomCode": "BOM-618",
+    "date": "2026-08-22",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600049",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600049"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0135.png",
+      "size": "0.14 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T09:25:19.989Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0131.png",
+      "size": "0.14 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T09:25:48.753Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Aluminum Sheet",
+        "category": "Sheet",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 2500,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0131.png",
+      "proofDocObj": {
+        "name": "PO-0131.png",
+        "size": "0.14 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-08-22T09:25:48.753Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Aluminum Sheet",
+        "bomQty": 100,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 250000,
+    "gstAmount": 45000,
+    "cgstAmount": 22500,
+    "sgstAmount": 22500,
+    "grandTotal": 295000,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-618",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-08-22T09:30:13.645Z",
+    "packedItemsDeducted": [
+      {
+        "code": "PRD-001",
+        "name": "Aluminum Sheet",
+        "desc": "Sheet",
+        "uom": "NOS",
+        "bomQty": 100,
+        "invQty": 100,
+        "rate": 2500,
+        "discount": 0,
+        "tax": 18,
+        "amt": 295000,
+        "selected": true
+      }
+    ]
+  },
+  {
+    "bomCode": "BOM-617",
+    "date": "2026-08-22",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600030",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600030"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0132.png",
+      "size": "0.16 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T07:29:45.872Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0135.png",
+      "size": "0.14 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T07:29:57.673Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Packed & Ready for Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0135.png",
+      "proofDocObj": {
+        "name": "PO-0135.png",
+        "size": "0.14 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-08-22T07:29:57.673Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": true
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": true
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": true
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": true
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false
+  },
+  {
+    "bomCode": "BOM-616",
+    "date": "2026-08-22",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0137.png",
+      "size": "0.14 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T07:22:36.679Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Packed & Ready for Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
+        "category": "HDG Heavy Column",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 4200,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Heavy Rafter 120x50x20x2.5 (Length 4.5m)",
+        "category": "HDG Heavy Rafter",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 3600,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 80x40x15x2.0 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 1650,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Cross Bracing Pipe 42.4x2.6mm",
+        "category": "HDG Pipe Bracing",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 48,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Base Plate 250x250x10mm with M16 Anchors",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 6,
+        "rate": 1250,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0137.png",
+      "proofDocObj": {
+        "name": "PO-0137.png",
+        "size": "0.14 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-08-22T07:22:36.679Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
+        "bomQty": 6,
+        "packed": true
+      },
+      {
+        "name": "Heavy Rafter 120x50x20x2.5 (Length 4.5m)",
+        "bomQty": 3,
+        "packed": true
+      },
+      {
+        "name": "Purlin 80x40x15x2.0 (Length 3.5m)",
+        "bomQty": 16,
+        "packed": true
+      },
+      {
+        "name": "Cross Bracing Pipe 42.4x2.6mm",
+        "bomQty": 6,
+        "packed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 48,
+        "packed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 16,
+        "packed": true
+      },
+      {
+        "name": "Base Plate 250x250x10mm with M16 Anchors",
+        "bomQty": 6,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 77800,
+    "gstAmount": 14004,
+    "cgstAmount": 7002,
+    "sgstAmount": 7002,
+    "grandTotal": 91804,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false
+  },
+  {
+    "bomCode": "BOM-615",
+    "date": "2026-08-22",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0133.png",
+      "size": "0.13 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T05:48:53.464Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0136.png",
+      "size": "0.20 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-22T05:49:01.649Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sent to Production",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0136.png",
+      "proofDocObj": {
+        "name": "PO-0136.png",
+        "size": "0.20 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-08-22T05:49:01.649Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-614",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0136.png",
+      "size": "201.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:41:48.404Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:41:54.507Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Requested Address Proof",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0133.png",
+      "proofDocObj": {
+        "name": "PO-0133.png",
+        "size": "137.0 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T11:41:54.507Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592,
+    "addressProofStatus": "Requested Address Proof",
+    "addressProofRequestedAt": "2026-08-21T12:59:42.593Z"
+  },
+  {
+    "bomCode": "BOM-613",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0136.png",
+      "size": "201.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:39:21.605Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0135.png",
+      "size": "142.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:39:28.487Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0135.png",
+      "proofDocObj": {
+        "name": "PO-0135.png",
+        "size": "142.1 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T11:39:28.487Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-612",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600030",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600030"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0131.png",
+      "size": "142.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:36:37.569Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:36:44.747Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0133.png",
+      "proofDocObj": {
+        "name": "PO-0133.png",
+        "size": "137.0 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T11:36:44.747Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-611",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600030",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600030"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0132.png",
+      "size": "159.3 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:33:50.050Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0132.png",
+      "proofDocObj": {
+        "name": "PO-0132.png",
+        "size": "159.3 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T11:33:50.050Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-610",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0135.png",
+      "size": "142.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T10:59:53.735Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0132.png",
+      "size": "159.3 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T11:00:12.755Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "category": "",
+        "uom": "NOS",
+        "qty": 900,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0132.png",
+      "proofDocObj": {
+        "name": "PO-0132.png",
+        "size": "159.3 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T11:00:12.755Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "bomQty": 900,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 40500,
+    "gstAmount": 7290,
+    "cgstAmount": 3645,
+    "sgstAmount": 3645,
+    "grandTotal": 47790,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-610",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-08-21T11:13:36.656Z",
+    "packedItemsDeducted": [
+      {
+        "code": "PRD-001",
+        "name": "Mid Clamp 35 mm",
+        "desc": "High grade mounting component",
+        "uom": "NOS",
+        "bomQty": 900,
+        "invQty": 900,
+        "rate": 45,
+        "discount": 0,
+        "tax": 18,
+        "amt": 47790,
+        "selected": true
+      }
+    ]
+  },
+  {
+    "bomCode": "BOM-609",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600030",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600030"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T10:44:43.570Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0134.png",
+      "size": "150.2 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T10:45:12.311Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "category": "35mm",
+        "uom": "NOS",
+        "qty": 500,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0134.png",
+      "proofDocObj": {
+        "name": "PO-0134.png",
+        "size": "150.2 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T10:45:12.311Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "bomQty": 500,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 22500,
+    "gstAmount": 4050,
+    "cgstAmount": 2025,
+    "sgstAmount": 2025,
+    "grandTotal": 26550,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-609",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-08-21T10:58:52.156Z",
+    "packedItemsDeducted": [
+      {
+        "code": "PRD-001",
+        "name": "Mid Clamp 35 mm",
+        "desc": "35mm",
+        "uom": "NOS",
+        "bomQty": 500,
+        "invQty": 500,
+        "rate": 45,
+        "discount": 0,
+        "tax": 18,
+        "amt": 26550,
+        "selected": true
+      }
+    ]
+  },
+  {
+    "bomCode": "BOM-608",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0135.png",
+      "size": "142.1 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T10:07:26.825Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T10:07:52.865Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "category": "35mm",
+        "uom": "NOS",
+        "qty": 200,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0133.png",
+      "proofDocObj": {
+        "name": "PO-0133.png",
+        "size": "137.0 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T10:07:52.865Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "bomQty": 200,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 9000,
+    "gstAmount": 1620,
+    "cgstAmount": 810,
+    "sgstAmount": 810,
+    "grandTotal": 10620,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-608",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-08-21T10:25:08.568Z",
+    "packedItemsDeducted": [
+      {
+        "code": "PRD-001",
+        "name": "Mid Clamp 35 mm",
+        "desc": "35mm",
+        "uom": "NOS",
+        "bomQty": 200,
+        "invQty": 200,
+        "rate": 45,
+        "discount": 0,
+        "tax": 18,
+        "amt": 10620,
+        "selected": true
+      }
+    ]
+  },
+  {
+    "bomCode": "BOM-607",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600030",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600030"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0137.png",
+      "size": "139.4 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:58:01.454Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:58:12.587Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Packed & Ready for Dispatch",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0133.png",
+      "proofDocObj": {
+        "name": "PO-0133.png",
+        "size": "137.0 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T09:58:12.587Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": true
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": true
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": true
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": true
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false,
+      "verified": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false
+  },
+  {
+    "bomCode": "BOM-606",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0133.png",
+      "size": "137.0 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:55:04.219Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0134.png",
+      "size": "150.2 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:54:40.785Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sent to Production",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
+        "category": "HDG Heavy Column",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 4200,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Heavy Rafter 120x50x20x2.5 (Length 4.5m)",
+        "category": "HDG Heavy Rafter",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 3600,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 80x40x15x2.0 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 1650,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Cross Bracing Pipe 42.4x2.6mm",
+        "category": "HDG Pipe Bracing",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 48,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Base Plate 250x250x10mm with M16 Anchors",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 6,
+        "rate": 1250,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0134.png",
+      "proofDocObj": {
+        "name": "PO-0134.png",
+        "size": "150.2 KB",
+        "type": "image/png",
+        "uploadTimestamp": "2026-08-21T09:54:40.785Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "Heavy Rafter 120x50x20x2.5 (Length 4.5m)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x2.0 (Length 3.5m)",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "Cross Bracing Pipe 42.4x2.6mm",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 48,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 250x250x10mm with M16 Anchors",
+        "bomQty": 6,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 77800,
+    "gstAmount": 14004,
+    "cgstAmount": 7002,
+    "sgstAmount": 7002,
+    "grandTotal": 77800
+  },
+  {
+    "bomCode": "BOM-605",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600059",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600059"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0134.png",
+      "size": "150.2 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:49:23.451Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-604",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600020",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600020"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0134.png",
+      "size": "150.2 KB",
+      "type": "image/png",
+      "uploadTimestamp": "2026-08-21T09:41:06.327Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-603",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600034",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600034"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
+    "bomCode": "BOM-602",
+    "date": "2026-08-21",
+    "customerName": "Solar pvt ltd",
+    "companyName": "Solar pvt ltd",
+    "mobile": "7092996058",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Chennai, Tamilnadu - 600056",
+    "billingAddressObj": {
+      "address": "No 1427, GNT Road, Nagappa Industrial Estate",
+      "city": "Chennai",
+      "state": "Tamilnadu",
+      "pincode": "600056"
+    },
+    "deliveryAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Chennai, Tamil Nadu - 500049",
+    "deliveryAddressObj": {
+      "address": " No 1427, GNT Road, Nagappa Industrial Estate",
+      "city": "Chennai",
+      "state": "Tamil Nadu ",
+      "pincode": "500049"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "PO-0135.png",
+      "size": "0.14 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-21T06:08:39.011Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "PO-0133.png",
+      "size": "0.13 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-08-21T06:08:53.298Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "category": "",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "PO-0133.png",
+      "proofDocObj": {
+        "name": "PO-0133.png",
+        "size": "0.13 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-08-21T06:08:53.298Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mid Clamp 35 mm",
+        "bomQty": 100,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 4500,
+    "gstAmount": 810,
+    "cgstAmount": 405,
+    "sgstAmount": 405,
+    "grandTotal": 5310
+  },
+  {
+    "bomCode": "BOM-601",
+    "date": "2026-08-21",
+    "customerName": "Acme Corp",
+    "companyName": "Acme Corp",
+    "mobile": "9876543210",
+    "email": "contact@acme.com",
+    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "billingAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
+    "deliveryAddressObj": {
+      "address": "123 Main Street, Industrial Area",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600032"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Pending Confirmation",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "category": "HDG Column Leg",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 2800,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "category": "HDG Rafter Beam",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 2100,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "category": "HDG Purlin Channel",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 1450,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "category": "HDG Wind Bracing",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 650,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 45,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "category": "Aluminum Fastener",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 40,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "category": "Base Plate Assembly",
+        "uom": "SET",
+        "qty": 4,
+        "rate": 850,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "Column 110x55x30x2.5 (Length 3.2m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Rafter 100x50x20x2.0 (Length 2.4m)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 80x40x15x1.8 (Length 3.5m)",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Bracing Angle 40x40x4 (Length 1.8m)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm HDG with Fasteners",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35mm HDG with Fasteners",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Base Plate 200x200x8mm with Anchor Bolts",
+        "bomQty": 4,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 34400,
+    "gstAmount": 6192,
+    "cgstAmount": 3096,
+    "sgstAmount": 3096,
+    "grandTotal": 40592
+  },
+  {
     "bomCode": "BOM-101",
     "date": "2026-07-10",
     "customerName": "Vikram Solar Pvt Ltd",
