@@ -1514,25 +1514,120 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   </button>
                 )}
 
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setShowFloatingMenu(!showFloatingMenu)}
-                    title="More actions"
-                    style={{
-                      backgroundColor: showFloatingMenu ? '#F1F5F9' : '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#64748B',
-                      borderRadius: '10px',
-                      padding: '6px 10px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <MoreHorizontal size={14} />
-                  </button>
+                {/* CEO View: Render buttons directly inside the floating toolbar pill (no 3-dot menu) */}
+                {isExecutiveOrMD ? (
+                  <>
+                    {selectedPOs.length === 1 && (() => {
+                      const target = poList.find(p => p.poNo === selectedPOs[0]);
+                      if (!target) return null;
+                      const st = String(target.status || '').trim();
+                      const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                      if (isDraftOrPending) {
+                        return (
+                          <button
+                            onClick={() => setApprovingPo(target)}
+                            style={{
+                              backgroundColor: '#F0FDF4',
+                              border: '1px solid #BBF7D0',
+                              color: '#166534',
+                              borderRadius: '10px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                          >
+                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> CEO Approval
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <button
+                      onClick={() => {
+                        if (selectedPOs && selectedPOs.length > 1) {
+                          alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                          return;
+                        }
+                        const target = (selectedPOs && selectedPOs.length > 0)
+                          ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
+                          : (poList[0] || null);
+                        if (target) {
+                          handleStartView(target);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                    </button>
+
+                    <button
+                      onClick={() => window.print()}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <FileText size={14} style={{ color: '#059669' }} /> Export PDF
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowFloatingMenu(!showFloatingMenu)}
+                      title="More actions"
+                      style={{
+                        backgroundColor: showFloatingMenu ? '#F1F5F9' : '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#64748B',
+                        borderRadius: '10px',
+                        padding: '6px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      <MoreHorizontal size={14} />
+                    </button>
 
                   {showFloatingMenu && (
                     <div style={{
@@ -1550,256 +1645,150 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                       flexDirection: 'column',
                       gap: '2px'
                     }}>
-                      {/* For CEO / Executive view: exactly CEO Approval, View Details, and Export PDF */}
-                      {isExecutiveOrMD ? (
-                        <>
-                          {selectedPOs.length === 1 && (() => {
-                            const target = poList.find(p => p.poNo === selectedPOs[0]);
-                            if (!target) return null;
-                            const st = String(target.status || '').trim();
-                            const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
-                            if (isDraftOrPending) {
-                              return (
-                                <button
-                                  onClick={() => {
-                                    setApprovingPo(target);
-                                    setShowFloatingMenu(false);
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: 'none',
-                                    background: '#F0FDF4',
-                                    textAlign: 'left',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    color: '#166534',
-                                    cursor: 'pointer',
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
-                                >
-                                  <CheckCircle size={14} style={{ color: '#16A34A' }} /> CEO Approval
-                                </button>
-                              );
-                            }
-                            return null;
-                          })()}
+                      <button
+                        onClick={() => {
+                          if (selectedPOs && selectedPOs.length > 1) {
+                            alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                            setShowFloatingMenu(false);
+                            return;
+                          }
+                          const target = (selectedPOs && selectedPOs.length > 0)
+                            ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
+                            : (poList[0] || null);
+                          if (target) {
+                            handleStartView(target);
+                          }
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                      </button>
 
-                          <button
-                            onClick={() => {
-                              if (selectedPOs && selectedPOs.length > 1) {
-                                alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                      <button
+                        onClick={() => {
+                          alert(`Cloned ${selectedPOs.length} selected PO record(s).`);
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Copy size={14} style={{ color: '#2563EB' }} /> Duplicate / Clone
+                      </button>
+
+                      {selectedPOs.length === 1 && (() => {
+                        const target = poList.find(p => p.poNo === selectedPOs[0]);
+                        if (!target) return null;
+                        const st = String(target.status || '').trim();
+                        const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                        const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved';
+                        const isPaymentProcessed = st === 'Payment Processed';
+
+                        if (isDraftOrPending) {
+                          return (
+                            <button
+                              onClick={() => {
+                                setApprovingPo(target);
                                 setShowFloatingMenu(false);
-                                return;
-                              }
-                              const target = (selectedPOs && selectedPOs.length > 0)
-                                ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
-                                : (poList[0] || null);
-                              if (target) {
-                                handleStartView(target);
-                              }
-                              setShowFloatingMenu(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                          </button>
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#F0FDF4', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approval
+                            </button>
+                          );
+                        }
 
-                          <button
-                            onClick={() => {
-                              window.print();
-                              setShowFloatingMenu(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <FileText size={14} style={{ color: '#059669' }} /> Export PDF
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => {
-                              if (selectedPOs && selectedPOs.length > 1) {
-                                alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                        if (isMdApproved) {
+                          return (
+                            <button
+                              onClick={() => {
+                                handleOpenPaymentProcessModal(target);
                                 setShowFloatingMenu(false);
-                                return;
-                              }
-                              const target = (selectedPOs && selectedPOs.length > 0)
-                                ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
-                                : (poList[0] || null);
-                              if (target) {
-                                handleStartView(target);
-                              }
-                              setShowFloatingMenu(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                          </button>
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#FFFBEB', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#92400E', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <CreditCard size={14} style={{ color: '#D97706' }} /> Process Payment / Verify Credit
+                            </button>
+                          );
+                        }
 
-                          <button
-                            onClick={() => {
-                              alert(`Cloned ${selectedPOs.length} selected PO record(s).`);
-                              setShowFloatingMenu(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Copy size={14} style={{ color: '#2563EB' }} /> Duplicate / Clone
-                          </button>
+                        if (isPaymentProcessed) {
+                          return (
+                            <button
+                              onClick={() => {
+                                setProceedingPo(target);
+                                setShowFloatingMenu(false);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#ECFEFF', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <Send size={14} style={{ color: '#0E7490' }} /> Proceed PO (Ready for GRN)
+                            </button>
+                          );
+                        }
 
-                          {selectedPOs.length === 1 && (() => {
-                            const target = poList.find(p => p.poNo === selectedPOs[0]);
-                            if (!target) return null;
-                            const st = String(target.status || '').trim();
-                            const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
-                            const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved';
-                            const isPaymentProcessed = st === 'Payment Processed';
+                        return null;
+                      })()}
 
-                            if (isDraftOrPending) {
-                              return (
-                                <button
-                                  onClick={() => {
-                                    setApprovingPo(target);
-                                    setShowFloatingMenu(false);
-                                  }}
-                                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#F0FDF4', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                >
-                                  <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approval
-                                </button>
-                              );
-                            }
-
-                            if (isMdApproved) {
-                              return (
-                                <button
-                                  onClick={() => {
-                                    handleOpenPaymentProcessModal(target);
-                                    setShowFloatingMenu(false);
-                                  }}
-                                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#FFFBEB', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#92400E', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                >
-                                  <CreditCard size={14} style={{ color: '#D97706' }} /> Process Payment / Verify Credit
-                                </button>
-                              );
-                            }
-
-                            if (isPaymentProcessed) {
-                              return (
-                                <button
-                                  onClick={() => {
-                                    setProceedingPo(target);
-                                    setShowFloatingMenu(false);
-                                  }}
-                                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#ECFEFF', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                >
-                                  <Send size={14} style={{ color: '#0E7490' }} /> Proceed PO (Ready for GRN)
-                                </button>
-                              );
-                            }
-
-                            return null;
-                          })()}
-
-                          <button
-                            onClick={() => {
-                              window.print();
-                              setShowFloatingMenu(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <FileText size={14} style={{ color: '#059669' }} /> Export / Print PDF
-                          </button>
-                        </>
-                      )}
-
+                      <button
+                        onClick={() => {
+                          window.print();
+                          setShowFloatingMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#1E293B',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <FileText size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                      </button>
                     </div>
                   )}
                 </div>
+              )}
 
                 <button
                   onClick={() => setSelectedPOs([])}
