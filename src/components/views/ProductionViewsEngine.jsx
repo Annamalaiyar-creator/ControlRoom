@@ -6638,12 +6638,12 @@ export default function ProductionViewsEngine(props) {
                     <table className="custom-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                          <th style={{ padding: '12px 14px', width: '40px', boxSizing: 'border-box' }}>
+                          <th style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                             <input
                               type="checkbox"
                               checked={currentMaterialsPage.length > 0 && selectedRows.length === currentMaterialsPage.length}
                               onChange={handleSelectAll}
-                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                             />
                           </th>
                           <th style={{ padding: '12px 14px', width: '160px', fontWeight: 'bold', boxSizing: 'border-box' }}>Material Code</th>
@@ -6693,12 +6693,12 @@ export default function ProductionViewsEngine(props) {
                               }}
                               className={`table-row-hover ${isSelected ? 'selected-row' : ''}`}
                             >
-                              <td style={{ padding: '12px 14px', borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent' }}>
+                              <td style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box', borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent' }}>
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => handleToggleRow(m.code)}
-                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                                 />
                               </td>
                               <td
@@ -7903,12 +7903,12 @@ export default function ProductionViewsEngine(props) {
                     <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                          <th style={{ padding: '12px 14px', width: '30px' }}>
+                          <th style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                             <input
                               type="checkbox"
                               checked={isAllSelected}
                               onChange={() => toggleSelectAll(visibleWoIds)}
-                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                             />
                           </th>
                           <th style={{ padding: '12px 14px' }}>WO No.</th>
@@ -7936,14 +7936,19 @@ export default function ProductionViewsEngine(props) {
                               }}
                             >
                               <td style={{
-                                padding: '12px 14px',
+                                width: '48px',
+                                minWidth: '48px',
+                                padding: '12px 0',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                boxSizing: 'border-box',
                                 borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
                               }}>
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => toggleSelectRow(row.woNo)}
-                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                                 />
                               </td>
                               <td
@@ -14503,10 +14508,10 @@ export default function ProductionViewsEngine(props) {
                   <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                        <th style={{ padding: '12px 14px', width: '30px' }}>
+                        <th style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                           <input
                             type="checkbox"
-                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                             checked={filteredRows.length > 0 && filteredRows.every(r => selectedRows.includes(r.code))}
                             onChange={(e) => {
                               if (e.target.checked) {
@@ -14541,13 +14546,20 @@ export default function ProductionViewsEngine(props) {
                             <tr key={idx} style={{
                               borderBottom: '1px solid #F1F5F9',
                               transition: 'all 0.15s ease',
-                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
-                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                              backgroundColor: isChecked ? '#ECFEFF' : 'transparent'
                             }} className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}>
-                              <td style={{ padding: '12px 14px', width: '30px' }}>
+                              <td style={{
+                                width: '48px',
+                                minWidth: '48px',
+                                padding: '12px 0',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                boxSizing: 'border-box',
+                                borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                              }}>
                                 <input
                                   type="checkbox"
-                                  style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                                   checked={isChecked}
                                   onChange={() => handleSelectRowGeneric(row.code)}
                                 />

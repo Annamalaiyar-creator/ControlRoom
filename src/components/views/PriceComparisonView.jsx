@@ -2320,18 +2320,18 @@ export default function PriceComparisonView(props) {
               <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: '#F8FAFC' }}>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', width: '40px', textAlign: 'center' }}>#</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Category</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Unit</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Supplier</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Current (01 Jul - 03 Aug 2026)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Previous (01 Jun - 30 Jun 2026)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Change (₹)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Change (%)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Highest Price (₹) (12 Months)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Lowest Price (₹) (12 Months)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Last Updated</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', width: '50px', textAlign: 'center' }}>#</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Category</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Unit</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Supplier</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Current (01 Jul - 03 Aug 2026)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Previous (01 Jun - 30 Jun 2026)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Change (₹)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Change (%)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Highest Price (₹) (12 Months)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Lowest Price (₹) (12 Months)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Last Updated</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2344,21 +2344,21 @@ export default function PriceComparisonView(props) {
                     { id: 6, name: 'GI Nut Bolt M10 x 30', sku: 'NB-M10-30', cat: 'Fasteners', unit: 'Nos', supplier: 'Fasteners India Pvt Ltd', curr: '6.25', prev: '6.30', diff: '-0.05', pct: '-0.79%', high: '7.20', low: '5.80', updated: '03 Aug 2026', positive: false }
                   ].map((row) => (
                     <tr key={row.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ textAlign: 'center', padding: '12px 4px' }}>{row.id}</td>
-                      <td style={{ padding: '12px 4px' }}>
+                      <td style={{ textAlign: 'center', padding: '13px 16px' }}>{row.id}</td>
+                      <td style={{ padding: '13px 16px' }}>
                         <div style={{ fontWeight: '600', color: '#1E293B' }}>{row.name}</div>
                         <div style={{ fontSize: '10px', color: '#64748B' }}>{row.sku}</div>
                       </td>
-                      <td style={{ padding: '12px 4px', color: '#475569' }}>{row.cat}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B' }}>{row.unit}</td>
-                      <td style={{ padding: '12px 4px', color: '#475569' }}>{row.supplier}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', fontWeight: 'bold', color: '#1E293B' }}>{row.curr}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B' }}>{row.prev}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: 'bold', color: row.positive ? '#EF4444' : '#16A34A' }}>{row.diff}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: 'bold', color: row.positive ? '#EF4444' : '#16A34A' }}>{row.pct}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'right', color: '#475569' }}>{row.high}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'right', color: '#475569' }}>{row.low}</td>
-                      <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B' }}>{row.updated}</td>
+                      <td style={{ padding: '13px 16px', color: '#475569' }}>{row.cat}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', color: '#64748B' }}>{row.unit}</td>
+                      <td style={{ padding: '13px 16px', color: '#475569' }}>{row.supplier}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', fontWeight: 'bold', color: '#1E293B' }}>{row.curr}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', color: '#64748B' }}>{row.prev}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: 'bold', color: row.positive ? '#EF4444' : '#16A34A' }}>{row.diff}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: 'bold', color: row.positive ? '#EF4444' : '#16A34A' }}>{row.pct}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'right', color: '#475569' }}>{row.high}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'right', color: '#475569' }}>{row.low}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', color: '#64748B' }}>{row.updated}</td>
                     </tr>
                   ))}
                 </tbody>

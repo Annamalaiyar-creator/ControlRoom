@@ -2367,11 +2367,11 @@ export default function VendorPerformanceView(props) {
               <table className="custom-table widget-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600' }}></th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>On-Time Delivery</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Quality Score</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Overall Score</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', width: '36px' }}>#</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>On-Time Delivery</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Quality Score</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Overall Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2381,11 +2381,11 @@ export default function VendorPerformanceView(props) {
                     { rank: 3, name: 'Galaxy Components', ot: '96.1%', q: '4.42 / 5', overall: '4.38 / 5' }
                   ].map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                      <td style={{ padding: '10px 4px', color: '#94A3B8', fontWeight: 'bold' }}>{row.rank}</td>
-                      <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A' }}>{row.name}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center', color: '#475569' }}>{row.ot}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center', color: '#475569' }}>{row.q}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 14px', color: '#94A3B8', fontWeight: 'bold' }}>{row.rank}</td>
+                      <td style={{ padding: '12px 14px', fontWeight: '600', color: '#0F172A' }}>{row.name}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569' }}>{row.ot}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569' }}>{row.q}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E6F7ED', color: '#137333', fontWeight: 'bold' }}>
                           {row.overall}
                         </span>
@@ -2418,11 +2418,11 @@ export default function VendorPerformanceView(props) {
               <table className="custom-table widget-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600' }}></th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>On-Time Delivery</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Quality Score</th>
-                    <th style={{ padding: '8px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Overall Score</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', width: '36px' }}>#</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>On-Time Delivery</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Quality Score</th>
+                    <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Overall Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2432,11 +2432,11 @@ export default function VendorPerformanceView(props) {
                     { rank: 3, name: 'National Fasteners', ot: '74.2%', q: '3.05 / 5', overall: '3.12 / 5' }
                   ].map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                      <td style={{ padding: '10px 4px', color: '#94A3B8', fontWeight: 'bold' }}>{row.rank}</td>
-                      <td style={{ padding: '10px 4px', fontWeight: '600', color: '#0F172A' }}>{row.name}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center', color: '#475569' }}>{row.ot}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center', color: '#475569' }}>{row.q}</td>
-                      <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 14px', color: '#94A3B8', fontWeight: 'bold' }}>{row.rank}</td>
+                      <td style={{ padding: '12px 14px', fontWeight: '600', color: '#0F172A' }}>{row.name}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569' }}>{row.ot}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569' }}>{row.q}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FCE8E6', color: '#C5221F', fontWeight: 'bold' }}>
                           {row.overall}
                         </span>

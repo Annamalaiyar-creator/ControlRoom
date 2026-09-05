@@ -844,7 +844,7 @@ table td {
 
 .custom-table {
   width: 100% !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse !important;
   text-align: left !important;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -852,29 +852,36 @@ table td {
 }
 
 .custom-table th {
-  padding: 12px 14px !important;
+  padding: 13px 16px !important;
   background-color: #F8FAFC !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   color: #64748B !important;
   border: 1px solid #E2E8F0 !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   box-sizing: border-box !important;
 }
 
 .custom-table td {
-  padding: 12px 14px !important;
+  padding: 13px 16px !important;
   font-size: 12.5px !important;
   border: 1px solid #E2E8F0 !important;
   color: #1E293B !important;
   vertical-align: middle !important;
   transition: background-color 0.15s ease !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   box-sizing: border-box !important;
+}
+
+/* Dedicated standard styling for checkbox column */
+.custom-table th:has(input[type="checkbox"]),
+.custom-table td:has(input[type="checkbox"]) {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  padding: 13px 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
 
 .custom-table td strong,
@@ -884,7 +891,6 @@ table td {
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  white-space: nowrap !important;
 }
 
 .custom-table tr:hover td {

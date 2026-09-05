@@ -2244,13 +2244,13 @@ export default function GoodsReceiptNoteView(props) {
                   <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
                       <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN No.</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>PO No.</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>GRN Date</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Total Value</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                        <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>GRN No.</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>PO No.</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>GRN Date</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Total Value</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2262,12 +2262,12 @@ export default function GoodsReceiptNoteView(props) {
                         </tr>
                       ) : [...grnList].reverse().map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                          <td style={{ padding: '12px 4px', fontWeight: '700', color: '#0F172A' }}>{row.id}</td>
-                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.poRef}</td>
-                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.vendor}</td>
-                          <td style={{ padding: '12px 4px', color: '#64748B' }}>{row.date}</td>
-                          <td style={{ padding: '12px 4px', fontWeight: '600', color: '#0F172A' }}>{row.val || '₹ 2,48,500'}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                          <td style={{ padding: '13px 16px', fontWeight: '700', color: '#0F172A' }}>{row.id}</td>
+                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.poRef}</td>
+                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.vendor}</td>
+                          <td style={{ padding: '13px 16px', color: '#64748B' }}>{row.date}</td>
+                          <td style={{ padding: '13px 16px', fontWeight: '600', color: '#0F172A' }}>{row.val || '₹ 2,48,500'}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center' }}>
                             <span style={{
                               padding: '2px 8px',
                               borderRadius: '4px',
@@ -2279,7 +2279,7 @@ export default function GoodsReceiptNoteView(props) {
                               {row.status}
                             </span>
                           </td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                          <td style={{ padding: '13px 16px', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                               <button
                                 type="button"

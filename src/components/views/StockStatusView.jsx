@@ -2315,17 +2315,17 @@ export default function StockStatusView(props) {
               <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
                   <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>#</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Category</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Available Qty</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reserved Qty</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Incoming Qty</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Stock Value (₹)</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px 4px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>#</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Category</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Available Qty</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reserved Qty</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Incoming Qty</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Stock Value (₹)</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2365,19 +2365,19 @@ export default function StockStatusView(props) {
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                          <td style={{ padding: '12px 4px', color: '#94A3B8' }}>{idx + 1}</td>
-                          <td style={{ padding: '12px 4px' }}>
+                          <td style={{ padding: '13px 16px', color: '#94A3B8' }}>{idx + 1}</td>
+                          <td style={{ padding: '13px 16px' }}>
                             <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
                             <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
                           </td>
-                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.category}</td>
-                          <td style={{ padding: '12px 4px', color: '#475569' }}>{row.location}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center' }}>
+                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.category}</td>
+                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.location}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
+                          <td style={{ padding: '13px 16px', textAlign: 'center' }}>
                             {(() => {
                               let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
                               if (row.status === 'In Stock') {
