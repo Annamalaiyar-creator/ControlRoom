@@ -2771,25 +2771,7 @@ export default function ProductionViewsEngine(props) {
                       <div>
                         <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>Invoice Number</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {isEditingInvoice ? (
-                            <input
-                              type="text"
-                              value={invoiceEditForm.invNo || ''}
-                              onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, invNo: e.target.value }))}
-                              style={{
-                                fontSize: '18px',
-                                fontWeight: '800',
-                                color: '#0F172A',
-                                border: '1px solid #0E7490',
-                                borderRadius: '6px',
-                                padding: '4px 10px',
-                                width: '220px',
-                                outline: 'none'
-                              }}
-                            />
-                          ) : (
-                            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
-                          )}
+                          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
                           {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
                             <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               <Check style={{ width: '13px', height: '13px', strokeWidth: 3 }} /> INVOICE COMPLETED & LOCKED
@@ -2811,47 +2793,11 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Invoice Date</div>
-                        {isEditingInvoice ? (
-                          <input
-                            type="text"
-                            value={invoiceEditForm.date || ''}
-                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, date: e.target.value }))}
-                            style={{
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '6px',
-                              padding: '3px 8px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              width: '100%',
-                              boxSizing: 'border-box'
-                            }}
-                          />
-                        ) : (
-                          <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
-                        )}
+                        <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Customer</div>
-                        {isEditingInvoice ? (
-                          <input
-                            type="text"
-                            value={invoiceEditForm.customerName || ''}
-                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, customerName: e.target.value }))}
-                            style={{
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '6px',
-                              padding: '3px 8px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#2563EB',
-                              width: '100%',
-                              boxSizing: 'border-box'
-                            }}
-                          />
-                        ) : (
-                          <strong style={{ color: '#2563EB' }}>{customerText}</strong>
-                        )}
+                        <strong style={{ color: '#2563EB' }}>{customerText}</strong>
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Due Date</div>
@@ -2859,29 +2805,7 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Payment Type</div>
-                        {isEditingInvoice ? (
-                          <select
-                            value={invoiceEditForm.paymentType || '100% Advance'}
-                            onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, paymentType: e.target.value }))}
-                            style={{
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '6px',
-                              padding: '3px 8px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              width: '100%',
-                              boxSizing: 'border-box',
-                              backgroundColor: '#FFFFFF'
-                            }}
-                          >
-                            <option value="100% Advance">100% Advance</option>
-                            <option value="50% Advance, 50% Before Dispatch">50% Advance, 50% Before Dispatch</option>
-                            <option value="Net 30 Days">Net 30 Days (Credit)</option>
-                          </select>
-                        ) : (
-                          <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
-                        )}
+                        <strong style={{ color: '#1E293B' }}>{paymentTypeText}</strong>
                       </div>
                     </div>
                   </div>
@@ -2966,8 +2890,9 @@ export default function ProductionViewsEngine(props) {
 
                   {/* TAB CONTENT: INVOICE ITEMS */}
                   {invoiceModalActiveTab === 'Invoice Items' && (() => {
-                    const packedItems = itemsList.filter(it => it.selected !== false);
-                    const unpackedItems = itemsList.filter(it => it.selected === false);
+                    const indexedItemsList = itemsList.map((it, idx) => ({ ...it, originalIndex: idx }));
+                    const packedItems = indexedItemsList.filter(it => it.selected !== false);
+                    const unpackedItems = indexedItemsList.filter(it => it.selected === false);
                     const packedTotal = packedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
                     const unpackedTotal = unpackedItems.reduce((acc, it) => acc + (it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18)), 0);
 
@@ -3016,176 +2941,172 @@ export default function ProductionViewsEngine(props) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {packedItems.length > 0 ? packedItems.map((it, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                                      <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                        <Check style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Packed
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="text"
-                                          value={it.code || ''}
-                                          onChange={(e) => {
-                                            const newCode = e.target.value;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => (x.code === it.code && i === idx) || i === idx);
-                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], code: newCode };
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
-                                        />
-                                      ) : (
-                                        it.code || `PRD-00${idx + 1}`
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', fontWeight: '700', color: '#0F172A' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="text"
-                                          value={it.name || ''}
-                                          onChange={(e) => {
-                                            const newName = e.target.value;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], name: newName };
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '100%', minWidth: '130px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
-                                        />
-                                      ) : (
-                                        it.name
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', color: '#64748B' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="text"
-                                          value={it.desc || it.category || ''}
-                                          onChange={(e) => {
-                                            const newDesc = e.target.value;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], desc: newDesc };
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '100%', minWidth: '100px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
-                                        />
-                                      ) : (
-                                        it.desc || it.category || 'High grade component'
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="text"
-                                          value={it.uom || 'Nos'}
-                                          onChange={(e) => {
-                                            const newUom = e.target.value;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) updated[targetIndex] = { ...updated[targetIndex], uom: newUom };
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
-                                        />
-                                      ) : (
-                                        it.uom || 'Nos'
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#166534' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="number"
-                                          value={it.bomQty || it.invQty || it.qty || 1}
-                                          onChange={(e) => {
-                                            const newQty = parseFloat(e.target.value) || 0;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) {
-                                                const rate = parseFloat(updated[targetIndex].rate || 0);
-                                                const tax = parseFloat(updated[targetIndex].tax || 18);
-                                                const sub = newQty * rate;
-                                                const tot = sub + (sub * tax / 100);
-                                                updated[targetIndex] = { ...updated[targetIndex], qty: newQty, bomQty: newQty, invQty: newQty, amt: tot };
-                                              }
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '60px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
-                                        />
-                                      ) : (
-                                        it.bomQty || it.qty
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="number"
-                                          value={it.rate !== undefined ? it.rate : 0}
-                                          onChange={(e) => {
-                                            const newRate = parseFloat(e.target.value) || 0;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) {
-                                                const qty = parseFloat(updated[targetIndex].bomQty || updated[targetIndex].qty || 1);
-                                                const tax = parseFloat(updated[targetIndex].tax || 18);
-                                                const sub = qty * newRate;
-                                                const tot = sub + (sub * tax / 100);
-                                                updated[targetIndex] = { ...updated[targetIndex], rate: newRate, amt: tot };
-                                              }
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '75px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
-                                        />
-                                      ) : (
-                                        `₹ ${parseFloat(it.rate || 0).toFixed(2)}`
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
-                                      {isEditingInvoice ? (
-                                        <input
-                                          type="number"
-                                          value={it.tax !== undefined ? it.tax : 18}
-                                          onChange={(e) => {
-                                            const newTax = parseFloat(e.target.value) || 0;
-                                            setInvoiceEditForm(prev => {
-                                              const updated = [...(prev.items || [])];
-                                              const targetIndex = updated.findIndex((x, i) => i === idx);
-                                              if (targetIndex >= 0) {
-                                                const qty = parseFloat(updated[targetIndex].bomQty || updated[targetIndex].qty || 1);
-                                                const rate = parseFloat(updated[targetIndex].rate || 0);
-                                                const sub = qty * rate;
-                                                const tot = sub + (sub * newTax / 100);
-                                                updated[targetIndex] = { ...updated[targetIndex], tax: newTax, amt: tot };
-                                              }
-                                              return { ...prev, items: updated };
-                                            });
-                                          }}
-                                          style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
-                                        />
-                                      ) : (
-                                        `${it.tax || 18}%`
-                                      )}
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#166534' }}>
-                                      ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </td>
-                                  </tr>
-                                )) : (
+                                {packedItems.length > 0 ? packedItems.map((it, idx) => {
+                                  const origIdx = it.originalIndex !== undefined ? it.originalIndex : idx;
+                                  return (
+                                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                                        <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                          <Check style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Packed
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.code || ''}
+                                            onChange={(e) => {
+                                              const newCode = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], code: newCode };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '90px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.code || `PRD-00${idx + 1}`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', fontWeight: '700', color: '#0F172A' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.name || ''}
+                                            onChange={(e) => {
+                                              const newName = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], name: newName };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '100%', minWidth: '130px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.name
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.desc || it.category || ''}
+                                            onChange={(e) => {
+                                              const newDesc = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], desc: newDesc };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '100%', minWidth: '100px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          it.desc || it.category || 'High grade component'
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.uom || 'Nos'}
+                                            onChange={(e) => {
+                                              const newUom = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], uom: newUom };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          it.uom || 'Nos'
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#166534' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.bomQty || it.invQty || it.qty || 1}
+                                            onChange={(e) => {
+                                              const newQty = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const rate = parseFloat(updated[origIdx].rate || 0);
+                                                  const tax = parseFloat(updated[origIdx].tax || 18);
+                                                  const sub = newQty * rate;
+                                                  const tot = sub + (sub * tax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], qty: newQty, bomQty: newQty, invQty: newQty, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '60px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.bomQty || it.qty
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.rate !== undefined ? it.rate : 0}
+                                            onChange={(e) => {
+                                              const newRate = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const qty = parseFloat(updated[origIdx].bomQty || updated[origIdx].qty || 1);
+                                                  const tax = parseFloat(updated[origIdx].tax || 18);
+                                                  const sub = qty * newRate;
+                                                  const tot = sub + (sub * tax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], rate: newRate, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '75px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          `₹ ${parseFloat(it.rate || 0).toFixed(2)}`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.tax !== undefined ? it.tax : 18}
+                                            onChange={(e) => {
+                                              const newTax = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const qty = parseFloat(updated[origIdx].bomQty || updated[origIdx].qty || 1);
+                                                  const rate = parseFloat(updated[origIdx].rate || 0);
+                                                  const sub = qty * rate;
+                                                  const tot = sub + (sub * newTax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], tax: newTax, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          `${it.tax || 18}%`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#166534' }}>
+                                        ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </td>
+                                    </tr>
+                                  );
+                                }) : (
                                   <tr>
                                     <td colSpan={9} style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontStyle: 'italic' }}>
                                       No items packed in dispatch yet.
@@ -3233,25 +3154,172 @@ export default function ProductionViewsEngine(props) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {unpackedItems.length > 0 ? unpackedItems.map((it, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFF5F5' }}>
-                                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                                      <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                        <X style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Unpacked
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 1}`}</td>
-                                    <td style={{ padding: '10px', fontWeight: '700', color: '#991B1B' }}>{it.name}</td>
-                                    <td style={{ padding: '10px', color: '#64748B' }}>{it.desc || it.category || 'High grade component'}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.uom || 'Nos'}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#DC2626' }}>{it.bomQty || it.qty}</td>
-                                    <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>₹ {parseFloat(it.rate || 0).toFixed(2)}</td>
-                                    <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>{it.tax || 18}%</td>
-                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#DC2626' }}>
-                                      ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </td>
-                                  </tr>
-                                )) : (
+                                {unpackedItems.length > 0 ? unpackedItems.map((it, idx) => {
+                                  const origIdx = it.originalIndex !== undefined ? it.originalIndex : idx;
+                                  return (
+                                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFF5F5' }}>
+                                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                                        <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                          <X style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Unpacked
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.code || ''}
+                                            onChange={(e) => {
+                                              const newCode = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], code: newCode };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '90px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.code || `PRD-00${idx + 1}`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', fontWeight: '700', color: '#991B1B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.name || ''}
+                                            onChange={(e) => {
+                                              const newName = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], name: newName };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '100%', minWidth: '130px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.name
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.desc || it.category || ''}
+                                            onChange={(e) => {
+                                              const newDesc = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], desc: newDesc };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '100%', minWidth: '100px', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          it.desc || it.category || 'High grade component'
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="text"
+                                            value={it.uom || 'Nos'}
+                                            onChange={(e) => {
+                                              const newUom = e.target.value;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) updated[origIdx] = { ...updated[origIdx], uom: newUom };
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          it.uom || 'Nos'
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#DC2626' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.bomQty || it.invQty || it.qty || 1}
+                                            onChange={(e) => {
+                                              const newQty = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const rate = parseFloat(updated[origIdx].rate || 0);
+                                                  const tax = parseFloat(updated[origIdx].tax || 18);
+                                                  const sub = newQty * rate;
+                                                  const tot = sub + (sub * tax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], qty: newQty, bomQty: newQty, invQty: newQty, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '60px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}
+                                          />
+                                        ) : (
+                                          it.bomQty || it.qty
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', color: '#475569' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.rate !== undefined ? it.rate : 0}
+                                            onChange={(e) => {
+                                              const newRate = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const qty = parseFloat(updated[origIdx].bomQty || updated[origIdx].qty || 1);
+                                                  const tax = parseFloat(updated[origIdx].tax || 18);
+                                                  const sub = qty * newRate;
+                                                  const tot = sub + (sub * tax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], rate: newRate, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '75px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          `₹ ${parseFloat(it.rate || 0).toFixed(2)}`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', color: '#64748B' }}>
+                                        {isEditingInvoice ? (
+                                          <input
+                                            type="number"
+                                            value={it.tax !== undefined ? it.tax : 18}
+                                            onChange={(e) => {
+                                              const newTax = parseFloat(e.target.value) || 0;
+                                              setInvoiceEditForm(prev => {
+                                                const updated = [...(prev.items || [])];
+                                                if (updated[origIdx]) {
+                                                  const qty = parseFloat(updated[origIdx].bomQty || updated[origIdx].qty || 1);
+                                                  const rate = parseFloat(updated[origIdx].rate || 0);
+                                                  const sub = qty * rate;
+                                                  const tot = sub + (sub * newTax / 100);
+                                                  updated[origIdx] = { ...updated[origIdx], tax: newTax, amt: tot };
+                                                }
+                                                return { ...prev, items: updated };
+                                              });
+                                            }}
+                                            style={{ width: '50px', textAlign: 'center', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          />
+                                        ) : (
+                                          `${it.tax || 18}%`
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#DC2626' }}>
+                                        ₹ {((it.amt || ((it.qty || 1) * (it.rate || 0) * 1.18))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </td>
+                                    </tr>
+                                  );
+                                }) : (
                                   <tr>
                                     <td colSpan={9} style={{ padding: '16px', textAlign: 'center', color: '#166534', fontWeight: '700' }}>
                                       All BOM items are fully packed & dispatched! No pending items.
@@ -3370,25 +3438,7 @@ export default function ProductionViewsEngine(props) {
                               </div>
                             </div>
                             <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
-                              {isEditingInvoice ? (
-                                <textarea
-                                  value={invoiceEditForm.billingAddress || ''}
-                                  onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, billingAddress: e.target.value }))}
-                                  rows={3}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px',
-                                    border: '1px solid #CBD5E1',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#1E293B',
-                                    boxSizing: 'border-box'
-                                  }}
-                                />
-                              ) : (
-                                bAddr
-                              )}
+                              {bAddr}
                             </div>
                           </div>
 
@@ -3411,25 +3461,7 @@ export default function ProductionViewsEngine(props) {
                               )}
                             </div>
                             <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.5' }}>
-                              {isEditingInvoice ? (
-                                <textarea
-                                  value={invoiceEditForm.deliveryAddress || ''}
-                                  onChange={(e) => setInvoiceEditForm(prev => ({ ...prev, deliveryAddress: e.target.value }))}
-                                  rows={3}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px',
-                                    border: '1px solid #CBD5E1',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#1E293B',
-                                    boxSizing: 'border-box'
-                                  }}
-                                />
-                              ) : (
-                                dAddr
-                              )}
+                              {dAddr}
                             </div>
                           </div>
                         </div>
