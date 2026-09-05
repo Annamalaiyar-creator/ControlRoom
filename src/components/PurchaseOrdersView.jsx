@@ -1499,7 +1499,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPOs.length}</strong> Selected
                 </span>
 
-                {!isExecutiveOrMD && (
+                {!isExecutiveOrMD && !isAccounts && (
                   <button
                     onClick={() => {
                       if (selectedPOs.length > 1) {
@@ -1533,7 +1533,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   </button>
                 )}
 
-                {!isExecutiveOrMD && (
+                {!isExecutiveOrMD && !isAccounts && (
                   <button
                     onClick={() => {
                       if (window.confirm(`Are you sure you want to delete ${selectedPOs.length} selected PO(s)?`)) {
@@ -1562,8 +1562,102 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   </button>
                 )}
 
-                {/* CEO View: Render buttons directly inside the floating toolbar pill (no 3-dot menu) */}
-                {isExecutiveOrMD ? (
+                {/* Accounts View: Render direct buttons inside floating toolbar pill (no 3-dot menu, no clone, no edit) */}
+                {isAccounts ? (
+                  <>
+                    {selectedPOs.length === 1 && (() => {
+                      const target = poList.find(p => p.poNo === selectedPOs[0]);
+                      if (!target) return null;
+                      const st = String(target.status || '').trim();
+                      const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved';
+
+                      if (isMdApproved) {
+                        return (
+                          <button
+                            onClick={() => handleOpenPaymentProcessModal(target)}
+                            style={{
+                              backgroundColor: '#FFFBEB',
+                              border: '1px solid #FDE68A',
+                              color: '#92400E',
+                              borderRadius: '10px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF3C7'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFBEB'}
+                          >
+                            <CreditCard size={14} style={{ color: '#D97706' }} /> Verify Payment
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <button
+                      onClick={() => {
+                        if (selectedPOs && selectedPOs.length > 1) {
+                          alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                          return;
+                        }
+                        const target = (selectedPOs && selectedPOs.length > 0)
+                          ? (poList.find(p => p.poNo === selectedPOs[0]) || { poNo: selectedPOs[0], vendor: 'Vendor Reference' })
+                          : (poList[0] || null);
+                        if (target) {
+                          handleStartView(target);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                    </button>
+
+                    <button
+                      onClick={() => window.print()}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <FileText size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                    </button>
+                  </>
+                ) : isExecutiveOrMD ? (
                   <>
                     {selectedPOs.length === 1 && (() => {
                       const target = poList.find(p => p.poNo === selectedPOs[0]);
