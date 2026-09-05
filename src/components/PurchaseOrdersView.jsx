@@ -3454,13 +3454,13 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>
-                      Transaction / UTR Reference No. <span style={{ color: '#94A3B8', fontWeight: 'normal' }}>(Optional)</span>
+                      Transaction / UTR Reference No.
                     </label>
                     <input
                       type="text"
                       value={payRefInput}
                       onChange={(e) => setPayRefInput(e.target.value)}
-                      placeholder="e.g. UTR12345678 (Optional)"
+                      placeholder="e.g. UTR12345678"
                       style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 10px', fontSize: '12px' }}
                     />
                   </div>
