@@ -28,8 +28,8 @@
     "approver": "Velmurugan Rathinam (CEO)",
     "approvalPriority": "High",
     "amount": "₹4,24,800.00",
-    "status": "Payment Processed",
-    "statusType": "payment_processed",
+    "status": "Proceed PO",
+    "statusType": "proceed_po",
     "items": [
       {
         "name": "100mm Adhesive rail",
@@ -55,6 +55,12 @@
       "isCredit": false,
       "creditTerms": "Net 30 Days",
       "verifiedBy": "Accounts Team"
+    },
+    "proceedDetails": {
+      "date": "05 Sept 2026",
+      "time": "05:44 pm",
+      "remarks": "Done",
+      "authorizedBy": "Procurement & Accounts"
     }
   },
   {

@@ -779,24 +779,48 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     if (!poTarget) return;
     const poId = poTarget.poNo || poTarget.id;
 
+    const now = new Date();
+    const proceedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const proceedTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const remarks = proceedRemarksInput || 'Authorized for dispatch and GRN creation';
+
+    // 1. Immediately reflect 'Proceed PO' in currently active view and poList
+    setViewingPoStatus('Proceed PO');
+    setPoList(prev => prev.map(p => {
+      if (p.poNo === poId || p.id === poId) {
+        return {
+          ...p,
+          status: 'Proceed PO',
+          statusType: 'proceed_po',
+          proceedDetails: {
+            date: proceedDate,
+            time: proceedTime,
+            remarks,
+            authorizedBy: 'Procurement & Accounts'
+          }
+        };
+      }
+      return p;
+    }));
+
+    setProceedingPo(null);
+    setProceedRemarksInput('');
+
     fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/proceed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        remarks: proceedRemarksInput || 'Authorized for dispatch and GRN creation',
+        remarks,
         authorizedBy: 'Procurement & Accounts'
       })
     })
       .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
       .then(() => {
-        setProceedingPo(null);
-        setProceedRemarksInput('');
-        fetchZohoPOs();
+        fetchZohoPOs(true);
         showCustomAlert(`PO ${poId} marked as Proceed PO! It is now active and eligible in GRN Process.`, 'Proceed PO Completed', 'success');
       })
       .catch(() => {
-        setProceedingPo(null);
-        fetchZohoPOs();
+        fetchZohoPOs(true);
       });
   };
 
@@ -2636,6 +2660,54 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           </a>
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* Proceed PO (Ready for GRN) Authorization Details Card (if proceeded) */}
+                {(() => {
+                  const currentPoObj = poList.find(p => p.poNo === poNumber || p.id === poNumber);
+                  const prd = currentPoObj?.proceedDetails;
+                  if (!prd && viewingPoStatus !== 'Proceed PO' && currentPoObj?.status !== 'Proceed PO') return null;
+
+                  return (
+                    <div style={{
+                      backgroundColor: '#ECFEFF',
+                      border: '1px solid #A5F3FC',
+                      borderRadius: '12px',
+                      padding: '14px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckCircle size={16} style={{ color: '#0E7490' }} />
+                          <strong style={{ fontSize: '13px', color: '#0F172A' }}>Proceed PO Authorization (Ready for GRN)</strong>
+                        </div>
+                        {prd?.date && (
+                          <span style={{ fontSize: '11px', color: '#0E7490', backgroundColor: '#CFFAFE', border: '1px solid #A5F3FC', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                            Authorized on {prd.date} {prd.time}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12px' }}>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Status</span>
+                          <strong style={{ color: '#0E7490' }}>Eligible & Ready for GRN Receiving</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Authorized By</span>
+                          <strong style={{ color: '#1E293B' }}>{prd?.authorizedBy || 'Procurement & Accounts'}</strong>
+                        </div>
+                        {prd?.remarks && (
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Proceed Remarks</span>
+                            <span style={{ color: '#334155' }}>{prd.remarks}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
