@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ChevronUp, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
   ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw,
-  CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes
+  CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Save
 } from 'lucide-react';
 import CreateWorkOrderPage from '../CreateWorkOrderPage';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../../utils/supabaseDataSync';
@@ -2393,7 +2393,7 @@ export default function ProductionViewsEngine(props) {
                             gap: '6px'
                           }}
                         >
-                          ✕ Cancel
+                          <X style={{ width: '15px', height: '15px', color: '#475569' }} /> Cancel
                         </button>
                         <button
                           onClick={handleSaveInvoiceEdits}
@@ -2413,7 +2413,7 @@ export default function ProductionViewsEngine(props) {
                             boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
                           }}
                         >
-                          💾 Save Changes
+                          <Save style={{ width: '15px', height: '15px', color: '#FFFFFF' }} /> Save Changes
                         </button>
                       </div>
                     ) : (
@@ -2791,8 +2791,8 @@ export default function ProductionViewsEngine(props) {
                             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A' }}>{invNoText}</h2>
                           )}
                           {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed'].includes(inv.status) ? (
-                            <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
-                              ✓ INVOICE COMPLETED & LOCKED
+                            <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Check style={{ width: '13px', height: '13px', strokeWidth: 3 }} /> INVOICE COMPLETED & LOCKED
                             </span>
                           ) : (
                             <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>
@@ -3019,8 +3019,8 @@ export default function ProductionViewsEngine(props) {
                                 {packedItems.length > 0 ? packedItems.map((it, idx) => (
                                   <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                                     <td style={{ padding: '10px', textAlign: 'center' }}>
-                                      <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>
-                                        ✓ Packed
+                                      <span style={{ backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                        <Check style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Packed
                                       </span>
                                     </td>
                                     <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>
@@ -3149,7 +3149,7 @@ export default function ProductionViewsEngine(props) {
                                               return { ...prev, items: updated };
                                             });
                                           }}
-                                          style={{ width: '80px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
+                                          style={{ width: '75px', textAlign: 'right', padding: '4px 6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px' }}
                                         />
                                       ) : (
                                         `₹ ${parseFloat(it.rate || 0).toFixed(2)}`
@@ -3236,8 +3236,8 @@ export default function ProductionViewsEngine(props) {
                                 {unpackedItems.length > 0 ? unpackedItems.map((it, idx) => (
                                   <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: '#FFF5F5' }}>
                                     <td style={{ padding: '10px', textAlign: 'center' }}>
-                                      <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>
-                                        ✕ Unpacked
+                                      <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                        <X style={{ width: '11px', height: '11px', strokeWidth: 3 }} /> Unpacked
                                       </span>
                                     </td>
                                     <td style={{ padding: '10px', fontWeight: 'bold', color: '#475569' }}>{it.code || `PRD-00${idx + 1}`}</td>
