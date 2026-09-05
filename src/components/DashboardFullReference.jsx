@@ -822,8 +822,8 @@ export default function DashboardFullReference({ userRole }) {
                         position: 'relative'
                       }}
                     >
-                      {/* Floating Tooltip Box on Hover */}
-                      {(isHovered || isSelected) && (
+                      {/* Floating Tooltip Box on Hover Only */}
+                      {isHovered && (
                         <div
                           style={{
                             position: 'absolute',
