@@ -312,7 +312,7 @@ function App() {
               }} 
             />
           ) : activeTab === 'Purchase Orders' ? (
-            <PurchaseOrdersView targetPoNo={targetPoNo} clearTargetPo={() => setTargetPoNo(null)} />
+            <PurchaseOrdersView userRole={userRole} targetPoNo={targetPoNo} clearTargetPo={() => setTargetPoNo(null)} />
           ) : activeTab === 'Zoho Integration' ? (
             <ZohoIntegrationView />
           ) : activeTab === 'Material Calculation Engine' ? (

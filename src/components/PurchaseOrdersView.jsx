@@ -88,7 +88,8 @@ const TERMS_PRESETS = [
   }
 ];
 
-export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
+export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo }) {
+  const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1113,44 +1114,46 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
                 </button>
 
-                <button
-                  onClick={() => handleStartFreshPO()}
-                  style={{
-                    backgroundColor: '#0E7490',
-                    border: 'none',
-                    color: 'white',
-                    height: '40px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '0 6px 0 20px',
-                    borderRadius: '50px',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
-                    transition: 'all 0.2s ease',
-                    letterSpacing: '0.2px'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
-                >
-                  <span>Create PO</span>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#0E7490',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}>
-                    <ArrowRight size={16} strokeWidth={2.5} />
-                  </div>
-                </button>
+                {!isExecutiveOrMD && (
+                  <button
+                    onClick={() => handleStartFreshPO()}
+                    style={{
+                      backgroundColor: '#0E7490',
+                      border: 'none',
+                      color: 'white',
+                      height: '40px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '0 6px 0 20px',
+                      borderRadius: '50px',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                      transition: 'all 0.2s ease',
+                      letterSpacing: '0.2px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                  >
+                    <span>Create PO</span>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0E7490',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      <ArrowRight size={16} strokeWidth={2.5} />
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1433,64 +1436,68 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPOs.length}</strong> Selected
                 </span>
 
-                <button
-                  onClick={() => {
-                    if (selectedPOs.length > 1) {
-                      alert('You cannot edit multiple items at once.');
-                    } else if (selectedPOs.length === 1) {
-                      const targetPoNo = selectedPOs[0];
-                      const idx = poList.findIndex(p => p.poNo === targetPoNo);
-                      const targetPo = poList[idx] || { poNo: targetPoNo, vendor: '' };
-                      handleStartEdit(targetPo, idx >= 0 ? idx : 0);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    color: '#1E293B',
-                    borderRadius: '10px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                >
-                  <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
-                </button>
+                {!isExecutiveOrMD && (
+                  <button
+                    onClick={() => {
+                      if (selectedPOs.length > 1) {
+                        alert('You cannot edit multiple items at once.');
+                      } else if (selectedPOs.length === 1) {
+                        const targetPoNo = selectedPOs[0];
+                        const idx = poList.findIndex(p => p.poNo === targetPoNo);
+                        const targetPo = poList[idx] || { poNo: targetPoNo, vendor: '' };
+                        handleStartEdit(targetPo, idx >= 0 ? idx : 0);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                  </button>
+                )}
 
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete ${selectedPOs.length} selected PO(s)?`)) {
-                      setSelectedPOs([]);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    color: '#1E293B',
-                    borderRadius: '10px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                >
-                  <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
-                </button>
+                {!isExecutiveOrMD && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete ${selectedPOs.length} selected PO(s)?`)) {
+                        setSelectedPOs([]);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                  </button>
+                )}
 
                 <div style={{ position: 'relative' }}>
                   <button
@@ -1723,21 +1730,23 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   >
                     Back to List
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const matchedPo = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
-                        poNo: poNumber, vendor: vendorName, branch, contactPerson, contactNo, email, gstNo,
-                        deliveryType, deliveryAddress, billingAddress, poDate, deliveryDate, paymentTerms,
-                        purchaser, shipmentPref, currency, project, priority, items, shippingCharges, otherCharges,
-                        discountPct, notes, terms, approvalRequired, approver
-                      };
-                      handleStartClone(matchedPo);
-                    }}
-                    style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#4338CA', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <Copy style={{ width: '14px', height: '14px', color: '#4338CA' }} /> Clone PO
-                  </button>
+                  {!isExecutiveOrMD && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const matchedPo = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
+                          poNo: poNumber, vendor: vendorName, branch, contactPerson, contactNo, email, gstNo,
+                          deliveryType, deliveryAddress, billingAddress, poDate, deliveryDate, paymentTerms,
+                          purchaser, shipmentPref, currency, project, priority, items, shippingCharges, otherCharges,
+                          discountPct, notes, terms, approvalRequired, approver
+                        };
+                        handleStartClone(matchedPo);
+                      }}
+                      style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#4338CA', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Copy style={{ width: '14px', height: '14px', color: '#4338CA' }} /> Clone PO
+                    </button>
+                  )}
                   <button
                     type="button"
                     style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}

@@ -7586,6 +7586,7 @@ export default function ProductionViewsEngine(props) {
             const [operatorRemarksVal, setOperatorRemarksVal] = useState('');
 
             const isFloorEmployee = String(userRole || '').toLowerCase().includes('employee') || String(userRole || '').toLowerCase().includes('floor') || String(userRole || '').toLowerCase().includes('operator');
+            const isExecutiveOrMD = userRole === 'CEO' || userRole === 'MD' || userRole === 'Managing Director';
 
             useEffect(() => {
               const applyWorkOrders = (workOrdersList) => {
@@ -7783,7 +7784,7 @@ export default function ProductionViewsEngine(props) {
                     </span>
                   </div>
 
-                  {!isFloorEmployee && (
+                  {!isFloorEmployee && !isExecutiveOrMD && (
                     <button
                       onClick={() => setShowWorkOrderForm(true)}
                       style={{
@@ -14376,7 +14377,7 @@ export default function ProductionViewsEngine(props) {
                     {pageConfig.subtitle}
                   </span>
                 </div>
-                {pageConfig.actionText ? (
+                {pageConfig.actionText && userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' ? (
                   <button
                     onClick={() => {
                       if (activeTab === 'BOM / Routing' || activeTab === 'BOM' || activeTab === 'BOM Orders' || pageConfig.title.includes('BOM')) {
@@ -14826,126 +14827,130 @@ export default function ProductionViewsEngine(props) {
                     <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
                   </span>
 
-                  <button
-                    onClick={() => {
-                      if (selectedRows.length > 1) {
-                        alert('You cannot edit multiple items at once.');
-                      } else if (selectedRows.length === 1) {
-                        const codeVal = selectedRows[0];
-                        const targetRow = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal };
+                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
+                    <button
+                      onClick={() => {
+                        if (selectedRows.length > 1) {
+                          alert('You cannot edit multiple items at once.');
+                        } else if (selectedRows.length === 1) {
+                          const codeVal = selectedRows[0];
+                          const targetRow = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal };
 
-                        if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
-                          setConfirmingBomModal({ ...targetRow, isEditMode: true });
-                        } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
-                          setEditingVendor(targetRow);
-                        } else if (activeTab === 'Customer Management') {
-                          setEditingCustomer({ ...targetRow, originalCode: targetRow.code });
-                          setCustFormName(targetRow.code);
-                          setCustFormCompany(targetRow.c2 || targetRow.code);
-                          setCustFormGstNo(targetRow.gstNo || '33AABCU9603R1ZM');
-                          setCustFormMobile(targetRow.c4 || '');
-                          setCustFormEmail(targetRow.c5 || '');
+                          if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
+                            setConfirmingBomModal({ ...targetRow, isEditMode: true });
+                          } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
+                            setEditingVendor(targetRow);
+                          } else if (activeTab === 'Customer Management') {
+                            setEditingCustomer({ ...targetRow, originalCode: targetRow.code });
+                            setCustFormName(targetRow.code);
+                            setCustFormCompany(targetRow.c2 || targetRow.code);
+                            setCustFormGstNo(targetRow.gstNo || '33AABCU9603R1ZM');
+                            setCustFormMobile(targetRow.c4 || '');
+                            setCustFormEmail(targetRow.c5 || '');
 
-                          const bObj = targetRow.billingAddressObj || {};
-                          const dObj = targetRow.deliveryAddressObj || {};
-                          setCustFormBillingAddress(bObj.address || targetRow.c6 || targetRow.billingAddress || '');
-                          setCustFormBillingCity(bObj.city || '');
-                          setCustFormBillingState(bObj.state || '');
-                          setCustFormBillingPincode(bObj.pincode || '');
+                            const bObj = targetRow.billingAddressObj || {};
+                            const dObj = targetRow.deliveryAddressObj || {};
+                            setCustFormBillingAddress(bObj.address || targetRow.c6 || targetRow.billingAddress || '');
+                            setCustFormBillingCity(bObj.city || '');
+                            setCustFormBillingState(bObj.state || '');
+                            setCustFormBillingPincode(bObj.pincode || '');
 
-                          const isSame = (targetRow.deliveryAddress === targetRow.billingAddress && Boolean(targetRow.billingAddress)) || (!targetRow.c7 && !targetRow.deliveryAddress);
-                          setCustFormSameAsBilling(isSame);
-                          setCustFormDeliveryAddress(dObj.address || targetRow.c7 || targetRow.deliveryAddress || '');
-                          setCustFormDeliveryCity(dObj.city || '');
-                          setCustFormDeliveryState(dObj.state || '');
-                          setCustFormDeliveryPincode(dObj.pincode || '');
-                        } else if (activeTab === 'Goods Receipt Note (GRN)') {
-                          resetCreateGRNForm();
-                          loadPOItems(targetRow.poRef || targetRow.code);
-                          if (targetRow.challanNo) setGrnChallanNo(targetRow.challanNo);
-                          if (targetRow.receivedBy) setGrnReceivedBy(targetRow.receivedBy);
-                          if (targetRow.inspectorName) setGrnInspectorName(targetRow.inspectorName);
-                          if (targetRow.inspectionRemarks) setGrnInspectionRemarks(targetRow.inspectionRemarks);
-                          setEditingGrnId(targetRow.id || targetRow.code);
-                          setIsViewOnlyMode(false);
-                          setShowCreateGRN(true);
-                        } else if (activeTab === 'Invoice Management') {
-                          setViewingInvoiceModal(targetRow);
-                          setInvoiceModalActiveTab('Invoice Items');
-                          setIsEditingInvoice(true);
-                          setInvoiceEditForm({
-                            invNo: targetRow.invNo || targetRow.code || '',
-                            customerName: targetRow.customerName || targetRow.vendor || 'Customer',
-                            date: targetRow.date || new Date().toLocaleDateString('en-GB'),
-                            paymentType: targetRow.paymentType || '100% Advance',
-                            billingAddress: targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
-                            deliveryAddress: targetRow.deliveryAddress || targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
-                            items: (targetRow.items && targetRow.items.length > 0)
-                              ? targetRow.items.map(it => ({ ...it }))
-                              : [{ code: 'PRD-001', name: 'Standard Component', qty: 1, bomQty: 1, invQty: 1, rate: 1000, tax: 18, amt: 1180, selected: true }]
-                          });
-                        } else if (activeTab === 'Dispatch Orders') {
-                          if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
-                            setVehicleLoadingModal(targetRow);
+                            const isSame = (targetRow.deliveryAddress === targetRow.billingAddress && Boolean(targetRow.billingAddress)) || (!targetRow.c7 && !targetRow.deliveryAddress);
+                            setCustFormSameAsBilling(isSame);
+                            setCustFormDeliveryAddress(dObj.address || targetRow.c7 || targetRow.deliveryAddress || '');
+                            setCustFormDeliveryCity(dObj.city || '');
+                            setCustFormDeliveryState(dObj.state || '');
+                            setCustFormDeliveryPincode(dObj.pincode || '');
+                          } else if (activeTab === 'Goods Receipt Note (GRN)') {
+                            resetCreateGRNForm();
+                            loadPOItems(targetRow.poRef || targetRow.code);
+                            if (targetRow.challanNo) setGrnChallanNo(targetRow.challanNo);
+                            if (targetRow.receivedBy) setGrnReceivedBy(targetRow.receivedBy);
+                            if (targetRow.inspectorName) setGrnInspectorName(targetRow.inspectorName);
+                            if (targetRow.inspectionRemarks) setGrnInspectionRemarks(targetRow.inspectionRemarks);
+                            setEditingGrnId(targetRow.id || targetRow.code);
+                            setIsViewOnlyMode(false);
+                            setShowCreateGRN(true);
+                          } else if (activeTab === 'Invoice Management') {
+                            setViewingInvoiceModal(targetRow);
+                            setInvoiceModalActiveTab('Invoice Items');
+                            setIsEditingInvoice(true);
+                            setInvoiceEditForm({
+                              invNo: targetRow.invNo || targetRow.code || '',
+                              customerName: targetRow.customerName || targetRow.vendor || 'Customer',
+                              date: targetRow.date || new Date().toLocaleDateString('en-GB'),
+                              paymentType: targetRow.paymentType || '100% Advance',
+                              billingAddress: targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                              deliveryAddress: targetRow.deliveryAddress || targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                              items: (targetRow.items && targetRow.items.length > 0)
+                                ? targetRow.items.map(it => ({ ...it }))
+                                : [{ code: 'PRD-001', name: 'Standard Component', qty: 1, bomQty: 1, invQty: 1, rate: 1000, tax: 18, amt: 1180, selected: true }]
+                            });
+                          } else if (activeTab === 'Dispatch Orders') {
+                            if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
+                              setVehicleLoadingModal(targetRow);
+                            } else {
+                              setDispatchPackingModal(targetRow);
+                            }
+                          } else if (activeTab === 'Accounts Verification') {
+                            setAccountsVerificationModal(targetRow);
+                            setIsAccountsViewOnly(false);
                           } else {
-                            setDispatchPackingModal(targetRow);
+                            setConfirmingBomModal({ ...targetRow, isEditMode: true });
                           }
-                        } else if (activeTab === 'Accounts Verification') {
-                          setAccountsVerificationModal(targetRow);
-                          setIsAccountsViewOnly(false);
-                        } else {
-                          setConfirmingBomModal({ ...targetRow, isEditMode: true });
                         }
-                      }
-                    }}
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#1E293B',
-                      borderRadius: '10px',
-                      padding: '6px 14px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                  >
-                    <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
-                  </button>
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected item(s)?`)) {
-                        setSelectedRows([]);
-                        setSelectedVendors([]);
-                      }
-                    }}
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#1E293B',
-                      borderRadius: '10px',
-                      padding: '6px 14px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                  >
-                    <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
-                  </button>
+                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected item(s)?`)) {
+                          setSelectedRows([]);
+                          setSelectedVendors([]);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                    >
+                      <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+                    </button>
+                  )}
 
                   {/* Dots / More Actions Button & Popup Menu */}
                   <div style={{ position: 'relative' }}>
