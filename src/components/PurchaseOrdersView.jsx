@@ -705,8 +705,8 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     const poId = poTarget.poNo || poTarget.id;
     const isCredit = payModeInput === 'Credit / Net Terms';
 
-    // Image of the payment is mandatory
-    if (!payImageInput) {
+    // Image of the payment is mandatory for all non-credit payment modes (Bank Transfer, UPI, Cheque, Advance, etc.)
+    if (!isCredit && !payImageInput) {
       alert('Payment Proof Image is mandatory. Please attach the image of the payment to complete verification.');
       return;
     }
@@ -3437,7 +3437,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     <strong style={{ fontSize: '12px', color: '#854D0E' }}>Credit Verification Required</strong>
                   </div>
                   <p style={{ fontSize: '11px', color: '#713F12', margin: 0, lineHeight: 1.4 }}>
-                    This PO will be marked as Credit Verified by Accounts. MD has approved the PO, and once Accounts confirms credit terms and attaches the credit confirmation proof, you can Proceed PO for GRN.
+                    This PO will be marked as Credit Verified by Accounts. MD has approved the PO, and once Accounts confirms the credit terms, you can Proceed PO for GRN (No payment receipt upload required for credit terms).
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#854D0E' }}>Agreed Credit Terms / Days</label>
@@ -3477,96 +3477,98 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 </div>
               )}
 
-              {/* Mandatory Payment Proof Image Attachment */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    Payment Proof Image <span style={{ color: '#EF4444', fontWeight: 'bold' }}>* (Mandatory)</span>
-                  </label>
-                  {payImageMeta && (
-                    <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>
-                      ✓ {payImageMeta.name} ({payImageMeta.size})
-                    </span>
+              {/* Mandatory Payment Proof Image Attachment - ONLY for Non-Credit payment modes */}
+              {payModeInput !== 'Credit / Net Terms' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      Payment Proof Image <span style={{ color: '#EF4444', fontWeight: 'bold' }}>* (Mandatory)</span>
+                    </label>
+                    {payImageMeta && (
+                      <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>
+                        ✓ {payImageMeta.name} ({payImageMeta.size})
+                      </span>
+                    )}
+                  </div>
+
+                  {!payImageInput ? (
+                    <label style={{
+                      border: '2px dashed #CBD5E1',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      backgroundColor: '#F8FAFC',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#F0FDFA'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                    >
+                      <UploadCloud size={24} style={{ color: '#0E7490' }} />
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
+                        Click to upload Payment Screenshot / Receipt <span style={{ color: '#EF4444' }}>*</span>
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>
+                        PNG, JPG, JPEG or WEBP (Max 5MB - Auto-compressed)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePaymentImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      backgroundColor: '#F0FDF4',
+                      border: '1px solid #BBF7D0',
+                      borderRadius: '10px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={payImageInput}
+                          alt="Payment Proof"
+                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #86EFAC' }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: '#166534' }}>{payImageMeta?.name || 'Payment_Proof.jpg'}</span>
+                          <span style={{ fontSize: '11px', color: '#15803D' }}>{payImageMeta?.size || 'Image attached'} • Ready to verify</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPayImageInput(null);
+                          setPayImageMeta(null);
+                        }}
+                        style={{
+                          background: '#FEE2E2',
+                          border: '1px solid #FECACA',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          color: '#DC2626',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <X size={12} /> Remove
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {!payImageInput ? (
-                  <label style={{
-                    border: '2px dashed #CBD5E1',
-                    borderRadius: '10px',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    backgroundColor: '#F8FAFC',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#F0FDFA'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
-                  >
-                    <UploadCloud size={24} style={{ color: '#0E7490' }} />
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
-                      Click to upload Payment Screenshot / Receipt <span style={{ color: '#EF4444' }}>*</span>
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#64748B' }}>
-                      PNG, JPG, JPEG or WEBP (Max 5MB - Auto-compressed)
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePaymentImageUpload}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                ) : (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    backgroundColor: '#F0FDF4',
-                    border: '1px solid #BBF7D0',
-                    borderRadius: '10px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img
-                        src={payImageInput}
-                        alt="Payment Proof"
-                        style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #86EFAC' }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#166534' }}>{payImageMeta?.name || 'Payment_Proof.jpg'}</span>
-                        <span style={{ fontSize: '11px', color: '#15803D' }}>{payImageMeta?.size || 'Image attached'} • Ready to verify</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPayImageInput(null);
-                        setPayImageMeta(null);
-                      }}
-                      style={{
-                        background: '#FEE2E2',
-                        border: '1px solid #FECACA',
-                        borderRadius: '6px',
-                        padding: '4px 8px',
-                        color: '#DC2626',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <X size={12} /> Remove
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Accounts Verification Notes (Optional)</label>
