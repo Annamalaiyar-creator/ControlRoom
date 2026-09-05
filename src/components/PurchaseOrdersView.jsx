@@ -442,6 +442,19 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
   const [approvingPo, setApprovingPo] = useState(null);
   const [approvalRemarksInput, setApprovalRemarksInput] = useState('');
 
+  // Payment Processing & Credit Verification Modal states
+  const [paymentProcessingPo, setPaymentProcessingPo] = useState(null);
+  const [payModeInput, setPayModeInput] = useState('Bank Transfer');
+  const [payRefInput, setPayRefInput] = useState('');
+  const [payAmountInput, setPayAmountInput] = useState('');
+  const [payRemarksInput, setPayRemarksInput] = useState('');
+  const [payCreditTermsInput, setPayCreditTermsInput] = useState('Net 30 Days');
+  const [creditAlertPopup, setCreditAlertPopup] = useState(null);
+
+  // Proceed PO Confirmation Modal state
+  const [proceedingPo, setProceedingPo] = useState(null);
+  const [proceedRemarksInput, setProceedRemarksInput] = useState('');
+
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
     const isAppReq = String(approvalRequired).toUpperCase() === 'YES';
@@ -600,8 +613,8 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        remarks: approvalRemarksInput || 'Approved by CEO',
-        approver: 'CEO / Operations Manager'
+        remarks: approvalRemarksInput || 'Approved by MD',
+        approver: 'Velmurugan Rathinam (MD)'
       })
     })
       .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
@@ -609,9 +622,83 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         setApprovingPo(null);
         setApprovalRemarksInput('');
         fetchZohoPOs();
+        showCustomAlert(`PO ${poId} approved by MD successfully! Now ready for Payment Process.`, 'MD Approval Completed', 'success');
       })
       .catch(() => {
         setApprovingPo(null);
+        fetchZohoPOs();
+      });
+  };
+
+  const handleOpenPaymentProcessModal = (poTarget) => {
+    if (!poTarget) return;
+    setPaymentProcessingPo(poTarget);
+    setPayModeInput(poTarget.paymentTerms?.toLowerCase().includes('credit') || poTarget.paymentTerms?.toLowerCase().includes('net') ? 'Credit / Net Terms' : 'Bank Transfer');
+    setPayRefInput('');
+    setPayAmountInput(poTarget.amount ? String(poTarget.amount).replace(/[^0-9.]/g, '') : '');
+    setPayRemarksInput('');
+    setPayCreditTermsInput(poTarget.paymentTerms || 'Net 30 Days');
+  };
+
+  const handleProcessPaymentSubmit = (poTarget) => {
+    if (!poTarget) return;
+    const poId = poTarget.poNo || poTarget.id;
+    const isCredit = payModeInput === 'Credit / Net Terms';
+
+    fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/process-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentMode: payModeInput,
+        paymentRef: payRefInput || (isCredit ? 'CREDIT-CONFIRMED' : 'TXN-PAID'),
+        amountPaid: payAmountInput ? `₹ ${Number(payAmountInput).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : poTarget.amount,
+        remarks: payRemarksInput || (isCredit ? 'Credit terms verified by Accounts team' : 'Payment recorded by Accounts'),
+        isCredit: isCredit,
+        creditTerms: payCreditTermsInput
+      })
+    })
+      .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
+      .then(() => {
+        setPaymentProcessingPo(null);
+        fetchZohoPOs();
+        if (isCredit) {
+          setCreditAlertPopup({
+            poNo: poId,
+            vendor: poTarget.vendor,
+            amount: poTarget.amount,
+            terms: payCreditTermsInput
+          });
+        } else {
+          showCustomAlert(`Payment verified and processed by Accounts for PO ${poId}. Now ready for Proceed PO.`, 'Payment Verified', 'success');
+        }
+      })
+      .catch(() => {
+        setPaymentProcessingPo(null);
+        fetchZohoPOs();
+      });
+  };
+
+  const handleProceedPoSubmit = (poTarget) => {
+    if (!poTarget) return;
+    const poId = poTarget.poNo || poTarget.id;
+
+    fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/proceed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        remarks: proceedRemarksInput || 'Authorized for dispatch and GRN creation',
+        authorizedBy: 'Procurement & Accounts'
+      })
+    })
+      .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
+      .then(() => {
+        setProceedingPo(null);
+        setProceedRemarksInput('');
+        fetchZohoPOs();
+        showCustomAlert(`PO ${poId} marked as Proceed PO! It is now active and eligible in GRN Process.`, 'Proceed PO Completed', 'success');
+      })
+      .catch(() => {
+        setProceedingPo(null);
         fetchZohoPOs();
       });
   };
@@ -901,7 +988,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           'All',
           'Draft',
           'Draft / Pending Approval',
-          'OPEN',
+          'MD Approved',
+          'Payment Processed',
+          'Proceed PO',
           'OPEN / PARTIALLY RECEIVED',
           'CLOSED / FULLY RECEIVED',
           'REJECTED'
@@ -920,6 +1009,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
           const matchesStatus = statusFilter === 'All' ||
             (statusFilter === 'Draft' && (statusStr === 'Draft' || statusTypeStr === 'draft')) ||
             (statusFilter === 'Draft / Pending Approval' && (statusStr === 'Draft / Pending Approval' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'pending')) ||
+            (statusFilter === 'MD Approved' && (statusStr === 'MD Approved' || statusTypeStr === 'md_approved')) ||
+            (statusFilter === 'Payment Processed' && (statusStr === 'Payment Processed' || statusTypeStr === 'payment_processed')) ||
+            (statusFilter === 'Proceed PO' && (statusStr === 'Proceed PO' || statusTypeStr === 'proceed_po')) ||
             (statusFilter === 'OPEN' && (statusStr === 'OPEN' || statusTypeStr === 'approved')) ||
             (statusFilter === 'OPEN / PARTIALLY RECEIVED' && (statusStr.includes('PARTIALLY') || statusTypeStr === 'partially_received')) ||
             (statusFilter === 'CLOSED / FULLY RECEIVED' && (statusStr.includes('CLOSED') || statusStr.includes('FULLY RECEIVED') || statusTypeStr === 'closed')) ||
@@ -928,7 +1020,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
           const matchesTab = poTab === 'All' ||
             (poTab === 'Draft' && (statusStr === 'Draft' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'draft' || statusTypeStr === 'pending')) ||
-            (poTab === 'Approved' && ((statusStr === 'OPEN' || statusStr === 'Approved' || statusTypeStr === 'approved') && !statusStr.includes('PARTIALLY'))) ||
+            (poTab === 'MD_APPROVED' && (statusStr === 'MD Approved' || statusTypeStr === 'md_approved')) ||
+            (poTab === 'PAYMENT_PROCESSED' && (statusStr === 'Payment Processed' || statusTypeStr === 'payment_processed')) ||
+            (poTab === 'PROCEED_PO' && (statusStr === 'Proceed PO' || statusTypeStr === 'proceed_po')) ||
             (poTab === 'PARTIALLY_RECEIVED' && (statusStr === 'OPEN / PARTIALLY RECEIVED' || statusStr.includes('PARTIALLY') || statusTypeStr === 'partially_received')) ||
             (poTab === 'CLOSED' && (statusStr === 'CLOSED / FULLY RECEIVED' || statusStr === 'CLOSED' || statusTypeStr === 'closed')) ||
             (poTab === 'REJECTED' && (statusStr === 'REJECTED' || statusTypeStr === 'rejected')) ||
@@ -1122,7 +1216,9 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
               {[
                 { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
                 { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Approved', label: 'Approved (OPEN)', count: poList.filter(po => (po.status === 'OPEN' || po.status === 'Approved' || po.statusType === 'approved') && !String(po.status).includes('PARTIALLY')).length, bg: '#dcfce7', fg: '#166534' },
+                { id: 'MD_APPROVED', label: 'MD Approved', count: poList.filter(po => po.status === 'MD Approved' || po.statusType === 'md_approved').length, bg: '#e0e7ff', fg: '#3730a3' },
+                { id: 'PAYMENT_PROCESSED', label: 'Payment Processed', count: poList.filter(po => po.status === 'Payment Processed' || po.statusType === 'payment_processed').length, bg: '#fef3c7', fg: '#92400e' },
+                { id: 'PROCEED_PO', label: 'Proceed PO (GRN Ready)', count: poList.filter(po => po.status === 'Proceed PO' || po.statusType === 'proceed_po').length, bg: '#ecfeff', fg: '#0e7490' },
                 { id: 'PARTIALLY_RECEIVED', label: 'Open / Partially Received', count: poList.filter(po => po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received').length, bg: '#fef3c7', fg: '#b45309' },
                 { id: 'CLOSED', label: 'Closed / Fully Received', count: poList.filter(po => po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed').length, bg: '#dcfce7', fg: '#15803d' },
                 { id: 'REJECTED', label: 'Rejected', count: poList.filter(po => po.status === 'REJECTED' || po.statusType === 'rejected').length, bg: '#fee2e2', fg: '#dc2626' }
@@ -1494,6 +1590,60 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                         <Copy size={14} style={{ color: '#2563EB' }} /> Duplicate / Clone
                       </button>
 
+                      {/* Workflow Transitions from Floating Menu */}
+                      {selectedPOs.length === 1 && (() => {
+                        const target = poList.find(p => p.poNo === selectedPOs[0]);
+                        if (!target) return null;
+                        const st = String(target.status || '').trim();
+                        const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                        const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved';
+                        const isPaymentProcessed = st === 'Payment Processed';
+
+                        if (isDraftOrPending) {
+                          return (
+                            <button
+                              onClick={() => {
+                                setApprovingPo(target);
+                                setShowFloatingMenu(false);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#F0FDF4', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approval
+                            </button>
+                          );
+                        }
+
+                        if (isMdApproved) {
+                          return (
+                            <button
+                              onClick={() => {
+                                handleOpenPaymentProcessModal(target);
+                                setShowFloatingMenu(false);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#FFFBEB', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#92400E', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <CreditCard size={14} style={{ color: '#D97706' }} /> Process Payment / Verify Credit
+                            </button>
+                          );
+                        }
+
+                        if (isPaymentProcessed) {
+                          return (
+                            <button
+                              onClick={() => {
+                                setProceedingPo(target);
+                                setShowFloatingMenu(false);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#ECFEFF', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              <Send size={14} style={{ color: '#0E7490' }} /> Proceed PO (Ready for GRN)
+                            </button>
+                          );
+                        }
+
+                        return null;
+                      })()}
+
                       <button
                         onClick={() => {
                           window.print();
@@ -1594,6 +1744,68 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
                   >
                     Generate PDF
                   </button>
+                  {/* Stage-based Workflow Action Buttons */}
+                  {(() => {
+                    const st = String(viewingPoStatus || '').trim();
+                    const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                    const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved';
+                    const isPaymentProcessed = st === 'Payment Processed';
+                    const isProceedPo = st === 'Proceed PO' || st === 'PROCEED PO';
+
+                    const currentPoObj = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
+                      poNo: poNumber,
+                      vendor: vendorName,
+                      amount: `₹ ${Number(totalAmountWithGst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                      paymentTerms
+                    };
+
+                    if (isDraftOrPending) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setApprovingPo(currentPoObj)}
+                          style={{ backgroundColor: '#16A34A', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)' }}
+                        >
+                          <CheckCircle style={{ width: '15px', height: '15px' }} /> MD Approval
+                        </button>
+                      );
+                    }
+
+                    if (isMdApproved) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
+                          style={{ backgroundColor: '#D97706', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)' }}
+                        >
+                          <CreditCard style={{ width: '15px', height: '15px' }} /> Process Payment / Verify Credit
+                        </button>
+                      );
+                    }
+
+                    if (isPaymentProcessed) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setProceedingPo(currentPoObj)}
+                          style={{ backgroundColor: '#0E7490', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)' }}
+                        >
+                          <Send style={{ width: '15px', height: '15px' }} /> Proceed PO (Ready for GRN)
+                        </button>
+                      );
+                    }
+
+                    if (isProceedPo) {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ECFEFF', border: '1px solid #0E7490', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
+                          <CheckCircle size={14} /> Ready for GRN Process
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
+
                   <button
                     type="button"
                     style={{ backgroundColor: '#2563eb', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -1697,19 +1909,20 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', padding: '10px 0' }}>
                   {(() => {
-                    const st = String(viewingPoStatus || 'OPEN').trim();
+                    const st = String(viewingPoStatus || 'Draft / Pending Approval').trim();
                     const isClosed = st.includes('CLOSED') || st.includes('FULLY RECEIVED');
                     const isPartial = st.includes('PARTIALLY');
-                    const isOpen = st === 'OPEN' || st === 'Approved' || st === 'Issued';
-                    const isPending = st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
-                    const isDraft = st === 'Draft' || st === 'DRAFT';
+                    const isProceed = st === 'Proceed PO' || st === 'PROCEED PO' || isPartial || isClosed;
+                    const isPaymentDone = st === 'Payment Processed' || isProceed;
+                    const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved' || isPaymentDone;
+                    const isDraft = st === 'Draft' || st === 'DRAFT' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
 
                     return [
-                      { label: 'Created (Draft)', done: true, current: isDraft },
-                      { label: 'Draft / Pending Approval', done: !isDraft, current: isPending },
-                      { label: 'Approved (OPEN)', done: (isOpen || isPartial || isClosed), current: isOpen },
-                      { label: 'GRN Progress', done: (isPartial || isClosed), current: isPartial },
-                      { label: 'Closed / Fully Received', done: isClosed, current: isClosed }
+                      { label: '1. PO Created', done: true, current: isDraft && st !== 'Draft / Pending Approval' },
+                      { label: '2. MD Approval', done: isMdApproved, current: st === 'MD Approved' || (isDraft && st === 'Draft / Pending Approval') },
+                      { label: '3. Payment Process', done: isPaymentDone, current: st === 'Payment Processed' },
+                      { label: '4. Proceed PO', done: isProceed, current: st === 'Proceed PO' || st === 'PROCEED PO' },
+                      { label: '5. GRN Process', done: (isPartial || isClosed), current: isPartial || isClosed }
                     ];
                   })().map((step, idx, arr) => (
                     <React.Fragment key={idx}>
@@ -2589,31 +2802,233 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
         </div>
       )}
 
-      {/* CEO APPROVAL MODAL */}
+      {/* MD APPROVAL MODAL */}
       {approvingPo && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '450px', padding: '20px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '460px', padding: '20px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ backgroundColor: '#16a34a', color: 'white', fontSize: '12px', fontWeight: '800', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.15em' }}>
-              APPROVE PURCHASE ORDER
+              MD APPROVAL
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Approve PO {approvingPo.poNo}?</h3>
               <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{approvingPo.vendor}</strong> | Amount: <strong>{approvingPo.amount}</strong></span>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Approval Remarks (Optional)</label>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Approval Remarks / MD Notes</label>
                 <textarea
                   value={approvalRemarksInput}
                   onChange={(e) => setApprovalRemarksInput(e.target.value)}
-                  placeholder="Enter approval remarks or notes..."
+                  placeholder="Enter MD remarks or instructions for Accounts..."
                   style={{ height: '60px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '8px 12px', fontSize: '12px', resize: 'none' }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
                 <button onClick={() => { setApprovingPo(null); setApprovalRemarksInput(''); }} style={{ border: 'none', backgroundColor: 'transparent', color: '#64748b', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={() => handleApprovePoSubmit(approvingPo)} style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Approve & Issue PO</button>
+                <button onClick={() => handleApprovePoSubmit(approvingPo)} style={{ backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Approve as MD</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT PROCESS & CREDIT VERIFICATION MODAL */}
+      {paymentProcessingPo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '500px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ backgroundColor: '#D97706', color: 'white', fontSize: '12px', fontWeight: '800', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.15em' }}>
+              ACCOUNTS TEAM - PAYMENT & CREDIT PROCESS
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Process Payment / Verify Credit</h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>PO Ref: <strong>{paymentProcessingPo.poNo}</strong> | Vendor: <strong>{paymentProcessingPo.vendor}</strong></span>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E293B', backgroundColor: '#FEF3C7', padding: '4px 10px', borderRadius: '8px' }}>
+                  {paymentProcessingPo.amount}
+                </span>
+              </div>
+
+              {/* Mode Selection */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Payment / Settlement Mode <span style={{ color: '#EF4444' }}>*</span></label>
+                <select
+                  value={payModeInput}
+                  onChange={(e) => setPayModeInput(e.target.value)}
+                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white' }}
+                >
+                  <option value="Bank Transfer">Bank Transfer (NEFT / RTGS / IMPS)</option>
+                  <option value="UPI / Online">UPI / Corporate Card</option>
+                  <option value="Cheque / DD">Cheque / Demand Draft</option>
+                  <option value="Credit / Net Terms">Credit Mode (Vendor Credit Period / Net Days)</option>
+                  <option value="Advance 50% / Balance on Delivery">Partial Advance Payment</option>
+                </select>
+              </div>
+
+              {/* Conditional Credit Fields vs Direct Payment Fields */}
+              {payModeInput === 'Credit / Net Terms' ? (
+                <div style={{ backgroundColor: '#FEF9C3', border: '1px solid #FDE047', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Info size={16} style={{ color: '#854D0E' }} />
+                    <strong style={{ fontSize: '12px', color: '#854D0E' }}>Credit Verification Required</strong>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#713F12', margin: 0, lineHeight: 1.4 }}>
+                    This PO will be marked as Credit Verified by Accounts. MD has approved the PO, and once Accounts confirms credit terms, you can Proceed PO for GRN.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#854D0E' }}>Agreed Credit Terms / Days</label>
+                    <input
+                      type="text"
+                      value={payCreditTermsInput}
+                      onChange={(e) => setPayCreditTermsInput(e.target.value)}
+                      placeholder="e.g. Net 30 Days, PDC 45 Days..."
+                      style={{ height: '34px', borderRadius: '6px', border: '1px solid #FDE047', padding: '0 10px', fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Transaction / UTR Reference No.</label>
+                    <input
+                      type="text"
+                      value={payRefInput}
+                      onChange={(e) => setPayRefInput(e.target.value)}
+                      placeholder="e.g. UTR12345678"
+                      style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 10px', fontSize: '12px' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Amount Recorded (₹)</label>
+                    <input
+                      type="text"
+                      value={payAmountInput}
+                      onChange={(e) => setPayAmountInput(e.target.value)}
+                      placeholder="Amount"
+                      style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 10px', fontSize: '12px' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Accounts Verification Notes (Optional)</label>
+                <textarea
+                  value={payRemarksInput}
+                  onChange={(e) => setPayRemarksInput(e.target.value)}
+                  placeholder="Enter remarks or voucher details..."
+                  style={{ height: '50px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '8px 10px', fontSize: '12px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                <button
+                  onClick={() => setPaymentProcessingPo(null)}
+                  style={{ border: 'none', backgroundColor: 'transparent', color: '#64748b', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleProcessPaymentSubmit(paymentProcessingPo)}
+                  style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={14} /> {payModeInput === 'Credit / Net Terms' ? 'Confirm Credit Terms' : 'Record & Verify Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROCEED PO CONFIRMATION MODAL */}
+      {proceedingPo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', width: '480px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ backgroundColor: '#0E7490', color: 'white', fontSize: '12px', fontWeight: '800', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.15em' }}>
+              AUTHORIZE PROCEED PO (READY FOR GRN)
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Authorize Proceed PO for {proceedingPo.poNo}?</h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Vendor: <strong>{proceedingPo.vendor}</strong> | Amount: <strong>{proceedingPo.amount}</strong></span>
+              </div>
+
+              <div style={{ backgroundColor: '#ECFEFF', border: '1px solid #A5F3FC', borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <CheckCircle size={18} style={{ color: '#0E7490', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '12px', color: '#155E75', lineHeight: '1.4' }}>
+                  <strong>Final Authorization Checklist:</strong>
+                  <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: '11px' }}>
+                    <li>MD Approval has been successfully granted.</li>
+                    <li>Accounts team has confirmed payment or verified credit terms.</li>
+                    <li>Once Proceed PO is authorized, this PO will immediately become available in the <strong>GRN Process</strong> for warehouse receiving.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Proceed Authorization Remarks (Optional)</label>
+                <textarea
+                  value={proceedRemarksInput}
+                  onChange={(e) => setProceedRemarksInput(e.target.value)}
+                  placeholder="Enter dispatch notes, delivery gate instructions, etc..."
+                  style={{ height: '50px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '8px 10px', fontSize: '12px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '6px' }}>
+                <button
+                  onClick={() => { setProceedingPo(null); setProceedRemarksInput(''); }}
+                  style={{ border: 'none', backgroundColor: 'transparent', color: '#64748b', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleProceedPoSubmit(proceedingPo)}
+                  style={{ backgroundColor: '#0E7490', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={14} /> Authorize & Proceed PO
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREDIT CONFIRMATION NOTIFICATION POPUP */}
+      {creditAlertPopup && (
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 10000, animation: 'slideInRight 0.3s ease-out' }}>
+          <div style={{ backgroundColor: '#FFFFFF', border: '2px solid #F59E0B', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)', width: '380px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+                  <AlertCircle size={16} />
+                </div>
+                <strong style={{ fontSize: '13px', color: '#92400E' }}>Credit Term Verified by Accounts</strong>
+              </div>
+              <button
+                onClick={() => setCreditAlertPopup(null)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+              PO <strong>{creditAlertPopup.poNo}</strong> ({creditAlertPopup.vendor}) is confirmed under <strong>{creditAlertPopup.terms}</strong>. MD approval was verified, and accounts team has authorized credit terms.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+              <button
+                onClick={() => {
+                  const targetPo = poList.find(p => p.poNo === creditAlertPopup.poNo) || { poNo: creditAlertPopup.poNo, vendor: creditAlertPopup.vendor, amount: creditAlertPopup.amount };
+                  setCreditAlertPopup(null);
+                  setProceedingPo(targetPo);
+                }}
+                style={{ backgroundColor: '#0E7490', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                Proceed PO Now <ArrowRight size={12} />
+              </button>
             </div>
           </div>
         </div>

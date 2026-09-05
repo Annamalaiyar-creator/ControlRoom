@@ -1953,6 +1953,15 @@ app.get('/api/zoho/purchaseorders', async (req, res) => {
         } else if (matchingGRNs.length > 0 || po.status === 'partially_received') {
           statusType = 'partially_received';
           statusText = 'OPEN / PARTIALLY RECEIVED';
+        } else if (lpMatch && (lpMatch.status === 'Proceed PO' || lpMatch.statusType === 'proceed_po')) {
+          statusType = 'proceed_po';
+          statusText = 'Proceed PO';
+        } else if (lpMatch && (lpMatch.status === 'Payment Processed' || lpMatch.statusType === 'payment_processed')) {
+          statusType = 'payment_processed';
+          statusText = 'Payment Processed';
+        } else if (lpMatch && (lpMatch.status === 'MD Approved' || lpMatch.statusType === 'md_approved')) {
+          statusType = 'md_approved';
+          statusText = 'MD Approved';
         } else if (lpMatch && lpMatch.status === 'REJECTED') {
           statusType = 'rejected';
           statusText = 'REJECTED';
@@ -2015,7 +2024,16 @@ app.get('/api/zoho/purchaseorders', async (req, res) => {
         });
 
         if (existsIdx !== -1) {
-          if (lp.status === 'OPEN' || String(lp.approvalRequired).toUpperCase() === 'NO') {
+          if (lp.status === 'Proceed PO' || lp.statusType === 'proceed_po') {
+            translated[existsIdx].status = 'Proceed PO';
+            translated[existsIdx].statusType = 'proceed_po';
+          } else if (lp.status === 'Payment Processed' || lp.statusType === 'payment_processed') {
+            translated[existsIdx].status = 'Payment Processed';
+            translated[existsIdx].statusType = 'payment_processed';
+          } else if (lp.status === 'MD Approved' || lp.statusType === 'md_approved') {
+            translated[existsIdx].status = 'MD Approved';
+            translated[existsIdx].statusType = 'md_approved';
+          } else if (lp.status === 'OPEN' || String(lp.approvalRequired).toUpperCase() === 'NO') {
             translated[existsIdx].status = 'OPEN';
             translated[existsIdx].statusType = 'approved';
           } else if (lp.status === 'REJECTED') {
@@ -2445,7 +2463,16 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
       } else if (totalReceivedQty > 0 || po.status === 'partially_received') {
         statusType = 'partially_received';
         statusText = 'OPEN / PARTIALLY RECEIVED';
-      } else if (po.status === 'draft') {
+      } else if (matchedLocalPO && (matchedLocalPO.status === 'Proceed PO' || matchedLocalPO.statusType === 'proceed_po')) {
+        statusType = 'proceed_po';
+        statusText = 'Proceed PO';
+      } else if (matchedLocalPO && (matchedLocalPO.status === 'Payment Processed' || matchedLocalPO.statusType === 'payment_processed')) {
+        statusType = 'payment_processed';
+        statusText = 'Payment Processed';
+      } else if (matchedLocalPO && (matchedLocalPO.status === 'MD Approved' || matchedLocalPO.statusType === 'md_approved')) {
+        statusType = 'md_approved';
+        statusText = 'MD Approved';
+      } else if (po.status === 'draft' || (matchedLocalPO && matchedLocalPO.statusType === 'draft')) {
         statusType = 'draft';
         statusText = 'Draft';
       }
@@ -2916,11 +2943,11 @@ app.post('/api/grns', async (req, res) => {
   res.json({ success: true, grn: newGRN });
 });
 
-// Endpoint to explicitly approve/open a Purchase Order in Zoho Books (Draft/Pending -> Open)
+// Endpoint for MD Approval (Draft/Pending -> MD Approved)
 app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
   const targetId = req.params.id;
-  const remarks = req.body.remarks || 'Approved by CEO';
-  const approver = req.body.approver || 'CEO / Operations Manager';
+  const remarks = req.body.remarks || 'Approved by MD';
+  const approver = req.body.approver || 'Velmurugan Rathinam (MD)';
 
   const now = new Date();
   const approvedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2930,8 +2957,8 @@ app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
   const localPOs = loadLocalPOs();
   const matchedIdx = localPOs.findIndex(p => p.id === targetId || p.poNo === targetId);
   if (matchedIdx !== -1) {
-    localPOs[matchedIdx].status = 'OPEN';
-    localPOs[matchedIdx].statusType = 'approved';
+    localPOs[matchedIdx].status = 'MD Approved';
+    localPOs[matchedIdx].statusType = 'md_approved';
     localPOs[matchedIdx].approvedBy = approver;
     localPOs[matchedIdx].approvalDate = approvedDate;
     localPOs[matchedIdx].approvalTime = approvedTime;
@@ -2941,8 +2968,8 @@ app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
     localPOs.unshift({
       id: targetId,
       poNo: targetId,
-      status: 'OPEN',
-      statusType: 'approved',
+      status: 'MD Approved',
+      statusType: 'md_approved',
       approvedBy: approver,
       approvalDate: approvedDate,
       approvalTime: approvedTime,
@@ -2960,7 +2987,108 @@ app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
     }
   }
 
-  res.json({ success: true, message: `PO ${targetId} approved by ${approver} and marked as OPEN!` });
+  res.json({ success: true, message: `PO ${targetId} approved by ${approver} and marked as MD Approved!` });
+});
+
+// Endpoint for Payment Process (MD Approved -> Payment Processed / Credit Verified)
+app.post('/api/zoho/purchaseorders/:id/process-payment', async (req, res) => {
+  const targetId = req.params.id;
+  const paymentMode = req.body.paymentMode || 'Bank Transfer';
+  const paymentRef = req.body.paymentRef || 'TXN-PAID';
+  const amountPaid = req.body.amountPaid || '';
+  const remarks = req.body.remarks || 'Payment verified by Accounts';
+  const isCredit = req.body.isCredit || paymentMode.toLowerCase().includes('credit');
+  const creditTerms = req.body.creditTerms || 'Net 30 Days';
+
+  const now = new Date();
+  const paymentDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const paymentTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const localPOs = loadLocalPOs();
+  const matchedIdx = localPOs.findIndex(p => p.id === targetId || p.poNo === targetId);
+  if (matchedIdx !== -1) {
+    localPOs[matchedIdx].status = 'Payment Processed';
+    localPOs[matchedIdx].statusType = 'payment_processed';
+    localPOs[matchedIdx].paymentDetails = {
+      mode: paymentMode,
+      refNo: paymentRef,
+      amount: amountPaid || localPOs[matchedIdx].amount,
+      date: paymentDate,
+      time: paymentTime,
+      remarks,
+      isCredit,
+      creditTerms,
+      verifiedBy: 'Accounts Team'
+    };
+    saveLocalPOs(localPOs);
+  } else {
+    localPOs.unshift({
+      id: targetId,
+      poNo: targetId,
+      status: 'Payment Processed',
+      statusType: 'payment_processed',
+      paymentDetails: {
+        mode: paymentMode,
+        refNo: paymentRef,
+        amount: amountPaid,
+        date: paymentDate,
+        time: paymentTime,
+        remarks,
+        isCredit,
+        creditTerms,
+        verifiedBy: 'Accounts Team'
+      }
+    });
+    saveLocalPOs(localPOs);
+  }
+
+  res.json({ 
+    success: true, 
+    message: isCredit 
+      ? `Credit terms verified by Accounts team for PO ${targetId}` 
+      : `Payment processed and verified by Accounts for PO ${targetId}` 
+  });
+});
+
+// Endpoint to Proceed PO (Payment Processed -> Proceed PO -> Ready for GRN)
+app.post('/api/zoho/purchaseorders/:id/proceed', async (req, res) => {
+  const targetId = req.params.id;
+  const remarks = req.body.remarks || 'Proceeded for dispatch and GRN';
+  const authorizedBy = req.body.authorizedBy || 'Procurement & Accounts';
+
+  const now = new Date();
+  const proceedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const proceedTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const localPOs = loadLocalPOs();
+  const matchedIdx = localPOs.findIndex(p => p.id === targetId || p.poNo === targetId);
+  if (matchedIdx !== -1) {
+    localPOs[matchedIdx].status = 'Proceed PO';
+    localPOs[matchedIdx].statusType = 'proceed_po';
+    localPOs[matchedIdx].proceedDetails = {
+      date: proceedDate,
+      time: proceedTime,
+      remarks,
+      authorizedBy
+    };
+    saveLocalPOs(localPOs);
+  } else {
+    localPOs.unshift({
+      id: targetId,
+      poNo: targetId,
+      status: 'Proceed PO',
+      statusType: 'proceed_po',
+      proceedDetails: {
+        date: proceedDate,
+        time: proceedTime,
+        remarks,
+        authorizedBy
+      }
+    });
+    saveLocalPOs(localPOs);
+  }
+
+  res.json({ success: true, message: `PO ${targetId} marked as Proceed PO! Ready for GRN generation.` });
 });
 
 // Endpoint to explicitly reject a Purchase Order (Pending -> Rejected)

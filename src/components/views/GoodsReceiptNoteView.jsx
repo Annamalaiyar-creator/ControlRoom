@@ -2478,15 +2478,16 @@ export default function GoodsReceiptNoteView(props) {
                               const isClosed = s.includes('CLOSED') || s.includes('FULLY RECEIVED') || sType === 'closed';
                               if (isClosed && !isSelected) return false;
 
-                              const isOpen = s === 'OPEN' || s === 'APPROVED' || sType === 'approved';
+                              // Strictly only POs that reached "Proceed PO" or are already partially received in GRN
+                              const isProceedPo = s === 'PROCEED PO' || sType === 'proceed_po';
                               const isPartiallyReceived = s.includes('PARTIALLY') || sType === 'partially_received';
 
-                              return isSelected || isOpen || isPartiallyReceived;
+                              return isSelected || isProceedPo || isPartiallyReceived;
                             });
 
                             return (
                               <>
-                                <option value="" disabled>Select Purchase Order ({eligiblePOs.length} Open / Partial POs)</option>
+                                <option value="" disabled>Select Purchase Order ({eligiblePOs.length} Proceeded / Partial POs)</option>
                                 {eligiblePOs.map((po) => (
                                   <option key={po.id || po.poNo} value={po.poNo || po.id}>
                                     {po.poNo} — {po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : po.vendor} ({po.status})

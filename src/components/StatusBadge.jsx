@@ -93,6 +93,47 @@ const IconExpired = ({ size = 13 }) => (
 export function getStatusStyleConfig(statusOrType, customLabel) {
   const raw = String(statusOrType || customLabel || '').trim().toLowerCase();
 
+  // 0. PO Specific Sequential Workflow States
+  if (
+    raw === 'md approved' ||
+    raw === 'md_approved'
+  ) {
+    return {
+      label: customLabel || 'MD Approved',
+      bg: '#e0e7ff',
+      color: '#3730a3',
+      border: '1px solid #c7d2fe',
+      Icon: IconSuccess
+    };
+  }
+
+  if (
+    raw === 'payment processed' ||
+    raw === 'payment_processed' ||
+    raw === 'credit verified'
+  ) {
+    return {
+      label: customLabel || 'Payment Processed',
+      bg: '#fef3c7',
+      color: '#92400e',
+      border: '1px solid #fde68a',
+      Icon: IconInProgress
+    };
+  }
+
+  if (
+    raw === 'proceed po' ||
+    raw === 'proceed_po'
+  ) {
+    return {
+      label: customLabel || 'Proceed PO',
+      bg: '#ecfeff',
+      color: '#0e7490',
+      border: '1px solid #a5f3fc',
+      Icon: IconSuccess
+    };
+  }
+
   // 1. Pending / Warning (Soft Orange)
   if (
     raw === 'pending' || 
