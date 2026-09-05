@@ -136,28 +136,51 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
   const [poList, setPoList] = useState([]);
   const [tableLoading, setTableLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [zohoVendors, setZohoVendors] = useState([]);
   const [zohoItems, setZohoItems] = useState([]);
 
-  const fetchZohoPOs = async () => {
-    setTableLoading(true);
+  const fetchZohoPOs = async (isBackground = false) => {
+    if (!isBackground) {
+      setTableLoading(true);
+    }
     try {
       const safePOs = await getSafeZohoPOs();
       if (Array.isArray(safePOs) && safePOs.length > 0) {
-        setPoList(safePOs);
+        setPoList(prev => {
+          // Merge to preserve any freshly added or local POs
+          const existingIds = new Set(safePOs.map(p => p.id || p.poNo));
+          const localOnly = prev.filter(p => !existingIds.has(p.id || p.poNo));
+          return [...safePOs, ...localOnly];
+        });
       } else {
         const response = await fetchWithTimeout('/api/zoho/purchaseorders', { timeout: 25000 }).catch(() => null);
         if (response && response.ok) {
           const zohoPOs = await response.json().catch(() => []);
           if (Array.isArray(zohoPOs)) {
-            setPoList(zohoPOs);
+            setPoList(prev => {
+              const existingIds = new Set(zohoPOs.map(p => p.id || p.poNo));
+              const localOnly = prev.filter(p => !existingIds.has(p.id || p.poNo));
+              return [...zohoPOs, ...localOnly];
+            });
           }
         }
       }
     } catch (err) {
       console.error("Error fetching Zoho POs:", err);
     } finally {
-      setTableLoading(false);
+      if (!isBackground) {
+        setTableLoading(false);
+      }
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchZohoPOs(true);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -194,10 +217,10 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
     fetchZohoPOs();
     fetchZohoDropdowns();
 
-    // Auto-poll Zoho Books POs every 15 seconds to ensure real-time synchronization
+    // Auto-poll Zoho Books POs silently in background every 30 seconds to ensure real-time synchronization without flashing the UI
     const pollInterval = setInterval(() => {
-      fetchZohoPOs();
-    }, 15000);
+      fetchZohoPOs(true);
+    }, 30000);
 
     return () => clearInterval(pollInterval);
   }, []);
@@ -952,53 +975,89 @@ export default function PurchaseOrdersView({ targetPoNo, clearTargetPo }) {
 
             {/* Header section with Action Button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h2 style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>
                   Purchase Orders (PO)
                 </h2>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
                   Generate, tracking and dispatch management of corporate Purchase Orders
                 </span>
               </div>
 
-              <button
-                onClick={() => handleStartFreshPO()}
-                style={{
-                  backgroundColor: '#0E7490',
-                  border: 'none',
-                  color: 'white',
-                  height: '40px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '0 6px 0 20px',
-                  borderRadius: '50px',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
-                  transition: 'all 0.2s ease',
-                  letterSpacing: '0.2px'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
-              >
-                <span>Create PO</span>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#0E7490',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                }}>
-                  <ArrowRight size={16} strokeWidth={2.5} />
-                </div>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  title="Refresh Purchase Orders from Zoho Books"
+                  style={{
+                    height: '40px',
+                    padding: '0 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF',
+                    color: '#1E293B',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => { if (!isRefreshing) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                  onMouseLeave={(e) => { if (!isRefreshing) e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                >
+                  <RotateCcw
+                    style={{
+                      width: '15px',
+                      height: '15px',
+                      color: '#0E7490',
+                      animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none'
+                    }}
+                  />
+                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+
+                <button
+                  onClick={() => handleStartFreshPO()}
+                  style={{
+                    backgroundColor: '#0E7490',
+                    border: 'none',
+                    color: 'white',
+                    height: '40px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '0 6px 0 20px',
+                    borderRadius: '50px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.2px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#085D75'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0E7490'}
+                >
+                  <span>Create PO</span>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0E7490',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
+                    <ArrowRight size={16} strokeWidth={2.5} />
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* 1. FILTERS & SEARCH ROW CARD */}
