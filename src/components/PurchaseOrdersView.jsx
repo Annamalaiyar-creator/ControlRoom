@@ -120,9 +120,10 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     }
   };
 
+  const isAccounts = userRole.includes('Accounts');
   const [statusFilter, setStatusFilter] = useState('All');
   const [filterDate, setFilterDate] = useState('');
-  const [poTab, setPoTab] = useState(isExecutiveOrMD ? 'Draft' : 'All');
+  const [poTab, setPoTab] = useState(isExecutiveOrMD ? 'Draft' : isAccounts ? 'MD_APPROVED' : 'All');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
@@ -1105,11 +1106,13 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
               <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>
-                  {isExecutiveOrMD ? 'Purchase Order Approvals (PO)' : 'Purchase Orders (PO)'}
+                  {isExecutiveOrMD ? 'Purchase Order Approvals (PO)' : isAccounts ? 'Purchase Order Verification (PO)' : 'Purchase Orders (PO)'}
                 </h2>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>
                   {isExecutiveOrMD 
                     ? 'Review, verify and grant MD approval for corporate Purchase Orders awaiting authorization'
+                    : isAccounts
+                    ? 'Verify payment process, credit terms, and accounts clearance for MD-approved Purchase Orders'
                     : 'Generate, tracking and dispatch management of corporate Purchase Orders'}
                 </span>
               </div>

@@ -172,7 +172,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Invoice Management', icon: Receipt },
+            { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
@@ -539,7 +539,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
                   title={collapsed ? item.label : undefined}
                   onClick={() => {
                     const targetTab = actualTarget === 'Proforma Invoice' ? 'Performa Invoice' : actualTarget;
-                    onChangeTab(targetTab);
+                    onChangeTab(targetTab, null, item.poTabTarget || null);
                   }}
                   onMouseEnter={(e) => {
                     setHoveredItem(item.label);

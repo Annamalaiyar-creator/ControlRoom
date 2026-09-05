@@ -171,7 +171,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
             margin: 0,
             letterSpacing: '-0.3px'
           }}>
-            {(activeTab === 'Purchase Orders' && isExecutiveOrMD) ? 'Purchase Order Approvals' : (activeTab || 'Dashboard')}
+            {(activeTab === 'Purchase Orders' && isExecutiveOrMD) ? 'Purchase Order Approvals' : (activeTab === 'Purchase Orders' && userRole.includes('Accounts')) ? 'Purchase Order Verification' : (activeTab || 'Dashboard')}
           </h2>
         </div>
       </div>
