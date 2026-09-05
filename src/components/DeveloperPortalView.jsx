@@ -146,6 +146,8 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
     }
   });
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [showAllPasswords, setShowAllPasswords] = useState(false);
 
   // Sync registered employee list from server & cloud database
   const refreshEmployeesList = async () => {
@@ -1117,7 +1119,26 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
               </div>
 
               <div style={{ backgroundColor: '#1E293B', borderRadius: '10px', border: '1px solid #334155', padding: '16px', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <button
+                    onClick={() => setShowAllPasswords(prev => !prev)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: showAllPasswords ? 'rgba(245, 158, 11, 0.15)' : '#0F172A',
+                      border: showAllPasswords ? '1px solid #F59E0B' : '1px solid #334155',
+                      color: showAllPasswords ? '#FBBF24' : '#94A3B8',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showAllPasswords ? <EyeOff size={13} /> : <Eye size={13} />}
+                    {showAllPasswords ? 'Hide All Passwords' : 'Show All Passwords'}
+                  </button>
                   <button
                     onClick={refreshEmployeesList}
                     disabled={isLoadingEmployees}
@@ -1146,6 +1167,7 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                       <th style={{ padding: '12px 14px' }}>EMPLOYEE NAME</th>
                       <th style={{ padding: '12px 14px' }}>ROLE / TYPE</th>
                       <th style={{ padding: '12px 14px' }}>EMAIL</th>
+                      <th style={{ padding: '12px 14px' }}>PASSWORD</th>
                       <th style={{ padding: '12px 14px' }}>STATUS</th>
                       <th style={{ padding: '12px 14px' }}>DEVELOPER ACTIONS</th>
                     </tr>
@@ -1153,7 +1175,7 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                   <tbody>
                     {employeesList.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ padding: '28px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                        <td colSpan={7} style={{ padding: '28px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
                           No employee accounts registered yet. When users sign up, their access requests will appear here in real time.
                         </td>
                       </tr>
@@ -1162,6 +1184,8 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                         const empCode = emp.employee_code || emp.code;
                         const empStatus = emp.status || 'Active';
                         const isPending = empStatus === 'Pending Approval';
+                        const empPassword = emp.password || '—';
+                        const isRevealed = showAllPasswords || Boolean(revealedPasswords[empCode]);
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #334155', backgroundColor: isPending ? 'rgba(217, 119, 6, 0.08)' : 'transparent' }}>
@@ -1169,6 +1193,23 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
                           <td style={{ padding: '12px 14px', fontWeight: '700', color: '#F8FAFC' }}>{emp.employee_name || emp.name}</td>
                           <td style={{ padding: '12px 14px', color: '#CBD5E1' }}>{emp.role}</td>
                           <td style={{ padding: '12px 14px', color: '#94A3B8' }}>{emp.email}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#0F172A', padding: '3px 8px', borderRadius: '4px', border: '1px solid #334155' }}>
+                              <span style={{ fontFamily: 'monospace', fontSize: '12px', color: isRevealed ? '#34D399' : '#94A3B8', letterSpacing: isRevealed ? 'normal' : '2px', fontWeight: '700' }}>
+                                {isRevealed ? empPassword : (empPassword !== '—' ? '••••••••' : '—')}
+                              </span>
+                              {empPassword !== '—' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setRevealedPasswords(prev => ({ ...prev, [empCode]: !prev[empCode] }))}
+                                  title={isRevealed ? "Hide Password" : "Show Password"}
+                                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748B' }}
+                                >
+                                  {isRevealed ? <EyeOff size={12} color="#F59E0B" /> : <Eye size={12} color="#94A3B8" />}
+                                </button>
+                              )}
+                            </div>
+                          </td>
                           <td style={{ padding: '12px 14px' }}>
                             <span style={{ 
                               backgroundColor: empStatus === 'Disabled' ? '#7F1D1D' : isPending ? '#B45309' : '#065F46', 
