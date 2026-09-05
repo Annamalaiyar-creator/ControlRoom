@@ -640,8 +640,14 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
       .then(() => {
         setApprovingPo(null);
         setApprovalRemarksInput('');
+        setSelectedPOs([]);
+        // If executive was on the "Pending MD Approval" filter, transition tab to "Approved by MD"
+        // so the PO doesn't vanish from their view!
+        if (poTab === 'Draft') {
+          setPoTab('MD_APPROVED');
+        }
         fetchZohoPOs(true);
-        showCustomAlert(`PO ${poId} approved by MD successfully! Now ready for Payment Process.`, 'MD Approval Completed', 'success');
+        showCustomAlert(`PO ${poId} approved by MD successfully! Moved to 'Approved by MD' tab and ready for Payment Process.`, 'MD Approval Completed', 'success');
       })
       .catch(() => {
         setApprovingPo(null);
