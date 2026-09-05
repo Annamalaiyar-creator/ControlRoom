@@ -50,6 +50,17 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       return 0;
     }
   })();
+  const realAccountsAwaitingPOCount = (() => {
+    try {
+      const pos = JSON.parse(localStorage.getItem('controlroom_purchase_orders') || '[]');
+      if (Array.isArray(pos)) {
+        return pos.filter(p => p.status === 'MD Approved' || p.statusType === 'md_approved').length;
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  })();
 
   // Categorized Menu Sections Structure matching exact design layout
   const procurementSections = [
@@ -172,7 +183,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart },
+            { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart, badge: realAccountsAwaitingPOCount > 0 ? String(realAccountsAwaitingPOCount) : undefined },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }

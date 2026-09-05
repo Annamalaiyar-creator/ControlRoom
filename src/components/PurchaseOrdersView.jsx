@@ -1011,6 +1011,10 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
   }, []);
 
   const renderStatusBadge = (type, label) => {
+    const raw = String(label || type || '').trim();
+    if (isAccounts && (raw === 'MD Approved' || raw === 'md_approved')) {
+      return <StatusBadge status="Awaiting Accounts Verification" size="sm" />;
+    }
     return <StatusBadge status={label || type} size="sm" />;
   };
 
@@ -1019,7 +1023,14 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
       {/* ==================== VIEW 1: MAIN PO LIST SCREEN ==================== */}
       {viewMode === 'list' && (() => {
-        const allStatusOptions = [
+        const allStatusOptions = isAccounts ? [
+          'All',
+          'Awaiting Accounts Verification',
+          'Payment Processed / Credit Verified',
+          'Proceed PO (GRN Ready)',
+          'Draft / Pending MD Approval',
+          'REJECTED'
+        ] : [
           'All',
           'Draft',
           'Draft / Pending Approval',
@@ -1042,6 +1053,10 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
           const statusTypeStr = String(po.statusType || '');
 
           const matchesStatus = statusFilter === 'All' ||
+            (statusFilter === 'Awaiting Accounts Verification' && (statusStr === 'MD Approved' || statusTypeStr === 'md_approved')) ||
+            (statusFilter === 'Payment Processed / Credit Verified' && (statusStr === 'Payment Processed' || statusTypeStr === 'payment_processed')) ||
+            (statusFilter === 'Proceed PO (GRN Ready)' && (statusStr === 'Proceed PO' || statusTypeStr === 'proceed_po')) ||
+            (statusFilter === 'Draft / Pending MD Approval' && (statusStr === 'Draft' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'pending' || statusTypeStr === 'draft')) ||
             (statusFilter === 'Draft' && (statusStr === 'Draft' || statusTypeStr === 'draft')) ||
             (statusFilter === 'Draft / Pending Approval' && (statusStr === 'Draft / Pending Approval' || statusStr === 'WAITING FOR APPROVAL' || statusStr === 'Pending Approval' || statusTypeStr === 'pending')) ||
             (statusFilter === 'MD Approved' && (statusStr === 'MD Approved' || statusTypeStr === 'md_approved')) ||
@@ -1258,6 +1273,12 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 { id: 'Draft', label: 'Pending MD Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
                 { id: 'MD_APPROVED', label: 'Approved by MD', count: poList.filter(po => po.status === 'MD Approved' || po.statusType === 'md_approved').length, bg: '#e0e7ff', fg: '#3730a3' },
                 { id: 'All', label: 'All Purchase Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' }
+              ] : isAccounts ? [
+                { id: 'MD_APPROVED', label: 'Awaiting Accounts Verification', count: poList.filter(po => po.status === 'MD Approved' || po.statusType === 'md_approved').length, bg: '#e0e7ff', fg: '#3730a3' },
+                { id: 'PAYMENT_PROCESSED', label: 'Payment Processed / Credit Verified', count: poList.filter(po => po.status === 'Payment Processed' || po.statusType === 'payment_processed').length, bg: '#fef3c7', fg: '#92400e' },
+                { id: 'PROCEED_PO', label: 'Proceed PO (GRN Ready)', count: poList.filter(po => po.status === 'Proceed PO' || po.statusType === 'proceed_po').length, bg: '#ecfeff', fg: '#0e7490' },
+                { id: 'Draft', label: 'Pending MD Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' }
               ] : [
                 { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
                 { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
@@ -2488,16 +2509,39 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            backgroundColor: '#F0FDF4',
-                            border: '1px solid #BBF7D0',
+                            backgroundColor: isAccounts ? '#EEF2FF' : '#F0FDF4',
+                            border: isAccounts ? '1px solid #C7D2FE' : '1px solid #BBF7D0',
                             borderRadius: '8px',
                             padding: '6px 14px',
                             fontSize: '12px',
                             fontWeight: '700',
-                            color: '#166534'
+                            color: isAccounts ? '#3730A3' : '#166534'
                           }}>
-                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approved
+                            <CheckCircle size={14} style={{ color: isAccounts ? '#4F46E5' : '#16A34A' }} /> {isAccounts ? 'Awaiting Accounts Verification' : 'MD Approved'}
                           </div>
+
+                          {isAccounts && (st === 'MD Approved' || currentPoObj?.status === 'MD Approved') && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
+                              style={{
+                                backgroundColor: '#0E7490',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '7px 18px',
+                                fontSize: '13px',
+                                fontWeight: '700',
+                                color: 'white',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                              }}
+                            >
+                              <CreditCard size={15} /> Process Payment / Verify Credit
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

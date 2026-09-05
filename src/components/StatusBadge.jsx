@@ -95,6 +95,20 @@ export function getStatusStyleConfig(statusOrType, customLabel) {
 
   // 0. PO Specific Sequential Workflow States
   if (
+    raw === 'awaiting accounts verification' ||
+    raw === 'awaiting_accounts_verification' ||
+    raw === 'pending accounts verification'
+  ) {
+    return {
+      label: customLabel || 'Awaiting Accounts Verification',
+      bg: '#e0e7ff',
+      color: '#3730a3',
+      border: '1px solid #c7d2fe',
+      Icon: IconInProgress
+    };
+  }
+
+  if (
     raw === 'md approved' ||
     raw === 'md_approved'
   ) {
@@ -110,14 +124,15 @@ export function getStatusStyleConfig(statusOrType, customLabel) {
   if (
     raw === 'payment processed' ||
     raw === 'payment_processed' ||
-    raw === 'credit verified'
+    raw === 'credit verified' ||
+    raw === 'payment processed / credit verified'
   ) {
     return {
       label: customLabel || 'Payment Processed',
       bg: '#fef3c7',
       color: '#92400e',
       border: '1px solid #fde68a',
-      Icon: IconInProgress
+      Icon: IconSuccess
     };
   }
 
