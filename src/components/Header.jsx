@@ -15,6 +15,7 @@ export const addLiveNotification = (notif) => {
 export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal, onSelectTab }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
   
   const [readIds, setReadIds] = useState(() => {
     try {
