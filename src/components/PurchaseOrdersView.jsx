@@ -619,6 +619,15 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     if (!poTarget) return;
     const poId = poTarget.poNo || poTarget.id;
 
+    // Immediately reflect MD Approved state in the currently active view
+    setViewingPoStatus('MD Approved');
+    setPoList(prev => prev.map(p => {
+      if (p.poNo === poId || p.id === poId) {
+        return { ...p, status: 'MD Approved', statusType: 'md_approved' };
+      }
+      return p;
+    }));
+
     fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -631,12 +640,12 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
       .then(() => {
         setApprovingPo(null);
         setApprovalRemarksInput('');
-        fetchZohoPOs();
+        fetchZohoPOs(true);
         showCustomAlert(`PO ${poId} approved by MD successfully! Now ready for Payment Process.`, 'MD Approval Completed', 'success');
       })
       .catch(() => {
         setApprovingPo(null);
-        fetchZohoPOs();
+        fetchZohoPOs(true);
       });
   };
 
@@ -721,6 +730,15 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     }
     const poId = poTarget.poNo || poTarget.id;
 
+    // Immediately reflect REJECTED state in the currently active view
+    setViewingPoStatus('REJECTED');
+    setPoList(prev => prev.map(p => {
+      if (p.poNo === poId || p.id === poId) {
+        return { ...p, status: 'REJECTED', statusType: 'rejected', rejectionReason: rejectionReasonInput };
+      }
+      return p;
+    }));
+
     fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/reject`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -733,11 +751,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
       .then(() => {
         setRejectingPo(null);
         setRejectionReasonInput('');
-        fetchZohoPOs();
+        fetchZohoPOs(true);
       })
       .catch(() => {
         setRejectingPo(null);
-        fetchZohoPOs();
+        fetchZohoPOs(true);
       });
   };
 
@@ -1821,15 +1839,26 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
           {/* Title Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
-                {viewMode === 'view' ? 'View Purchase Order' : viewMode === 'edit' ? 'Edit Purchase Order' : 'Create Purchase Order'}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+                  {viewMode === 'view' ? 'View Purchase Order' : viewMode === 'edit' ? 'Edit Purchase Order' : 'Create Purchase Order'}
+                </h2>
+                {viewMode === 'view' && viewingPoStatus && (
+                  renderStatusBadge(
+                    (viewingPoStatus === 'MD Approved' || viewingPoStatus === 'OPEN' || viewingPoStatus === 'Approved') ? 'approved' :
+                    (viewingPoStatus === 'Payment Processed') ? 'payment_processed' :
+                    (viewingPoStatus === 'Proceed PO') ? 'proceed_po' :
+                    (viewingPoStatus === 'REJECTED') ? 'rejected' : 'pending',
+                    viewingPoStatus
+                  )
+                )}
+              </div>
               <span style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
                 {viewMode === 'view' ? `Details of purchase order ${poNumber}.` : 'Fill in the details below to create a new purchase order.'}
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {viewMode === 'view' ? (
                 <>
                   {!isExecutiveOrMD && (
@@ -1918,13 +1947,31 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
                     if (isMdApproved) {
                       return (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
-                          style={{ backgroundColor: '#D97706', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)' }}
-                        >
-                          <CreditCard style={{ width: '15px', height: '15px' }} /> Process Payment / Verify Credit
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: '#F0FDF4',
+                            border: '1px solid #BBF7D0',
+                            borderRadius: '8px',
+                            padding: '6px 14px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: '#166534'
+                          }}>
+                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approved
+                          </div>
+                          {!isExecutiveOrMD && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
+                              style={{ backgroundColor: '#D97706', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)' }}
+                            >
+                              <CreditCard style={{ width: '15px', height: '15px' }} /> Process Payment / Verify Credit
+                            </button>
+                          )}
+                        </div>
                       );
                     }
 
@@ -2062,10 +2109,12 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved' || isPaymentDone;
                     const isDraft = st === 'Draft' || st === 'DRAFT' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
 
+                    const isApprovedOnly = (st === 'MD Approved' || st === 'OPEN' || st === 'Approved') && !isPaymentDone;
+
                     return [
                       { label: '1. PO Created', done: true, current: isDraft && st !== 'Draft / Pending Approval' },
-                      { label: '2. MD Approval', done: isMdApproved, current: st === 'MD Approved' || (isDraft && st === 'Draft / Pending Approval') },
-                      { label: '3. Payment Process', done: isPaymentDone, current: st === 'Payment Processed' },
+                      { label: '2. MD Approval', done: isMdApproved, current: isDraft && st === 'Draft / Pending Approval' },
+                      { label: '3. Payment Process', done: isPaymentDone, current: isApprovedOnly || st === 'Payment Processed' },
                       { label: '4. Proceed PO', done: isProceed, current: st === 'Proceed PO' || st === 'PROCEED PO' },
                       { label: '5. GRN Process', done: (isPartial || isClosed), current: isPartial || isClosed }
                     ];
@@ -2379,7 +2428,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                         </button>
                       </div>
 
-                      {isDraftOrPending && (
+                      {isDraftOrPending ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>
                             Decision for PO <strong>{poNumber}</strong>:
@@ -2423,6 +2472,23 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           >
                             <CheckCircle size={15} /> Approve as MD
                           </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: '#F0FDF4',
+                            border: '1px solid #BBF7D0',
+                            borderRadius: '8px',
+                            padding: '6px 14px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: '#166534'
+                          }}>
+                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> MD Approved
+                          </div>
                         </div>
                       )}
                     </div>
