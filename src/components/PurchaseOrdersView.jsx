@@ -468,8 +468,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
-    const isAppReq = String(approvalRequired).toUpperCase() === 'YES';
-    executeCreatePO(e, isAppReq ? 'Draft / Pending Approval' : 'OPEN');
+    executeCreatePO(e, 'Draft / Pending Approval');
   };
 
   const executeCreatePO = (e, targetStatus = 'Draft / Pending Approval') => {
@@ -2657,38 +2656,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
               </div>
 
-              {/* 5. Approval Info */}
-              <div className="section-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <strong style={{ fontSize: '14px', color: '#2563eb', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>5. Approval Workflows</strong>
-
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Requires CEO / Director Approval?</span>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: '500', color: '#475569', fontSize: '12px' }}>
-                    <input type="radio" name="approvalRequired" value="Yes" checked={approvalRequired === 'Yes'} onChange={() => setApprovalRequired('Yes')} /> Yes
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: '500', color: '#475569', fontSize: '12px' }}>
-                    <input type="radio" name="approvalRequired" value="No" checked={approvalRequired === 'No'} onChange={() => setApprovalRequired('No')} /> No
-                  </label>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Designated Approver</label>
-                    <input type="text" value={approver} disabled style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#64748b' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Approval Priority</label>
-                    <select value={approvalPriority} onChange={(e) => setApprovalPriority(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>High</option>
-                      <option>Medium</option>
-                      <option>Low</option>
-                    </select>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* 6. Form Footer Action Buttons */}
+              {/* 5. Form Footer Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px', padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
                 <button
                   type="button"
