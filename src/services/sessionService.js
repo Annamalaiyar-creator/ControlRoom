@@ -34,13 +34,22 @@ export function getDeviceInfo() {
 }
 
 /**
+ * Create a brand new unique session token
+ */
+export function createNewSessionId() {
+  const sesId = 'SES-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+  localStorage.setItem('controlroom_device_session_id', sesId);
+  localStorage.setItem('controlroom_session_start_time', String(Date.now()));
+  return sesId;
+}
+
+/**
  * Get or generate unique persistent session token for this browser client
  */
 export function getOrCreateSessionId() {
   let sesId = localStorage.getItem('controlroom_device_session_id');
   if (!sesId) {
-    sesId = 'SES-' + Math.random().toString(36).substring(2, 9).toUpperCase();
-    localStorage.setItem('controlroom_device_session_id', sesId);
+    sesId = createNewSessionId();
   }
   return sesId;
 }
@@ -115,6 +124,10 @@ export async function heartbeatActiveSession() {
   const isAuthenticated = localStorage.getItem('controlroom_is_authenticated') === 'true';
   if (!isAuthenticated) return;
 
+  // Grace period: do not force logout within 30 seconds of starting a session
+  const sessionStartTime = Number(localStorage.getItem('controlroom_session_start_time') || 0);
+  const sessionAgeSeconds = (Date.now() - sessionStartTime) / 1000;
+
   try {
     const { data: existing } = await supabase
       .from('leaves')
@@ -124,10 +137,13 @@ export async function heartbeatActiveSession() {
       .maybeSingle();
 
     if (existing) {
-      // If admin revoked this session
-      if (existing.status === 'revoked') {
+      // Only treat as revoked if not in fresh session grace window
+      if (existing.status === 'revoked' && sessionAgeSeconds > 30) {
+        console.warn('Session has been revoked remotely. Logging out.');
         localStorage.removeItem('controlroom_is_authenticated');
         localStorage.removeItem('controlroom_user_role');
+        localStorage.removeItem('controlroom_device_session_id');
+        localStorage.removeItem('controlroom_session_start_time');
         window.location.reload();
         return;
       }
@@ -143,7 +159,8 @@ export async function heartbeatActiveSession() {
         .from('leaves')
         .update({
           reason: JSON.stringify(payload),
-          dates: new Date().toISOString()
+          dates: new Date().toISOString(),
+          status: 'active'
         })
         .eq('id', existing.id);
     }

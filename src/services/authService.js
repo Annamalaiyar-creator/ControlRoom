@@ -294,6 +294,8 @@ export const logoutUser = () => {
     localStorage.removeItem('controlroom_user_role');
     localStorage.removeItem('controlroom_logged_user');
     localStorage.removeItem('controlroom_logged_user_name');
+    localStorage.removeItem('controlroom_device_session_id');
+    localStorage.removeItem('controlroom_session_start_time');
   } catch (e) {
     console.error('Error removing login session:', e);
   }

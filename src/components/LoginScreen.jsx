@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { authenticateUser, syncEmployeesFromCloud } from '../services/authService';
 import { saveCloudStore } from '../utils/supabaseDataSync';
-import { registerActiveSession } from '../services/sessionService';
+import { registerActiveSession, createNewSessionId } from '../services/sessionService';
 
 export const USER_ROLES_CONFIG = [
   {
@@ -228,6 +228,9 @@ export default function LoginScreen({ onLoginSuccess }) {
   };
 
   const finalizeSuccessfulLogin = (roleName, empCode, emailStr, displayNameStr) => {
+    // Generate fresh session token so we never inherit a previously revoked session ID
+    createNewSessionId();
+
     localStorage.setItem('controlroom_is_authenticated', 'true');
     localStorage.setItem('controlroom_user_role', roleName);
     localStorage.setItem('controlroom_logged_emp_id', empCode);
