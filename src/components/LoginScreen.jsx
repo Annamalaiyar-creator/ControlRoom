@@ -578,7 +578,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               {/* Employee Code Input + Verify Button */}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#0F172A', marginBottom: '4px' }}>
-                  Employee Code <span style={{ color: '#EF4444', fontWeight: '700' }}>*</span>
+                  Employee Code
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input 
