@@ -730,7 +730,32 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
         setPaymentProcessingPo(null);
         setPayImageInput(null);
         setPayImageMeta(null);
-        fetchZohoPOs();
+        // Immediately update status in active viewing state and poList
+        setViewingPoStatus('Payment Processed');
+        setPoList(prev => prev.map(p => {
+          if (p.poNo === poId || p.id === poId) {
+            return {
+              ...p,
+              status: 'Payment Processed',
+              statusType: 'payment_processed',
+              paymentDetails: {
+                mode: payModeInput,
+                refNo: payRefInput || (isCredit ? 'CREDIT-CONFIRMED' : ''),
+                amount: payAmountInput ? `₹ ${Number(payAmountInput).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : poTarget.amount,
+                date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                remarks: payRemarksInput || (isCredit ? 'Credit terms verified by Accounts team' : 'Payment recorded by Accounts'),
+                isCredit,
+                creditTerms: payCreditTermsInput,
+                paymentImage: payImageInput,
+                paymentImageMeta: payImageMeta,
+                verifiedBy: 'Accounts Team'
+              }
+            };
+          }
+          return p;
+        }));
+        fetchZohoPOs(true);
         if (isCredit) {
           setCreditAlertPopup({
             poNo: poId,
@@ -2031,7 +2056,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {viewMode === 'view' ? (
                 <>
-                  {!isExecutiveOrMD && (
+                  {!isExecutiveOrMD && !isAccounts && (
                     <button
                       type="button"
                       onClick={() => {
@@ -2723,42 +2748,98 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                         </div>
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            backgroundColor: isAccounts ? '#EEF2FF' : '#F0FDF4',
-                            border: isAccounts ? '1px solid #C7D2FE' : '1px solid #BBF7D0',
-                            borderRadius: '8px',
-                            padding: '6px 14px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            color: isAccounts ? '#3730A3' : '#166534'
-                          }}>
-                            <CheckCircle size={14} style={{ color: isAccounts ? '#4F46E5' : '#16A34A' }} /> {isAccounts ? 'Awaiting Accounts Verification' : 'MD Approved'}
-                          </div>
-
-                          {isAccounts && (st === 'MD Approved' || currentPoObj?.status === 'MD Approved') && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
-                              style={{
-                                backgroundColor: '#0E7490',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '7px 18px',
-                                fontSize: '13px',
-                                fontWeight: '700',
-                                color: 'white',
-                                cursor: 'pointer',
+                          {(st === 'Proceed PO' || currentPoObj?.status === 'Proceed PO') ? (
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: '#ECFEFF',
+                              border: '1px solid #0E7490',
+                              borderRadius: '8px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              color: '#0E7490'
+                            }}>
+                              <CheckCircle size={14} style={{ color: '#0E7490' }} /> Ready for GRN Process
+                            </div>
+                          ) : (st === 'Payment Processed' || currentPoObj?.status === 'Payment Processed') ? (
+                            <>
+                              <div style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
-                              }}
-                            >
-                              <CreditCard size={15} /> Process Payment / Verify Credit
-                            </button>
+                                backgroundColor: '#F0FDF4',
+                                border: '1px solid #BBF7D0',
+                                borderRadius: '8px',
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                color: '#166534'
+                              }}>
+                                <CheckCircle size={14} style={{ color: '#16A34A' }} /> Payment Processed / Credit Verified
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setProceedingPo(currentPoObj)}
+                                style={{
+                                  backgroundColor: '#0E7490',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '7px 18px',
+                                  fontSize: '13px',
+                                  fontWeight: '700',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                                }}
+                              >
+                                <Send size={15} /> Proceed PO (Ready for GRN)
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                backgroundColor: isAccounts ? '#EEF2FF' : '#F0FDF4',
+                                border: isAccounts ? '1px solid #C7D2FE' : '1px solid #BBF7D0',
+                                borderRadius: '8px',
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                color: isAccounts ? '#3730A3' : '#166534'
+                              }}>
+                                <CheckCircle size={14} style={{ color: isAccounts ? '#4F46E5' : '#16A34A' }} /> {isAccounts ? 'Awaiting Accounts Verification' : 'MD Approved'}
+                              </div>
+
+                              {isAccounts && (st === 'MD Approved' || currentPoObj?.status === 'MD Approved') && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenPaymentProcessModal(currentPoObj)}
+                                  style={{
+                                    backgroundColor: '#0E7490',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    padding: '7px 18px',
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                                  }}
+                                >
+                                  <CreditCard size={15} /> Process Payment / Verify Credit
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
