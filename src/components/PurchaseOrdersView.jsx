@@ -1832,13 +1832,6 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
             <div style={{ display: 'flex', gap: '12px' }}>
               {viewMode === 'view' ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
-                  >
-                    Back to List
-                  </button>
                   {!isExecutiveOrMD && (
                     <button
                       type="button"
@@ -1856,12 +1849,6 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                       <Copy style={{ width: '14px', height: '14px', color: '#4338CA' }} /> Clone PO
                     </button>
                   )}
-                  <button
-                    type="button"
-                    style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
-                  >
-                    Generate PDF
-                  </button>
                   {/* Stage-based Workflow Action Buttons */}
                   {(() => {
                     const st = String(viewingPoStatus || '').trim();
