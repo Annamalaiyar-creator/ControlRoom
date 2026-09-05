@@ -1174,7 +1174,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 <Search style={{ width: '15px', height: '15px', color: '#64748b', flexShrink: 0 }} />
                 <input
                   type="text"
-                  placeholder="Search Purchase Orders (PO No, Vendor Name)..."
+                  placeholder="Search Purchase Orders (PO No, Company Name)..."
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                   style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
@@ -1281,7 +1281,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                         />
                       </th>
                       <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO No.</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Vendor Name</th>
+                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Company Name</th>
                       <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO Date</th>
                       <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Expected Delivery</th>
                       <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'right' }}>Total Value</th>
@@ -2210,7 +2210,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
-                      Vendor Name <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
+                      Company Name <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
                     <select
                       value={vendorName}

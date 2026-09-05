@@ -2907,7 +2907,7 @@ export default function VendorManagementView(props) {
                             style={{ cursor: 'pointer' }}
                           />
                         </th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Vendor Name</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Company Name</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Contact Person</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Mobile / Email</th>
                         <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Status</th>
