@@ -481,6 +481,20 @@ export default function GoodsReceiptNoteView(props) {
     setEditingGrnId(null);
   };
 
+  // Helper to handle push to GRN transition
+  const handlePendingPushToGrn = (currentPOs = livePOs) => {
+    try {
+      const pushPo = localStorage.getItem('controlroom_push_to_grn_po');
+      if (pushPo) {
+        localStorage.removeItem('controlroom_push_to_grn_po');
+        resetCreateGRNForm();
+        loadPOItems(pushPo, currentPOs, true);
+        setIsViewOnlyMode(false);
+        setShowCreateGRN(true);
+      }
+    } catch (_) {}
+  };
+
   // Fetch live Zoho Purchase Orders & stored GRNs for GRN selection and list display
   useEffect(() => {
     fetch('/api/zoho/purchaseorders')
@@ -488,22 +502,21 @@ export default function GoodsReceiptNoteView(props) {
       .then(data => {
         if (Array.isArray(data)) {
           setLivePOs(data);
-
-          // Check if user clicked "Push to GRN" from Purchase Orders view
-          try {
-            const pushPo = localStorage.getItem('controlroom_push_to_grn_po');
-            if (pushPo) {
-              localStorage.removeItem('controlroom_push_to_grn_po');
-              resetCreateGRNForm();
-              loadPOItems(pushPo, data);
-              setIsViewOnlyMode(false);
-              setShowCreateGRN(true);
-            }
-          } catch (_) {}
+          handlePendingPushToGrn(data);
         }
       })
-      .catch(err => console.error('Error fetching live POs:', err));
+      .catch(err => {
+        console.error('Error fetching live POs:', err);
+        handlePendingPushToGrn(livePOs);
+      });
   }, []);
+
+  // Also check whenever activeTab switches to Goods Receipt Note
+  useEffect(() => {
+    if (activeTab === 'Goods Receipt Note' || activeTab === 'Goods Receipt Note (GRN)') {
+      handlePendingPushToGrn(livePOs);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'Goods Receipt Note' || activeTab === 'Goods Receipt Note (GRN)') {
@@ -533,7 +546,7 @@ export default function GoodsReceiptNoteView(props) {
   }, [activeTab]);
 
   // Function to load PO details and line items when a PO is selected
-  const loadPOItems = (selectedId, currentLivePOs = livePOs) => {
+  const loadPOItems = (selectedId, currentLivePOs = livePOs, autoFillNow = false) => {
     if (!selectedId) {
       setSelectedGRNPo('');
       setGrnItems([]);
@@ -557,10 +570,17 @@ export default function GoodsReceiptNoteView(props) {
       .then(([detail, historyData]) => {
         let rawItems = (detail && Array.isArray(detail.items) && detail.items.length > 0)
           ? detail.items
-          : [
-            { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', qty: 3000, unit: 'NOS' },
-            { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', qty: 1000, unit: 'Set' }
-          ];
+          : (found && Array.isArray(found.items) && found.items.length > 0)
+            ? found.items
+            : [
+              { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', qty: 3000, unit: 'NOS' },
+              { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', qty: 1000, unit: 'Set' }
+            ];
+
+        // Also if vendor was not resolved earlier, resolve from detail
+        if (detail && detail.vendor && (!vendorName || vendorName === 'Vendor')) {
+          setSelectedGRNVendor(detail.vendor);
+        }
 
         const historyTotals = (historyData && historyData.itemReceivedTotals) ? historyData.itemReceivedTotals : {};
         const historyList = (historyData && historyData.grnHistory) ? historyData.grnHistory : [];
@@ -583,6 +603,10 @@ export default function GoodsReceiptNoteView(props) {
           const ordered = it.qty || 0;
           const remaining = (it.remainingQty !== undefined) ? Number(it.remainingQty) : Math.max(0, ordered - prev);
 
+          // If autoFillNow is true (e.g. pushed from PO), pre-populate receiving now and accepted with remaining quantity!
+          const nowVal = autoFillNow ? remaining : '';
+          const acceptedVal = autoFillNow ? remaining : '';
+
           return {
             id: itemId,
             name: it.name,
@@ -592,8 +616,8 @@ export default function GoodsReceiptNoteView(props) {
             ordered: ordered,
             prev: prev,
             remaining: remaining,
-            now: '',
-            accepted: '',
+            now: nowVal,
+            accepted: acceptedVal,
             rejected: 0,
             reason: '—',
             batch: `LOT-2026-${idx + 1}`
@@ -2497,12 +2521,17 @@ export default function GoodsReceiptNoteView(props) {
                               return isSelected || isProceedPo || isPartiallyReceived;
                             });
 
+                            const hasSelected = eligiblePOs.some(p => p.poNo === selectedGRNPo || p.id === selectedGRNPo);
+                            const displayList = (!hasSelected && selectedGRNPo)
+                              ? [{ poNo: selectedGRNPo, id: selectedGRNPo, vendor: selectedGRNVendor || 'Vendor', status: 'Proceed PO' }, ...eligiblePOs]
+                              : eligiblePOs;
+
                             return (
                               <>
-                                <option value="" disabled>Select Purchase Order ({eligiblePOs.length} Proceeded / Partial POs)</option>
-                                {eligiblePOs.map((po) => (
+                                <option value="" disabled>Select Purchase Order ({displayList.length} Proceeded / Partial POs)</option>
+                                {displayList.map((po) => (
                                   <option key={po.id || po.poNo} value={po.poNo || po.id}>
-                                    {po.poNo} — {po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : po.vendor} ({po.status})
+                                    {po.poNo} — {po.vendor && po.vendor.length > 20 ? po.vendor.substring(0, 20) + '...' : (po.vendor || 'Vendor')} ({po.status})
                                   </option>
                                 ))}
                               </>
