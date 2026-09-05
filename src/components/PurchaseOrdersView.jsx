@@ -122,7 +122,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
   const [statusFilter, setStatusFilter] = useState('All');
   const [filterDate, setFilterDate] = useState('');
-  const [poTab, setPoTab] = useState('All');
+  const [poTab, setPoTab] = useState(isExecutiveOrMD ? 'Draft' : 'All');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
@@ -1082,10 +1082,12 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
               <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#0F172A' }}>
-                  Purchase Orders (PO)
+                  {isExecutiveOrMD ? 'Purchase Order Approvals (PO)' : 'Purchase Orders (PO)'}
                 </h2>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>
-                  Generate, tracking and dispatch management of corporate Purchase Orders
+                  {isExecutiveOrMD 
+                    ? 'Review, verify and grant MD approval for corporate Purchase Orders awaiting authorization'
+                    : 'Generate, tracking and dispatch management of corporate Purchase Orders'}
                 </span>
               </div>
 
@@ -1226,7 +1228,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
             {/* 2. STATUS TABS ROW */}
             <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-              {[
+              {(isExecutiveOrMD ? [
+                { id: 'Draft', label: 'Pending MD Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'MD_APPROVED', label: 'Approved by MD', count: poList.filter(po => po.status === 'MD Approved' || po.statusType === 'md_approved').length, bg: '#e0e7ff', fg: '#3730a3' },
+                { id: 'All', label: 'All Purchase Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' }
+              ] : [
                 { id: 'All', label: 'All Orders', count: poList.length, bg: '#e2e8f0', fg: '#475569' },
                 { id: 'Draft', label: 'Draft / Pending Approval', count: poList.filter(po => po.status === 'Draft' || po.status === 'WAITING FOR APPROVAL' || po.status === 'Pending Approval' || po.statusType === 'draft' || po.statusType === 'pending').length, bg: '#fff7ed', fg: '#c2410c' },
                 { id: 'MD_APPROVED', label: 'MD Approved', count: poList.filter(po => po.status === 'MD Approved' || po.statusType === 'md_approved').length, bg: '#e0e7ff', fg: '#3730a3' },
@@ -1235,7 +1241,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 { id: 'PARTIALLY_RECEIVED', label: 'Open / Partially Received', count: poList.filter(po => po.status === 'OPEN / PARTIALLY RECEIVED' || String(po.status).includes('PARTIALLY') || po.statusType === 'partially_received').length, bg: '#fef3c7', fg: '#b45309' },
                 { id: 'CLOSED', label: 'Closed / Fully Received', count: poList.filter(po => po.status === 'CLOSED / FULLY RECEIVED' || po.status === 'CLOSED' || po.statusType === 'closed').length, bg: '#dcfce7', fg: '#15803d' },
                 { id: 'REJECTED', label: 'Rejected', count: poList.filter(po => po.status === 'REJECTED' || po.statusType === 'rejected').length, bg: '#fee2e2', fg: '#dc2626' }
-              ].map(tab => (
+              ]).map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => { setPoTab(tab.id); setCurrentPage(1); }}

@@ -39,6 +39,17 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       return 0;
     }
   })();
+  const realPendingPOCount = (() => {
+    try {
+      const pos = JSON.parse(localStorage.getItem('controlroom_purchase_orders') || '[]');
+      if (Array.isArray(pos)) {
+        return pos.filter(p => p.status === 'Draft' || p.status === 'WAITING FOR APPROVAL' || p.status === 'Pending Approval' || p.statusType === 'draft' || p.statusType === 'pending').length;
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  })();
 
   // Categorized Menu Sections Structure matching exact design layout
   const procurementSections = [
@@ -235,7 +246,12 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
+            { 
+              label: 'Purchase Order Approvals', 
+              targetTab: 'Purchase Orders', 
+              icon: ShoppingCart, 
+              badge: realPendingPOCount > 0 ? String(realPendingPOCount) : undefined 
+            },
             { label: 'Proforma Invoice', icon: FileText }
           ]
         },
@@ -273,11 +289,11 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
   };
 
   const getBadgeStyle = (label) => {
-    if (label === 'Purchase Orders') {
+    if (label === 'Purchase Orders' || label === 'Purchase Order Approvals') {
       return {
-        backgroundColor: '#EEF2FF',
-        color: '#4F46E5',
-        border: '1px solid #C7D2FE'
+        backgroundColor: '#FEF3C7',
+        color: '#B45309',
+        border: '1px solid #FDE68A'
       };
     }
     if (label === 'Work Orders') {

@@ -15,34 +15,6 @@ export const addLiveNotification = (notif) => {
 export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal, onSelectTab }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
-  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
-
-  const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
-
-  // Fetch pending PO approvals for CEO / MD button
-  useEffect(() => {
-    const fetchPendingApprovals = () => {
-      fetch('/api/zoho/purchaseorders')
-        .then(res => res.ok ? res.json() : [])
-        .then(data => {
-          if (Array.isArray(data)) {
-            const count = data.filter(po => 
-              po.status === 'Draft' || 
-              po.status === 'WAITING FOR APPROVAL' || 
-              po.status === 'Pending Approval' || 
-              po.statusType === 'draft' || 
-              po.statusType === 'pending'
-            ).length;
-            setPendingApprovalCount(count);
-          }
-        })
-        .catch(() => {});
-    };
-
-    fetchPendingApprovals();
-    const interval = setInterval(fetchPendingApprovals, 20000);
-    return () => clearInterval(interval);
-  }, []);
   
   const [readIds, setReadIds] = useState(() => {
     try {
@@ -198,72 +170,13 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
             margin: 0,
             letterSpacing: '-0.3px'
           }}>
-            {activeTab || 'Dashboard'}
+            {(activeTab === 'Purchase Orders' && isExecutiveOrMD) ? 'Purchase Order Approvals' : (activeTab || 'Dashboard')}
           </h2>
         </div>
       </div>
 
       {/* Right side: Actions & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-
-        {/* CEO / MD Quick Action: Approve PO Button */}
-        {isExecutiveOrMD && (
-          <button
-            onClick={() => {
-              if (onSelectTab) {
-                // Navigate to Purchase Orders tab and specifically activate the Draft / Pending Approval tab
-                onSelectTab('Purchase Orders', null, 'Draft');
-              }
-            }}
-            title="View POs waiting for MD Approval"
-            style={{
-              height: '38px',
-              padding: '0 16px',
-              borderRadius: '20px',
-              backgroundColor: '#FFFFFF',
-              color: '#0E7490',
-              border: 'none',
-              fontSize: '12.5px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
-              transition: 'all 0.2s ease',
-              letterSpacing: '0.1px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.backgroundColor = '#F0FDFA';
-              e.currentTarget.style.boxShadow = '0 6px 18px rgba(0, 0, 0, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.backgroundColor = '#FFFFFF';
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.15)';
-            }}
-          >
-            <CheckCircle size={15} style={{ color: '#16A34A', strokeWidth: 2.5 }} />
-            <span>Approve PO</span>
-            {pendingApprovalCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#FEF3C7',
-                  color: '#92400E',
-                  borderRadius: '12px',
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  fontWeight: '900',
-                  border: '1px solid #FDE68A',
-                  lineHeight: '1.2'
-                }}
-              >
-                {pendingApprovalCount}
-              </span>
-            )}
-          </button>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
 
         {/* Neumorphism Help & Support Button */}
         <button 
