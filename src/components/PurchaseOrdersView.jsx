@@ -1525,7 +1525,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                       if (isDraftOrPending) {
                         return (
                           <button
-                            onClick={() => setApprovingPo(target)}
+                            onClick={() => handleStartView(target)}
                             style={{
                               backgroundColor: '#F0FDF4',
                               border: '1px solid #BBF7D0',
@@ -1719,7 +1719,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           return (
                             <button
                               onClick={() => {
-                                setApprovingPo(target);
+                                handleStartView(target);
                                 setShowFloatingMenu(false);
                               }}
                               style={{ width: '100%', padding: '8px 12px', border: 'none', background: '#F0FDF4', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#166534', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -1879,13 +1879,53 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
                     if (isDraftOrPending) {
                       return (
-                        <button
-                          type="button"
-                          onClick={() => setApprovingPo(currentPoObj)}
-                          style={{ backgroundColor: '#16A34A', border: 'none', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)' }}
-                        >
-                          <CheckCircle style={{ width: '15px', height: '15px' }} /> MD Approval
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setRejectingPo(currentPoObj)}
+                            style={{
+                              backgroundColor: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: '8px',
+                              padding: '8px 18px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              color: '#DC2626',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                          >
+                            <XCircle style={{ width: '15px', height: '15px' }} /> Reject PO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setApprovingPo(currentPoObj)}
+                            style={{
+                              backgroundColor: '#16A34A',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px 20px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              color: 'white',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803D'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16A34A'}
+                          >
+                            <CheckCircle style={{ width: '15px', height: '15px' }} /> Approve as MD
+                          </button>
+                        </div>
                       );
                     }
 
@@ -2290,6 +2330,117 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     </div>
                   )}
                 </div>
+
+                {/* Bottom Review & Approval Action Card for Executive / Approver */}
+                {(() => {
+                  const st = String(viewingPoStatus || '').trim();
+                  const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                  const currentPoObj = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
+                    poNo: poNumber,
+                    vendor: vendorName,
+                    amount: `₹ ${Number(totalAmountWithGst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                    paymentTerms
+                  };
+
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '16px 24px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                      marginTop: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('list')}
+                          style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '8px',
+                            padding: '8px 18px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#475569',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ← Back to PO List
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '8px',
+                            padding: '8px 18px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <FileText size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                        </button>
+                      </div>
+
+                      {isDraftOrPending && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>
+                            Decision for PO <strong>{poNumber}</strong>:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setRejectingPo(currentPoObj)}
+                            style={{
+                              backgroundColor: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: '8px',
+                              padding: '8px 18px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              color: '#DC2626',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <XCircle size={15} style={{ color: '#DC2626' }} /> Reject PO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setApprovingPo(currentPoObj)}
+                            style={{
+                              backgroundColor: '#16A34A',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px 22px',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              color: 'white',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)'
+                            }}
+                          >
+                            <CheckCircle size={15} /> Approve as MD
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
             </div>
