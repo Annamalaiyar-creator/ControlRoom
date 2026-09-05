@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, XCircle, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy, Tag, MoreHorizontal, CreditCard, Send } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, XCircle, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Truck, Info, Mail, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, AlertCircle, Copy, Tag, MoreHorizontal, CreditCard, Send, Image } from 'lucide-react';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { getSafeZohoPOs, getSafeZohoVendors, getSafeZohoItems, saveSafeZohoPO } from '../services/zohoSafeSync';
 import StatusBadge from './StatusBadge';
@@ -461,6 +461,8 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
   const [payAmountInput, setPayAmountInput] = useState('');
   const [payRemarksInput, setPayRemarksInput] = useState('');
   const [payCreditTermsInput, setPayCreditTermsInput] = useState('Net 30 Days');
+  const [payImageInput, setPayImageInput] = useState(null);
+  const [payImageMeta, setPayImageMeta] = useState(null);
   const [creditAlertPopup, setCreditAlertPopup] = useState(null);
 
   // Proceed PO Confirmation Modal state
@@ -664,6 +666,38 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     setPayAmountInput(poTarget.amount ? String(poTarget.amount).replace(/[^0-9.]/g, '') : '');
     setPayRemarksInput('');
     setPayCreditTermsInput(poTarget.paymentTerms || 'Net 30 Days');
+    setPayImageInput(null);
+    setPayImageMeta(null);
+  };
+
+  const handlePaymentImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Lightweight compression using FileReader / Canvas
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
+        canvas.height = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setPayImageInput(dataUrl);
+        setPayImageMeta({
+          name: file.name,
+          size: `${Math.round(dataUrl.length * 0.75 / 1024)} KB`,
+          type: file.type || 'image/jpeg',
+          uploadedAt: new Date().toISOString()
+        });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleProcessPaymentSubmit = (poTarget) => {
@@ -671,21 +705,31 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     const poId = poTarget.poNo || poTarget.id;
     const isCredit = payModeInput === 'Credit / Net Terms';
 
+    // Image of the payment is mandatory
+    if (!payImageInput) {
+      alert('Payment Proof Image is mandatory. Please attach the image of the payment to complete verification.');
+      return;
+    }
+
     fetch(`/api/zoho/purchaseorders/${encodeURIComponent(poId)}/process-payment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paymentMode: payModeInput,
-        paymentRef: payRefInput || (isCredit ? 'CREDIT-CONFIRMED' : 'TXN-PAID'),
+        paymentRef: payRefInput || (isCredit ? 'CREDIT-CONFIRMED' : ''),
         amountPaid: payAmountInput ? `₹ ${Number(payAmountInput).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : poTarget.amount,
         remarks: payRemarksInput || (isCredit ? 'Credit terms verified by Accounts team' : 'Payment recorded by Accounts'),
         isCredit: isCredit,
-        creditTerms: payCreditTermsInput
+        creditTerms: payCreditTermsInput,
+        paymentImage: payImageInput,
+        paymentImageMeta: payImageMeta
       })
     })
       .then(res => (res.ok && res.headers.get('content-type')?.includes('application/json')) ? res.json() : null)
       .then(() => {
         setPaymentProcessingPo(null);
+        setPayImageInput(null);
+        setPayImageMeta(null);
         fetchZohoPOs();
         if (isCredit) {
           setCreditAlertPopup({
@@ -700,6 +744,8 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
       })
       .catch(() => {
         setPaymentProcessingPo(null);
+        setPayImageInput(null);
+        setPayImageMeta(null);
         fetchZohoPOs();
       });
   };
@@ -2491,6 +2537,84 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   )}
                 </div>
 
+                {/* Accounts Payment Verification & Proof Card (if verified) */}
+                {(() => {
+                  const currentPoObj = poList.find(p => p.poNo === poNumber || p.id === poNumber);
+                  const pd = currentPoObj?.paymentDetails;
+                  if (!pd) return null;
+
+                  return (
+                    <div style={{
+                      backgroundColor: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '14px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckCircle size={16} style={{ color: '#059669' }} />
+                          <strong style={{ fontSize: '13px', color: '#0F172A' }}>Accounts Payment Verification Details</strong>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                          Verified on {pd.date} {pd.time}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '12px' }}>
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Payment Mode</span>
+                          <strong style={{ color: '#1E293B' }}>{pd.mode || 'Bank Transfer'}</strong>
+                        </div>
+                        {pd.refNo && pd.refNo !== 'CREDIT-CONFIRMED' && (
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Transaction / UTR Ref</span>
+                            <strong style={{ color: '#0E7490' }}>{pd.refNo}</strong>
+                          </div>
+                        )}
+                        <div>
+                          <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Amount Recorded</span>
+                          <strong style={{ color: '#1E293B' }}>{pd.amount || '—'}</strong>
+                        </div>
+                        {pd.remarks && (
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Accounts Notes</span>
+                            <span style={{ color: '#334155' }}>{pd.remarks}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {pd.paymentImage && (
+                        <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Payment Proof Attachment:</span>
+                          <a
+                            href={pd.paymentImage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              padding: '4px 10px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: '#0E7490',
+                              textDecoration: 'none'
+                            }}
+                          >
+                            <Image size={13} /> View Attached Payment Proof
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Bottom Review & Approval Action Card for Executive / Approver */}
                 {(() => {
                   const st = String(viewingPoStatus || '').trim();
@@ -3313,7 +3437,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     <strong style={{ fontSize: '12px', color: '#854D0E' }}>Credit Verification Required</strong>
                   </div>
                   <p style={{ fontSize: '11px', color: '#713F12', margin: 0, lineHeight: 1.4 }}>
-                    This PO will be marked as Credit Verified by Accounts. MD has approved the PO, and once Accounts confirms credit terms, you can Proceed PO for GRN.
+                    This PO will be marked as Credit Verified by Accounts. MD has approved the PO, and once Accounts confirms credit terms and attaches the credit confirmation proof, you can Proceed PO for GRN.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#854D0E' }}>Agreed Credit Terms / Days</label>
@@ -3329,12 +3453,14 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Transaction / UTR Reference No.</label>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>
+                      Transaction / UTR Reference No. <span style={{ color: '#94A3B8', fontWeight: 'normal' }}>(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       value={payRefInput}
                       onChange={(e) => setPayRefInput(e.target.value)}
-                      placeholder="e.g. UTR12345678"
+                      placeholder="e.g. UTR12345678 (Optional)"
                       style={{ height: '36px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 10px', fontSize: '12px' }}
                     />
                   </div>
@@ -3350,6 +3476,97 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   </div>
                 </div>
               )}
+
+              {/* Mandatory Payment Proof Image Attachment */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Payment Proof Image <span style={{ color: '#EF4444', fontWeight: 'bold' }}>* (Mandatory)</span>
+                  </label>
+                  {payImageMeta && (
+                    <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>
+                      ✓ {payImageMeta.name} ({payImageMeta.size})
+                    </span>
+                  )}
+                </div>
+
+                {!payImageInput ? (
+                  <label style={{
+                    border: '2px dashed #CBD5E1',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    backgroundColor: '#F8FAFC',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0E7490'; e.currentTarget.style.backgroundColor = '#F0FDFA'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                  >
+                    <UploadCloud size={24} style={{ color: '#0E7490' }} />
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#0E7490' }}>
+                      Click to upload Payment Screenshot / Receipt <span style={{ color: '#EF4444' }}>*</span>
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>
+                      PNG, JPG, JPEG or WEBP (Max 5MB - Auto-compressed)
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePaymentImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    backgroundColor: '#F0FDF4',
+                    border: '1px solid #BBF7D0',
+                    borderRadius: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img
+                        src={payImageInput}
+                        alt="Payment Proof"
+                        style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #86EFAC' }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#166534' }}>{payImageMeta?.name || 'Payment_Proof.jpg'}</span>
+                        <span style={{ fontSize: '11px', color: '#15803D' }}>{payImageMeta?.size || 'Image attached'} • Ready to verify</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayImageInput(null);
+                        setPayImageMeta(null);
+                      }}
+                      style={{
+                        background: '#FEE2E2',
+                        border: '1px solid #FECACA',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        color: '#DC2626',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <X size={12} /> Remove
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>Accounts Verification Notes (Optional)</label>

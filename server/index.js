@@ -3004,6 +3004,9 @@ app.post('/api/zoho/purchaseorders/:id/process-payment', async (req, res) => {
   const paymentDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const paymentTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
+  const paymentImage = req.body.paymentImage || null;
+  const paymentImageMeta = req.body.paymentImageMeta || null;
+
   const localPOs = loadLocalPOs();
   const matchedIdx = localPOs.findIndex(p => p.id === targetId || p.poNo === targetId);
   if (matchedIdx !== -1) {
@@ -3018,6 +3021,8 @@ app.post('/api/zoho/purchaseorders/:id/process-payment', async (req, res) => {
       remarks,
       isCredit,
       creditTerms,
+      paymentImage,
+      paymentImageMeta,
       verifiedBy: 'Accounts Team'
     };
     saveLocalPOs(localPOs);
@@ -3036,6 +3041,8 @@ app.post('/api/zoho/purchaseorders/:id/process-payment', async (req, res) => {
         remarks,
         isCredit,
         creditTerms,
+        paymentImage,
+        paymentImageMeta,
         verifiedBy: 'Accounts Team'
       }
     });
