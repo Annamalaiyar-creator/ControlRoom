@@ -2241,7 +2241,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     <input type="text" value={branch} onChange={(e) => setBranch(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Contact Person</label>
+                    <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>Vendor Name</label>
                     <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }} />
                   </div>
                 </div>
