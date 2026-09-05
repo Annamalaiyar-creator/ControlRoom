@@ -235,7 +235,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           category: 'MAIN MENU',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Work Orders', icon: Boxes, badge: realWOCount > 0 ? String(realWOCount) : undefined },
             { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
             { label: 'Proforma Invoice', icon: FileText }
           ]

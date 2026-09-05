@@ -155,6 +155,7 @@ function App() {
   });
 
   const [targetPoNo, setTargetPoNo] = useState(null);
+  const [targetPoTab, setTargetPoTab] = useState(null);
   const [convertingPiData, setConvertingPiData] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [itemsList, setItemsList] = useState([]);
@@ -192,9 +193,12 @@ function App() {
     setShowLoginModal(false);
   };
 
-  const handleTabChange = (tab, targetPo = null) => {
+  const handleTabChange = (tab, targetPo = null, poTabTarget = null) => {
     if (targetPo) {
       setTargetPoNo(targetPo);
+    }
+    if (poTabTarget) {
+      setTargetPoTab(poTabTarget);
     }
     setActiveTab(tab);
     localStorage.setItem('controlroom_active_tab', tab);
@@ -312,7 +316,13 @@ function App() {
               }} 
             />
           ) : activeTab === 'Purchase Orders' ? (
-            <PurchaseOrdersView userRole={userRole} targetPoNo={targetPoNo} clearTargetPo={() => setTargetPoNo(null)} />
+            <PurchaseOrdersView 
+              userRole={userRole} 
+              targetPoNo={targetPoNo} 
+              clearTargetPo={() => setTargetPoNo(null)} 
+              targetPoTab={targetPoTab}
+              clearTargetPoTab={() => setTargetPoTab(null)}
+            />
           ) : activeTab === 'Zoho Integration' ? (
             <ZohoIntegrationView />
           ) : activeTab === 'Material Calculation Engine' ? (

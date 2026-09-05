@@ -88,7 +88,7 @@ const TERMS_PRESETS = [
   }
 ];
 
-export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo }) {
+export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo, targetPoTab, clearTargetPoTab }) {
   const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
@@ -247,6 +247,16 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
       if (clearTargetPo) clearTargetPo();
     }
   }, [targetPoNo, poList, clearTargetPo]);
+
+  // Handle targetPoTab (e.g. from header "Approve PO" button to immediately show Draft / Pending Approval tab)
+  useEffect(() => {
+    if (targetPoTab) {
+      setViewMode('list');
+      setPoTab(targetPoTab);
+      setCurrentPage(1);
+      if (clearTargetPoTab) clearTargetPoTab();
+    }
+  }, [targetPoTab, clearTargetPoTab]);
 
   // Handle pending reorder PO items payload automatically transferred from Material Reorder
   useEffect(() => {
