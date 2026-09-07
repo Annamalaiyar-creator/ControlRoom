@@ -343,7 +343,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
   const [poNumber, setPoNumber] = useState('');
   const [poDate, setPoDate] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
-  const [paymentTerms, setPaymentTerms] = useState('Net 30 Days');
+  const [paymentTerms, setPaymentTerms] = useState('');
   const [purchaser, setPurchaser] = useState(loggedInUserName);
   const [purchaserMode, setPurchaserMode] = useState('dropdown'); // 'dropdown' or 'type'
   const [shipmentPref, setShipmentPref] = useState('Transport');
@@ -1088,7 +1088,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     setSameAsDelivery(true);
     setPoDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate('');
-    setPaymentTerms('Net 30 Days');
+    setPaymentTerms('');
     setPurchaser(loggedInUserName);
     setShipmentPref('Transport');
     setCurrency('INR - Indian Rupee');
@@ -3264,11 +3264,14 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
                       Payment Terms <span style={{ color: '#EF4444', marginLeft: '2px' }}>*</span>
                     </label>
-                    <select value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px' }}>
-                      <option>Net 30 Days</option>
-                      <option>Net 45 Days</option>
-                      <option>Net 60 Days</option>
-                      <option>Immediate</option>
+                    <select value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: 'white' }}>
+                      <option value="" disabled>Select Payment Terms</option>
+                      <option value="Net 30 Days">Net 30 Days</option>
+                      <option value="Net 45 Days">Net 45 Days</option>
+                      <option value="Net 60 Days">Net 60 Days</option>
+                      <option value="Immediate">Immediate</option>
+                      <option value="100% Advance">100% Advance</option>
+                      <option value="50% Advance, 50% on Delivery">50% Advance, 50% on Delivery</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

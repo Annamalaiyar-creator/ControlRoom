@@ -1648,6 +1648,21 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
           li.item_id = matched.item_id;
         }
       }
+
+      // Zoho Books Tax ID mapping based on user-entered GST rate
+      const taxIdMap = {
+        0: '4080449000000341001',   // GST0
+        5: '4080449000000333019',   // GST5
+        12: '4080449000000324002',  // GST12
+        18: '4080449000000055031',  // GST18
+        28: '4080449000000340001'   // GST28
+      };
+      if (taxIdMap[itemTaxPct] !== undefined) {
+        li.tax_id = taxIdMap[itemTaxPct];
+      } else if (taxIdMap[Math.round(itemTaxPct)] !== undefined) {
+        li.tax_id = taxIdMap[Math.round(itemTaxPct)];
+      }
+
       return li;
     }));
 
@@ -3008,15 +3023,7 @@ app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
     saveLocalPOs(localPOs);
   }
 
-  if (zohoSession.connected) {
-    try {
-      const accessToken = await getZohoAccessToken();
-      await approveOrOpenZohoPO(accessToken, targetId);
-    } catch (err) {
-      console.error('Failed to approve PO in Zoho Books:', err);
-    }
-  }
-
+  // PO status remains Draft in Zoho Books until Accounts and Proceed PO is completed
   res.json({ success: true, message: `PO ${targetId} approved by ${approver} and marked as MD Approved!` });
 });
 
@@ -3123,6 +3130,16 @@ app.post('/api/zoho/purchaseorders/:id/proceed', async (req, res) => {
       }
     });
     saveLocalPOs(localPOs);
+  }
+
+  // Transition Zoho Books PO status from Draft to Issued / Open once PO is Proceeded
+  if (zohoSession.connected) {
+    try {
+      const accessToken = await getZohoAccessToken();
+      await approveOrOpenZohoPO(accessToken, targetId);
+    } catch (err) {
+      console.warn('Failed to transition PO to issued in Zoho on Proceed PO:', err.message);
+    }
   }
 
   res.json({ success: true, message: `PO ${targetId} marked as Proceed PO! Ready for GRN generation.` });
