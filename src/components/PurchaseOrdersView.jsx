@@ -90,6 +90,28 @@ const TERMS_PRESETS = [
 
 export default function PurchaseOrdersView({ userRole = 'Procurement Head', targetPoNo, clearTargetPo, targetPoTab, clearTargetPoTab, onNavigateTab }) {
   const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
+  
+  const getLoggedInUserName = () => {
+    const storedName = localStorage.getItem('controlroom_logged_user_name');
+    if (storedName && storedName !== 'undefined' && storedName !== 'null') return storedName;
+    if (userRole === 'Production Head') return 'Senthil Kumar';
+    if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+    if (userRole === 'Dispatch Head') return 'Karthik Raja';
+    if (userRole === 'Floor Supervisor') return 'Murugan';
+    if (userRole === 'Floor Employee') return 'Ramesh';
+    if (userRole === 'Accounts Head') return 'Venkatesh';
+    if (userRole === 'Accounts Executive') return 'Priya';
+    if (userRole === 'Sales Head') return 'Vijay';
+    if (userRole === 'Sales Executive') return 'Saravanan';
+    if (userRole === 'Design Engineer') return 'Dinesh';
+    if (userRole === 'Design Executive') return 'Kavitha';
+    if (userRole === 'Invoice Executive' || userRole === 'Billing') return 'Anand';
+    if (userRole === 'BOM Executive') return 'Balaji';
+    if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') return 'Annamalaiyar';
+    return 'Annamalaiyar';
+  };
+
+  const loggedInUserName = getLoggedInUserName();
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit' | 'view'
   const [poDetailLoading, setPoDetailLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +121,8 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     const poNo = poTarget.poNo || poTarget.id;
     try {
       localStorage.setItem('controlroom_push_to_grn_po', poNo);
+      localStorage.setItem('controlroom_push_to_grn_po_data', JSON.stringify(poTarget));
+      window.dispatchEvent(new CustomEvent('controlroom_push_to_grn', { detail: poTarget }));
     } catch (_) {}
     if (typeof onNavigateTab === 'function') {
       onNavigateTab('Goods Receipt Note');
@@ -320,7 +344,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
   const [poDate, setPoDate] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30 Days');
-  const [purchaser, setPurchaser] = useState('Arun');
+  const [purchaser, setPurchaser] = useState(loggedInUserName);
   const [purchaserMode, setPurchaserMode] = useState('dropdown'); // 'dropdown' or 'type'
   const [shipmentPref, setShipmentPref] = useState('Transport');
   const [currency, setCurrency] = useState('INR - Indian Rupee');
@@ -439,13 +463,15 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
   };
   const getEffectiveCGSTPct = () => {
     const taxable = getTaxableAmount();
-    if (taxable <= 0) return 9;
-    return ((getCGST() / taxable) * 100);
+    if (taxable <= 0) return 2.5;
+    const pct = (getCGST() / taxable) * 100;
+    return Number(pct.toFixed(2));
   };
   const getEffectiveSGSTPct = () => {
     const taxable = getTaxableAmount();
-    if (taxable <= 0) return 9;
-    return ((getSGST() / taxable) * 100);
+    if (taxable <= 0) return 2.5;
+    const pct = (getSGST() / taxable) * 100;
+    return Number(pct.toFixed(2));
   };
 
   const handleAddItem = () => {
@@ -910,7 +936,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     setPoDate(parseDateToInputFormat(po.poDate));
     setDeliveryDate(parseDateToInputFormat(po.deliveryDate));
     setPaymentTerms(po.paymentTerms || 'Net 30 Days');
-    setPurchaser(po.purchaser || 'Arun');
+    setPurchaser(po.purchaser || loggedInUserName);
     setShipmentPref(po.shipmentPref || 'Transport');
     setCurrency(po.currency || 'INR - Indian Rupee');
     setProject(po.project || '');
@@ -1063,7 +1089,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
     setPoDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate('');
     setPaymentTerms('Net 30 Days');
-    setPurchaser('Arun');
+    setPurchaser(loggedInUserName);
     setShipmentPref('Transport');
     setCurrency('INR - Indian Rupee');
     setProject('');
@@ -1426,39 +1452,49 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
             {/* PO Table */}
             <div className="section-card" style={{ padding: 0, overflowX: 'auto', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
               <div className="table-responsive" style={{ border: 'none', borderRadius: '16px', margin: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
-                <table className="custom-table" style={{ fontSize: '13px', width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <table className="custom-table" style={{ fontSize: '13px', width: '100%', minWidth: '1000px', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#475569', height: '48px' }}>
-                      <th style={{ width: '48px', textAlign: 'center', padding: '12px 14px' }}>
+                      <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', textAlign: 'center', padding: '12px 0', boxSizing: 'border-box' }}>
                         <input
                           type="checkbox"
                           onChange={(e) => handleSelectAll(e, filteredPOList)}
                           checked={filteredPOList.length > 0 && filteredPOList.every(po => selectedPOs.includes(po.poNo))}
-                          style={{ cursor: 'pointer', borderRadius: '4px' }}
+                          style={{ cursor: 'pointer', borderRadius: '4px', accentColor: '#0E7490' }}
                         />
                       </th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO No.</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Company Name</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>PO Date</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left' }}>Expected Delivery</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'right' }}>Total Value</th>
-                      <th style={{ fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'center' }}>Status</th>
+                      <th style={{ width: '16%', minWidth: '130px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left', boxSizing: 'border-box' }}>PO No.</th>
+                      <th style={{ width: '28%', minWidth: '200px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left', boxSizing: 'border-box' }}>Company Name</th>
+                      <th style={{ width: '14%', minWidth: '120px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left', boxSizing: 'border-box' }}>PO Date</th>
+                      <th style={{ width: '16%', minWidth: '140px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'left', boxSizing: 'border-box' }}>Expected Delivery</th>
+                      <th style={{ width: '14%', minWidth: '130px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'right', boxSizing: 'border-box' }}>Total Value</th>
+                      <th style={{ width: '12%', minWidth: '130px', fontWeight: '700', padding: '12px 14px', color: '#334155', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tableLoading ? (
                       Array.from({ length: 6 }).map((_, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ textAlign: 'center' }}>
+                          <td style={{ textAlign: 'center', padding: '12px 0', width: '48px' }}>
                             <input type="checkbox" defaultChecked={false} disabled />
                           </td>
-                          {Array.from({ length: 6 }).map((_, cIdx) => (
-                            <td key={cIdx}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: `${50 + (cIdx * 9) % 40}%`, height: '14px' }} />
-                            </td>
-                          ))}
-                          <td style={{ textAlign: 'center' }}>
-                            <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
+                          <td style={{ padding: '12px 14px' }}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: '90px', height: '14px' }} />
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '14px' }} />
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: '80px', height: '14px' }} />
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: '80px', height: '14px' }} />
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                            <div className="skeleton-shimmer skeleton-text" style={{ width: '85px', height: '14px', marginLeft: 'auto' }} />
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                            <div className="skeleton-shimmer" style={{ width: '80px', height: '22px', borderRadius: '12px', margin: '0 auto' }} />
                           </td>
                         </tr>
                       ))
@@ -2636,7 +2672,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                             <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{item.unit}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>{rateNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748B' }}>{itemTax}%</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: '#0F172A' }}>{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 'bold', color: '#0F172A' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           </tr>
                         );
                       })}
@@ -2678,11 +2714,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#64748B' }}>CGST ({getEffectiveCGSTPct().toFixed(0)}%)</span>
+                      <span style={{ color: '#64748B' }}>CGST ({getEffectiveCGSTPct()}%)</span>
                       <strong style={{ color: '#1E293B' }}>₹ {getCGST().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#64748B' }}>SGST ({getEffectiveSGSTPct().toFixed(0)}%)</span>
+                      <span style={{ color: '#64748B' }}>SGST ({getEffectiveSGSTPct()}%)</span>
                       <strong style={{ color: '#1E293B' }}>₹ {getSGST().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                     </div>
                     {shippingCharges > 0 && (
@@ -3242,7 +3278,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     <input
                       type="text"
                       readOnly
-                      value="Arun"
+                      value={purchaser || loggedInUserName}
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 12px', fontSize: '13px', backgroundColor: '#F8FAFC', color: '#334155', fontWeight: '600' }}
                     />
                   </div>
@@ -3409,7 +3445,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                               </select>
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 'bold', color: '#1e293b' }}>
-                              ₹{(total + taxAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                               <button type="button" onClick={() => handleRemoveItem(idx)} style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '4px' }}>
@@ -3521,12 +3557,12 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: '#64748b' }}>CGST ({getEffectiveCGSTPct().toFixed(0)}%)</span>
+                    <span style={{ color: '#64748b' }}>CGST ({getEffectiveCGSTPct()}%)</span>
                     <strong style={{ color: '#334155' }}>₹ {getCGST().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: '#64748b' }}>SGST ({getEffectiveSGSTPct().toFixed(0)}%)</span>
+                    <span style={{ color: '#64748b' }}>SGST ({getEffectiveSGSTPct()}%)</span>
                     <strong style={{ color: '#334155' }}>₹ {getSGST().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                   </div>
 
@@ -3553,31 +3589,7 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
 
               </div>
 
-              {/* 5. Form Footer Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px', padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCancelConfirm(true)}
-                  style={{ backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => executeCreatePO(e, 'Draft')}
-                  style={{ backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: '600', color: '#c2410c', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <FileText style={{ width: '15px', height: '15px' }} />
-                  Save as Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={triggerSaveConfirm}
-                  style={{ backgroundColor: '#0E7490', border: 'none', borderRadius: '8px', padding: '10px 28px', fontSize: '13px', fontWeight: '700', color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(14, 116, 144, 0.3)' }}
-                >
-                  Create & Save PO
-                </button>
-              </div>
+
             </div>
           )}
         </div>

@@ -2801,44 +2801,38 @@ export default function ItemsDirectoryView(props) {
                             style={{ accentColor: '#0E7490', width: '16px', height: '16px', cursor: 'pointer' }}
                           />
                         </th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Item / Product Name</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>SKU / Item Code</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Sales Rate (₹)</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Unit</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Description</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Status</th>
+                        <th style={{ minWidth: '220px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>Item / Product Name</th>
+                        <th style={{ width: '140px', minWidth: '140px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>SKU / Item Code</th>
+                        <th style={{ width: '140px', minWidth: '140px', padding: '12px 16px', textAlign: 'right', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>Sales Rate (₹)</th>
+                        <th style={{ width: '90px', minWidth: '90px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>Unit</th>
+                        <th style={{ width: '220px', minWidth: '220px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>Description</th>
+                        <th style={{ width: '120px', minWidth: '120px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {itemsLoading ? (
                         Array.from({ length: 6 }).map((_, sIdx) => (
                           <tr key={`item-skel-${sIdx}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 0', textAlign: 'center', width: '48px' }}>
                               <div className="skeleton-shimmer" style={{ width: '16px', height: '16px', borderRadius: '4px', margin: '0 auto' }} />
                             </td>
                             <td style={{ padding: '14px 16px' }}>
                               <div className="skeleton-shimmer skeleton-text" style={{ width: '75%', height: '14px' }} />
                             </td>
                             <td style={{ padding: '14px 16px' }}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: '60px', height: '14px', borderRadius: '6px' }} />
-                            </td>
-                            <td style={{ padding: '14px 16px' }}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: '80%', height: '14px' }} />
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70px', height: '14px', borderRadius: '6px' }} />
                             </td>
                             <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} />
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '75px', height: '14px', marginLeft: 'auto' }} />
                             </td>
-                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} />
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '45px', height: '14px', margin: '0 auto' }} />
                             </td>
                             <td style={{ padding: '14px 16px' }}>
-                              <div className="skeleton-shimmer skeleton-text" style={{ width: '50px', height: '14px' }} />
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '85%', height: '14px' }} />
                             </td>
                             <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                               <div className="skeleton-shimmer skeleton-text" style={{ width: '65px', height: '18px', borderRadius: '12px', margin: '0 auto' }} />
-                            </td>
-                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                              <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '8px', margin: '0 auto' }} />
                             </td>
                           </tr>
                         ))

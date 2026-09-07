@@ -7935,8 +7935,8 @@ export default function ProductionViewsEngine(props) {
                   <div style={{ overflowX: 'auto', width: '100%' }}>
                     <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                          <th style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                        <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
+                          <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                             <input
                               type="checkbox"
                               checked={isAllSelected}
@@ -7944,15 +7944,15 @@ export default function ProductionViewsEngine(props) {
                               style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                             />
                           </th>
-                          <th style={{ padding: '12px 14px' }}>WO No.</th>
-                          <th style={{ padding: '12px 14px' }}>Product</th>
-                          {!isFloorEmployee && <th style={{ padding: '12px 14px' }}>WO Date</th>}
-                          {isFloorEmployee && <th style={{ padding: '12px 14px' }}>Customer / Project</th>}
-                          <th style={{ padding: '12px 14px' }}>Qty (Planned)</th>
-                          <th style={{ padding: '12px 14px' }}>{!isFloorEmployee ? 'Expected Start' : 'Planned Date'}</th>
-                          <th style={{ padding: '12px 14px' }}>{!isFloorEmployee ? 'Expected Completion' : 'Due Date'}</th>
-                          <th style={{ padding: '12px 14px' }}>Priority</th>
-                          <th style={{ padding: '12px 14px' }}>Status</th>
+                          <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', boxSizing: 'border-box' }}>WO No.</th>
+                          <th style={{ minWidth: '220px', padding: '12px 14px', boxSizing: 'border-box' }}>Product</th>
+                          {!isFloorEmployee && <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', boxSizing: 'border-box' }}>WO Date</th>}
+                          {isFloorEmployee && <th style={{ minWidth: '180px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Project</th>}
+                          <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Qty (Planned)</th>
+                          <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', boxSizing: 'border-box' }}>{!isFloorEmployee ? 'Expected Start' : 'Planned Date'}</th>
+                          <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', boxSizing: 'border-box' }}>{!isFloorEmployee ? 'Expected Completion' : 'Due Date'}</th>
+                          <th style={{ width: '120px', minWidth: '120px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Priority</th>
+                          <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -14540,8 +14540,8 @@ export default function ProductionViewsEngine(props) {
                 <div style={{ overflowX: 'auto', width: '100%' }}>
                   <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                        <th style={{ width: '48px', minWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                      <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
+                        <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                           <input
                             type="checkbox"
                             style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
@@ -14555,15 +14555,32 @@ export default function ProductionViewsEngine(props) {
                             }}
                           />
                         </th>
-                        {pageConfig.headers.filter(h => h !== 'Action' && h !== 'Actions').map((h, i) => (
-                          <th key={i} style={{
-                            padding: '12px 14px',
-                            fontWeight: 'bold',
-                            textAlign: (h === 'Status' || h === 'Fulfillment Status' || h === 'Dispatch Packing Status') ? 'center' : (h.includes('Total') || h.includes('Value')) ? 'right' : 'left'
-                          }}>
-                            {h}
-                          </th>
-                        ))}
+                        {pageConfig.headers.filter(h => h !== 'Action' && h !== 'Actions').map((h, i) => {
+                          const isCenter = h === 'Status' || h === 'Fulfillment Status' || h === 'Dispatch Packing Status';
+                          const isRight = h.includes('Total') || h.includes('Value') || h.includes('Rate') || h.includes('Amount');
+                          let colWidth = 'auto';
+                          let minColWidth = '140px';
+                          if (i === 0) { colWidth = '150px'; minColWidth = '150px'; }
+                          else if (i === 1) { minColWidth = '220px'; }
+                          else if (isCenter) { colWidth = '140px'; minColWidth = '140px'; }
+                          else if (isRight) { colWidth = '150px'; minColWidth = '150px'; }
+                          else if (h.includes('Date')) { colWidth = '130px'; minColWidth = '130px'; }
+                          else if (h.includes('Payment')) { colWidth = '150px'; minColWidth = '150px'; }
+
+                          return (
+                            <th key={i} style={{
+                              width: colWidth,
+                              minWidth: minColWidth,
+                              padding: '12px 14px',
+                              fontWeight: 'bold',
+                              textAlign: isCenter ? 'center' : isRight ? 'right' : 'left',
+                              boxSizing: 'border-box',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {h}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>

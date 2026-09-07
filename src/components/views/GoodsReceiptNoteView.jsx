@@ -485,15 +485,90 @@ export default function GoodsReceiptNoteView(props) {
   const handlePendingPushToGrn = (currentPOs = livePOs) => {
     try {
       const pushPo = localStorage.getItem('controlroom_push_to_grn_po');
-      if (pushPo) {
+      const pushDataStr = localStorage.getItem('controlroom_push_to_grn_po_data');
+      if (pushPo || pushDataStr) {
         localStorage.removeItem('controlroom_push_to_grn_po');
+        localStorage.removeItem('controlroom_push_to_grn_po_data');
         resetCreateGRNForm();
-        loadPOItems(pushPo, currentPOs, true);
+
+        let poTarget = null;
+        if (pushDataStr) {
+          try { poTarget = JSON.parse(pushDataStr); } catch (_) {}
+        }
+        const poRef = (poTarget && (poTarget.poNo || poTarget.id)) || pushPo;
+
+        // Instant pre-population from poTarget if available
+        if (poTarget) {
+          setSelectedGRNPo(poRef);
+          if (poTarget.vendor) setSelectedGRNVendor(poTarget.vendor);
+          if (Array.isArray(poTarget.items) && poTarget.items.length > 0) {
+            const initialItems = poTarget.items.map((it, idx) => {
+              const ordered = Number(it.qty || it.quantity || 0);
+              return {
+                id: it.id || it.itemId || it.lineItemId || `PO-ITEM-${idx}`,
+                name: it.name || it.item_name || 'Item',
+                sku: it.sku || `SKU-${101 + idx}`,
+                desc: it.description || '',
+                uom: it.unit || it.uom || 'NOS',
+                ordered: ordered,
+                prev: 0,
+                remaining: ordered,
+                now: ordered,
+                accepted: ordered,
+                rejected: 0,
+                reason: '—',
+                batch: `LOT-2026-${idx + 1}`
+              };
+            });
+            setGrnItems(initialItems);
+          }
+        }
+
+        loadPOItems(poRef, currentPOs, true);
         setIsViewOnlyMode(false);
         setShowCreateGRN(true);
       }
     } catch (_) {}
   };
+
+  // Listen for instant push-to-grn event across components
+  useEffect(() => {
+    const handlePushEvent = (e) => {
+      const poTarget = e.detail;
+      if (!poTarget) return;
+      resetCreateGRNForm();
+      const poRef = poTarget.poNo || poTarget.id;
+      setSelectedGRNPo(poRef);
+      if (poTarget.vendor) setSelectedGRNVendor(poTarget.vendor);
+      if (Array.isArray(poTarget.items) && poTarget.items.length > 0) {
+        const initialItems = poTarget.items.map((it, idx) => {
+          const ordered = Number(it.qty || it.quantity || 0);
+          return {
+            id: it.id || it.itemId || it.lineItemId || `PO-ITEM-${idx}`,
+            name: it.name || it.item_name || 'Item',
+            sku: it.sku || `SKU-${101 + idx}`,
+            desc: it.description || '',
+            uom: it.unit || it.uom || 'NOS',
+            ordered: ordered,
+            prev: 0,
+            remaining: ordered,
+            now: ordered,
+            accepted: ordered,
+            rejected: 0,
+            reason: '—',
+            batch: `LOT-2026-${idx + 1}`
+          };
+        });
+        setGrnItems(initialItems);
+      }
+      loadPOItems(poRef, livePOs, true);
+      setIsViewOnlyMode(false);
+      setShowCreateGRN(true);
+    };
+
+    window.addEventListener('controlroom_push_to_grn', handlePushEvent);
+    return () => window.removeEventListener('controlroom_push_to_grn', handlePushEvent);
+  }, [livePOs]);
 
   // Fetch live Zoho Purchase Orders & stored GRNs for GRN selection and list display
   useEffect(() => {
@@ -2276,17 +2351,17 @@ export default function GoodsReceiptNoteView(props) {
                   }}>View All</button>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <div style={{ overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
+                  <table className="custom-table" style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
-                      <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>GRN No.</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>PO No.</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Vendor Name</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>GRN Date</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Total Value</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9', height: '48px' }}>
+                        <th style={{ width: '140px', minWidth: '140px', padding: '13px 16px', color: '#64748B', fontWeight: '700', boxSizing: 'border-box' }}>GRN No.</th>
+                        <th style={{ width: '140px', minWidth: '140px', padding: '13px 16px', color: '#64748B', fontWeight: '700', boxSizing: 'border-box' }}>PO No.</th>
+                        <th style={{ minWidth: '220px', padding: '13px 16px', color: '#64748B', fontWeight: '700', boxSizing: 'border-box' }}>Vendor Name</th>
+                        <th style={{ width: '130px', minWidth: '130px', padding: '13px 16px', color: '#64748B', fontWeight: '700', boxSizing: 'border-box' }}>GRN Date</th>
+                        <th style={{ width: '140px', minWidth: '140px', padding: '13px 16px', color: '#64748B', fontWeight: '700', textAlign: 'right', boxSizing: 'border-box' }}>Total Value</th>
+                        <th style={{ width: '130px', minWidth: '130px', padding: '13px 16px', color: '#64748B', fontWeight: '700', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
+                        <th style={{ width: '100px', minWidth: '100px', padding: '13px 16px', color: '#64748B', fontWeight: '700', textAlign: 'center', boxSizing: 'border-box' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>

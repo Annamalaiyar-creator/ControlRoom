@@ -624,8 +624,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               <div style={{ overflowX: 'auto', width: '100%' }}>
                 <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold' }}>
-                      <th style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                    <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
+                      <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                         <input
                           type="checkbox"
                           onChange={(e) => handleSelectAll(e, filteredPIList)}
@@ -633,13 +633,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                         />
                       </th>
-                      <th style={{ padding: '12px 14px' }}>PI No.</th>
-                      <th style={{ padding: '12px 14px' }}>Product</th>
-                      <th style={{ padding: '12px 14px' }}>Customer / Project</th>
-                      <th style={{ padding: '12px 14px' }}>GST No.</th>
-                      <th style={{ padding: '12px 14px' }}>PI Date</th>
-                      <th style={{ padding: '12px 14px' }}>Total Amount</th>
-                      <th style={{ padding: '12px 14px' }}>Status</th>
+                      <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', boxSizing: 'border-box' }}>PI No.</th>
+                      <th style={{ width: '180px', minWidth: '180px', padding: '12px 14px', boxSizing: 'border-box' }}>Product</th>
+                      <th style={{ minWidth: '220px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Project</th>
+                      <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', boxSizing: 'border-box' }}>GST No.</th>
+                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 14px', boxSizing: 'border-box' }}>PI Date</th>
+                      <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Total Amount</th>
+                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>

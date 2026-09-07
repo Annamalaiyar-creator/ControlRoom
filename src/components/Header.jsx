@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle } from 'lucide-react';
+import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle, Menu } from 'lucide-react';
 
 export const addLiveNotification = (notif) => {
   try {
@@ -12,7 +12,7 @@ export const addLiveNotification = (notif) => {
   }
 };
 
-export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal, onSelectTab }) {
+export default function Header({ activeTab, userRole = 'Procurement Admin', onSwitchRole, onOpenLoginModal, onSelectTab, onToggleSidebar }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const isExecutiveOrMD = userRole === 'CEO' || userRole === 'Managing Director' || userRole === 'MD';
@@ -78,10 +78,10 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     else if (userRole === 'Design Executive') userName = 'Kavitha';
     else if (userRole === 'Invoice Executive' || userRole === 'Billing') userName = 'Anand';
     else if (userRole === 'BOM Executive') userName = 'Balaji';
-    else if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') userName = 'ARUN BOOPATHI M';
-    else userName = 'Arun Boopathi M';
+    else if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') userName = 'Annamalaiyar';
+    else userName = 'Annamalaiyar';
   }
-  const safeName = (userName && userName !== 'undefined' && userName !== 'null') ? userName : 'ARUN BOOPATHI M';
+  const safeName = (userName && userName !== 'undefined' && userName !== 'null') ? userName : 'Annamalaiyar';
   const avatarLetter = (safeName.charAt(0) || 'A').toUpperCase();
 
   const markItemAsRead = (id, e) => {
@@ -118,7 +118,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
   return (
     <header 
-      className="top-navigation" 
+      className="top-navigation app-header-responsive" 
       style={{
         height: '60px',
         borderRadius: '16px',
@@ -127,7 +127,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '0 24px',
+        padding: '0 16px',
         boxShadow: '0 6px 22px rgba(14, 116, 144, 0.25)',
         position: 'relative',
         color: '#FFFFFF',
@@ -155,21 +155,49 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px'
+          gap: '10px',
+          minWidth: 0
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Mobile Hamburger Menu Button */}
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="mobile-header-menu-btn"
+            title="Toggle Menu"
+            style={{
+              display: 'none',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+          >
+            <Menu style={{ width: '20px', height: '20px' }} />
+          </button>
+        )}
+
+        <div className="header-brand-prefix" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: '#BAE6FD', fontWeight: '600', fontSize: '13.5px' }}>ControlRoom</span>
           <span style={{ color: 'rgba(255, 255, 255, 0.35)', fontWeight: '300' }}>|</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           <h2 style={{
-            fontSize: '17px',
+            fontSize: '16px',
             fontWeight: '800',
             color: '#FFFFFF',
             margin: 0,
-            letterSpacing: '-0.3px'
+            letterSpacing: '-0.3px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>
             {(activeTab === 'Purchase Orders' && isExecutiveOrMD) ? 'Purchase Order Approvals' : (activeTab === 'Purchase Orders' && userRole.includes('Accounts')) ? 'Purchase Order Verification' : (activeTab || 'Dashboard')}
           </h2>
@@ -177,15 +205,16 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
       </div>
 
       {/* Right side: Actions & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
 
         {/* Neumorphism Help & Support Button */}
         <button 
           title="Help & Support"
+          className="header-action-help"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '14px',
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
             backgroundColor: '#FFFFFF',
             border: 'none',
             padding: 0,
@@ -206,7 +235,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
             e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9)';
           }}
         >
-          <HelpCircle style={{ width: '20px', height: '20px', color: '#1E293B' }} />
+          <HelpCircle style={{ width: '18px', height: '18px', color: '#1E293B' }} />
         </button>
 
         {/* Neumorphism Notification Icon Button with Disappearing Badge Animation */}
@@ -215,9 +244,9 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
             title="Notifications"
             onClick={() => setShowNotificationMenu(!showNotificationMenu)}
             style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '14px',
+              width: '38px',
+              height: '38px',
+              borderRadius: '12px',
               backgroundColor: '#FFFFFF',
               border: 'none',
               padding: 0,
@@ -239,7 +268,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
             }}
           >
             {/* Solid Dark Slate Bell Icon */}
-            <Bell style={{ width: '20px', height: '20px', color: '#1E293B', fill: '#1E293B' }} />
+            <Bell style={{ width: '18px', height: '18px', color: '#1E293B', fill: '#1E293B' }} />
             
             {/* Red Circle Badge with count */}
             {unreadCount > 0 && (
@@ -397,7 +426,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
           </div>
 
           {/* Name of the person */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div className="header-user-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#FFFFFF', lineHeight: '1.2', letterSpacing: '-0.2px' }}>
               {userName}
             </span>
@@ -405,7 +434,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
               {userRole}
             </span>
           </div>
-          <ChevronDown style={{ width: '15px', height: '15px', color: '#FFFFFF', opacity: 0.9 }} />
+          <ChevronDown className="header-user-chevron" style={{ width: '15px', height: '15px', color: '#FFFFFF', opacity: 0.9 }} />
 
           {/* Role & Login Menu Popup */}
           {showRoleMenu && (

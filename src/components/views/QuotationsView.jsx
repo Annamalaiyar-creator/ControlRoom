@@ -2284,25 +2284,25 @@ export default function QuotationsView(props) {
             <div className="section-card" style={{ padding: 0, overflow: 'hidden' }}>
 
               {/* Table */}
-              <div style={{ overflowX: 'auto', width: '100%' }}>
-                <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <div style={{ overflowX: 'auto', width: '100%', boxSizing: 'border-box' }}>
+                <table className="custom-table" style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                      <th style={{ width: '40px', padding: '12px 16px', textAlign: 'center' }}>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', height: '48px' }}>
+                      <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', boxSizing: 'border-box' }}>
                         <input
                           type="checkbox"
                           onChange={handleSelectAll}
                           checked={currentRows.length > 0 && currentRows.every(r => selectedQuotations.includes(r.id))}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', accentColor: '#0E7490' }}
                         />
                       </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Quotation No</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Date</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Valid Until</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Amount (₹)</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700' }}>Sales Person</th>
-                      <th style={{ width: '60px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700' }}>Actions</th>
+                      <th style={{ width: '150px', minWidth: '150px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Quotation No</th>
+                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Date</th>
+                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Valid Until</th>
+                      <th style={{ width: '140px', minWidth: '140px', padding: '12px 16px', textAlign: 'right', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Amount (₹)</th>
+                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Status</th>
+                      <th style={{ minWidth: '180px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Sales Person</th>
+                      <th style={{ width: '90px', minWidth: '90px', padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: '700', boxSizing: 'border-box' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>

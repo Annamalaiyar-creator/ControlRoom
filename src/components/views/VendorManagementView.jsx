@@ -2895,39 +2895,46 @@ export default function VendorManagementView(props) {
                 </div>
 
                 {/* 3. TABLE CARD */}
-                <div className="section-card" style={{ padding: 0, overflowX: 'auto', width: '100%' }}>
-                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <div className="section-card" style={{ padding: 0, overflowX: 'auto', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
+                  <table className="custom-table" style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#fafbfc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ width: '40px', padding: '12px 16px', textAlign: 'center' }}>
+                      <tr style={{ backgroundColor: '#fafbfc', borderBottom: '1px solid #e2e8f0', height: '48px' }}>
+                        <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', boxSizing: 'border-box' }}>
                           <input
                             type="checkbox"
                             onChange={handleSelectAllVendors}
                             checked={currentVendorRows.length > 0 && currentVendorRows.every(row => selectedVendors.includes(row.code))}
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', accentColor: '#0E7490' }}
                           />
                         </th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Company Name</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Contact Person</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Mobile / Email</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Status</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold' }}>Payment Terms</th>
+                        <th style={{ minWidth: '220px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold', boxSizing: 'border-box' }}>Company Name</th>
+                        <th style={{ width: '180px', minWidth: '180px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold', boxSizing: 'border-box' }}>Contact Person</th>
+                        <th style={{ width: '220px', minWidth: '220px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold', boxSizing: 'border-box' }}>Mobile / Email</th>
+                        <th style={{ width: '130px', minWidth: '130px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold', boxSizing: 'border-box' }}>Status</th>
+                        <th style={{ width: '150px', minWidth: '150px', padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 'bold', boxSizing: 'border-box' }}>Payment Terms</th>
                       </tr>
                     </thead>
                     <tbody>
                       {vendorLoading ? (
                         Array.from({ length: 6 }).map((_, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 0', textAlign: 'center', width: '48px' }}>
                               <input type="checkbox" defaultChecked={false} disabled />
                             </td>
-                            {Array.from({ length: 5 }).map((_, cIdx) => (
-                              <td key={cIdx} style={{ padding: '12px 16px' }}>
-                                <div className="skeleton-shimmer skeleton-text" style={{ width: `${60 + (cIdx * 7) % 30}%`, height: '13px' }} />
-                              </td>
-                            ))}
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                              <div className="skeleton-shimmer" style={{ width: '28px', height: '28px', borderRadius: '6px', margin: '0 auto' }} />
+                            <td style={{ padding: '12px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '70%', height: '13px' }} />
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '110px', height: '13px' }} />
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '130px', height: '13px' }} />
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div className="skeleton-shimmer" style={{ width: '75px', height: '22px', borderRadius: '12px' }} />
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div className="skeleton-shimmer skeleton-text" style={{ width: '90px', height: '13px' }} />
                             </td>
                           </tr>
                         ))

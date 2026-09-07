@@ -1,0 +1,8 @@
+{
+  "appId": "com.controlroom.app",
+  "appName": "Control Room",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

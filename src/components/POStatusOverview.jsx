@@ -79,37 +79,35 @@ export default function POStatusOverview({
 
   return (
     <div 
-      className="section-card" 
+      className="section-card po-status-overview-card" 
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        padding: '14px 18px', 
+        padding: '14px 16px', 
         backgroundColor: '#FFFFFF',
         border: '1px solid #EAEFEF',
         borderRadius: '20px',
-        gap: '10px',
         boxSizing: 'border-box',
         boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
-        position: 'relative'
+        position: 'relative',
+        height: '100%',
+        justifyContent: 'space-between'
       }}
     >
       {/* Card Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
         <h3 style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {title}
         </h3>
-        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '3px 10px', borderRadius: '12px' }}>
-          {totalCount} {totalLabel}
-        </span>
       </div>
 
       {/* Main Body Split: LEFT Normal Pie Chart + RIGHT Legend List */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', padding: '4px 0', gap: '14px', minWidth: 0 }}>
+      <div className="po-status-body" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px', minWidth: 0 }}>
         
         {/* LEFT SIDE: Normal Pie / Donut SVG with Center Counter */}
-        <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="130" height="130" viewBox="0 0 220 220" style={{ width: '100%', height: '100%' }}>
+        <div style={{ position: 'relative', width: statusItems.length > 4 ? '118px' : '126px', height: statusItems.length > 4 ? '118px' : '126px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="100%" height="100%" viewBox="0 0 220 220" style={{ width: '100%', height: '100%' }}>
             {segmentPaths}
           </svg>
 
@@ -126,13 +124,13 @@ export default function POStatusOverview({
               alignItems: 'center',
               justifyContent: 'center',
               pointerEvents: 'none',
-              padding: '12px'
+              padding: '10px'
             }}
           >
             {(() => {
               const displayVal = String(hoveredIdx !== null ? statusItems[hoveredIdx].count : totalCount);
               const valLen = displayVal.length;
-              const dynamicFontSize = valLen > 10 ? '12px' : valLen > 7 ? '13.5px' : valLen > 4 ? '15px' : '18px';
+              const dynamicFontSize = valLen > 10 ? '11px' : valLen > 7 ? '12.5px' : valLen > 4 ? '14px' : '16px';
 
               return (
                 <span 
@@ -152,16 +150,17 @@ export default function POStatusOverview({
                 </span>
               );
             })()}
-            <span style={{ fontSize: '8.5px', color: '#64748B', fontWeight: '800', letterSpacing: '0.4px', marginTop: '3px', textTransform: 'uppercase', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '82px' }}>
+            <span style={{ fontSize: '8px', color: '#64748B', fontWeight: '800', letterSpacing: '0.4px', marginTop: '2px', textTransform: 'uppercase', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '78px' }}>
               {hoveredIdx !== null ? statusItems[hoveredIdx].name : totalLabel}
             </span>
           </div>
         </div>
 
         {/* RIGHT SIDE: Legend Breakdown */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 140px', minWidth: '130px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: statusItems.length > 4 ? '4px' : '6px', flex: '1 1 130px', minWidth: '120px', height: '100%' }}>
           {statusItems.map((item, idx) => {
             const pctDisplay = `${Math.round((item.pct || 0) * 100)}%`;
+            const isDense = statusItems.length > 4;
 
             return (
               <div 
@@ -169,37 +168,38 @@ export default function POStatusOverview({
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  gap: '6px',
+                  justifyContent: 'space-between', 
+                  gap: '4px',
                   cursor: 'pointer',
                   opacity: hoveredIdx !== null && hoveredIdx !== idx ? 0.45 : 1,
-                  padding: '6px 8px',
+                  padding: isDense ? '4px 7px' : '5px 8px',
                   borderRadius: '8px',
                   backgroundColor: hoveredIdx === idx ? `${item.color}15` : '#F8FAFC',
                   border: hoveredIdx === idx ? `1px solid ${item.color}` : '1px solid #E2E8F0',
                   transition: 'all 0.2s ease',
-                  minWidth: 0
+                  minWidth: 0,
+                  flex: 1
                 }}
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                   <span style={{ 
-                    width: '8px', 
-                    height: '8px', 
+                    width: isDense ? '7px' : '8px', 
+                    height: isDense ? '7px' : '8px', 
                     borderRadius: '50%', 
                     backgroundColor: item.color, 
                     flexShrink: 0 
                   }} />
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: isDense ? '10px' : '10.5px', fontWeight: '700', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.name}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>
+                  <span style={{ fontSize: isDense ? '9.5px' : '10px', fontWeight: '700', color: '#64748B' }}>
                     {pctDisplay}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: '900', color: '#0F172A', minWidth: '20px', textAlign: 'right' }}>
+                  <span style={{ fontSize: isDense ? '11px' : '11.5px', fontWeight: '900', color: '#0F172A', minWidth: '18px', textAlign: 'right' }}>
                     {item.count}
                   </span>
                 </div>

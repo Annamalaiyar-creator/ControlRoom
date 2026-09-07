@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Control Room</string>
+    <string name="title_activity_main">Control Room</string>
+    <string name="package_name">com.controlroom.app</string>
+    <string name="custom_url_scheme">com.controlroom.app</string>
+</resources>

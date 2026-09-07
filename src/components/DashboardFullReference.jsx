@@ -215,7 +215,7 @@ export default function DashboardFullReference({ userRole }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
       
       {/* PERSONALIZED WELCOME BANNER CARD */}
-      <div style={{
+      <div className="welcome-banner-card" style={{
         backgroundColor: '#FFFFFF',
         borderRadius: '16px',
         border: '1px solid #E2E8F0',
@@ -223,14 +223,16 @@ export default function DashboardFullReference({ userRole }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
         boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
         background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2, minWidth: 0 }}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em', wordBreak: 'break-word' }}>
               Welcome back, {(() => {
                 const storedName = localStorage.getItem('controlroom_logged_user_name');
                 if (storedName) return storedName;
@@ -251,17 +253,17 @@ export default function DashboardFullReference({ userRole }) {
                 return 'ARUN BOOPATHI M';
               })()}!
             </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
               Here is your operational summary, live approvals & enterprise inventory metrics for today.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current System Status</div>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span>
+        <div className="welcome-banner-status" style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current System Status</div>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#16A34A', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 8px #22C55E' }}></span>
               All Systems Operational
             </div>
           </div>
@@ -761,10 +763,10 @@ export default function DashboardFullReference({ userRole }) {
           </div>
 
           {/* Chart Container with Y-Axis and Clean Vertical Pills */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', height: '170px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flex: 1, minHeight: '190px' }}>
             
             {/* Left Y-Axis Labels */}
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: '22px', color: '#9CA3AF', fontSize: '10px', fontWeight: '600', flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: '24px', color: '#9CA3AF', fontSize: '10px', fontWeight: '600', flexShrink: 0 }}>
               <span>1.5k</span>
               <span>1.25k</span>
               <span>1k</span>
@@ -775,10 +777,10 @@ export default function DashboardFullReference({ userRole }) {
             </div>
 
             {/* Bars Area with Y-Axis Light Reference Grid lines */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
               
               {/* Background Reference Grid Lines */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', opacity: 0.35 }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none', opacity: 0.35 }}>
                 <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
                 <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
                 <div style={{ borderBottom: '1px dashed #E5E7EB', width: '100%' }} />
@@ -789,7 +791,7 @@ export default function DashboardFullReference({ userRole }) {
               </div>
 
               {/* Bars Row - Only Jan through Sep (current month in 2026) */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', paddingBottom: '22px', gap: '6px', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flex: 1, paddingBottom: '24px', gap: '6px', zIndex: 1 }}>
                 {[
                   { month: 'Jan', valCr: '1.20', count: '45', code: 'JAN', pct: 0.32 },
                   { month: 'Feb', valCr: '1.60', count: '52', code: 'FEB', pct: 0.42 },
@@ -899,7 +901,7 @@ export default function DashboardFullReference({ userRole }) {
               </div>
 
               {/* Bottom Subtle Horizontal Accent Line (from reference) */}
-              <div style={{ height: '3px', backgroundColor: '#EBF2F7', borderRadius: '3px', width: '100%', marginTop: 'auto' }} />
+              <div style={{ height: '3px', backgroundColor: '#EBF2F7', borderRadius: '3px', width: '100%' }} />
             </div>
 
           </div>
@@ -980,17 +982,17 @@ export default function DashboardFullReference({ userRole }) {
           </div>
 
           <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                  <th style={{ width: '24%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoice No.' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'PI No.' : 'PO No.'} <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                     </div>
                   </th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer / Client' : 'Vendor'}</th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
+                  <th style={{ width: '36%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer / Client' : 'Vendor'}</th>
+                  <th style={{ width: '22%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
+                  <th style={{ width: '18%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1009,7 +1011,7 @@ export default function DashboardFullReference({ userRole }) {
                 ] : poData.slice(0, 5)).map((r, idx) => (
                   <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
                     <td style={{ padding: '6px 10px', color: '#64748B', fontWeight: '600' }}>{r.no || r.poNo || r.po}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A' }}>{r.client || r.vendor}</td>
+                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.client || r.vendor}</td>
                     <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A' }}>{r.val || r.amount}</td>
                     <td style={{ padding: '6px 10px' }}>
                       <StatusBadge status={r.status || 'Scheduled'} size="sm" />
@@ -1021,26 +1023,29 @@ export default function DashboardFullReference({ userRole }) {
           </div>
         </div>
 
-        {/* OVERDUE INVOICES */}
+        {/* OVERDUE INVOICES / POS */}
         <div className="section-card" style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Overdue Payment Invoices' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Top Client Accounts (MTD)' : 'Overdue POs'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Overdue Payment Invoices' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Top Client Accounts (MTD)' : 'Overdue POs'}
+              </span>
+              <span style={{ fontSize: '9.5px', color: '#DC2626', fontWeight: '700', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '8px' }}>ATTENTION</span>
+            </div>
           </div>
 
           <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                  <th style={{ width: '24%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoice No.' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Client Name' : 'PO No.'} <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                     </div>
                   </th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer' : 'Vendor'}</th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
-                  <th style={{ padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Overdue Days</th>
+                  <th style={{ width: '36%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer' : 'Vendor'}</th>
+                  <th style={{ width: '22%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
+                  <th style={{ width: '18%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Overdue Days</th>
                 </tr>
               </thead>
               <tbody>
@@ -1058,11 +1063,30 @@ export default function DashboardFullReference({ userRole }) {
                   { no: 'Waaree Energies', name: '3 PIs', val: '₹ 0.45 Cr', delay: '30% Advance' }
                 ] : poData.slice(0, 5)).map((o, idx) => (
                   <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '6px 10px', color: '#0F172A', fontWeight: '700' }}>{o.no || o.name || o.poNo || o.po}</td>
-                    <td style={{ padding: '6px 10px', color: '#64748B' }}>{o.name || o.count || o.vendor}</td>
+                    <td style={{ padding: '6px 10px', color: '#64748B', fontWeight: '600' }}>{o.no || o.name || o.poNo || o.po}</td>
+                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name || o.count || o.vendor}</td>
                     <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A' }}>{o.val || o.rev || o.amount}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '800', color: '#DC2626' }}>
-                      {o.delay || o.term || `${idx + 3} Days`}
+                    <td style={{ padding: '6px 10px' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          backgroundColor: '#FEF2F2',
+                          color: '#DC2626',
+                          border: '1px solid #FEE2E2',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <Clock style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                        <span>{o.delay || o.term || `${idx + 3} Days`}</span>
+                      </span>
                     </td>
                   </tr>
                 ))}

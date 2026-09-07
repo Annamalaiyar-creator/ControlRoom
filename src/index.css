@@ -844,7 +844,6 @@ table td {
 
 .custom-table {
   width: 100% !important;
-  table-layout: auto !important;
   border-collapse: collapse !important;
   text-align: left !important;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -874,14 +873,17 @@ table td {
 }
 
 /* Dedicated standard styling for checkbox column */
-.custom-table th:has(input[type="checkbox"]),
-.custom-table td:has(input[type="checkbox"]) {
+.custom-table th:first-child:has(input[type="checkbox"]),
+.custom-table td:first-child:has(input[type="checkbox"]),
+.custom-table th.col-checkbox,
+.custom-table td.col-checkbox {
   width: 48px !important;
   min-width: 48px !important;
   max-width: 48px !important;
-  padding: 13px 0 !important;
+  padding: 12px 0 !important;
   text-align: center !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 .custom-table td strong,
@@ -1619,9 +1621,93 @@ table td {
     grid-column: span 1;
   }
 }
+
 @media (max-width: 768px) {
   .kpi-grid-6, .kpi-grid-5 {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .content-pane {
+    padding: 10px 12px !important;
+  }
+  
+  .app-header-responsive {
+    margin: 10px 10px 8px 10px !important;
+    padding: 0 12px !important;
+    height: 52px !important;
+  }
+  
+  .mobile-header-menu-btn {
+    display: inline-flex !important;
+  }
+  
+  .header-brand-prefix {
+    display: none !important;
+  }
+  
+  .header-user-text {
+    display: none !important;
+  }
+  
+  .header-user-chevron {
+    display: none !important;
+  }
+  
+  .header-action-help {
+    display: none !important;
+  }
+  
+  /* Mobile Sidebar: Overlay drawer mode */
+  .app-sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 99999 !important;
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.25) !important;
+  }
+  
+  .app-sidebar.collapsed {
+    transform: translateX(-100%) !important;
+    width: 260px !important;
+    visibility: hidden;
+  }
+  
+  .app-sidebar:not(.collapsed) {
+    transform: translateX(0) !important;
+    width: 260px !important;
+    visibility: visible;
+  }
+  
+  .mobile-sidebar-backdrop {
+    display: block !important;
+  }
+  
+  .po-status-overview-card {
+    padding: 12px 14px !important;
+  }
+  
+  .po-status-body {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  
+  .po-status-body > div:last-child {
+    width: 100% !important;
+  }
+  
+  .welcome-banner-card {
+    padding: 10px 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid-6, .kpi-grid-5 {
+    grid-template-columns: 1fr;
+  }
+  
+  .content-pane {
+    padding: 8px 10px !important;
   }
 }
 

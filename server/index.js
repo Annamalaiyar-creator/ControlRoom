@@ -1593,13 +1593,13 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
     let totalSubTotal = 0;
     let totalTaxAmt = 0;
 
-    const lineItems = (req.body.items || []).map(item => {
+    // Process line items and automatically enable Purchase Information in Zoho if disabled
+    const lineItems = await Promise.all((req.body.items || []).map(async (item) => {
       const itemName = item.itemName || item.name || item.description || 'General Item';
       const matched = zohoItemsList.find(zi => 
         zi.name.toLowerCase() === itemName.toLowerCase() ||
         (zi.sku && item.sku && zi.sku.toLowerCase() === item.sku.toLowerCase())
       );
-      const itemId = matched ? matched.item_id : (item.itemId || defaultZohoItemId);
 
       const itemTaxPct = Number(item.tax !== undefined && item.tax !== '' ? item.tax : 18);
       const baseRate = Number(item.unitPrice || item.rate || item.price || 0) || 100;
@@ -1614,15 +1614,42 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
         description: item.description || '',
         rate: baseRate,
         quantity: itemQty,
-        account_id: "4080449000000000567" // Cost of Goods Sold account for non-catalog/sales-only items
+        account_id: "4080449000000000567"
       };
 
-      // Only attach catalog item_id if the Zoho item explicitly allows purchase operations
-      if (matched && matched.item_id && (matched.is_purchase === true || matched.is_purchased === true)) {
-        li.item_id = matched.item_id;
+      if (matched && matched.item_id) {
+        // Check if item has purchase permissions enabled in Zoho Books
+        if (matched.is_purchase !== true && matched.is_purchased !== true) {
+          try {
+            console.log('[ZOHO AUTO-ENABLE ITEM]', matched.item_id, matched.name);
+            const upRes = await updateZohoItem(accessToken, matched.item_id, {
+              name: matched.name,
+              rate: matched.rate || baseRate,
+              sku: matched.sku,
+              description: matched.description || item.description,
+              unit: matched.unit || item.unit || 'NOS',
+              purchase_rate: baseRate,
+              purchase_description: item.description || matched.description || matched.name,
+              is_purchase: true,
+              is_purchased: true,
+              purchase_account_id: "4080449000000000567"
+            });
+            if (upRes && (upRes.code === 0 || upRes.item)) {
+              matched.is_purchase = true;
+              matched.is_purchased = true;
+            }
+          } catch (e) {
+            console.warn('Failed to auto-enable purchase on item:', e.message);
+          }
+        }
+
+        // Attach item_id ONLY if it is verified as a purchase item in Zoho Books
+        if (matched.is_purchase === true || matched.is_purchased === true) {
+          li.item_id = matched.item_id;
+        }
       }
       return li;
-    });
+    }));
 
     if (lineItems.length === 0) {
       lineItems.push({
@@ -1755,12 +1782,15 @@ app.post('/api/zoho/purchaseorders', async (req, res) => {
       if (payload.delivery_address) payload.delivery_address = payload.delivery_address.slice(0, 60);
       if (payload.billing_address) payload.billing_address = payload.billing_address.slice(0, 60);
       
-      // If error mentions account or item, remove account_id or ensure standard account
+      // If error mentions non-purchase item or item/account, strip item_id so Zoho accepts it as a custom purchase line item
+      const isNonPurchaseError = String(result.message || "").toLowerCase().includes("non-purchase") ||
+        String(result.message || "").toLowerCase().includes("item");
+
       if (payload.line_items && Array.isArray(payload.line_items)) {
         payload.line_items = payload.line_items.map(li => {
+          // If initial attempt failed, strip item_id completely so Zoho accepts all line items without non-purchase restrictions
           const cleanLi = { name: li.name, rate: li.rate, quantity: li.quantity };
           if (li.description) cleanLi.description = li.description;
-          if (li.item_id) cleanLi.item_id = li.item_id;
           return cleanLi;
         });
       }
@@ -3538,8 +3568,10 @@ const updateZohoItem = (accessToken, id, itemData) => {
       sku: itemData.sku,
       description: itemData.description,
       unit: itemData.unit,
-      purchase_rate: itemData.purchaseRate,
-      purchase_description: itemData.purchaseDescription
+      purchase_rate: itemData.purchaseRate || itemData.purchase_rate || itemData.rate,
+      purchase_description: itemData.purchaseDescription || itemData.purchase_description || itemData.description,
+      is_purchase: true,
+      purchase_account_id: itemData.purchase_account_id || "4080449000000000567"
     });
 
     const options = {
