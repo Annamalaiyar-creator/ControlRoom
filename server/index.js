@@ -2342,14 +2342,16 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
         id: it.id || it.itemId || `PO-ITEM-${Math.random()}`,
         name: it.name || it.itemName || 'Material Item',
         description: it.description || it.desc || '',
+        account: it.account || 'Raw Material',
         quantity: Number(it.qty || it.quantity || 1),
         unit: it.unit || 'NOS',
-        rate: Number(it.rate || it.unitPrice || 0)
+        rate: Number(it.rate || it.unitPrice || 0),
+        tax: (it.tax !== undefined && it.tax !== '' && !isNaN(Number(it.tax))) ? Number(it.tax) : 18
       }));
     } else {
       sampleItems = [
-        { id: 'PO-ITEM-0', name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, sku: 'SKU-101' },
-        { id: 'PO-ITEM-1', name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, sku: 'SKU-102' }
+        { id: 'PO-ITEM-0', name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-101' },
+        { id: 'PO-ITEM-1', name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-102' }
       ];
     }
 
@@ -2390,11 +2392,11 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
         name: item.name,
         sku: item.sku || `SKU-${101 + idx}`,
         description: item.description,
-        account: 'Raw Material',
+        account: item.account || 'Raw Material',
         qty: ordered,
         unit: item.unit || 'NOS',
         rate: item.rate || 0,
-        tax: 18,
+        tax: item.tax !== undefined ? item.tax : 18,
         previouslyReceived: prevReceived,
         remainingQty: remaining
       };
@@ -2635,29 +2637,31 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
       sampleItems = matchedLocalPO.items.map(it => ({
         name: it.name || it.itemName || 'Material Item',
         description: it.description || it.desc || '',
+        account: it.account || 'Raw Material',
         quantity: Number(it.qty || it.quantity || 1),
         unit: it.unit || 'NOS',
-        rate: Number(it.rate || it.unitPrice || 0)
+        rate: Number(it.rate || it.unitPrice || 0),
+        tax: (it.tax !== undefined && it.tax !== '' && !isNaN(Number(it.tax))) ? Number(it.tax) : 18
       }));
     } else if (poNo.includes('0201')) {
       sampleItems = [
-        { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', quantity: 3000, unit: 'NOS', rate: 450, sku: 'SKU-101' },
-        { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', quantity: 1000, unit: 'Set', rate: 25, sku: 'SKU-102' }
+        { name: 'Solar Mounting Structure', description: 'HDG Aluminium Profile Rail 40x40mm', quantity: 3000, unit: 'NOS', rate: 450, tax: 18, sku: 'SKU-101' },
+        { name: 'Fasteners M8*50 SS304', description: 'SS304 Allen Bolt with Washer', quantity: 1000, unit: 'Set', rate: 25, tax: 18, sku: 'SKU-102' }
       ];
     } else if (poNo.includes('0202')) {
       sampleItems = [
-        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, sku: 'SKU-101' },
-        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, sku: 'SKU-102' }
+        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-101' },
+        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-102' }
       ];
     } else if (poNo.includes('142')) {
       sampleItems = [
-        { name: 'Monocrystalline Solar Panel 540W', description: 'Tier 1 Bifacial Dual Glass Module', quantity: 1500, unit: 'NOS', rate: 14500, sku: 'SKU-101' },
-        { name: 'Solar Inverter 100kW String', description: 'Three Phase Grid Tied Inverter', quantity: 8, unit: 'NOS', rate: 185000, sku: 'SKU-102' }
+        { name: 'Monocrystalline Solar Panel 540W', description: 'Tier 1 Bifacial Dual Glass Module', quantity: 1500, unit: 'NOS', rate: 14500, tax: 18, sku: 'SKU-101' },
+        { name: 'Solar Inverter 100kW String', description: 'Three Phase Grid Tied Inverter', quantity: 8, unit: 'NOS', rate: 185000, tax: 18, sku: 'SKU-102' }
       ];
     } else {
       sampleItems = [
-        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, sku: 'SKU-101' },
-        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, sku: 'SKU-102' }
+        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. SQUARE TUBES 60*60*2MM', quantity: 4850, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-101' },
+        { name: 'MS Material without Galvanizing', description: 'Supply of MS Material without galvanizing (APL Make)\n1. ISMC SECTIONS 75*40*5MM', quantity: 1450, unit: 'Kg', rate: 65, tax: 18, sku: 'SKU-102' }
       ];
     }
 
@@ -2685,11 +2689,11 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
         name: item.name,
         sku: item.sku || `SKU-${101 + idx}`,
         description: item.description,
-        account: 'Raw Material',
+        account: item.account || 'Raw Material',
         qty: ordered,
         unit: item.unit,
         rate: item.rate,
-        tax: 18,
+        tax: item.tax !== undefined ? item.tax : 18,
         previouslyReceived: prevReceived,
         remainingQty: remaining
       };

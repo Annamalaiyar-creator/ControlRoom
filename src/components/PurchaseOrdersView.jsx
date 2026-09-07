@@ -971,7 +971,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
         const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
         if (res.ok) {
           const detail = await res.json();
-          populateFormStates(detail);
+          if (detail && detail.items && Array.isArray(detail.items) && detail.items.length > 0) {
+            populateFormStates({ ...po, ...detail });
+          } else if (detail && detail.poNo) {
+            populateFormStates({ ...po, ...detail, items: (po.items && po.items.length > 0) ? po.items : (detail.items || []) });
+          }
         }
       } catch (err) {
         console.error("Failed to load PO details from Zoho", err);
@@ -991,7 +995,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
         const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
         if (res.ok) {
           const detail = await res.json();
-          populateFormStates(detail);
+          if (detail && detail.items && Array.isArray(detail.items) && detail.items.length > 0) {
+            populateFormStates({ ...po, ...detail });
+          } else if (detail && detail.poNo) {
+            populateFormStates({ ...po, ...detail, items: (po.items && po.items.length > 0) ? po.items : (detail.items || []) });
+          }
         }
       } catch (err) {
         console.error("Failed to load PO details from Zoho", err);
@@ -1029,7 +1037,11 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
         const res = await fetch(`/api/zoho/purchaseorders/${po.id}`);
         if (res.ok) {
           const detail = await res.json();
-          populateFormStates(detail);
+          if (detail && detail.items && Array.isArray(detail.items) && detail.items.length > 0) {
+            populateFormStates({ ...po, ...detail });
+          } else if (detail && detail.poNo) {
+            populateFormStates({ ...po, ...detail, items: (po.items && po.items.length > 0) ? po.items : (detail.items || []) });
+          }
           setPoDate(todayStr);
           const nextRes = await fetch('/api/zoho/next-po-number');
           if (nextRes.ok) {
