@@ -2010,12 +2010,15 @@ app.get('/api/zoho/purchaseorders', async (req, res) => {
         } else if (lpMatch && lpMatch.status === 'REJECTED') {
           statusType = 'rejected';
           statusText = 'REJECTED';
-        } else if (isNoApproval || (lpMatch && lpMatch.status === 'OPEN') || po.status === 'issued' || po.status === 'open' || po.status === 'approved') {
-          statusType = 'approved';
-          statusText = 'OPEN';
         } else if (lpMatch && (lpMatch.status === 'Draft / Pending Approval' || lpMatch.status === 'WAITING FOR APPROVAL' || lpMatch.status === 'Pending Approval' || lpMatch.statusType === 'pending')) {
           statusType = 'pending';
           statusText = 'Draft / Pending Approval';
+        } else if (lpMatch && (lpMatch.status === 'Draft' || lpMatch.statusType === 'draft')) {
+          statusType = 'draft';
+          statusText = 'Draft';
+        } else if (isNoApproval || (lpMatch && lpMatch.status === 'OPEN') || po.status === 'issued' || po.status === 'open' || po.status === 'approved') {
+          statusType = 'approved';
+          statusText = 'OPEN';
         } else {
           statusType = 'draft';
           statusText = 'Draft';
@@ -2078,6 +2081,12 @@ app.get('/api/zoho/purchaseorders', async (req, res) => {
           } else if (lp.status === 'MD Approved' || lp.statusType === 'md_approved') {
             translated[existsIdx].status = 'MD Approved';
             translated[existsIdx].statusType = 'md_approved';
+          } else if (lp.status === 'Draft / Pending Approval' || lp.statusType === 'pending') {
+            translated[existsIdx].status = 'Draft / Pending Approval';
+            translated[existsIdx].statusType = 'pending';
+          } else if (lp.status === 'Draft' || lp.statusType === 'draft') {
+            translated[existsIdx].status = 'Draft';
+            translated[existsIdx].statusType = 'draft';
           } else if (lp.status === 'OPEN' || String(lp.approvalRequired).toUpperCase() === 'NO') {
             translated[existsIdx].status = 'OPEN';
             translated[existsIdx].statusType = 'approved';

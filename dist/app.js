@@ -2,6 +2,8 @@
 const https = require('https');
 const http = require('http');
 const url = require('url');
+const fs = require('fs');
+const path = require('path');
 
 const ZOHO_CLIENT_ID = process.env.ZOHO_CLIENT_ID || '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K';
 const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13';
@@ -142,18 +144,33 @@ const server = http.createServer(async (req, res) => {
 
         if (req.method === 'GET') {
           const zohoRes = await callZoho('GET', '/books/v3/purchaseorders?per_page=200&sort_column=created_time&sort_order=D', null, token);
-          const mapped = ((zohoRes && zohoRes.purchaseorders) || []).map(p => ({
-            id: p.purchaseorder_id,
-            poNo: p.purchaseorder_number,
-            vendor: p.vendor_name,
-            poDate: p.date,
-            deliveryDate: p.delivery_date,
-            amount: `₹${Number(p.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            total: p.total,
-            status: p.status === 'open' ? 'OPEN' : (p.status === 'draft' ? 'Draft' : p.status),
-            statusType: p.status === 'open' ? 'approved' : (p.status === 'draft' ? 'draft' : 'pending'),
-            items: []
-          }));
+          const storePath = path.join(__dirname, 'po_workflow_store.json');
+          let wfStore = {};
+          try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+
+          const mapped = ((zohoRes && zohoRes.purchaseorders) || []).map(p => {
+            const wf = wfStore[p.purchaseorder_id] || wfStore[p.purchaseorder_number] || null;
+            let st = p.status === 'open' ? 'OPEN' : (p.status === 'draft' ? 'Draft / Pending Approval' : p.status);
+            let stType = p.status === 'open' ? 'approved' : (p.status === 'draft' ? 'pending' : 'draft');
+
+            if (wf && wf.status) {
+              st = wf.status;
+              stType = wf.statusType || stType;
+            }
+
+            return {
+              id: p.purchaseorder_id,
+              poNo: p.purchaseorder_number,
+              vendor: p.vendor_name,
+              poDate: p.date,
+              deliveryDate: p.delivery_date,
+              amount: `₹${Number(p.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+              total: p.total,
+              status: st,
+              statusType: stType,
+              items: []
+            };
+          });
           res.writeHead(200, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify(mapped));
         }
@@ -203,9 +220,12 @@ const server = http.createServer(async (req, res) => {
             const created = zohoResult.purchaseorder;
             const targetPoId = created ? created.purchaseorder_id : null;
 
-            // In Zoho Books, new POs default to 'draft'. If approval is not required or user didn't ask for approval,
-            // automatically issue/open the PO so status transitions to OPEN immediately!
-            if (targetPoId) {
+            // Follow multi-step approval flow: new POs remain in Draft / Pending Approval until approved by MD
+            const isNoApproval = String(body.approvalRequired || '').toUpperCase() === 'NO';
+            const statusRequested = body.status || 'Draft';
+            const isExplicitDraft = statusRequested === 'Draft' || statusRequested === 'DRAFT';
+
+            if (isNoApproval && targetPoId) {
               try {
                 await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetPoId)}/status/issued`, null, token);
               } catch (_) {
@@ -215,18 +235,21 @@ const server = http.createServer(async (req, res) => {
               }
             }
 
+            const finalStatus = isNoApproval ? 'OPEN' : (isExplicitDraft ? 'Draft' : 'Draft / Pending Approval');
+            const finalStatusType = isNoApproval ? 'approved' : (isExplicitDraft ? 'draft' : 'pending');
+
             res.writeHead(200, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
               success: true,
-              message: 'Purchase Order created and issued in Zoho Books successfully!',
+              message: isNoApproval ? 'Purchase Order created and issued in Zoho Books successfully!' : 'Purchase Order created as Draft awaiting MD Approval!',
               po: { 
                 ...body, 
                 id: targetPoId || body.poNo, 
                 poNo: created ? created.purchaseorder_number : body.poNo,
-                status: 'OPEN',
-                statusType: 'approved'
+                status: finalStatus,
+                statusType: finalStatusType
               },
-              zohoPo: { ...created, status: 'open' }
+              zohoPo: { ...created, status: isNoApproval ? 'open' : 'draft' }
             }));
           } else {
             console.warn('[ZOHO CREATE WARNING]', zohoResult);
@@ -238,6 +261,60 @@ const server = http.createServer(async (req, res) => {
             }));
           }
         }
+      }
+
+      // Step 2: MD Approval Endpoint (Draft / Pending Approval -> MD Approved)
+      if (pathname.includes('/purchaseorders/') && pathname.endsWith('/approve')) {
+        const parts = pathname.split('/');
+        const targetId = parts[parts.length - 2];
+        const token = await getZohoAccessToken();
+        const storePath = path.join(__dirname, 'po_workflow_store.json');
+        let wfStore = {};
+        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'MD Approved', statusType: 'md_approved', approvedBy: body.approver || 'MD' };
+        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} approved by MD and moved to MD Approved.` }));
+      }
+
+      // Step 3: Accounts Process Payment Endpoint (MD Approved -> Payment Processed)
+      if (pathname.includes('/purchaseorders/') && pathname.endsWith('/process-payment')) {
+        const parts = pathname.split('/');
+        const targetId = parts[parts.length - 2];
+        const storePath = path.join(__dirname, 'po_workflow_store.json');
+        let wfStore = {};
+        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'Payment Processed', statusType: 'payment_processed', paymentDetails: body };
+        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} payment details recorded and moved to Payment Processed.` }));
+      }
+
+      // Step 4: Proceed PO Endpoint (Payment Processed -> Proceed PO -> Calls Zoho POST .../status/issued to open it for GRN)
+      if (pathname.includes('/purchaseorders/') && pathname.endsWith('/proceed')) {
+        const parts = pathname.split('/');
+        const targetId = parts[parts.length - 2];
+        const token = await getZohoAccessToken();
+        
+        // Only now does the server transition the PO to issued/open in Zoho Books!
+        try {
+          await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetId)}/status/issued`, null, token);
+        } catch (_) {
+          try {
+            await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetId)}/status/open`, null, token);
+          } catch (_) {}
+        }
+
+        const storePath = path.join(__dirname, 'po_workflow_store.json');
+        let wfStore = {};
+        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'Proceed PO', statusType: 'proceed_po', proceedDetails: body };
+        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} moved to Proceed PO and issued in Zoho Books for GRN generation!` }));
       }
 
       // If not an API request, serve the static frontend files
