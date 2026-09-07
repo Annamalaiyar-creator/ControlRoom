@@ -13303,7 +13303,7 @@ export default function ProductionViewsEngine(props) {
                         }}
                         style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
                       >
-                        <option value="" disabled style={{ color: '#94A3B8' }}>Select VRM HDG Table Preset...</option>
+                        <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset...</option>
                         {Object.values(VRM_HDG_PRESETS || {}).map(preset => (
                           <option key={preset.id} value={preset.id}>
                             {preset.label}
