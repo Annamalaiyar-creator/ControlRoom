@@ -3130,5 +3130,554 @@ export const VRM_HDG_PRESETS = {
         "gstRate": "18%"
       }
     ]
+  },
+  "preset_bos_6kw": {
+    "id": "preset_bos_6kw",
+    "label": "BOS KITS DCR 6 KW Complete Solar Proposal Kit",
+    "items": [
+      {
+        "name": "Module - WAREE 580wp - DCR",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Inverter - Polycab make 5 Kw 1 Ph",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "ACDB (5-10 KW) WITH MCB AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Lightning Arrestor - 16mm (Terrabond)",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Earth Pit Chamber",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Chemical Bag -10 kg",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "MC 4 Connector",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tie",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tray",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      }
+    ]
+  },
+  "preset_bos_8kw": {
+    "id": "preset_bos_8kw",
+    "label": "BOS KITS DCR 8 KW Complete Solar Proposal Kit",
+    "items": [
+      {
+        "name": "ACDB (5-10 KW) WITH MCB AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Lightning Arrestor - 16mm (Terrabond)",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Earth Pit Chamber",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Chemical Bag -10 kg",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "MC 4 Connector",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tie",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tray",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      }
+    ]
+  },
+  "preset_bos_10kw": {
+    "id": "preset_bos_10kw",
+    "label": "BOS KITS DCR 10 KW Complete Solar Proposal Kit",
+    "items": [
+      {
+        "name": "ACDB (5-10 KW) WITH MCB AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Lightning Arrestor - 16mm (Terrabond)",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Earth Pit Chamber",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Chemical Bag -10 kg",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "MC 4 Connector",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tie",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      },
+      {
+        "name": "CABLE Tray",
+        "category": "BOS Solar Kit",
+        "uom": "NOS",
+        "qty": "1",
+        "wastage": "0%",
+        "rate": "0.0",
+        "gstRate": "18%"
+      }
+    ]
   }
 };

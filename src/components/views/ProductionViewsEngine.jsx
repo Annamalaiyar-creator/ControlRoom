@@ -13303,12 +13303,35 @@ export default function ProductionViewsEngine(props) {
                         }}
                         style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
                       >
-                        <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset...</option>
-                        {Object.values(VRM_HDG_PRESETS || {}).map(preset => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.label}
-                          </option>
-                        ))}
+                        <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset (30 Presets Available)...</option>
+                        {(() => {
+                          const presetsList = Object.values(VRM_HDG_PRESETS || {});
+                          const categories = [
+                            { name: 'DCR BOS Solar Proposal Kits', match: (p) => p.label.includes('BOS KITS') },
+                            { name: 'Mini Rail Kits', match: (p) => p.label.includes('Mini rail') },
+                            { name: 'Adhesive Rail Kits', match: (p) => p.label.includes('Adhesive') },
+                            { name: 'Long Rail Kits', match: (p) => p.label.includes('rail') || p.label.includes('Rail') },
+                            { name: 'Triangle Structure Kits', match: (p) => p.label.includes('Triangle') },
+                            { name: 'HDG Structure Tables (3900 Rafter)', match: (p) => p.label.includes('HDG Structure') },
+                            { name: 'GAL Structure Tables (3900 Rafter)', match: (p) => p.label.includes('GAL Structure') },
+                          ];
+
+                          const rendered = new Set();
+                          return categories.map(cat => {
+                            const items = presetsList.filter(p => !rendered.has(p.id) && cat.match(p));
+                            items.forEach(p => rendered.add(p.id));
+                            if (items.length === 0) return null;
+                            return (
+                              <optgroup key={cat.name} label={`--- ${cat.name} (${items.length}) ---`}>
+                                {items.map(preset => (
+                                  <option key={preset.id} value={preset.id}>
+                                    {preset.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            );
+                          });
+                        })()}
                       </select>
 
                       {/* SET COUNT / MULTIPLIER INPUT */}
