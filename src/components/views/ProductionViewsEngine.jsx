@@ -9522,13 +9522,12 @@ export default function ProductionViewsEngine(props) {
                         <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
                           {!isAlreadyForwarded && <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>✓</th>}
                           <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>#</th>
-                          <th style={{ padding: '12px 10px', width: '22%' }}>Product / Component Name</th>
-                          <th style={{ padding: '12px 10px', width: '15%' }}>Description</th>
-                          <th style={{ padding: '12px 10px', width: '10%' }}>MM</th>
-                          <th style={{ padding: '12px 10px', width: '8%', textAlign: 'center' }}>UOM</th>
-                          <th style={{ padding: '12px 10px', width: '8%', textAlign: 'center' }}>Qty</th>
-                          <th style={{ padding: '12px 10px', width: '11%', textAlign: 'right' }}>Rate (₹)</th>
-                          <th style={{ padding: '12px 10px', width: '12%', textAlign: 'right' }}>Total (₹)</th>
+                          <th style={{ padding: '12px 10px', width: '25%' }}>Product / Component Name</th>
+                          <th style={{ padding: '12px 10px', width: '18%' }}>Description</th>
+                          <th style={{ padding: '12px 10px', width: '9%', textAlign: 'center' }}>UOM</th>
+                          <th style={{ padding: '12px 10px', width: '9%', textAlign: 'center' }}>Qty</th>
+                          <th style={{ padding: '12px 10px', width: '12%', textAlign: 'right' }}>Rate (₹)</th>
+                          <th style={{ padding: '12px 10px', width: '13%', textAlign: 'right' }}>Total (₹)</th>
                           {!isAlreadyForwarded && <th style={{ padding: '12px 10px', width: '50px', textAlign: 'center' }}>Action</th>}
                         </tr>
                       </thead>
@@ -9544,7 +9543,6 @@ export default function ProductionViewsEngine(props) {
                                 <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
                                 <td style={{ padding: '12px 10px', fontWeight: '700', color: '#0F172A' }}>{item.name || '—'}</td>
                                 <td style={{ padding: '12px 10px', color: '#64748B' }}>{item.category || item.specs || '—'}</td>
-                                <td style={{ padding: '12px 10px', color: '#4338CA', fontWeight: '700' }}>{item.mm || '—'}</td>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>{item.uom || item.unit || 'NOS'}</td>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>{itemQty}</td>
                                 <td style={{ padding: '12px 10px', textAlign: 'right', color: '#334155' }}>₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
@@ -9592,19 +9590,6 @@ export default function ProductionViewsEngine(props) {
                                     setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                                   }}
                                   style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
-                                />
-                              </td>
-                              <td style={{ padding: '12px 10px' }}>
-                                <input
-                                  type="text"
-                                  placeholder="MM / Size"
-                                  value={item.mm || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, mm: val } : it);
-                                    setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                                  }}
-                                  style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
                                 />
                               </td>
                               <td style={{ padding: '12px 10px' }}>
@@ -13467,19 +13452,18 @@ export default function ProductionViewsEngine(props) {
                               style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
                             />
                           </th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '20%' }}>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '25%' }}>
                             Product / Item <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '14%' }}>Description</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>MM</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '9%' }}>UOM</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '7%', textAlign: 'center' }}>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '18%' }}>Description</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>
                             Qty <span style={{ color: '#EF4444' }}>*</span>
                           </th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '9%', textAlign: 'center' }}>GST Rate</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Taxable (₹)</th>
-                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Total (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%' }}>Price (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Taxable (₹)</th>
+                          <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Total (₹)</th>
                           <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
                         </tr>
                       </thead>
@@ -13547,50 +13531,6 @@ export default function ProductionViewsEngine(props) {
                                   }}
                                   style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                                 />
-                              </td>
-                              {/* MM Heading Input (Both Dropdown & Typeable) */}
-                              <td style={{ padding: '12px 10px' }}>
-                                <input
-                                  type="text"
-                                  list={`mm-list-${i}`}
-                                  placeholder="MM / Size"
-                                  value={item.mm || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, mm: val } : mat));
-                                  }}
-                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
-                                />
-                                <datalist id={`mm-list-${i}`}>
-                                  <option value="100mm" />
-                                  <option value="125mm" />
-                                  <option value="120mm" />
-                                  <option value="300mm" />
-                                  <option value="500mm" />
-                                  <option value="650mm" />
-                                  <option value="900mm" />
-                                  <option value="1000mm" />
-                                  <option value="1200mm" />
-                                  <option value="1300mm" />
-                                  <option value="1500mm" />
-                                  <option value="1600mm" />
-                                  <option value="1800mm" />
-                                  <option value="2000mm" />
-                                  <option value="2400mm" />
-                                  <option value="2500mm" />
-                                  <option value="2950mm" />
-                                  <option value="3000mm" />
-                                  <option value="3350mm" />
-                                  <option value="3600mm" />
-                                  <option value="3900mm" />
-                                  <option value="4800mm" />
-                                  <option value="40*40*2" />
-                                  <option value="40*85mm" />
-                                  <option value="35mm" />
-                                  <option value="30mm" />
-                                  <option value="m8*30" />
-                                  <option value="m6*75" />
-                                </datalist>
                               </td>
                               {/* UOM Heading Input (Both Dropdown & Typeable) */}
                               <td style={{ padding: '12px 10px' }}>
@@ -15357,7 +15297,6 @@ export default function ProductionViewsEngine(props) {
                               <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
                                 <th style={{ padding: '8px 10px', width: '30px' }}>#</th>
                                 <th style={{ padding: '8px 10px' }}>Product Item</th>
-                                <th style={{ padding: '8px 10px' }}>MM</th>
                                 <th style={{ padding: '8px 10px', textAlign: 'center' }}>UOM</th>
                                 <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
                                 <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (₹)</th>
@@ -15366,12 +15305,11 @@ export default function ProductionViewsEngine(props) {
                             <tbody>
                               {((quickPreviewRecord.items || quickPreviewRecord.materials || []).length > 0
                                 ? (quickPreviewRecord.items || quickPreviewRecord.materials)
-                                : [{ name: quickPreviewRecord.productName || quickPreviewRecord.c2 || 'BOM Material Kit', mm: 'Standard', uom: 'NOS', qty: 1, rate: parseFloat(quickPreviewRecord.grandTotal || quickPreviewRecord.value || 0) }]
+                                : [{ name: quickPreviewRecord.productName || quickPreviewRecord.c2 || 'BOM Material Kit', uom: 'NOS', qty: 1, rate: parseFloat(quickPreviewRecord.grandTotal || quickPreviewRecord.value || 0) }]
                               ).map((it, idx) => (
                                 <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                                   <td style={{ padding: '8px 10px', color: '#94A3B8', fontWeight: '700' }}>{idx + 1}</td>
                                   <td style={{ padding: '8px 10px', fontWeight: '700', color: '#0F172A' }}>{it.name || '—'}</td>
-                                  <td style={{ padding: '8px 10px', color: '#4338CA', fontWeight: '600' }}>{it.mm || '—'}</td>
                                   <td style={{ padding: '8px 10px', textAlign: 'center', color: '#475569' }}>{it.uom || it.unit || 'NOS'}</td>
                                   <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>{it.qty || 1}</td>
                                   <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>₹ {Number(it.rate || 0).toLocaleString('en-IN')}</td>
