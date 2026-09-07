@@ -1907,18 +1907,21 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 ) : isExecutiveOrMD ? (
                   <>
                     {selectedPOs.length === 1 && (() => {
-                      const target = poList.find(p => p.poNo === selectedPOs[0]);
+                      const target = poList.find(p => p.poNo === selectedPOs[0] || p.id === selectedPOs[0]);
                       if (!target) return null;
                       const st = String(target.status || '').trim();
-                      const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
+                      const stType = String(target.statusType || '').toLowerCase();
+                      const isAlreadyApproved = st === 'MD Approved' || st === 'Payment Processed' || st === 'Proceed PO' || st.includes('CLOSED') || stType === 'md_approved' || stType === 'payment_processed' || stType === 'proceed_po' || stType === 'closed';
+                      const isDraftOrPending = !isAlreadyApproved && (st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval' || st === 'OPEN' || stType === 'pending' || stType === 'draft');
                       if (isDraftOrPending) {
                         return (
                           <button
                             onClick={() => handleStartView(target)}
+                            title="Open full PO details to review line items, totals, and terms before CEO approval"
                             style={{
                               backgroundColor: '#F0FDF4',
-                              border: '1px solid #BBF7D0',
-                              color: '#166534',
+                              border: '1.5px solid #86EFAC',
+                              color: '#15803D',
                               borderRadius: '10px',
                               padding: '6px 14px',
                               fontSize: '12px',
@@ -1927,13 +1930,13 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '6px',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              boxShadow: '0 2px 4px rgba(22, 163, 74, 0.15)',
                               transition: 'all 0.15s ease'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DCFCE7'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#DCFCE7'; e.currentTarget.style.borderColor = '#4ADE80'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F0FDF4'; e.currentTarget.style.borderColor = '#86EFAC'; }}
                           >
-                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> CEO Approval
+                            <CheckCircle size={14} style={{ color: '#16A34A' }} /> Review & Approve (CEO)
                           </button>
                         );
                       }
@@ -2824,13 +2827,24 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 {/* Bottom Review & Approval Action Card for Executive / Approver */}
                 {(() => {
                   const st = String(viewingPoStatus || '').trim();
-                  const isDraftOrPending = st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
                   const currentPoObj = poList.find(p => p.poNo === poNumber || p.id === poNumber) || {
                     poNo: poNumber,
                     vendor: vendorName,
                     amount: `₹ ${Number(totalAmountWithGst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                     paymentTerms
                   };
+                  const objStatus = String(currentPoObj?.status || '').trim();
+                  const objStatusType = String(currentPoObj?.statusType || '').toLowerCase();
+                  
+                  const isAlreadyApproved = st === 'MD Approved' || objStatus === 'MD Approved' || 
+                                           st === 'Payment Processed' || objStatus === 'Payment Processed' || 
+                                           st === 'Proceed PO' || objStatus === 'Proceed PO' || 
+                                           st.includes('CLOSED') || objStatus.includes('CLOSED') ||
+                                           objStatusType === 'md_approved' || objStatusType === 'payment_processed' || objStatusType === 'proceed_po' || objStatusType === 'closed';
+
+                  const isDraftOrPending = isExecutiveOrMD 
+                    ? (!isAlreadyApproved && st !== 'REJECTED' && objStatus !== 'REJECTED')
+                    : (st === 'Draft' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval');
 
                   return (
                     <div style={{

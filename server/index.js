@@ -2467,7 +2467,15 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
       let totalReceivedQty = 0;
 
       const localPOs = loadLocalPOs();
-      const matchedLocalPO = localPOs.find(p => p.id === po.purchaseorder_id || p.poNo === po.purchaseorder_number || (p.poNo && po.purchaseorder_number && p.poNo.toLowerCase() === po.purchaseorder_number.toLowerCase()));
+      const cleanZohoId = String(po.purchaseorder_id || '').trim().toLowerCase();
+      const cleanPoNo = String(po.purchaseorder_number || poNo || '').trim().toLowerCase();
+      const matchedLocalPO = localPOs.find(p => {
+        const lpId = String(p.id || '').trim().toLowerCase();
+        const lpNo = String(p.poNo || '').trim().toLowerCase();
+        const lpZohoId = String(p.zohoId || '').trim().toLowerCase();
+        return (cleanZohoId && (lpId === cleanZohoId || lpZohoId === cleanZohoId)) ||
+               (cleanPoNo && (lpNo === cleanPoNo || lpId === cleanPoNo));
+      });
 
       const items = (po.line_items || []).map((item, idx) => {
         const idKey = item.id || item.itemId || item.line_item_id;
@@ -2526,9 +2534,21 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
       } else if (matchedLocalPO && (matchedLocalPO.status === 'MD Approved' || matchedLocalPO.statusType === 'md_approved')) {
         statusType = 'md_approved';
         statusText = 'MD Approved';
-      } else if (po.status === 'draft' || (matchedLocalPO && matchedLocalPO.statusType === 'draft')) {
+      } else if (matchedLocalPO && matchedLocalPO.status === 'REJECTED') {
+        statusType = 'rejected';
+        statusText = 'REJECTED';
+      } else if (matchedLocalPO && (matchedLocalPO.status === 'Draft / Pending Approval' || matchedLocalPO.status === 'WAITING FOR APPROVAL' || matchedLocalPO.status === 'Pending Approval' || matchedLocalPO.statusType === 'pending')) {
+        statusType = 'pending';
+        statusText = 'Draft / Pending Approval';
+      } else if (matchedLocalPO && (matchedLocalPO.status === 'Draft' || matchedLocalPO.statusType === 'draft')) {
         statusType = 'draft';
         statusText = 'Draft';
+      } else if (po.status === 'draft') {
+        statusType = 'draft';
+        statusText = 'Draft';
+      } else if ((matchedLocalPO && matchedLocalPO.status === 'OPEN') || po.status === 'issued' || po.status === 'open' || po.status === 'approved') {
+        statusType = 'approved';
+        statusText = 'OPEN';
       }
 
 
@@ -2590,7 +2610,13 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
         terms: po.terms || (matchedLocalPO ? matchedLocalPO.terms : ''),
         amount: `₹${Number(po.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         status: statusText,
-        statusType: statusType
+        statusType: statusType,
+        approvedBy: matchedLocalPO ? matchedLocalPO.approvedBy : undefined,
+        approvalDate: matchedLocalPO ? matchedLocalPO.approvalDate : undefined,
+        approvalTime: matchedLocalPO ? matchedLocalPO.approvalTime : undefined,
+        approvalRemarks: matchedLocalPO ? matchedLocalPO.approvalRemarks : undefined,
+        paymentDetails: matchedLocalPO ? matchedLocalPO.paymentDetails : undefined,
+        proceedDetails: matchedLocalPO ? matchedLocalPO.proceedDetails : undefined
       };
       res.json(translated);
     } else {
@@ -2701,7 +2727,13 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
       grnHistory: matchingGRNs,
       amount: matchedLocalPO ? matchedLocalPO.amount : '₹ 13,75,000.00',
       status: matchedLocalPO ? matchedLocalPO.status : (totalReceivedQty >= totalOrderedQty ? 'CLOSED / FULLY RECEIVED' : (totalReceivedQty > 0 ? 'OPEN / PARTIALLY RECEIVED' : 'OPEN')),
-      statusType: matchedLocalPO ? matchedLocalPO.statusType : (totalReceivedQty >= totalOrderedQty ? 'closed' : (totalReceivedQty > 0 ? 'partially_received' : 'open'))
+      statusType: matchedLocalPO ? matchedLocalPO.statusType : (totalReceivedQty >= totalOrderedQty ? 'closed' : (totalReceivedQty > 0 ? 'partially_received' : 'open')),
+      approvedBy: matchedLocalPO ? matchedLocalPO.approvedBy : undefined,
+      approvalDate: matchedLocalPO ? matchedLocalPO.approvalDate : undefined,
+      approvalTime: matchedLocalPO ? matchedLocalPO.approvalTime : undefined,
+      approvalRemarks: matchedLocalPO ? matchedLocalPO.approvalRemarks : undefined,
+      paymentDetails: matchedLocalPO ? matchedLocalPO.paymentDetails : undefined,
+      proceedDetails: matchedLocalPO ? matchedLocalPO.proceedDetails : undefined
     });
   }
 });
@@ -3009,7 +3041,12 @@ app.post('/api/zoho/purchaseorders/:id/approve', async (req, res) => {
 
   // Update local PO store
   const localPOs = loadLocalPOs();
-  const matchedIdx = localPOs.findIndex(p => p.id === targetId || p.poNo === targetId);
+  const cleanTarget = String(targetId).trim().toLowerCase();
+  const matchedIdx = localPOs.findIndex(p => 
+    String(p.id || '').trim().toLowerCase() === cleanTarget || 
+    String(p.poNo || '').trim().toLowerCase() === cleanTarget ||
+    String(p.zohoId || '').trim().toLowerCase() === cleanTarget
+  );
   if (matchedIdx !== -1) {
     localPOs[matchedIdx].status = 'MD Approved';
     localPOs[matchedIdx].statusType = 'md_approved';
