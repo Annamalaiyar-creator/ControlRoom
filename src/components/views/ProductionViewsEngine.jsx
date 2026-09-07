@@ -2466,7 +2466,7 @@ export default function ProductionViewsEngine(props) {
                             ? (itemsList || []).filter(item => Boolean(item.selected))
                             : (itemsList || []);
 
-                          // 2. Reduce stock in stockRegistry and RawMaterialInventoryView materials state
+                          // 2. Reduce stock in stockRegistry
                           setStockRegistry(prevRegistry => {
                             const updated = [...prevRegistry];
                             packedItemsToDeduct.forEach(pItem => {
@@ -2496,118 +2496,7 @@ export default function ProductionViewsEngine(props) {
                             return updated;
                           });
 
-                          // Update raw materials stock table
-                          try {
-                            const initialMaterials = [
-                              { code: 'RM-001', name: 'Aluminium Sheet', cat: 'Aluminium', unit: 'KG', stock: 1250, minLevel: 500, status: 'In Stock', store: 'Main Store', hsn: '7606', lastUpdated: '20 Aug 2026 10:30 AM', reserved: 200, openingStock: 1000, goodsReceived: 500, issuedProd: 180, matReturn: 30, stockAdj: 10 },
-                              { code: 'RM-002', name: 'GI Sheet', cat: 'Steel', unit: 'KG', stock: 320, minLevel: 400, status: 'Low Stock', store: 'Main Store', hsn: '7210', lastUpdated: '20 Aug 2026 09:15 AM', reserved: 50, openingStock: 400, goodsReceived: 100, issuedProd: 200, matReturn: 10, stockAdj: 10 },
-                              { code: 'RM-003', name: 'MS Angle', cat: 'Steel', unit: 'Nos', stock: 0, minLevel: 100, status: 'Out of Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 0, openingStock: 150, goodsReceived: 0, issuedProd: 150, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-004', name: 'MS Channel', cat: 'Steel', unit: 'Nos', stock: 150, minLevel: 200, status: 'Low Stock', store: 'Store B', hsn: '7216', lastUpdated: '19 Aug 2026 04:45 PM', reserved: 20, openingStock: 200, goodsReceived: 50, issuedProd: 110, matReturn: 0, stockAdj: 10 },
-                              { code: 'RM-005', name: 'Aluminium Rail', cat: 'Aluminium', unit: 'Nos', stock: 2450, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: '18 Aug 2026 02:20 PM', reserved: 350, openingStock: 2000, goodsReceived: 800, issuedProd: 350, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-006', name: 'SS Bolt M8', cat: 'Fasteners', unit: 'Nos', stock: 8600, minLevel: 2000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '18 Aug 2026 11:00 AM', reserved: 1200, openingStock: 6000, goodsReceived: 4000, issuedProd: 1400, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-007', name: 'Nut M8', cat: 'Fasteners', unit: 'Nos', stock: 1200, minLevel: 1000, status: 'In Stock', store: 'Main Store', hsn: '7318', lastUpdated: '17 Aug 2026 05:10 PM', reserved: 400, openingStock: 1000, goodsReceived: 1000, issuedProd: 800, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-008', name: 'Washer M8', cat: 'Fasteners', unit: 'Nos', stock: 500, minLevel: 1000, status: 'Low Stock', store: 'Store B', hsn: '7318', lastUpdated: '17 Aug 2026 03:30 PM', reserved: 100, openingStock: 800, goodsReceived: 200, issuedProd: 500, matReturn: 0, stockAdj: 0 },
-                              { code: 'RM-009', name: 'Zinc Coating', cat: 'Coating', unit: 'Ltr', stock: 80, minLevel: 100, status: 'Low Stock', store: 'Main Store', hsn: '3208', lastUpdated: '16 Aug 2026 01:15 PM', reserved: 15, openingStock: 120, goodsReceived: 40, issuedProd: 80, matReturn: 0, stockAdj: 0 },
-                              { code: 'MC30', name: 'Mid 30mm', cat: 'Fasteners', unit: 'Nos', stock: 1000, minLevel: 200, status: 'In Stock', store: 'Main Store', hsn: '7616', lastUpdated: '20 Aug 2026 10:00 AM', reserved: 0, openingStock: 1000, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 }
-                            ];
-                            const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
-                            let currentMats = [];
-                            if (savedMatStr) {
-                              try { currentMats = JSON.parse(savedMatStr); } catch (e) { }
-                            }
-                            if (!currentMats || !Array.isArray(currentMats) || currentMats.length === 0) {
-                              currentMats = initialMaterials;
-                            }
-
-                            // Direct Main Branch Stock Deduction Algorithm
-                            // Deduct directly from the main branch item matching code or name
-                            const matchedDeductionsMap = new Map(); // target material code/name -> pItem
-
-                            packedItemsToDeduct.forEach(pItem => {
-                              const pCode = (pItem.code || '').toUpperCase().trim();
-                              const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
-
-                              // Find candidates matching code or name
-                              const target = currentMats.find(m => {
-                                const mCode = (m.code || '').toUpperCase().trim();
-                                const mName = (m.name || '').toLowerCase().trim();
-
-                                if (pCode === 'MC30' && (mCode === 'MC30' || mName.includes('mid 30'))) return true;
-                                if (pCode && mCode === pCode) return true;
-                                if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
-
-                                const keywords = ['column', 'rafter', 'purlin', 'bracing', 'mid clamp', 'end clamp', 'base plate', 'rail', 'sheet', 'bolt', 'nut', 'washer', 'mid', 'end', 'leg'];
-                                for (const kw of keywords) {
-                                  if (pName.includes(kw) && mName.includes(kw)) {
-                                    const pNum = (pName.match(/\d+/) || [])[0];
-                                    const mNum = (mName.match(/\d+/) || [])[0];
-                                    if (pNum && mNum && pNum !== mNum) return false;
-                                    return true;
-                                  }
-                                }
-                                return false;
-                              });
-
-                              if (target) {
-                                matchedDeductionsMap.set(target.code || target.name, pItem);
-                              }
-                            });
-
-                            let updatedMats = currentMats.map(m => {
-                              const matchP = matchedDeductionsMap.get(m.code) || matchedDeductionsMap.get(m.name);
-                              if (matchP) {
-                                const qtyToDeduct = parseInt(matchP.invQty || matchP.bomQty || matchP.qty || 1, 10) || 0;
-                                const currSt = Math.max(0, parseInt(String(m.stock).replace(/,/g, ''), 10) || 0);
-                                const newSt = Math.max(0, currSt - qtyToDeduct);
-                                const minL = parseInt(String(m.minLevel || '100').replace(/,/g, ''), 10) || 100;
-                                return {
-                                  ...m,
-                                  stock: newSt,
-                                  issuedProd: (m.issuedProd || 0) + qtyToDeduct,
-                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock'),
-                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                };
-                              }
-                              return m;
-                            });
-
-                            // If item wasn't present in catalog at all, auto-create main product entry
-                            packedItemsToDeduct.forEach(pItem => {
-                              const pCode = (pItem.code || '').toUpperCase().trim();
-                              const pName = pItem.name || pItem.description || 'Custom Finished Good';
-                              const isMatched = Array.from(matchedDeductionsMap.values()).includes(pItem);
-
-                              if (!isMatched) {
-                                const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
-                                const startStock = 1000;
-                                const newSt = Math.max(0, startStock - qtyToDeduct);
-                                updatedMats.push({
-                                  code: pCode || 'FG-NEW-001',
-                                  name: pName,
-                                  cat: 'Finished Goods',
-                                  unit: pItem.unit || 'Nos',
-                                  stock: newSt,
-                                  minLevel: 50,
-                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= 50 ? 'Low Stock' : 'In Stock'),
-                                  store: 'Main Store',
-                                  hsn: '7616',
-                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                                  reserved: 0,
-                                  openingStock: startStock,
-                                  goodsReceived: 0,
-                                  issuedProd: qtyToDeduct,
-                                  matReturn: 0,
-                                  stockAdj: 0
-                                });
-                              }
-                            });
-
-                            localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(updatedMats));
-                            saveCloudStore('raw_materials_store', updatedMats);
-                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                          } catch (err) { }
-
-                          // Deduct stock directly from prodModuleEngine central live inventory
+                          // 3. Deduct stock directly from prodModuleEngine central live inventory
                           try {
                             const engineInv = prodModuleEngine.getInventory();
                             packedItemsToDeduct.forEach(pItem => {
@@ -2628,17 +2517,18 @@ export default function ProductionViewsEngine(props) {
                                 targetItem.physicalStock = Math.max(0, targetItem.physicalStock - qtyToDeduct);
                                 targetItem.availableStock = Math.max(0, targetItem.physicalStock - (targetItem.reservedStock || 0));
                               } else {
-                                prodModuleEngine.inventory.push({
-                                  code: pCode || 'MC35',
-                                  name: pItem.name || pItem.description || 'Mid 35mm',
+                                targetItem = {
+                                  code: pCode || `FG-${Date.now().toString().slice(-4)}`,
+                                  name: pItem.name || pItem.description || 'Finished Good Item',
                                   category: 'Finished Goods',
-                                  unit: pItem.unit || 'Nos',
+                                  unit: pItem.uom || pItem.unit || 'Nos',
                                   physicalStock: Math.max(0, 1000 - qtyToDeduct),
                                   availableStock: Math.max(0, 1000 - qtyToDeduct),
                                   reservedStock: 0,
                                   safetyStock: 50,
                                   bayLocation: 'Main Store'
-                                });
+                                };
+                                prodModuleEngine.inventory.push(targetItem);
                               }
 
                               // Record in central audit log ledger for inventory traceability
@@ -2651,20 +2541,89 @@ export default function ProductionViewsEngine(props) {
                                 itemCode: targetCodeName,
                                 itemName: pItem.name || pItem.description || 'Finished Good Item',
                                 qty: -qtyToDeduct,
-                                unit: pItem.unit || 'Nos',
-                                previousStock: targetItem ? targetItem.physicalStock + qtyToDeduct : 1000,
-                                newStock: targetItem ? targetItem.physicalStock : Math.max(0, 1000 - qtyToDeduct),
+                                unit: pItem.uom || pItem.unit || 'Nos',
+                                previousStock: targetItem.physicalStock + qtyToDeduct,
+                                newStock: targetItem.physicalStock,
                                 user: 'Accounts & Billing Department',
                                 employee: salesRepName,
-                                reason: `Dispatch & Invoice Outflow (-${qtyToDeduct} ${pItem.unit || 'Nos'}): Sales order BOM (${bomRefText}) invoiced (${invNoText}) by ${salesRepName}. Stock deducted from inventory.`,
+                                reason: `Dispatch & Invoice Outflow (-${qtyToDeduct} ${pItem.uom || pItem.unit || 'Nos'}): Sales order BOM (${bomRefText}) invoiced (${invNoText}) by ${salesRepName}. Stock deducted from inventory.`,
                                 referenceDoc: invNoText
                               });
                             });
                             prodModuleEngine.saveToStorage();
-                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
-                          } catch (e) { console.error('Invoice stock deduction error:', e); }
+                          } catch (e) { console.error('Invoice stock deduction engine error:', e); }
 
-                          // 3. Update Invoice status & persist to localStorage / cloud store
+                          // 4. Update controlroom_raw_materials_store accurately
+                          try {
+                            const savedMatStr = localStorage.getItem('controlroom_raw_materials_store');
+                            let currentMats = [];
+                            if (savedMatStr) {
+                              try { currentMats = JSON.parse(savedMatStr); } catch (e) { }
+                            }
+                            if (!Array.isArray(currentMats) || currentMats.length === 0) {
+                              currentMats = ALUMINUM_PROFILES.map(p => ({
+                                ...p,
+                                lastUpdated: 'Live Store',
+                                reserved: 0,
+                                openingStock: p.stock,
+                                goodsReceived: 0,
+                                issuedProd: 0,
+                                matReturn: 0,
+                                stockAdj: 0
+                              }));
+                            }
+
+                            packedItemsToDeduct.forEach(pItem => {
+                              const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                              const pCode = (pItem.code || '').toUpperCase().trim();
+                              const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+
+                              let match = currentMats.find(m => {
+                                const mCode = (m.code || '').toUpperCase().trim();
+                                const mName = (m.name || '').toLowerCase().trim();
+                                if (pCode && mCode === pCode) return true;
+                                if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
+                                return false;
+                              });
+
+                              if (match) {
+                                const currSt = Math.max(0, parseInt(String(match.stock).replace(/,/g, ''), 10) || 0);
+                                const newSt = Math.max(0, currSt - qtyToDeduct);
+                                const minL = parseInt(String(match.minLevel || '100').replace(/,/g, ''), 10) || 100;
+                                match.stock = newSt;
+                                match.issuedProd = (match.issuedProd || 0) + qtyToDeduct;
+                                match.status = newSt === 0 ? 'Out of Stock' : (newSt <= minL ? 'Low Stock' : 'In Stock');
+                                match.lastUpdated = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                              } else {
+                                const startStock = 1000;
+                                const newSt = Math.max(0, startStock - qtyToDeduct);
+                                currentMats.push({
+                                  code: pCode || `FG-${Date.now().toString().slice(-4)}`,
+                                  name: pItem.name || pItem.description || 'Finished Good Item',
+                                  cat: 'Finished Goods',
+                                  unit: pItem.uom || pItem.unit || 'Nos',
+                                  stock: newSt,
+                                  minLevel: 50,
+                                  status: newSt === 0 ? 'Out of Stock' : (newSt <= 50 ? 'Low Stock' : 'In Stock'),
+                                  store: 'Main Store',
+                                  hsn: '7616',
+                                  lastUpdated: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                                  reserved: 0,
+                                  openingStock: startStock,
+                                  goodsReceived: 0,
+                                  issuedProd: qtyToDeduct,
+                                  matReturn: 0,
+                                  stockAdj: 0
+                                });
+                              }
+                            });
+
+                            localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(currentMats));
+                            saveCloudStore('raw_materials_store', currentMats);
+                            window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+                          } catch (err) { console.error('Error updating raw materials store:', err); }
+
+                          // 5. Update Invoice status & persist to localStorage / cloud store
                           setViewingInvoiceModal(prev => prev ? {
                             ...prev,
                             status: 'Invoice Confirmed',
@@ -2693,7 +2652,7 @@ export default function ProductionViewsEngine(props) {
                             return updatedInvoices;
                           });
 
-                          // 4. Update matching BOM status to 'Awaiting Vehicle Loading & Dispatch'
+                          // 6. Update matching BOM status to 'Awaiting Vehicle Loading & Dispatch'
                           const targetCode = inv.poNo || inv.code || bomRefText;
                           setBomStore(prev => prev.map(b => (
                             b.bomCode === targetCode ||
@@ -2709,6 +2668,29 @@ export default function ProductionViewsEngine(props) {
                             stockDeductionDate: new Date().toISOString(),
                             packedItemsDeducted: packedItemsToDeduct
                           } : b));
+
+                          // 7. Post Invoice to Zoho Books API (/api/zoho/invoices)
+                          try {
+                            fetch('/api/zoho/invoices', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                invNo: invNoText,
+                                poNo: bomRefText,
+                                bomCode: bomRefText,
+                                vendor: customerText,
+                                customerName: customerText,
+                                date: invDateText || new Date().toISOString().split('T')[0],
+                                invAmt: totalAmtRaw,
+                                items: packedItemsToDeduct.map(it => ({
+                                  name: it.name || it.description || 'Finished Good',
+                                  rate: Number(it.rate || it.unitPrice || 1000),
+                                  quantity: Number(it.invQty || it.bomQty || it.qty || 1)
+                                })),
+                                notes: `Sales Invoice confirmed for BOM ${bomRefText} with ${packedItemsToDeduct.length} item(s) dispatched.`
+                              })
+                            }).catch(err => console.warn('Zoho invoice sync notice:', err));
+                          } catch (e) { console.error('Zoho invoice fetch trigger error:', e); }
 
                           setViewingInvoiceModal(null);
                           setConfirmInvoiceSuccessModal({
@@ -4776,9 +4758,9 @@ export default function ProductionViewsEngine(props) {
 
                   const existing = matMap.get(mapKey) || {};
                   const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
-                  const stockVal = (existing.stock !== undefined)
-                    ? Number(existing.stock)
-                    : (engineStock !== null ? engineStock : 1000);
+                  const stockVal = engineStock !== null
+                    ? engineStock
+                    : (existing.stock !== undefined ? Number(existing.stock) : 1000);
                   const minLvl = Number(item.safetyStock || existing.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';
@@ -4866,8 +4848,7 @@ export default function ProductionViewsEngine(props) {
                 });
                 const filteredMaterials = Array.from(matMap.values()).filter(m => {
                   if (deletedCodes.includes(m.code)) return false;
-                  const codeUpper = String(m.code || '').toUpperCase();
-                  return !codeUpper.startsWith('FG-00') && !codeUpper.startsWith('FG-HDG') && !codeUpper.startsWith('FG-NEW');
+                  return true;
                 });
                 setMaterials(filteredMaterials);
               };
@@ -4934,7 +4915,9 @@ export default function ProductionViewsEngine(props) {
                 const sCode = String(selectedMat.code || '').toUpperCase();
                 const eName = String(entry.itemName || '').toLowerCase();
                 const sName = String(selectedMat.name || '').toLowerCase();
-                return eCode === sCode || (sName.includes('300') && (eName.includes('300') || eCode.includes('300'))) || (sCode === 'RM-ALU-2414' && (eCode.includes('ALU') || eName.includes('aluminum')));
+                return eCode === sCode || 
+                  (sName.includes('300') && (eName.includes('300') || eCode.includes('300'))) || 
+                  (sCode === 'RM-ALU-2414' && (eCode === 'ALU-LEN-2414MM' || eCode === 'RM-ALU-2414' || (eCode.includes('2414') && eName.includes('aluminum'))));
               });
 
               // Match completed work orders

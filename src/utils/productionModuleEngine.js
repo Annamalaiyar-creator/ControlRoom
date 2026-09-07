@@ -23,7 +23,7 @@ export const INITIAL_MANUFACTURING_RECIPES = [
     expectedOutputQty: 24,
     rawMaterialCode: 'ALU-LEN-2414MM',
     rawMaterialName: 'Aluminium Length (2414 mm)',
-    rawMaterialUnit: 'Raw Bars',
+    rawMaterialUnit: 'Length',
     inputQty: 1,
     notes: 'Mini Rail profile (100mm Height). User specifies custom Cut Length (mm) per order.'
   },
@@ -35,7 +35,7 @@ export const INITIAL_MANUFACTURING_RECIPES = [
     expectedOutputQty: 16,
     rawMaterialCode: 'ALU-LEN-2414MM',
     rawMaterialName: 'Aluminium Length (2414 mm)',
-    rawMaterialUnit: 'Raw Bars',
+    rawMaterialUnit: 'Length',
     inputQty: 1,
     notes: 'Mini Rail profile (150mm Height). User specifies custom Cut Length (mm) per order.'
   },
@@ -47,7 +47,7 @@ export const INITIAL_MANUFACTURING_RECIPES = [
     expectedOutputQty: 1,
     rawMaterialCode: 'ALU-LEN-2414MM',
     rawMaterialName: 'Aluminium Length (2414 mm)',
-    rawMaterialUnit: 'Raw Bars',
+    rawMaterialUnit: 'Length',
     inputQty: 1,
     notes: 'Standard 1 Aluminium Length (2414mm) yields 1 Full Long Rail 2414mm piece.'
   },
@@ -56,24 +56,24 @@ export const INITIAL_MANUFACTURING_RECIPES = [
     productCode: 'MC35',
     productName: 'Mid Clamp 35 mm',
     outputUnit: 'Pieces',
-    expectedOutputQty: 40,
-    rawMaterialCode: 'ALU-COIL-1.5',
-    rawMaterialName: 'Aluminium Strip Coil 1.5mm',
-    rawMaterialUnit: 'Kg',
+    expectedOutputQty: 75,
+    rawMaterialCode: 'ALU-BAR-2650MM',
+    rawMaterialName: 'Aluminium Extrusion Bar (2650 mm)',
+    rawMaterialUnit: 'Length',
     inputQty: 1,
-    notes: '1 Kg Aluminium Coil produces 40 Mid Clamp pieces.'
+    notes: '1 Raw Length (2650 mm) yields 75 Mid Clamp (35 mm) pieces with 2 mm saw kerf.'
   },
   {
     id: 'RECIPE-EC35',
     productCode: 'EC35',
     productName: 'End Clamp 35 mm',
     outputUnit: 'Pieces',
-    expectedOutputQty: 40,
-    rawMaterialCode: 'ALU-COIL-1.5',
-    rawMaterialName: 'Aluminium Strip Coil 1.5mm',
-    rawMaterialUnit: 'Kg',
+    expectedOutputQty: 75,
+    rawMaterialCode: 'ALU-BAR-2650MM',
+    rawMaterialName: 'Aluminium Extrusion Bar (2650 mm)',
+    rawMaterialUnit: 'Length',
     inputQty: 1,
-    notes: '1 Kg Aluminium Coil produces 40 End Clamp pieces.'
+    notes: '1 Raw Length (2650 mm) yields 75 End Clamp (35 mm) pieces with 2 mm saw kerf.'
   }
 ];
 
@@ -83,7 +83,7 @@ export const INITIAL_INVENTORY_ITEMS = [
     code: 'ALU-LEN-2414MM',
     name: 'Aluminium Length (2414 mm)',
     category: 'Raw Material',
-    unit: 'Raw Bars',
+    unit: 'Length',
     isWholeUnitOnly: true,
     physicalStock: 100,
     reservedStock: 0,
@@ -95,11 +95,26 @@ export const INITIAL_INVENTORY_ITEMS = [
     bayLocation: 'Bay #1 - Extrusion Yard'
   },
   {
-    code: 'ALU-COIL-1.5',
-    name: 'Aluminium Strip Coil 1.5mm',
+    code: 'ALU-BAR-2650MM',
+    name: 'Aluminium Extrusion Bar (2650 mm)',
     category: 'Raw Material',
-    unit: 'Kg',
-    isWholeUnitOnly: false,
+    unit: 'Length',
+    isWholeUnitOnly: true,
+    physicalStock: 120,
+    reservedStock: 0,
+    availableStock: 120,
+    issuedStock: 0,
+    consumedStock: 0,
+    safetyStock: 20,
+    unitRate: 620,
+    bayLocation: 'Bay #1 - Extrusion Yard'
+  },
+  {
+    code: 'ALU-COIL-1.5',
+    name: 'Aluminium Strip Coil (3000 mm Length)',
+    category: 'Raw Material',
+    unit: 'Length',
+    isWholeUnitOnly: true,
     physicalStock: 500,
     reservedStock: 0,
     availableStock: 500,
@@ -107,7 +122,7 @@ export const INITIAL_INVENTORY_ITEMS = [
     consumedStock: 0,
     safetyStock: 50,
     unitRate: 260,
-    bayLocation: 'Bay #2 - Coil Storage'
+    bayLocation: 'Bay #2 - Storage'
   },
   {
     code: 'MR100N',
@@ -292,8 +307,42 @@ class ProductionModuleEngine {
       const savedWOs = localStorage.getItem('vrm_prod_workorders');
       const savedLedger = localStorage.getItem('vrm_prod_ledger');
 
-      if (savedRecipes) this.recipes = JSON.parse(savedRecipes);
-      if (savedInventory) this.inventory = JSON.parse(savedInventory);
+      if (savedRecipes) {
+        const parsedRecipes = JSON.parse(savedRecipes);
+        // Ensure all clamp and rail recipes are standardized to rawMaterialUnit 'Length'
+        this.recipes = parsedRecipes.map(r => ({
+          ...r,
+          rawMaterialUnit: 'Length',
+          outputUnit: r.outputUnit || 'Pieces'
+        }));
+      }
+      if (savedInventory) {
+        this.inventory = JSON.parse(savedInventory);
+        // Ensure all raw material items in inventory use 'Length' as unit
+        this.inventory.forEach(item => {
+          if (item.category === 'Raw Material') {
+            item.unit = 'Length';
+          }
+        });
+        // Ensure ALU-BAR-2650MM exists in inventory
+        if (!this.inventory.some(i => i.code === 'ALU-BAR-2650MM')) {
+          this.inventory.push({
+            code: 'ALU-BAR-2650MM',
+            name: 'Aluminium Extrusion Bar (2650 mm)',
+            category: 'Raw Material',
+            unit: 'Length',
+            isWholeUnitOnly: true,
+            physicalStock: 120,
+            reservedStock: 0,
+            availableStock: 120,
+            issuedStock: 0,
+            consumedStock: 0,
+            safetyStock: 20,
+            unitRate: 620,
+            bayLocation: 'Bay #1 - Extrusion Yard'
+          });
+        }
+      }
       if (savedWOs) this.workOrders = JSON.parse(savedWOs);
       if (savedLedger) this.ledger = JSON.parse(savedLedger);
     } catch (e) {
@@ -346,7 +395,6 @@ class ProductionModuleEngine {
   // Calculate Raw Material Requirement from Manufacturing Recipe & Custom Cut Length (mm)
   calculateMaterialRequirement(productCode, targetQty, customCutLengthMm = null, allProductItems = []) {
     const recipe = this.recipes.find(r => r.productCode === productCode);
-    const rawItem = this.inventory.find(i => (recipe && i.code === recipe.rawMaterialCode) || i.code === 'ALU-LEN-2414MM');
 
     // Parse cut length entered by user (e.g., "100", "100 mm", "500")
     let cutLenMm = 0;
@@ -438,15 +486,26 @@ class ProductionModuleEngine {
     const remainderOffcutMm = piecesInLastBar > 0 ? Math.max(0, rawLengthMm - usedMmInLastBar) : 0;
     const remainderOffcutMeters = Number((remainderOffcutMm / 1000).toFixed(2));
 
-    const availableStock = rawItem ? rawItem.availableStock : 0;
+    const targetRmCode = recipe?.rawMaterialCode || (rawLengthMm === 2650 ? 'ALU-BAR-2650MM' : (rawLengthMm === 2414 ? 'ALU-LEN-2414MM' : `ALU-LEN-${rawLengthMm}MM`));
+    const rawItem = this.inventory.find(i => 
+      i.code === targetRmCode || 
+      i.code === productCode || 
+      (i.lengthMm && String(i.lengthMm) === String(rawLengthMm))
+    ) || (rawLengthMm === 2414 ? this.inventory.find(i => i.code === 'ALU-LEN-2414MM' || i.code === 'RM-ALU-2414') : null);
+
+    const availableStock = rawItem ? rawItem.availableStock : 100;
     const isSufficient = availableStock >= physicalMatToIssue;
     const shortageQty = isSufficient ? 0 : (physicalMatToIssue - availableStock);
 
     return {
       rawLengthMm,
       recipe: recipe || {
+        productName: productCode,
+        outputUnit: 'Pieces',
+        id: `RECIPE-${productCode}`,
+        rawMaterialCode: targetRmCode,
         rawMaterialName: `Aluminium Length (${rawLengthMm} mm)`,
-        rawMaterialUnit: 'Raw Bars',
+        rawMaterialUnit: 'Length',
         expectedOutputQty: piecesPerLength
       },
       rawItem,
@@ -535,10 +594,10 @@ class ProductionModuleEngine {
       materialRequirement: {
         items: [
           {
-            materialName: recipe.rawMaterialName || 'Aluminium Length (2414 mm)',
+            materialName: recipe.rawMaterialName || `Aluminium Length (${calc.rawLengthMm || 2414} mm)`,
             piecesPerLength: calc.piecesPerLength || 6,
             rawLengthsRequired: calc.physicalMatToIssue || 1,
-            requiredTotalMeters: Number(((calc.physicalMatToIssue || 1) * 2.414).toFixed(2))
+            requiredTotalMeters: Number(((calc.physicalMatToIssue || 1) * ((calc.rawLengthMm || 2414) / 1000)).toFixed(2))
           }
         ]
       },
@@ -850,12 +909,10 @@ class ProductionModuleEngine {
       throw new Error(`Work Order must be in verification status. Current status: ${wo.status}`);
     }
 
-    const rawItem = this.inventory.find(i => 
-      i.code === wo.rawMaterialCode || 
-      i.code === 'ALU-LEN-2414MM' || 
-      i.code === 'RM-ALU-2414' || 
-      i.category === 'Raw Material'
-    ) || this.inventory[0];
+    const rawItem = (wo.rawMaterialCode && this.inventory.find(i => i.code === wo.rawMaterialCode)) ||
+      (wo.cutLengthMm && this.inventory.find(i => i.lengthMm && String(i.lengthMm) === String(wo.cutLengthMm))) ||
+      this.inventory.find(i => i.code === wo.rawMaterialCode || i.code === 'ALU-LEN-2414MM' || i.code === 'RM-ALU-2414' || i.category === 'Raw Material') ||
+      this.inventory[0];
 
     const consumedMatQty = Number(wo.rawMaterialPhysicalToIssue) || Math.ceil((Number(wo.targetQty) || 1) / 8);
     const rawPrevStock = rawItem ? rawItem.physicalStock : 100;
@@ -935,6 +992,75 @@ class ProductionModuleEngine {
 
     wo.status = 'APPROVED_CLOSED';
     wo.verifiedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+    // Sync directly to controlroom_raw_materials_store in localStorage for instantaneous UI updates across tabs
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
+        let currentMats = [];
+        if (rawStoreStr) {
+          try { currentMats = JSON.parse(rawStoreStr); } catch (_) {}
+        }
+        if (!Array.isArray(currentMats)) currentMats = [];
+
+        // 1. Deduct raw material from matching profile / stock code
+        const rmCode = rawItem ? rawItem.code : (wo.rawMaterialCode || 'RM-ALU-2414');
+        let rmMatch = currentMats.find(m => 
+          m.code === rmCode || 
+          (wo.finishedProductCode && m.code === wo.finishedProductCode) ||
+          (m.lengthMm && (String(m.lengthMm) === '2650' && rmCode.includes('2650'))) ||
+          (m.lengthMm && String(m.lengthMm) === String(wo.cutLengthMm)) ||
+          (rmCode === 'RM-ALU-2414' && m.code === 'RM-ALU-2414')
+        );
+        if (rmMatch) {
+          const currStock = Number(rmMatch.stock || 0);
+          const newStock = Math.max(0, currStock - consumedMatQty);
+          rmMatch.stock = newStock;
+          rmMatch.issuedProd = (Number(rmMatch.issuedProd) || 0) + consumedMatQty;
+          rmMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (rmMatch.minLevel || 50) ? 'Low Stock' : 'In Stock');
+          rmMatch.lastUpdated = 'Production Issue';
+        }
+
+        // 2. Add / increment Finished Goods product in store
+        let fgMatch = currentMats.find(m => 
+          (m.code && m.code.toUpperCase() === targetFgCode.toUpperCase()) ||
+          (m.name && m.name.toLowerCase() === targetFgName.toLowerCase())
+        );
+
+        if (fgMatch) {
+          const currStock = Number(fgMatch.stock || 0);
+          const newStock = currStock + wo.actualGoodOutput;
+          fgMatch.stock = newStock;
+          fgMatch.goodsReceived = (Number(fgMatch.goodsReceived) || 0) + wo.actualGoodOutput;
+          fgMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (fgMatch.minLevel || 50) ? 'Low Stock' : 'In Stock');
+          fgMatch.lastUpdated = 'Production Approved';
+        } else {
+          currentMats.push({
+            code: targetFgCode,
+            name: targetFgName,
+            cat: 'Finished Goods',
+            unit: wo.unit || 'Pieces',
+            stock: wo.actualGoodOutput,
+            minLevel: 20,
+            status: wo.actualGoodOutput > 0 ? 'In Stock' : 'Out of Stock',
+            store: 'Main Store',
+            hsn: '7616',
+            lastUpdated: 'Production Approved',
+            reserved: 0,
+            openingStock: 0,
+            goodsReceived: wo.actualGoodOutput,
+            issuedProd: 0,
+            matReturn: 0,
+            stockAdj: 0
+          });
+        }
+
+        localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(currentMats));
+        window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+      }
+    } catch (e) {
+      console.warn('Error syncing to controlroom_raw_materials_store:', e);
+    }
 
     this.saveToStorage();
     return { wo, rawTxnId, fgTxnId };

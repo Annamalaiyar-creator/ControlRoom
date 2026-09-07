@@ -161,6 +161,7 @@ const loadLocalWorkOrders = () => {
       syncStoreWithSupabase('grn_store', []),
       syncStoreWithSupabase('bom_store', []),
       syncStoreWithSupabase('employees_store', []),
+      syncStoreWithSupabase('invoice_store', []),
       syncStoreWithSupabase('workorder_store', initialWOs)
     ]);
     console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');
@@ -2273,17 +2274,41 @@ app.post('/api/zoho/invoices', async (req, res) => {
       r.end();
     });
 
+    const invRecord = {
+      ...req.body,
+      id: (zohoRes?.invoice && zohoRes.invoice.invoice_id) || req.body.invNo || `INV-${Date.now()}`,
+      zohoId: (zohoRes?.invoice && zohoRes.invoice.invoice_id) || undefined,
+      invNo: (zohoRes?.invoice && zohoRes.invoice.invoice_number) || req.body.invNo || `INV-${Date.now()}`,
+      status: 'Invoice Confirmed',
+      pay: 'Completed & Locked',
+      syncedToZoho: !!(zohoRes && (zohoRes.code === 0 || zohoRes.invoice))
+    };
+
+    try {
+      const invStorePath = getStoreFilePath('invoice_store.json');
+      let localInvList = [];
+      if (fs.existsSync(invStorePath)) {
+        try { localInvList = JSON.parse(fs.readFileSync(invStorePath, 'utf8')); } catch (_) {}
+      }
+      if (!Array.isArray(localInvList)) localInvList = [];
+      const matchIdx = localInvList.findIndex(i => i.invNo === invRecord.invNo || i.id === invRecord.id);
+      if (matchIdx !== -1) {
+        localInvList[matchIdx] = { ...localInvList[matchIdx], ...invRecord };
+      } else {
+        localInvList.unshift(invRecord);
+      }
+      fs.writeFileSync(invStorePath, JSON.stringify(localInvList, null, 2), 'utf8');
+      if (!supabaseMemoryStore['invoice_store']) supabaseMemoryStore['invoice_store'] = [];
+      supabaseMemoryStore['invoice_store'] = localInvList;
+      pushStoreToSupabase('invoice_store', localInvList);
+    } catch (e) {
+      console.error('Error persisting invoice to disk store:', e);
+    }
+
     if (zohoRes && (zohoRes.code === 0 || zohoRes.invoice)) {
-      const createdInv = zohoRes.invoice;
-      const invObj = {
-        ...req.body,
-        zohoId: createdInv.invoice_id,
-        id: createdInv.invoice_id,
-        invNo: createdInv.invoice_number || req.body.invNo
-      };
-      return res.json({ success: true, message: 'Invoice synced to Zoho Books!', invoice: invObj });
+      return res.json({ success: true, message: 'Invoice synced to Zoho Books!', invoice: invRecord, zohoResult: zohoRes });
     } else {
-      return res.json({ success: true, warning: zohoRes?.message || 'Invoice saved locally', invoice: req.body });
+      return res.json({ success: true, warning: zohoRes?.message || 'Invoice saved locally', invoice: invRecord, zohoResult: zohoRes });
     }
   } catch (err) {
     console.error('Error creating Zoho Invoice:', err);
@@ -3338,41 +3363,7 @@ app.get('/api/zoho/approvals-pending', async (req, res) => {
   }
 });
 
-// Real-time synchronization endpoint retrieving live invoices from Zoho Books
-app.get('/api/zoho/invoices', async (req, res) => {
-  if (!zohoSession.connected) {
-    return res.json([]);
-  }
 
-  try {
-    const accessToken = await getZohoAccessToken();
-    const data = await fetchZohoInvoices(accessToken);
-    
-    if (data.invoices) {
-      const translated = data.invoices.map(inv => {
-        return {
-          invNo: inv.invoice_number,
-          date: inv.date,
-          vendor: inv.customer_name,
-          poNo: inv.reference_number || '—',
-          grnNo: '—',
-          invAmt: Number(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-          poVal: '—',
-          grnVal: '—',
-          diff: '0.00',
-          match: 'Matched',
-          pay: inv.status === 'paid' ? 'Ready' : (inv.status === 'overdue' ? 'Blocked' : 'Hold')
-        };
-      });
-      res.json(translated);
-    } else {
-      res.status(500).json({ error: data.message || 'Failed to fetch invoices from Zoho.' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Connection to Zoho Books failed.' });
-  }
-});
 
 const fetchZohoItems = async (accessToken) => {
   let allItems = [];
