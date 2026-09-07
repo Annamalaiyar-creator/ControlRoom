@@ -2517,15 +2517,46 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                     const isMdApproved = st === 'MD Approved' || st === 'OPEN' || st === 'Approved' || isPaymentDone;
                     const isDraft = st === 'Draft' || st === 'DRAFT' || st.includes('Pending') || st.includes('WAITING') || st === 'Draft / Pending Approval';
 
-                    const isApprovedOnly = (st === 'MD Approved' || st === 'OPEN' || st === 'Approved') && !isPaymentDone;
+                    // Strict workflow state determination:
+                    // Stage 1: PO Created (Draft only, not yet sent for approval)
+                    // Stage 2: MD Approval (Draft / Pending Approval)
+                    // Stage 3: Payment Process (MD Approved / OPEN)
+                    // Stage 4: Proceed PO (Payment Processed)
+                    // Stage 5: GRN Process (Proceed PO / Partially Received / Closed)
+                    
+                    let currentStepIndex = 1; // 0: PO Created, 1: MD Approval, 2: Payment Process, 3: Proceed PO, 4: GRN Process
+                    if (st === 'Draft' || st === 'DRAFT') {
+                      currentStepIndex = 0;
+                    } else if (st === 'Draft / Pending Approval' || st.includes('Pending') || st.includes('WAITING')) {
+                      currentStepIndex = 1;
+                    } else if (st === 'MD Approved' || st === 'OPEN' || st === 'Approved') {
+                      currentStepIndex = 2;
+                    } else if (st === 'Payment Processed') {
+                      currentStepIndex = 3;
+                    } else if (isProceed) {
+                      currentStepIndex = 4;
+                    }
 
-                    return [
-                      { label: '1. PO Created', done: true, current: isDraft && st !== 'Draft / Pending Approval' },
-                      { label: '2. MD Approval', done: isMdApproved, current: isDraft && st === 'Draft / Pending Approval' },
-                      { label: '3. Payment Process', done: isPaymentDone, current: isApprovedOnly || st === 'Payment Processed' },
-                      { label: '4. Proceed PO', done: isProceed, current: st === 'Proceed PO' || st === 'PROCEED PO' },
-                      { label: '5. GRN Process', done: (isPartial || isClosed), current: isPartial || isClosed }
+                    const steps = [
+                      { label: '1. PO Created' },
+                      { label: '2. MD Approval' },
+                      { label: '3. Payment Process' },
+                      { label: '4. Proceed PO' },
+                      { label: '5. GRN Process' }
                     ];
+
+                    return steps.map((step, idx) => {
+                      const isDone = idx < currentStepIndex || (idx === 4 && (isClosed || isPartial));
+                      const isCurrent = idx === currentStepIndex && !(idx === 4 && isClosed);
+                      const isFinalDone = idx === 4 && isClosed;
+
+                      return {
+                        ...step,
+                        done: isDone,
+                        current: isCurrent,
+                        finalDone: isFinalDone
+                      };
+                    });
                   })().map((step, idx, arr) => (
                     <React.Fragment key={idx}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 2, flex: 1 }}>
@@ -2533,8 +2564,8 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           width: '28px',
                           height: '28px',
                           borderRadius: '50%',
-                          backgroundColor: step.current ? (step.label.includes('Closed') ? '#166534' : '#2563EB') : (step.done ? '#16A34A' : '#E2E8F0'),
-                          color: (step.current || step.done) ? '#FFFFFF' : '#64748B',
+                          backgroundColor: step.current ? '#2563EB' : (step.done || step.finalDone ? '#16A34A' : '#E2E8F0'),
+                          color: (step.current || step.done || step.finalDone) ? '#FFFFFF' : '#64748B',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2542,9 +2573,9 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                           fontWeight: 'bold',
                           boxShadow: step.current ? '0 0 0 4px #DBEAFE' : 'none'
                         }}>
-                          {step.done ? '✓' : (idx + 1)}
+                          {(step.done || step.finalDone) ? '✓' : (idx + 1)}
                         </div>
-                        <span style={{ fontSize: '10px', fontWeight: step.current ? 'bold' : '600', color: step.current ? (step.label.includes('Closed') ? '#166534' : '#2563EB') : (step.done ? '#166534' : '#64748B'), textAlign: 'center' }}>
+                        <span style={{ fontSize: '10px', fontWeight: step.current ? 'bold' : '600', color: step.current ? '#2563EB' : ((step.done || step.finalDone) ? '#16A34A' : '#64748B'), textAlign: 'center' }}>
                           {step.label}
                         </span>
                       </div>
