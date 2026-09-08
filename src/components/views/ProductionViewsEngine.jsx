@@ -2506,9 +2506,8 @@ export default function ProductionViewsEngine(props) {
 
                               let targetItem = engineInv.find(i => {
                                 const iCode = (i.code || '').toUpperCase().trim();
-                                const iParent = (i.parentCode || '').toUpperCase().trim();
                                 const iName = (i.name || '').toLowerCase().trim();
-                                if (pCode && (iCode === pCode || iParent === pCode)) return true;
+                                if (pCode && iCode === pCode) return true;
                                 if (pName && iName && (iName === pName || iName.includes(pName) || pName.includes(iName))) return true;
                                 return false;
                               });
@@ -4439,6 +4438,32 @@ export default function ProductionViewsEngine(props) {
                 tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
               }))
             },
+            'BOM Orders': {
+              title: 'BOM Orders & Client Specifications',
+              subtitle: 'Create and manage customer order BOMs, product specifications, and payment terms',
+              actionText: '+ Create BOM',
+              searchPlaceholder: 'Search BOM Orders (BOM Code, Customer Name, Product)...',
+              tabs: [
+                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+              ],
+              headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+              rows: (bomStore || []).map(b => ({
+                ...b,
+                code: b.bomCode || 'BOM-101',
+                c2: b.date || new Date().toISOString().split('T')[0],
+                c3: b.customerName || b.companyName || 'Customer Order',
+                c4: b.paymentType || '100% Advance',
+                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: b.status || 'Pending Confirmation',
+                stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
+                stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
+                stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : (!b.status || b.status.includes('Pending')) ? '1px solid #fde68a' : '1px solid #bbf7d0',
+                tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
+              }))
+            },
             'Customer Management': {
               title: 'Customer Directory & Management',
               subtitle: 'Manage client directory, contact details, billing addresses, and order history',
@@ -4645,8 +4670,7 @@ export default function ProductionViewsEngine(props) {
               const matMap = new Map();
               matMap.set('RM-ALU-2414', defaultAluLength);
               (initialMaterials || []).forEach(m => {
-                const mapKey = m.parentCode ? `${m.code}_sub_${m.name}` : m.code;
-                matMap.set(mapKey, m);
+                matMap.set(m.code, m);
               });
               // Only load items from itemsList if they are Aluminum OR have been received via completed GRN
               const completedGrnMapInitial = getCompletedGrnItems();
@@ -4730,8 +4754,7 @@ export default function ProductionViewsEngine(props) {
                 const defaultAluLength = { code: 'RM-ALU-2414', name: 'Aluminum Length (2414 mm)', cat: 'Aluminium', unit: 'Length', stock: currentEngStock, lengthMm: '2414', minLevel: 100, status: 'In Stock', store: 'Main Store', hsn: '7604', lastUpdated: 'Live Store', reserved: 0, openingStock: currentEngStock, goodsReceived: 0, issuedProd: 0, matReturn: 0, stockAdj: 0 };
                 matMap.set('RM-ALU-2414', defaultAluLength);
                 (initialMaterials || []).forEach(m => {
-                  const mapKey = m.parentCode ? `${m.code}_sub_${m.name}` : m.code;
-                  matMap.set(mapKey, m);
+                  matMap.set(m.code, m);
                 });
 
                 // Load stored raw materials from localStorage if updated on invoice completion
@@ -4741,7 +4764,7 @@ export default function ProductionViewsEngine(props) {
                     const savedMats = JSON.parse(savedMatStr);
                     if (Array.isArray(savedMats) && savedMats.length > 0) {
                       savedMats.forEach(sm => {
-                        const mapKey = sm.parentCode ? `${sm.code}_sub_${sm.name}` : (sm.code || sm.name);
+                        const mapKey = sm.code || sm.name;
                         matMap.set(mapKey, sm);
                       });
                     }
@@ -4751,10 +4774,8 @@ export default function ProductionViewsEngine(props) {
                 // Overlay live engine inventory updates (e.g. WO stock deductions & FG additions)
                 (engineInv || []).forEach(item => {
                   const mappedCode = item.code === 'ALU-LEN-2414MM' ? 'RM-ALU-2414' : item.code;
-                  const isSubProduct = Boolean(item.parentCode || item.code.includes('FG-MR-300') || item.name?.includes('mm'));
-                  const pCode = isSubProduct ? (item.parentCode || mappedCode) : null;
-                  const displayCode = pCode || mappedCode;
-                  const mapKey = isSubProduct ? `${displayCode}_sub_${item.name}` : displayCode;
+                  const displayCode = mappedCode;
+                  const mapKey = displayCode;
 
                   const existing = matMap.get(mapKey) || {};
                   const engineStock = item.physicalStock !== undefined ? Number(item.physicalStock) : null;
@@ -4776,9 +4797,7 @@ export default function ProductionViewsEngine(props) {
                     minLevel: minLvl,
                     status: statusText,
                     store: item.bayLocation || existing.store || 'Main Store',
-                    lastUpdated: existing.lastUpdated || 'Live Engine',
-                    parentCode: pCode || existing.parentCode,
-                    parentName: isSubProduct ? (item.parentName || existing.parentName || 'Finished Product') : existing.parentName
+                    lastUpdated: existing.lastUpdated || 'Live Engine'
                   });
                 });
 
@@ -4889,17 +4908,7 @@ export default function ProductionViewsEngine(props) {
             const selectedMat = useMemo(() => {
               const base = materials.find(m => m.code === selectedCode) || materials[0];
               if (!base) return null;
-              // Aggregate any sub-branch stocks for accurate current physical stock matching table view
-              let totalStock = Number(base.stock || 0);
-              materials.forEach(m => {
-                if (m.parentCode === base.code) {
-                  totalStock += Number(m.stock || 0);
-                }
-              });
-              return {
-                ...base,
-                stock: totalStock
-              };
+              return base;
             }, [materials, selectedCode]);
 
             // Item-specific live audit logs calculation
@@ -5043,43 +5052,7 @@ export default function ProductionViewsEngine(props) {
             const filteredMaterials = useMemo(() => {
               const isRawMaterialDirectory = activeTab === 'Raw Material Directory';
               
-              // Aggregate physical stock & min level across sub-branches onto parent main branch
-              const subTotalsMap = new Map();
-              materials.forEach(m => {
-                if (m.parentCode) {
-                  const pCode = m.parentCode;
-                  const current = subTotalsMap.get(pCode) || { stock: 0, minLevel: 0 };
-                  subTotalsMap.set(pCode, {
-                    stock: current.stock + Number(m.stock || 0),
-                    minLevel: current.minLevel + Number(m.minLevel || 0)
-                  });
-                }
-              });
-
-              // Prepare list: consolidate all sub-branches into their parent main branch item
-              // and strictly exclude standalone sub-branch rows so only main branch items are displayed.
-              const preparedList = materials
-                .filter(m => !m.parentCode)
-                .map(m => {
-                  if (subTotalsMap.has(m.code)) {
-                    const subTotals = subTotalsMap.get(m.code);
-                    const aggregatedTotalStock = (Number(m.stock || 0)) + subTotals.stock;
-                    const aggregatedMinLevel = subTotals.minLevel || m.minLevel || 50;
-                    let calcStatus = 'In Stock';
-                    if (aggregatedTotalStock === 0) calcStatus = 'Out of Stock';
-                    else if (aggregatedTotalStock <= aggregatedMinLevel) calcStatus = 'Low Stock';
-
-                    return {
-                      ...m,
-                      stock: aggregatedTotalStock,
-                      minLevel: aggregatedMinLevel,
-                      status: calcStatus
-                    };
-                  }
-                  return m;
-                });
-
-              return preparedList.filter(m => {
+              return materials.filter(m => {
                 const mName = (m.name || '').toLowerCase();
                 const mCode = (m.code || '').toLowerCase();
                 const mCat = (m.cat || m.category || '').toLowerCase();
@@ -14213,7 +14186,7 @@ export default function ProductionViewsEngine(props) {
           const defaultConfig = {
             title: activeTab,
             subtitle: `Management and control for ${activeTab}`,
-            actionText: `Active ${activeTab}`,
+            actionText: `+ Create ${activeTab.replace(/s$/, '')}`,
             searchPlaceholder: `Search ${activeTab}...`,
             tabs: [
               { id: 'All', label: 'All Entries', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' }

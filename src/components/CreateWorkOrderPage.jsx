@@ -25,29 +25,31 @@ import NotificationToast from './NotificationToast';
 import { addLiveNotification } from './Header';
 
 export const PRODUCT_CATALOG_OPTIONS = [
-  { label: "Double C Rail NEW", code: "CC4.8N", totalLen: 4800 },
-  { label: "Double C Rail", code: "CC3.6", totalLen: 3600 },
-  { label: "Strut Rail", code: "SR3.6", totalLen: 3600 },
-  { label: "Mini Rail - 100mm", code: "MR100O", totalLen: 2414 },
-  { label: "Mini Rail - 100mm (New)", code: "MR100N", totalLen: 2414 },
-  { label: "Locking Nut", code: "LC", totalLen: 3000 },
-  { label: "Mini Rail - 60mm", code: "MR60", totalLen: 2414 },
-  { label: "Mini Rail - 40mm", code: "MR40", totalLen: 2414 },
-  { label: "Adhesive rail 100 mm", code: "AR100", totalLen: 2414 },
-  { label: "Adhesive rail 120 mm", code: "AR120", totalLen: 2414 },
-  { label: "Mid Section", code: "MID-SEC", totalLen: 2730 },
-  { label: "Top Section - 2 Mtr", code: "TOP-2M", totalLen: 2000 },
-  { label: "Bottom Section - 2 Mtr", code: "BOT-2M", totalLen: 2000 },
-  { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M", totalLen: 1500 },
-  { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M", totalLen: 2400 },
-  { label: "Mid Clamp - 35 mm", code: "MC35", totalLen: 2650 },
-  { label: "Mid Clamp - 30 mm", code: "MC30", totalLen: 2650 },
-  { label: "T Nut -10mm", code: "T10", totalLen: 2562 },
-  { label: "Mid Clamp (Universal)", code: "UM", totalLen: 2650 },
-  { label: "End Clamp 35mm (New)", code: "UE", totalLen: 2650 },
-  { label: "End Clamp 35mm", code: "EC35", totalLen: 2650 },
-  { label: "L Bracket", code: "ALB", totalLen: 2050 },
-  { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580 }
+  { label: "Double C Rail NEW", code: "CC4.8N", totalLen: 4800, defaultCutLen: 4800, profileGroup: "double_c" },
+  { label: "Double C Rail", code: "CC3.6", totalLen: 3600, defaultCutLen: 3600, profileGroup: "double_c" },
+  { label: "Strut Rail", code: "SR3.6", totalLen: 3600, defaultCutLen: 3600, profileGroup: "strut_rail" },
+  { label: "Mini Rail - 300mm", code: "MR300", totalLen: 2414, defaultCutLen: 300, profileGroup: "mini_rail" },
+  { label: "Mini Rail - 100mm", code: "MR100O", totalLen: 2414, defaultCutLen: 100, profileGroup: "mini_rail" },
+  { label: "Mini Rail - 100mm (New)", code: "MR100N", totalLen: 2414, defaultCutLen: 100, profileGroup: "mini_rail" },
+  { label: "Locking Nut", code: "LC", totalLen: 3000, defaultCutLen: 40, profileGroup: "locking_nut" },
+  { label: "Mini Rail - 60mm", code: "MR60", totalLen: 2414, defaultCutLen: 60, profileGroup: "mini_rail" },
+  { label: "Mini Rail - 40mm", code: "MR40", totalLen: 2414, defaultCutLen: 40, profileGroup: "mini_rail" },
+  { label: "Adhesive rail 100 mm", code: "AR100", totalLen: 2414, defaultCutLen: 100, profileGroup: "adhesive_rail" },
+  { label: "Adhesive rail 120 mm", code: "AR120", totalLen: 2414, defaultCutLen: 120, profileGroup: "adhesive_rail" },
+  { label: "Mid Section", code: "MID-SEC", totalLen: 2730, defaultCutLen: 2730, profileGroup: "mid_sec" },
+  { label: "Top Section - 2 Mtr", code: "TOP-2M", totalLen: 2000, defaultCutLen: 2000, profileGroup: "top_sec" },
+  { label: "Bottom Section - 2 Mtr", code: "BOT-2M", totalLen: 2000, defaultCutLen: 2000, profileGroup: "bot_sec" },
+  { label: "Top Section - 1.5 Mtr", code: "TOP-1.5M", totalLen: 1500, defaultCutLen: 1500, profileGroup: "top_sec" },
+  { label: "Bottom Section - 2.4 Mtr", code: "BOT-2.4M", totalLen: 2400, defaultCutLen: 2400, profileGroup: "bot_sec" },
+  { label: "Mid Clamp - 47 mm", code: "MC47", totalLen: 2650, defaultCutLen: 47, profileGroup: "clamp" },
+  { label: "Mid Clamp - 35 mm", code: "MC35", totalLen: 2650, defaultCutLen: 35, profileGroup: "clamp" },
+  { label: "Mid Clamp - 30 mm", code: "MC30", totalLen: 2650, defaultCutLen: 30, profileGroup: "clamp" },
+  { label: "T Nut -10mm", code: "T10", totalLen: 2562, defaultCutLen: 10, profileGroup: "t_nut" },
+  { label: "Mid Clamp (Universal)", code: "UM", totalLen: 2650, defaultCutLen: 35, profileGroup: "clamp" },
+  { label: "End Clamp 35mm (New)", code: "UE", totalLen: 2650, defaultCutLen: 35, profileGroup: "clamp" },
+  { label: "End Clamp 35mm", code: "EC35", totalLen: 2650, defaultCutLen: 35, profileGroup: "clamp" },
+  { label: "L Bracket", code: "ALB", totalLen: 2050, defaultCutLen: 50, profileGroup: "l_bracket" },
+  { label: "T Nut (KMC) - 8mm", code: "T8", totalLen: 2580, defaultCutLen: 8, profileGroup: "t_nut_kmc" }
 ];
 
 export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
@@ -61,9 +63,58 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   ]);
 
   // Creator details dynamically derived from active logged-in session account
-  const loggedUserName = typeof window !== 'undefined'
-    ? (localStorage.getItem('controlroom_logged_user_name') || localStorage.getItem('controlroom_logged_user') || 'Production Head')
-    : 'Production Head';
+  const resolveLoggedPersonName = () => {
+    if (typeof window === 'undefined') return 'Production Head';
+    const storedName = localStorage.getItem('controlroom_logged_user_name');
+    const storedUser = localStorage.getItem('controlroom_logged_user') || '';
+    const userRole = localStorage.getItem('controlroom_user_role') || 'Production Head';
+
+    // If storedName exists and is not an email address, use it
+    if (storedName && !storedName.includes('@') && storedName !== 'undefined' && storedName !== 'null') {
+      return storedName;
+    }
+
+    // Attempt to match from registered employees list
+    try {
+      const emps = JSON.parse(localStorage.getItem('controlroom_employees_list') || '[]');
+      const cloudEmps = JSON.parse(localStorage.getItem('controlroom_employees_store') || '[]');
+      const allEmps = [...emps, ...cloudEmps];
+      const found = allEmps.find(e => 
+        (e.email && e.email.toLowerCase() === storedUser.toLowerCase()) ||
+        (storedName && e.employee_name && e.employee_name.toLowerCase() === storedName.toLowerCase()) ||
+        (e.role && e.role === userRole)
+      );
+      if (found && found.employee_name) {
+        return found.employee_name;
+      }
+    } catch (e) {}
+
+    // Fallbacks mapped by role
+    if (userRole === 'Production Head') return 'Senthil Kumar';
+    if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+    if (userRole === 'Dispatch Head') return 'Karthik Raja';
+    if (userRole === 'Floor Supervisor') return 'Murugan';
+    if (userRole === 'Floor Employee') return 'Ramesh';
+    if (userRole === 'Accounts Head') return 'Venkatesh';
+    if (userRole === 'Accounts Executive') return 'Priya';
+    if (userRole === 'Sales Head') return 'Vijay';
+    if (userRole === 'Sales Executive') return 'Saravanan';
+    if (userRole === 'Design Engineer') return 'Dinesh';
+    if (userRole === 'Procurement Head' || userRole === 'Procurement Admin') return 'ARUN BOOPATHI M';
+
+    // If storedUser was an email, strip @domain or capitalize
+    if (storedUser && !storedUser.includes('@')) {
+      return storedUser;
+    }
+    if (storedUser && storedUser.includes('@')) {
+      const prefix = storedUser.split('@')[0].replace(/[._-]/g, ' ');
+      return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+    }
+
+    return 'Senthil Kumar';
+  };
+
+  const loggedUserName = resolveLoggedPersonName();
   const loggedUserRole = typeof window !== 'undefined'
     ? (localStorage.getItem('controlroom_user_role') || 'Production Head')
     : 'Production Head';
@@ -197,13 +248,24 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   };
 
   const handleRemoveProductItem = (id) => {
-    if (productItems.length <= 1) return;
     setProductItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleUpdateProductItem = (id, field, value) => {
-    setProductItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+    setProductItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      return { ...item, [field]: value };
+    }));
   };
+
+  // Check if any product row is missing cut length or has invalid length
+  const invalidCutLengthItem = productItems.find(it => {
+    if (!it.productCode) return false;
+    const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === it.productCode);
+    const rawLen = cat?.totalLen || 2414;
+    const cut = parseFloat(String(it.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+    return cut <= 0 || cut > rawLen;
+  });
 
   // Active primary product item for calculation
   const primaryItem = productItems[0] || { productCode: '', cutLength: '', targetQty: '' };
@@ -228,7 +290,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
     const catalogItem = PRODUCT_CATALOG_OPTIONS.find(p => p.code === pCode);
     const rawLen = catalogItem?.totalLen || 2414;
     const parsedCutLen = parseFloat(String(pCutLen || '').replace(/[^\d.]/g, ''));
-    if (!parsedCutLen || parsedCutLen <= 0) return null;
+    if (!parsedCutLen || parsedCutLen <= 0 || parsedCutLen > rawLen) return null;
     const bladeKerf = 2;
     const pieces = Math.max(1, Math.floor((rawLen + bladeKerf) / (parsedCutLen + bladeKerf)));
     return {
@@ -236,6 +298,22 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
       cutLen: parsedCutLen,
       pieces,
       label: catalogItem?.label || pCode
+    };
+  };
+
+  // Helper to fetch raw material stock count for any selected product
+  const getRawMaterialStock = (pCode) => {
+    if (!pCode) return null;
+    const catalogItem = PRODUCT_CATALOG_OPTIONS.find(p => p.code === pCode);
+    const rawLen = catalogItem?.totalLen || 2414;
+    const invMatch = (prodModuleEngine.inventory || []).find(i => 
+      i.code === `ALU-LEN-${rawLen}MM` || (rawLen === 2414 && i.code === 'ALU-LEN-2414MM')
+    );
+    const availStock = invMatch ? invMatch.availableStock : (rawLen === 2414 ? 100 : (rawLen === 2650 ? 80 : 50));
+    return {
+      rawLen,
+      rawMaterialName: `Aluminium Raw Bar (${rawLen} mm)`,
+      availableStock: availStock
     };
   };
 
@@ -296,7 +374,7 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
 
   const allMaterialsSufficient = multiMatBreakdown.length === 0 || multiMatBreakdown.every(m => m.isSufficient);
 
-  // Recalculate material requirements across all product items in the Work Order
+  // Recalculate material requirements whenever product items or selection changes
   useEffect(() => {
     if (productItems && productItems.length > 0) {
       const calc = prodModuleEngine.calculateMaterialRequirement(selectedProductCode, Number(targetQty), cutLength, productItems);
@@ -311,6 +389,21 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
   // Submit Handler
   const handleCreateWorkOrder = async (e) => {
     e.preventDefault();
+
+    // Check for missing or invalid cut lengths in any row
+    if (invalidCutLengthItem) {
+      const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === invalidCutLengthItem.productCode);
+      const rawLen = cat?.totalLen || 2414;
+      const parsedCut = parseFloat(String(invalidCutLengthItem.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+      setToastAlert({
+        type: 'error',
+        title: 'Cut Length Required to Proceed',
+        message: parsedCut <= 0 
+          ? `Cut length for ${cat?.label || invalidCutLengthItem.productCode || 'product'} is missing. Please enter a valid cut length (e.g. ${cat?.defaultCutLen || 35} mm) before proceeding.`
+          : `Cut length (${parsedCut} mm) exceeds the raw bar length (${rawLen} mm) for ${cat?.label || invalidCutLengthItem.productCode}. Cannot proceed.`
+      });
+      return;
+    }
 
     if (!targetQty || Number(targetQty) <= 0) {
       setToastAlert({
@@ -542,8 +635,25 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
         {/* Step 2 Pill */}
         <div
           onClick={() => {
+            if (invalidCutLengthItem) {
+              const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === invalidCutLengthItem.productCode);
+              const rawLen = cat?.totalLen || 2414;
+              const parsedCut = parseFloat(String(invalidCutLengthItem.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+              setToastAlert({
+                type: 'error',
+                title: 'Cut Length Required to Proceed',
+                message: parsedCut <= 0 
+                  ? `Cut length for ${cat?.label || invalidCutLengthItem.productCode || 'product'} is missing. Please enter a valid cut length (e.g. ${cat?.defaultCutLen || 35} mm) before proceeding.`
+                  : `Cut length (${parsedCut} mm) exceeds the raw bar length (${rawLen} mm) for ${cat?.label || invalidCutLengthItem.productCode}. Cannot proceed.`
+              });
+              return;
+            }
             if (!targetQty || Number(targetQty) <= 0) {
-              alert('⚠️ Please enter a target quantity in Step 1 before proceeding.');
+              setToastAlert({
+                type: 'error',
+                title: 'Target Quantity Required',
+                message: 'Please enter a target quantity in Step 1 before proceeding.'
+              });
               return;
             }
             setFormStep(2);
@@ -768,10 +878,10 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
           {/* SECTION 1: WO METADATA */}
           <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>
+              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
                 <FileText style={{ width: '14px', height: '14px' }} />
               </div>
-              <h3 style={{ fontSize: '13.5px', fontWeight: '800', color: '#334155', margin: 0 }}>
+              <h3 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                 Work Order Details
               </h3>
             </div>
@@ -911,13 +1021,37 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
 
                   <div>
                     <label style={labelStyle}>CUT LENGTH (MM)</label>
-                    <input
-                      type="text"
-                      value={item.cutLength}
-                      onChange={(e) => handleUpdateProductItem(item.id, 'cutLength', e.target.value)}
-                      placeholder="e.g. 300"
-                      style={{ ...inputStyle, fontSize: '13px', fontWeight: '600', color: item.cutLength ? '#64748B' : '#94A3B8' }}
-                    />
+                    {(() => {
+                      const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === item.productCode);
+                      const rawLen = cat?.totalLen || 2414;
+                      const parsedCut = parseFloat(String(item.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+                      const isMissing = item.productCode && (!item.cutLength || String(item.cutLength).trim() === '' || parsedCut <= 0);
+                      const isTooLong = parsedCut > rawLen;
+
+                      return (
+                        <>
+                          <input
+                            type="text"
+                            value={item.cutLength}
+                            onChange={(e) => handleUpdateProductItem(item.id, 'cutLength', e.target.value)}
+                            placeholder={cat?.defaultCutLen ? `e.g. ${cat.defaultCutLen}` : "e.g. 300"}
+                            style={{ 
+                              ...inputStyle, 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: item.cutLength ? '#64748B' : '#94A3B8',
+                              border: isTooLong ? '1.5px solid #EF4444' : '1px solid #CBD5E1',
+                              backgroundColor: isTooLong ? '#FEF2F2' : '#FFFFFF'
+                            }}
+                          />
+                          {isTooLong && (
+                            <span style={{ fontSize: '10.5px', color: '#DC2626', fontWeight: '700', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              ⚠️ Cannot exceed raw bar ({rawLen} mm)
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div>
@@ -1064,10 +1198,10 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
           {/* SECTION 3: ASSIGNMENT & TIMELINE */}
           <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+              <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
                 <Cpu style={{ width: '14px', height: '14px' }} />
               </div>
-              <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#64748B', margin: 0 }}>
+              <h3 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                 Assignment & Production Schedule
               </h3>
             </div>
@@ -1091,18 +1225,23 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
           
           <div style={{
             backgroundColor: '#FFFFFF',
-            border: '1px solid #CBD5E1',
+            border: '1px solid #E2E8F0',
             borderRadius: '14px',
             padding: '20px',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                AUTOMATIC MATERIAL REQUIREMENT
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
+                  <Boxes style={{ width: '14px', height: '14px' }} />
+                </div>
+                <h3 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                  Automatic Material Requirement
+                </h3>
+              </div>
               <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#F1F5F9', color: '#94A3B8', padding: '2px 7px', borderRadius: '5px' }}>
                 RECIPE CALCULATED
               </span>
@@ -1158,9 +1297,20 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       : `${matCalc.exactRequiredMatQty.toFixed(2)} Lengths`
                     }
                   </div>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Raw Material: <strong style={{ color: '#475569' }}>{multiMatBreakdown.length > 1 ? `${multiMatBreakdown.length} Raw Profiles` : matCalc.recipe.rawMaterialName}</strong>
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#64748B' }}>
+                    <span>
+                      Raw Material: <strong style={{ color: '#475569' }}>{multiMatBreakdown.length > 1 ? `${multiMatBreakdown.length} Raw Profiles` : matCalc.recipe.rawMaterialName}</strong>
+                    </span>
+                    {selectedProductCode && (() => {
+                      const stockInfo = getRawMaterialStock(selectedProductCode);
+                      if (!stockInfo) return null;
+                      return (
+                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#0F766E', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '2px 6px', borderRadius: '4px' }}>
+                          Available: {stockInfo.availableStock} Bars
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* PHYSICAL WHOLE UNIT CONSTRAINT BOX */}
@@ -1183,11 +1333,22 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: matCalc.isWholeUnitConstraint ? '#C2410C' : '#475569' }}>
-                    {multiMatBreakdown.length > 1
-                      ? `${multiMatBreakdown.reduce((sum, m) => sum + m.totalBarsRequired, 0)} Lengths (${multiMatBreakdown.map(m => `${m.totalBarsRequired}x ${m.rawLengthMm}mm`).join(' + ')})`
-                      : `${matCalc.physicalMatToIssue} Length${matCalc.physicalMatToIssue > 1 ? 's' : ''}`
-                    }
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '800', color: matCalc.isWholeUnitConstraint ? '#C2410C' : '#475569' }}>
+                      {multiMatBreakdown.length > 1
+                        ? `${multiMatBreakdown.reduce((sum, m) => sum + m.totalBarsRequired, 0)} Lengths (${multiMatBreakdown.map(m => `${m.totalBarsRequired}x ${m.rawLengthMm}mm`).join(' + ')})`
+                        : `${matCalc.physicalMatToIssue} Length${matCalc.physicalMatToIssue > 1 ? 's' : ''}`
+                      }
+                    </div>
+                    {selectedProductCode && (() => {
+                      const stockInfo = getRawMaterialStock(selectedProductCode);
+                      if (!stockInfo) return null;
+                      return (
+                        <div style={{ fontSize: '11.5px', color: '#475569' }}>
+                          In Stock: <strong style={{ color: stockInfo.availableStock > 0 ? '#16A34A' : '#DC2626' }}>{stockInfo.availableStock} Bars</strong>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {matCalc.isWholeUnitConstraint && (
@@ -1203,192 +1364,140 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
                   )}
                 </div>
 
-                {/* ESTIMATED WASTAGE & SCRAP BOX */}
-                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>ESTIMATED SCRAP & WASTAGE</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
-                      {matCalc.wastagePercent}% SCRAP
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#475569' }}>
-                    {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Bar-End Stub + 2 mm kerf/cut ({matCalc.totalWastageMm} mm total)</span>
-                  </div>
-
-                  {/* Explicit 2mm Blade Kerf Loss Breakdown */}
-                  <div style={{ fontSize: '11px', color: '#475569', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <div>• <strong>2 mm Saw Blade Kerf Loss:</strong> {matCalc.totalCutStrokes} cut strokes ({matCalc.targetQty} pcs produced) × 2 mm = <strong>{matCalc.totalKerfLossMm} mm total kerf loss</strong></div>
-                    <div>• <strong>Bar-End Stub:</strong> {matCalc.endOffcutScrapMmPerBar} mm per bar</div>
-                    <div>• <strong>Formula per Bar:</strong> {matCalc.rawLengthMm || 2414} mm - [{matCalc.piecesPerLength} pcs × {matCalc.cutLenMm || 400} mm + {matCalc.cutsPerBar} cuts × 2 mm kerf] = {matCalc.endOffcutScrapMmPerBar} mm scrap</div>
-                  </div>
-
-                  {/* DYNAMIC SMART RECOMMENDATIONS: CONVERT USABLE SCRAP TO ANY COMPATIBLE PRODUCT */}
-                  {matCalc.endOffcutScrapMmPerBar >= 35 && (() => {
-                    const scrapMm = matCalc.endOffcutScrapMmPerBar;
-                    // Standard product lengths from catalog
-                    const standardProducts = [
-                      { code: 'MR100O', name: 'Mini Rail (100 mm)', cutLen: 100 },
-                      { code: 'MR60', name: 'Mini Rail (60 mm)', cutLen: 60 },
-                      { code: 'MR40', name: 'Mini Rail (40 mm)', cutLen: 40 },
-                      { code: 'AR100', name: 'Adhesive Rail (100 mm)', cutLen: 100 },
-                      { code: 'AR120', name: 'Adhesive Rail (120 mm)', cutLen: 120 },
-                      { code: 'MC35', name: 'Mid Clamp (35 mm)', cutLen: 35 },
-                      { code: 'MC30', name: 'Mid Clamp (30 mm)', cutLen: 30 },
-                      { code: 'EC35', name: 'End Clamp (35 mm)', cutLen: 35 }
-                    ];
-
-                    // Find all products that can be produced from the available scrap length
-                    const candidates = standardProducts
-                      .map(p => {
-                        const bladeKerf = 2;
-                        const yieldQty = Math.floor((scrapMm + bladeKerf) / (p.cutLen + bladeKerf));
-                        const remainderMm = Math.max(0, scrapMm - (yieldQty * p.cutLen + Math.max(0, yieldQty - 1) * bladeKerf));
-                        return { ...p, yieldQty, remainderMm };
-                      })
-                      .filter(p => p.yieldQty >= 1)
-                      .sort((a, b) => b.yieldQty - a.yieldQty);
-
-                    if (candidates.length === 0) return null;
-
-                    return (
-                      <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: '12px', color: '#0F172A', fontWeight: '800' }}>
-                            ♻️ Usable Offcut Scrap: <strong style={{ color: '#0E7490' }}>{scrapMm} mm bar</strong>
-                          </div>
-                          <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
-                            Recommended Products to Make:
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {candidates.map(cand => (
-                            <button
-                              key={cand.code}
-                              type="button"
-                              onClick={() => {
-                                setProductItems(prev => [
-                                  ...prev,
-                                  {
-                                    id: Date.now() + Math.random(),
-                                    productCode: cand.code,
-                                    cutLength: String(cand.cutLen),
-                                    targetQty: String(cand.yieldQty)
-                                  }
-                                ]);
-                                setToastAlert({
-                                  type: 'success',
-                                  title: 'Product Added from Usable Scrap',
-                                  message: `Added ${cand.yieldQty} pc(s) of ${cand.name} (${cand.cutLen} mm) from ${scrapMm} mm usable offcut!`
-                                });
-                              }}
-                              style={{
-                                backgroundColor: '#ECFEFF',
-                                color: '#0E7490',
-                                border: '1px solid #A5F3FC',
-                                padding: '6px 12px',
-                                borderRadius: '7px',
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                transition: 'all 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#0E7490';
-                                e.currentTarget.style.color = '#FFFFFF';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#ECFEFF';
-                                e.currentTarget.style.color = '#0E7490';
-                              }}
-                            >
-                              ⚡ + Make {cand.yieldQty} × {cand.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* LEFTOVER MATERIAL HANDLING STRATEGY (OPTION 1 vs OPTION 2) */}
-                {matCalc.isWholeUnitConstraint && matCalc.excessOutputPossible > 0 && (
-                  <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* ESTIMATED WASTAGE & SCRAP BOX - Rendered ONLY after FINISHED PRODUCT is selected/added */}
+                {(Boolean(selectedProductCode && (selectedProductCode !== 'custom_new' || customProductName.trim()))) && (
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                        LEFTOVER MATERIAL HANDLING
-                      </span>
-                      <span style={{ fontSize: '9.5px', fontWeight: '800', color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px' }}>
-                        2 METHODS
+                      <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>ESTIMATED SCRAP & WASTAGE</span>
+                      <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                        {matCalc.wastagePercent}% SCRAP
                       </span>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {/* Method 1 */}
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        fontSize: '12px',
-                        color: leftoverStrategy === 'OVER_PRODUCE_FG' ? '#0369A1' : '#475569',
-                        cursor: 'pointer',
-                        fontWeight: leftoverStrategy === 'OVER_PRODUCE_FG' ? '700' : '500',
-                        backgroundColor: leftoverStrategy === 'OVER_PRODUCE_FG' ? '#FFFFFF' : 'transparent',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: `1px solid ${leftoverStrategy === 'OVER_PRODUCE_FG' ? '#38BDF8' : '#E2E8F0'}`
-                      }}>
-                        <input
-                          type="radio"
-                          name="leftoverStrat"
-                          value="OVER_PRODUCE_FG"
-                          checked={leftoverStrategy === 'OVER_PRODUCE_FG'}
-                          onChange={() => setLeftoverStrategy('OVER_PRODUCE_FG')}
-                          style={{ accentColor: '#0E7490', marginTop: '2px' }}
-                        />
-                        <div>
-                          <div><strong>Method 1: Over-Produce to FG Store</strong></div>
-                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 'normal', marginTop: '2px' }}>
-                            Cut all {matCalc.expectedTheoreticalOutput} pieces. Credit <strong>+{matCalc.excessOutputPossible} extra pieces</strong> to FG Store for future orders.
-                          </div>
-                        </div>
-                      </label>
-
-                      {/* Method 2 */}
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        fontSize: '12px',
-                        color: leftoverStrategy === 'RETURN_OFFCUT_STOCK' ? '#0369A1' : '#475569',
-                        cursor: 'pointer',
-                        fontWeight: leftoverStrategy === 'RETURN_OFFCUT_STOCK' ? '700' : '500',
-                        backgroundColor: leftoverStrategy === 'RETURN_OFFCUT_STOCK' ? '#FFFFFF' : 'transparent',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: `1px solid ${leftoverStrategy === 'RETURN_OFFCUT_STOCK' ? '#38BDF8' : '#E2E8F0'}`
-                      }}>
-                        <input
-                          type="radio"
-                          name="leftoverStrat"
-                          value="RETURN_OFFCUT_STOCK"
-                          checked={leftoverStrategy === 'RETURN_OFFCUT_STOCK'}
-                          onChange={() => setLeftoverStrategy('RETURN_OFFCUT_STOCK')}
-                          style={{ accentColor: '#0E7490', marginTop: '2px' }}
-                        />
-                        <div>
-                          <div><strong>Method 2: Return Usable Offcut Bar</strong></div>
-                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 'normal', marginTop: '2px' }}>
-                            Cut target {matCalc.targetQty} pcs. Return remaining <strong>{matCalc.remainderOffcutMm || (matCalc.remainderOffcutMeters * 1000)} mm bar</strong> back to Raw Store as Usable Offcut.
-                          </div>
-                        </div>
-                      </label>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#475569' }}>
+                      {matCalc.endOffcutScrapMmPerBar} mm <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>Bar-End Stub + 2 mm kerf/cut ({matCalc.totalWastageMm} mm total)</span>
                     </div>
+
+                    {/* Explicit 2mm Blade Kerf Loss Breakdown */}
+                    <div style={{ fontSize: '11px', color: '#475569', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div>• <strong>2 mm Saw Blade Kerf Loss:</strong> {matCalc.totalCutStrokes} cut strokes ({matCalc.targetQty} pcs produced) × 2 mm = <strong>{matCalc.totalKerfLossMm} mm total kerf loss</strong></div>
+                      <div>• <strong>Bar-End Stub:</strong> {matCalc.endOffcutScrapMmPerBar} mm per bar</div>
+                      <div>• <strong>Formula per Bar:</strong> {matCalc.rawLengthMm || 2414} mm - [{matCalc.piecesPerLength} pcs × {matCalc.cutLenMm || 400} mm + {matCalc.cutsPerBar} cuts × 2 mm kerf] = {matCalc.endOffcutScrapMmPerBar} mm scrap</div>
+                    </div>
+
+                    {/* DYNAMIC SMART RECOMMENDATIONS: CONVERT USABLE SCRAP TO ONLY COMPATIBLE SAME-RAW-MATERIAL PRODUCTS */}
+                    {/* Strictly displayed only after user inputs product, cut length, and target quantity AND usable scrap yields compatible products */}
+                    {(() => {
+                      const parsedCut = parseFloat(String(cutLength || '').replace(/[^\d.]/g, '')) || 0;
+                      const parsedQty = parseFloat(String(targetQty || '').replace(/[^\d.]/g, '')) || 0;
+                      const hasEnteredValues = Boolean(selectedProductCode && parsedCut > 0 && parsedQty > 0);
+
+                      if (!hasEnteredValues || !matCalc.endOffcutScrapMmPerBar || matCalc.endOffcutScrapMmPerBar <= 0) {
+                        return null;
+                      }
+
+                      const scrapMm = matCalc.endOffcutScrapMmPerBar;
+                      const curCode = selectedProductCode;
+                      const curCatalog = PRODUCT_CATALOG_OPTIONS.find(p => p.code === curCode);
+                      const curRawLen = curCatalog?.totalLen || matCalc.rawLengthMm || 2414;
+                      const curGroup = curCatalog?.profileGroup;
+
+                      // Filter catalog to ONLY products sharing the EXACT SAME raw material profile length and profile group
+                      // This strictly ensures clamp extrusions (2650 mm) only recommend clamps (e.g. 47mm, 35mm, 30mm)
+                      // and mini rail (2414 mm) only recommends mini rails (e.g. 300mm, 100mm, 60mm, 40mm)
+                      const compatibleCatalog = PRODUCT_CATALOG_OPTIONS.filter(p => {
+                        const sameLength = p.totalLen === curRawLen;
+                        const sameGroup = curGroup ? p.profileGroup === curGroup : true;
+                        return sameLength && sameGroup;
+                      });
+
+                      // Find all compatible products that can produce >= 1 piece from the available scrap length
+                      const candidates = compatibleCatalog
+                        .map(p => {
+                          const bladeKerf = 2;
+                          const cutLen = p.defaultCutLen || 35;
+                          const yieldQty = Math.floor((scrapMm + bladeKerf) / (cutLen + bladeKerf));
+                          const remainderMm = Math.max(0, scrapMm - (yieldQty * cutLen + Math.max(0, yieldQty - 1) * bladeKerf));
+                          return { 
+                            code: p.code, 
+                            name: p.label, 
+                            cutLen, 
+                            yieldQty, 
+                            remainderMm,
+                            rawLen: p.totalLen
+                          };
+                        })
+                        .filter(p => p.yieldQty >= 1)
+                        .sort((a, b) => b.yieldQty - a.yieldQty);
+
+                      // Only show this section if there is actual usable scrap yielding at least 1 compatible product
+                      if (candidates.length === 0) return null;
+
+                      return (
+                        <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '12px', color: '#0F172A', fontWeight: '800' }}>
+                              ♻️ Usable Offcut Scrap: <strong style={{ color: '#0E7490' }}>{scrapMm} mm bar</strong>
+                            </div>
+                            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
+                              Recommended Products to Make ({curRawLen} mm Raw Material):
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {candidates.map(cand => (
+                              <button
+                                key={cand.code}
+                                type="button"
+                                onClick={() => {
+                                  setProductItems(prev => [
+                                    ...prev,
+                                    {
+                                      id: Date.now() + Math.random(),
+                                      productCode: cand.code,
+                                      cutLength: String(cand.cutLen),
+                                      targetQty: String(cand.yieldQty)
+                                    }
+                                  ]);
+                                  setToastAlert({
+                                    type: 'success',
+                                    title: 'Product Added from Usable Scrap',
+                                    message: `Added ${cand.yieldQty} pc(s) of ${cand.name} (${cand.cutLen} mm) from ${scrapMm} mm usable offcut (Same ${curRawLen} mm Raw Material)!`
+                                  });
+                                }}
+                                style={{
+                                  backgroundColor: '#ECFEFF',
+                                  color: '#0E7490',
+                                  border: '1px solid #A5F3FC',
+                                  padding: '6px 12px',
+                                  borderRadius: '7px',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#0E7490';
+                                  e.currentTarget.style.color = '#FFFFFF';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#ECFEFF';
+                                  e.currentTarget.style.color = '#0E7490';
+                                }}
+                              >
+                                ⚡ + Make {cand.yieldQty} × {cand.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
+
+
 
               </div>
             ) : (
@@ -1400,6 +1509,19 @@ export default function CreateWorkOrderPage({ onBack, onWorkOrderCreated }) {
             <button
               type="button"
               onClick={() => {
+                if (invalidCutLengthItem) {
+                  const cat = PRODUCT_CATALOG_OPTIONS.find(p => p.code === invalidCutLengthItem.productCode);
+                  const rawLen = cat?.totalLen || 2414;
+                  const parsedCut = parseFloat(String(invalidCutLengthItem.cutLength || '').replace(/[^\d.]/g, '')) || 0;
+                  setToastAlert({
+                    type: 'error',
+                    title: 'Cut Length Required to Proceed',
+                    message: parsedCut <= 0 
+                      ? `Cut length for ${cat?.label || invalidCutLengthItem.productCode || 'product'} is missing. Please enter a valid cut length (e.g. ${cat?.defaultCutLen || 35} mm) before proceeding.`
+                      : `Cut length (${parsedCut} mm) exceeds the raw bar length (${rawLen} mm) for ${cat?.label || invalidCutLengthItem.productCode}. Cannot proceed.`
+                  });
+                  return;
+                }
                 if (!targetQty || Number(targetQty) <= 0) {
                   setToastAlert({
                     type: 'error',

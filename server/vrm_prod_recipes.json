@@ -7,7 +7,7 @@
     "expectedOutputQty": 24,
     "rawMaterialCode": "ALU-LEN-2414MM",
     "rawMaterialName": "Aluminium Length (2414 mm)",
-    "rawMaterialUnit": "Raw Bars",
+    "rawMaterialUnit": "Length",
     "inputQty": 1,
     "notes": "Mini Rail profile (100mm Height). User specifies custom Cut Length (mm) per order."
   },
@@ -19,7 +19,7 @@
     "expectedOutputQty": 16,
     "rawMaterialCode": "ALU-LEN-2414MM",
     "rawMaterialName": "Aluminium Length (2414 mm)",
-    "rawMaterialUnit": "Raw Bars",
+    "rawMaterialUnit": "Length",
     "inputQty": 1,
     "notes": "Mini Rail profile (150mm Height). User specifies custom Cut Length (mm) per order."
   },
@@ -31,7 +31,7 @@
     "expectedOutputQty": 1,
     "rawMaterialCode": "ALU-LEN-2414MM",
     "rawMaterialName": "Aluminium Length (2414 mm)",
-    "rawMaterialUnit": "Raw Bars",
+    "rawMaterialUnit": "Length",
     "inputQty": 1,
     "notes": "Standard 1 Aluminium Length (2414mm) yields 1 Full Long Rail 2414mm piece."
   },
@@ -43,7 +43,7 @@
     "expectedOutputQty": 40,
     "rawMaterialCode": "ALU-COIL-1.5",
     "rawMaterialName": "Aluminium Strip Coil 1.5mm",
-    "rawMaterialUnit": "Kg",
+    "rawMaterialUnit": "Length",
     "inputQty": 1,
     "notes": "1 Kg Aluminium Coil produces 40 Mid Clamp pieces."
   },
@@ -55,7 +55,7 @@
     "expectedOutputQty": 40,
     "rawMaterialCode": "ALU-COIL-1.5",
     "rawMaterialName": "Aluminium Strip Coil 1.5mm",
-    "rawMaterialUnit": "Kg",
+    "rawMaterialUnit": "Length",
     "inputQty": 1,
     "notes": "1 Kg Aluminium Coil produces 40 End Clamp pieces."
   }

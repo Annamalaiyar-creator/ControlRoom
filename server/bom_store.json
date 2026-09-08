@@ -1,5 +1,200 @@
 [
   {
+    "id": "BOM-619",
+    "bomCode": "BOM-619",
+    "code": "BOM-619",
+    "date": "2026-09-08",
+    "customerName": "Tata Power Ltd",
+    "companyName": "Tata Power Ltd",
+    "mobile": "+91 98123 45678",
+    "email": "anish.s@tatapower.com",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": {
+      "name": "TOPCon_G2Gmodules(Gen-II)_07.11.24 (2).pdf",
+      "size": "2.72 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-08T05:50:19.035Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "A2B",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Adani Bifacial G-G Gen-II_21.12.2024 (PERC).pdf",
+      "size": "1.69 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-08T05:49:55.567Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sent to Production",
+    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "items": [
+      {
+        "name": "Mini Rail 100 mm",
+        "category": "Aluminum Mounting Rail",
+        "uom": "NOS",
+        "qty": 240,
+        "rate": 259,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Adani Bifacial G-G Gen-II_21.12.2024 (PERC).pdf",
+      "proofDocObj": {
+        "name": "Adani Bifacial G-G Gen-II_21.12.2024 (PERC).pdf",
+        "size": "1.69 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-08T05:49:55.567Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mini Rail 100 mm",
+        "bomQty": 240,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "subTotal": 62160,
+    "gstAmount": 11188.8,
+    "cgstAmount": 5594.4,
+    "sgstAmount": 5594.4,
+    "grandTotal": 73348.8
+  },
+  {
+    "bomCode": "BOM-101",
+    "date": "2026-07-10",
+    "customerName": "Vikram Solar Pvt Ltd",
+    "companyName": "Vikram Solar Pvt Ltd",
+    "mobile": "+91 98765 43210",
+    "email": "rajesh@vikramsolar.com",
+    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai",
+    "deliveryAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai",
+    "paymentType": "100% Advance",
+    "status": "Pending Confirmation",
+    "items": [
+      {
+        "name": "Mini Rail 100 mm",
+        "category": "Aluminum Mounting Rail",
+        "qty": 4,
+        "rate": 250,
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35 mm",
+        "category": "35mm Aluminum Clamp",
+        "qty": 6,
+        "rate": 45,
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "35mm End Fastener",
+        "qty": 4,
+        "rate": 40,
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null
+    },
+    "dispatchPacking": [],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "grandTotal": 1430
+  },
+  {
+    "bomCode": "BOM-102",
+    "date": "2026-07-12",
+    "customerName": "Tata Power Renewable",
+    "companyName": "Tata Power Ltd",
+    "mobile": "+91 98123 45678",
+    "email": "anish.s@tatapower.com",
+    "billingAddress": "Tata Power Tech Park, Whitefield, Bengaluru",
+    "deliveryAddress": "Tata Power Tech Park, Whitefield, Bengaluru",
+    "paymentType": "50% Advance + 50% Dispatch",
+    "status": "Sent to Production",
+    "items": [
+      {
+        "name": "Long Rail 3000 mm",
+        "category": "3 Meter Heavy Duty Rail",
+        "qty": 8,
+        "rate": 1800,
+        "confirmed": true
+      },
+      {
+        "name": "Mini Rail 100 mm",
+        "category": "Aluminum Mounting Rail",
+        "qty": 12,
+        "rate": 250,
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": true,
+      "dispatch50Uploaded": false,
+      "proofDoc": "payment_proof_50pct.pdf"
+    },
+    "dispatchPacking": [
+      {
+        "name": "Long Rail 3000 mm",
+        "bomQty": 8,
+        "packed": true
+      },
+      {
+        "name": "Mini Rail 100 mm",
+        "bomQty": 12,
+        "packed": true
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": "50% Received",
+      "hardCopyReceived": true,
+      "softCopyReceived": true
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "grandTotal": 17400
+  },
+  {
     "bomCode": "BOM-618",
     "date": "2026-08-22",
     "customerName": "Acme Corp",
@@ -2734,109 +2929,5 @@
     "cgstAmount": 3096,
     "sgstAmount": 3096,
     "grandTotal": 40592
-  },
-  {
-    "bomCode": "BOM-101",
-    "date": "2026-07-10",
-    "customerName": "Vikram Solar Pvt Ltd",
-    "companyName": "Vikram Solar Pvt Ltd",
-    "mobile": "+91 98765 43210",
-    "email": "rajesh@vikramsolar.com",
-    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai",
-    "deliveryAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai",
-    "paymentType": "100% Advance",
-    "status": "Pending Confirmation",
-    "items": [
-      {
-        "name": "Mini Rail 100 mm",
-        "category": "Aluminum Mounting Rail",
-        "qty": 4,
-        "rate": 250,
-        "confirmed": false
-      },
-      {
-        "name": "Mid Clamp 35 mm",
-        "category": "35mm Aluminum Clamp",
-        "qty": 6,
-        "rate": 45,
-        "confirmed": false
-      },
-      {
-        "name": "End Clamp 35 mm",
-        "category": "35mm End Fastener",
-        "qty": 4,
-        "rate": 40,
-        "confirmed": false
-      }
-    ],
-    "payments": {
-      "advance50Uploaded": false,
-      "dispatch50Uploaded": false,
-      "advance100Uploaded": false,
-      "net30Uploaded": false,
-      "proofDoc": null
-    },
-    "dispatchPacking": [],
-    "accountsVerification": {
-      "paymentStatus": null,
-      "hardCopyReceived": false,
-      "softCopyReceived": false
-    },
-    "invoiceConfirmed": false,
-    "invoiceDeducted": false,
-    "grandTotal": 1430
-  },
-  {
-    "bomCode": "BOM-102",
-    "date": "2026-07-12",
-    "customerName": "Tata Power Renewable",
-    "companyName": "Tata Power Ltd",
-    "mobile": "+91 98123 45678",
-    "email": "anish.s@tatapower.com",
-    "billingAddress": "Tata Power Tech Park, Whitefield, Bengaluru",
-    "deliveryAddress": "Tata Power Tech Park, Whitefield, Bengaluru",
-    "paymentType": "50% Advance + 50% Dispatch",
-    "status": "Sent to Production",
-    "items": [
-      {
-        "name": "Long Rail 3000 mm",
-        "category": "3 Meter Heavy Duty Rail",
-        "qty": 8,
-        "rate": 1800,
-        "confirmed": true
-      },
-      {
-        "name": "Mini Rail 100 mm",
-        "category": "Aluminum Mounting Rail",
-        "qty": 12,
-        "rate": 250,
-        "confirmed": true
-      }
-    ],
-    "payments": {
-      "advance50Uploaded": true,
-      "dispatch50Uploaded": false,
-      "proofDoc": "payment_proof_50pct.pdf"
-    },
-    "dispatchPacking": [
-      {
-        "name": "Long Rail 3000 mm",
-        "bomQty": 8,
-        "packed": true
-      },
-      {
-        "name": "Mini Rail 100 mm",
-        "bomQty": 12,
-        "packed": true
-      }
-    ],
-    "accountsVerification": {
-      "paymentStatus": "50% Received",
-      "hardCopyReceived": true,
-      "softCopyReceived": true
-    },
-    "invoiceConfirmed": false,
-    "invoiceDeducted": false,
-    "grandTotal": 17400
   }
 ]

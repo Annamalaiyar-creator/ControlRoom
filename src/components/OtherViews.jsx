@@ -14,6 +14,7 @@ import ItemsDirectoryView from './views/ItemsDirectoryView';
 import ProcurementReportsView from './views/ProcurementReportsView';
 import DispatchDashboardView from './views/DispatchDashboardView';
 import ProductionViewsEngine from './views/ProductionViewsEngine';
+import BomOrdersView from './views/BomOrdersView';
 import { RefreshCw } from 'lucide-react';
 
 class ViewErrorBoundary extends Component {
@@ -109,6 +110,11 @@ export default function OtherViews(props) {
         {(activeTab === 'Procurement Reports' || activeTab === 'Spend Reports' || activeTab === 'Supplier Reports') && <ProcurementReportsView {...props} />}
         {(activeTab === 'Dispatch Dashboard' || (userRole === 'Dispatch Head' && activeTab === 'Dashboard')) && <DispatchDashboardView {...props} />}
 
+        {/* BOM Orders dedicated view */}
+        {['BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'].includes(activeTab) && (
+          <BomOrdersView {...props} />
+        )}
+
         {/* Production & BOM & Invoices & Customer Management engine */}
         {(![
           'Requests for Purchase', 'Vendor Management', 'Quotations',
@@ -116,12 +122,12 @@ export default function OtherViews(props) {
           'Vendor Performance', 'Spend Analytics', 'Material Reorder',
           'Stock Status', 'Price Comparison', 'Items Directory',
           'Procurement Reports', 'Spend Reports', 'Supplier Reports',
-          'Dispatch Dashboard'
+          'Dispatch Dashboard', 'BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'
         ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
-          'Quality Control', 'Machine Maintenance', 'Inventory', 'BOM / Routing', 'BOM', 'Customer Management',
+          'Quality Control', 'Machine Maintenance', 'Inventory', 'Customer Management',
           'Production Reports', 'Efficiency Reports', 'Downtime Analytics',
           'Add Work Order', 'Record Production', 'Report Downtime', 'Dispatch Orders', 'Accounts Verification', 'Invoice Management'
-        ].includes(activeTab)) && activeTab !== 'Dispatch Dashboard' && (
+        ].includes(activeTab)) && activeTab !== 'Dispatch Dashboard' && !['BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'].includes(activeTab) && (
           <ProductionViewsEngine {...props} />
         )}
       </div>
