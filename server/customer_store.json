@@ -1,92 +1,8 @@
 [
   {
-    "code": "Acme Corp",
-    "c2": "Acme Corp",
-    "gstNo": "33AABCU9603R1ZM",
-    "c3": "Primary Contact",
-    "c4": "9876543210",
-    "c5": "contact@acme.com",
-    "c6": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
-    "billingAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
-    "billingAddressObj": {
-      "address": "123 Main Street, Industrial Area",
-      "city": "Chennai",
-      "state": "Tamil Nadu",
-      "pincode": "600032"
-    },
-    "c7": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
-    "deliveryAddress": "123 Main Street, Industrial Area, Chennai, Tamil Nadu - 600032",
-    "deliveryAddressObj": {
-      "address": "123 Main Street, Industrial Area",
-      "city": "Chennai",
-      "state": "Tamil Nadu",
-      "pincode": "600032"
-    },
-    "status": "ACTIVE",
-    "stBg": "#dcfce7",
-    "stFg": "#166534",
-    "stBorder": "1px solid #bbf7d0",
-    "tabGroup": "Active"
-  },
-  {
-    "code": "Annamalaiyar",
-    "c2": "Solar pvt ltd",
-    "c3": "Primary Contact",
-    "c4": "7092996058",
-    "c5": "arannamalaiyar@gmail.com",
-    "c6": "No 1427, GNT Road, Nagappa Industrial Estate, Chennai, Tamilnadu - 600056",
-    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Chennai, Tamilnadu - 600056",
-    "billingAddressObj": {
-      "address": "No 1427, GNT Road, Nagappa Industrial Estate",
-      "city": "Chennai",
-      "state": "Tamilnadu",
-      "pincode": "600056"
-    },
-    "c7": "",
-    "deliveryAddress": "",
-    "deliveryAddressObj": {
-      "address": "",
-      "city": "",
-      "state": "",
-      "pincode": ""
-    },
-    "status": "ACTIVE",
-    "stBg": "#dcfce7",
-    "stFg": "#166534",
-    "stBorder": "1px solid #bbf7d0",
-    "tabGroup": "Active"
-  },
-  {
-    "code": "Test Customer",
-    "c2": "Test Customer",
-    "c3": "Primary Contact",
-    "c4": "+91 98000 00000",
-    "c5": "contact@client.com",
-    "status": "ACTIVE",
-    "stBg": "#dcfce7",
-    "stFg": "#166534",
-    "stBorder": "1px solid #bbf7d0",
-    "tabGroup": "Active",
-    "c6": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai – 600066.",
-    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai – 600066.",
-    "c7": "",
-    "deliveryAddress": ""
-  },
-  {
-    "code": "Karthi Soo",
-    "c2": "Soo Solar Private Limited",
-    "c3": "Primary Contact",
-    "c4": "7092996058",
-    "c5": "karthisosolar@gmail.com",
-    "status": "ACTIVE",
-    "stBg": "#dcfce7",
-    "stFg": "#166534",
-    "stBorder": "1px solid #bbf7d0",
-    "tabGroup": "Active"
-  },
-  {
     "code": "Vikram Solar Pvt Ltd",
     "c2": "Vikram Solar Pvt Ltd",
+    "gstNo": "33AABCU9603R1ZM",
     "c3": "Rajesh Kumar",
     "c4": "+91 98765 43210",
     "c5": "rajesh@vikramsolar.com",
@@ -99,6 +15,7 @@
   {
     "code": "Tata Power Renewable",
     "c2": "Tata Power Ltd",
+    "gstNo": "29AAACT2727Q1ZW",
     "c3": "Anish Sharma",
     "c4": "+91 98123 45678",
     "c5": "anish.s@tatapower.com",
@@ -111,6 +28,7 @@
   {
     "code": "Apex Infra Systems",
     "c2": "Apex Infra Ltd",
+    "gstNo": "33AABCA1234F1Z5",
     "c3": "Priya Sundaram",
     "c4": "+91 99400 11223",
     "c5": "priya@apexinfra.com",

@@ -8,7 +8,7 @@ import {
   Search, HelpCircle, MessageSquare, Rocket, Sparkles, ChevronUp,
   CheckCircle, ClipboardList, Truck, Warehouse, ShieldCheck, Activity, FileCheck,
   Calendar, Wrench, Calculator, RefreshCw, Scale, Building2, BarChart3,
-  Zap, CreditCard, Layers
+  Zap, CreditCard, Layers, Briefcase
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 
@@ -200,13 +200,30 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     } else if (role === 'Sales Head' || role === 'Sales Executive') {
       sections = [
         {
-          category: 'MAIN MENU',
+          category: 'SALES & CRM',
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
-            { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Leads', icon: Users, badge: 'New' },
+            { label: 'Customers', icon: Building2 },
+            { label: 'Opportunities', icon: Briefcase },
+            { label: 'Follow-ups', icon: Calendar },
+            { label: 'WhatsApp Inbox', icon: MessageSquare },
+            { label: 'Quotations', icon: FileText }
+          ]
+        },
+        {
+          category: 'ENGINEERING & COMMERCIAL',
+          items: [
             { label: 'BOM Orders', icon: GitBranch },
-            { label: 'Customer Management', icon: Users },
+            { label: 'Proforma Invoice', icon: Receipt },
+            { label: 'Product Catalog', targetTab: 'Items Directory', icon: Boxes },
             { label: 'Stock Status', icon: Layers }
+          ]
+        },
+        {
+          category: 'ANALYTICS',
+          items: [
+            { label: 'Sales Reports', icon: BarChart3 }
           ]
         }
       ];

@@ -15,6 +15,7 @@ import ProcurementReportsView from './views/ProcurementReportsView';
 import DispatchDashboardView from './views/DispatchDashboardView';
 import ProductionViewsEngine from './views/ProductionViewsEngine';
 import BomOrdersView from './views/BomOrdersView';
+import SalesCrmEngine from './crm/SalesCrmEngine';
 import { RefreshCw } from 'lucide-react';
 
 class ViewErrorBoundary extends Component {
@@ -110,21 +111,31 @@ export default function OtherViews(props) {
         {(activeTab === 'Procurement Reports' || activeTab === 'Spend Reports' || activeTab === 'Supplier Reports') && <ProcurementReportsView {...props} />}
         {(activeTab === 'Dispatch Dashboard' || (userRole === 'Dispatch Head' && activeTab === 'Dashboard')) && <DispatchDashboardView {...props} />}
 
+        {/* Sales CRM Master Engine (Individual Dedicated Tabs) */}
+        {['Sales CRM', 'CRM', 'Sales & CRM', 'Leads', 'Customers', 'Customer Management', 'Opportunities', 'Follow-ups', 'WhatsApp Inbox', 'Quotations', 'Product Catalog', 'Sales Reports'].includes(activeTab) && (
+          <SalesCrmEngine
+            userRole={userRole}
+            activeTab={activeTab}
+            onNavigateTab={props.onChangeTab || props.onSelectTab}
+          />
+        )}
+
         {/* BOM Orders dedicated view */}
         {['BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'].includes(activeTab) && (
           <BomOrdersView {...props} />
         )}
 
-        {/* Production & BOM & Invoices & Customer Management engine */}
+        {/* Production & BOM & Invoices engine */}
         {(![
           'Requests for Purchase', 'Vendor Management', 'Quotations',
           'Goods Receipt Note', 'Goods Receipt Note (GRN)', 'Upload Invoice', 'Payments',
           'Vendor Performance', 'Spend Analytics', 'Material Reorder',
           'Stock Status', 'Price Comparison', 'Items Directory',
           'Procurement Reports', 'Spend Reports', 'Supplier Reports',
-          'Dispatch Dashboard', 'BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'
+          'Dispatch Dashboard', 'BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing',
+          'Sales CRM', 'CRM', 'Sales & CRM', 'Leads', 'Customers', 'Customer Management', 'Opportunities', 'Follow-ups', 'WhatsApp Inbox', 'Quotations', 'Product Catalog', 'Sales Reports'
         ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
-          'Quality Control', 'Machine Maintenance', 'Inventory', 'Customer Management',
+          'Quality Control', 'Machine Maintenance', 'Inventory',
           'Production Reports', 'Efficiency Reports', 'Downtime Analytics',
           'Add Work Order', 'Record Production', 'Report Downtime', 'Dispatch Orders', 'Accounts Verification', 'Invoice Management'
         ].includes(activeTab)) && activeTab !== 'Dispatch Dashboard' && !['BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing'].includes(activeTab) && (

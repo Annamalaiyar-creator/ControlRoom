@@ -93,7 +93,47 @@ const IconExpired = ({ size = 13 }) => (
 export function getStatusStyleConfig(statusOrType, customLabel) {
   const raw = String(statusOrType || customLabel || '').trim().toLowerCase();
 
-  // 0. PO Specific Sequential Workflow States
+  // 0. PO Specific Sequential Workflow States & Accounts Verification States
+  if (
+    raw === 'accounts verified' ||
+    raw === 'accounts_verified' ||
+    raw === 'accounts verified & passed to invoice'
+  ) {
+    return {
+      label: customLabel || 'Accounts Verified',
+      bg: '#dcfce7',
+      color: '#166534',
+      border: '1px solid #bbf7d0',
+      Icon: IconSuccess
+    };
+  }
+
+  if (
+    raw === 'partially verified' ||
+    raw === 'partially_verified'
+  ) {
+    return {
+      label: customLabel || 'Partially Verified',
+      bg: '#fef3c7',
+      color: '#92400e',
+      border: '1px solid #fde68a',
+      Icon: IconPending
+    };
+  }
+
+  if (
+    raw === 'pending verification' ||
+    raw === 'pending_verification'
+  ) {
+    return {
+      label: customLabel || 'Pending Verification',
+      bg: '#fef3c7',
+      color: '#b45309',
+      border: '1px solid #fde68a',
+      Icon: IconPending
+    };
+  }
+
   if (
     raw === 'awaiting accounts verification' ||
     raw === 'awaiting_accounts_verification' ||

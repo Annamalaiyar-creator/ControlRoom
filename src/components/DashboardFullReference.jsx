@@ -981,18 +981,18 @@ export default function DashboardFullReference({ userRole }) {
             </div>
           </div>
 
-          <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+          <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflowX: 'auto', backgroundColor: '#FFFFFF' }}>
+            <table style={{ width: '100%', minWidth: '460px', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ width: '24%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9', whiteSpace: 'nowrap' }}>
+                  <th style={{ width: '22%', minWidth: '100px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoice No.' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'PI No.' : 'PO No.'} <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                     </div>
                   </th>
-                  <th style={{ width: '36%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer / Client' : 'Vendor'}</th>
-                  <th style={{ width: '22%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
-                  <th style={{ width: '18%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
+                  <th style={{ width: '33%', minWidth: '140px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer / Client' : 'Vendor'}</th>
+                  <th style={{ width: '20%', minWidth: '85px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
+                  <th style={{ width: '25%', minWidth: '110px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1009,11 +1009,11 @@ export default function DashboardFullReference({ userRole }) {
                   { no: 'PI-2026-039', client: 'Sterling & Wilson', val: '₹ 32.80 L', status: 'Pending' },
                   { no: 'PI-2026-038', client: 'Waaree Energies', val: '₹ 28.40 L', status: 'Draft' }
                 ] : poData.slice(0, 5)).map((r, idx) => (
-                  <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '6px 10px', color: '#64748B', fontWeight: '600' }}>{r.no || r.poNo || r.po}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.client || r.vendor}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A' }}>{r.val || r.amount}</td>
-                    <td style={{ padding: '6px 10px' }}>
+                  <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '8px 12px', color: '#64748B', fontWeight: '600' }}>{r.no || r.poNo || r.po}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.client || r.vendor}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A' }}>{r.val || r.amount}</td>
+                    <td style={{ padding: '8px 12px' }}>
                       <StatusBadge status={r.status || 'Scheduled'} size="sm" />
                     </td>
                   </tr>
@@ -1034,18 +1034,18 @@ export default function DashboardFullReference({ userRole }) {
             </div>
           </div>
 
-          <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+          <div style={{ border: '1px solid #F1F5F9', borderRadius: '10px', overflowX: 'auto', backgroundColor: '#FFFFFF' }}>
+            <table style={{ width: '100%', minWidth: '490px', fontSize: '11px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ width: '24%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
+                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9', whiteSpace: 'nowrap' }}>
+                  <th style={{ width: '22%', minWidth: '100px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts') ? 'Invoice No.' : (userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Client Name' : 'PO No.'} <ArrowUpDown style={{ width: '11px', height: '11px', color: '#94A3B8' }} />
                     </div>
                   </th>
-                  <th style={{ width: '36%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer' : 'Vendor'}</th>
-                  <th style={{ width: '22%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
-                  <th style={{ width: '18%', padding: '6px 10px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Overdue Days</th>
+                  <th style={{ width: '30%', minWidth: '130px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>{(userRole === 'Invoice Executive' || userRole === 'Accounts Head' || userRole === 'Finance & Accounts' || userRole === 'Sales Executive' || userRole === 'Sales Head') ? 'Customer' : 'Vendor'}</th>
+                  <th style={{ width: '18%', minWidth: '85px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Amount</th>
+                  <th style={{ width: '30%', minWidth: '140px', padding: '8px 12px', color: '#94A3B8', fontWeight: '700', fontSize: '10.5px' }}>Overdue Days</th>
                 </tr>
               </thead>
               <tbody>
@@ -1062,11 +1062,11 @@ export default function DashboardFullReference({ userRole }) {
                   { no: 'Sterling & Wilson', name: '4 PIs', val: '₹ 0.62 Cr', delay: '15 Days Credit' },
                   { no: 'Waaree Energies', name: '3 PIs', val: '₹ 0.45 Cr', delay: '30% Advance' }
                 ] : poData.slice(0, 5)).map((o, idx) => (
-                  <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '6px 10px', color: '#64748B', fontWeight: '600' }}>{o.no || o.name || o.poNo || o.po}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name || o.count || o.vendor}</td>
-                    <td style={{ padding: '6px 10px', fontWeight: '700', color: '#0F172A' }}>{o.val || o.rev || o.amount}</td>
-                    <td style={{ padding: '6px 10px' }}>
+                  <tr key={idx} style={{ borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '8px 12px', color: '#64748B', fontWeight: '600' }}>{o.no || o.name || o.poNo || o.po}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name || o.count || o.vendor}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: '700', color: '#0F172A' }}>{o.val || o.rev || o.amount}</td>
+                    <td style={{ padding: '8px 12px' }}>
                       <span
                         style={{
                           display: 'inline-flex',

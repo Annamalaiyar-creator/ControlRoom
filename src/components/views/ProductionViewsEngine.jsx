@@ -20,6 +20,7 @@ import { addLiveNotification } from '../Header';
 import VRMTaxInvoicePrintTemplate from '../VRMTaxInvoicePrintTemplate';
 import * as XLSX from 'xlsx';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
+import StatusBadge from '../StatusBadge';
 
 
 export default function ProductionViewsEngine(props) {
@@ -307,6 +308,12 @@ export default function ProductionViewsEngine(props) {
   const cameraVideoRef = useRef(null);
   const cameraCanvasRef = useRef(null);
   const mediaStreamRef = useRef(null);
+
+  const [showDispatchCameraModal, setShowDispatchCameraModal] = useState(false);
+  const [dispatchCameraError, setDispatchCameraError] = useState('');
+  const dispatchCameraVideoRef = useRef(null);
+  const dispatchCameraCanvasRef = useRef(null);
+  const dispatchCameraStreamRef = useRef(null);
 
   const [newBomCode, setNewBomCode] = useState('');
   const [newBomProductName, setNewBomProductName] = useState('');
@@ -4104,59 +4111,64 @@ export default function ProductionViewsEngine(props) {
             },
             'Accounts Verification': {
               title: 'Accounts Verification & Document Control',
-              subtitle: 'Verify customer payment status (100% / 50% / Credit) and Hard/Soft copy BOM receipt',
+              subtitle: 'Verify customer payment details (Payment Date, Total Amount, Payment Status) and Hard Copy BOM receipt',
               actionText: '',
               searchPlaceholder: 'Search Accounts Verification (BOM Code, Customer Name)...',
               tabs: [
-                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !(b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Verified', label: 'Verified', count: (bomStore || []).filter(b => (b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#DCFCE7', fg: '#166534' },
-                { id: 'Cancelled', label: 'Cancelled / Reissued', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEE2E2', fg: '#DC2626' }
+                { id: 'All', label: 'All Accounts Orders', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Pending', label: 'Pending Verification', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !(b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Verified', label: 'Verified', count: (bomStore || []).filter(b => (b.accountsVerification?.verified || b.status === 'Accounts Verified & Passed to Invoice')).length, bg: '#DCFCE7', fg: '#166534' }
               ],
-              headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Status', 'Document Receipt', 'Status', 'Action'],
-              rows: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified || b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).map(b => {
+              headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Payment Date', 'Total Amount', 'Payment Status', 'Status'],
+              rows: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Packed & Awaiting Dispatch Payment' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) || b.status === 'Accounts Verified & Passed to Invoice' || b.accountsVerification?.verified).map(b => {
                 const acc = b.accountsVerification || {};
-                const isReissuedOrCancelled = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
-                const isVerified = !isReissuedOrCancelled && Boolean(
+                const isVerified = Boolean(
                   acc.verified ||
                   b.status === 'Accounts Verified & Passed to Invoice' ||
-                  (acc.hardCopyReceived && acc.softCopyReceived && (acc.paymentStatus || b.paymentType === 'Net 30 Days'))
+                  (acc.paymentDate && acc.totalAmount && (acc.paymentStatus || b.paymentType === 'Net 30 Days'))
                 );
-                const payStatus = isReissuedOrCancelled
-                  ? 'Reissued / Void'
-                  : (acc.paymentStatus || (b.paymentType === 'Net 30 Days' ? 'Credit Payment' : '100% Received'));
-                const docStatus = isReissuedOrCancelled
-                  ? 'Cancelled & Reissued'
-                  : (acc.hardCopyReceived && acc.softCopyReceived
-                    ? 'Both Received (Hard + Soft)'
-                    : acc.hardCopyReceived
-                      ? 'Only Hard Copy Received'
-                      : acc.softCopyReceived
-                        ? 'Only Soft Copy Received'
-                        : 'Pending Documents');
-
-                let statusText = isVerified ? 'ACCOUNTS VERIFIED' : 'PENDING VERIFICATION';
-                let stBg = isVerified ? '#DCFCE7' : '#FEF3C7';
-                let stFg = isVerified ? '#166534' : '#B45309';
-                let stBorder = isVerified ? '1px solid #BBF7D0' : '1px solid #FDE68A';
-                let tabGroup = isVerified ? 'Verified' : 'Pending';
-
-                if (isReissuedOrCancelled) {
-                  statusText = 'CANCELLED';
-                  stBg = '#FEE2E2';
-                  stFg = '#DC2626';
-                  stBorder = '1px solid #FCA5A5';
-                  tabGroup = 'Cancelled';
+                const payStatus = acc.paymentStatus || (b.paymentType === 'Net 30 Days' ? 'Credit Payment' : isVerified ? '100% Received' : 'Pending Confirmation');
+                
+                // Format Payment Date (should NOT be prefilled from createdAt/today if accounts haven't entered it)
+                const rawDate = acc.paymentDate || (isVerified ? (b.paymentDate || b.payments?.paymentDate || b.payments?.date) : null);
+                let paymentDateFormatted = '—';
+                if (rawDate) {
+                  try {
+                    const d = new Date(rawDate);
+                    if (!isNaN(d.getTime())) {
+                      paymentDateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    } else {
+                      paymentDateFormatted = rawDate;
+                    }
+                  } catch (e) {
+                    paymentDateFormatted = rawDate;
+                  }
                 }
+
+                // Format Total Amount (should NOT be prefilled if accounts haven't verified/entered it)
+                let totalAmtFormatted = '—';
+                if (acc.totalAmount !== undefined && acc.totalAmount !== null && acc.totalAmount !== '') {
+                  const val = parseFloat(acc.totalAmount) || 0;
+                  totalAmtFormatted = `₹ ${val.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                } else if (isVerified && b.grandTotal) {
+                  const val = parseFloat(b.grandTotal) || 0;
+                  totalAmtFormatted = `₹ ${val.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                }
+
+                const statusText = isVerified ? 'ACCOUNTS VERIFIED' : 'PENDING VERIFICATION';
+                const stBg = isVerified ? '#DCFCE7' : '#FEF3C7';
+                const stFg = isVerified ? '#166534' : '#B45309';
+                const stBorder = isVerified ? '1px solid #BBF7D0' : '1px solid #FDE68A';
+                const tabGroup = isVerified ? 'Verified' : 'Pending';
 
                 return {
                   ...b,
                   code: b.bomCode,
                   c2: b.customerName,
                   c3: b.paymentType,
-                  c4: payStatus,
-                  c5: docStatus,
-                  c6: undefined,
+                  c4: paymentDateFormatted,
+                  c5: totalAmtFormatted,
+                  c6: payStatus,
                   status: statusText,
                   stBg: stBg,
                   stFg: stFg,
@@ -4173,21 +4185,19 @@ export default function ProductionViewsEngine(props) {
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
                 { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production')) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
-                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production')) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed'].includes(b.status)).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED'].includes(b.status)).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
-                { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
-              headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status'],
+              headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status'],
               rows: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
                 const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
                 const isClosed = b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered';
-                const isReissued = b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts === true;
 
                 let statusLabel = 'PENDING DISPATCH PACKING';
                 let stBg = '#FFF7ED';
@@ -4195,13 +4205,7 @@ export default function ProductionViewsEngine(props) {
                 let stBorder = '1px solid #FED7AA';
                 let tabGroup = 'PendingPacking';
 
-                if (isReissued) {
-                  statusLabel = 'REISSUED';
-                  stBg = '#FEF3C7';
-                  stFg = '#B45309';
-                  stBorder = '1px solid #FDE68A';
-                  tabGroup = 'Reissued';
-                } else if (isClosed) {
+                if (isClosed) {
                   statusLabel = 'COMPLETED & DISPATCHED';
                   stBg = '#DCFCE7';
                   stFg = '#166534';
@@ -4233,8 +4237,7 @@ export default function ProductionViewsEngine(props) {
                   c2: b.customerName,
                   salesPerson: (b.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
                   c3: b.paymentType,
-                  c4: isReissued ? `Reissued by Accounts` : isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
-                  c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                  c4: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
                   status: statusLabel,
                   stBg: stBg,
                   stFg: stFg,
@@ -9466,6 +9469,134 @@ export default function ProductionViewsEngine(props) {
                       </div>
                     );
                   })()}
+
+                  {/* DISPATCH PACKED ITEMS MEDIA VIEWER FOR SALES */}
+                  {(() => {
+                    const packMedia = confirmingBomModal.dispatchPackingMedia || {};
+                    const packPhotos = packMedia.photos || [];
+                    const packVideos = packMedia.videos || [];
+                    const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
+
+                    if (!hasMedia && !confirmingBomModal.status?.includes('Dispatch') && !confirmingBomModal.status?.includes('Packed') && !confirmingBomModal.dispatchPacking) {
+                      return null;
+                    }
+
+                    return (
+                      <div style={{
+                        marginTop: '16px',
+                        backgroundColor: 'white',
+                        padding: '18px 22px',
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Camera size={16} />
+                            </div>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                                Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
+                              </h4>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                Photos and videos captured by Dispatch Fulfillment Team during packing
+                              </span>
+                            </div>
+                          </div>
+
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            backgroundColor: hasMedia ? '#DCFCE7' : '#F1F5F9',
+                            color: hasMedia ? '#166534' : '#64748B',
+                            border: `1px solid ${hasMedia ? '#BBF7D0' : '#E2E8F0'}`
+                          }}>
+                            {hasMedia ? '✓ Media Attached' : 'Awaiting Dispatch Media'}
+                          </span>
+                        </div>
+
+                        {hasMedia ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginTop: '4px' }}>
+                            {packPhotos.map((ph, pIdx) => (
+                              <div
+                                key={pIdx}
+                                onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name || `Packed Item Photo ${pIdx + 1}` })}
+                                style={{
+                                  height: '84px',
+                                  borderRadius: '10px',
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  border: '1.5px solid #CBD5E1',
+                                  backgroundColor: '#0F172A',
+                                  position: 'relative',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                                  transition: 'transform 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div style={{
+                                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                                  backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                  padding: '2px 6px', fontSize: '10px', fontWeight: '700',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}>
+                                  <span>📷 View Photo</span>
+                                  <span>›</span>
+                                </div>
+                              </div>
+                            ))}
+                            {packVideos.map((vd, vIdx) => (
+                              <div
+                                key={vIdx}
+                                onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name || `Packed Item Video ${vIdx + 1}` })}
+                                style={{
+                                  height: '84px',
+                                  borderRadius: '10px',
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  border: '1.5px solid #CBD5E1',
+                                  backgroundColor: '#0F172A',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  position: 'relative',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                                  transition: 'transform 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                <Video size={22} style={{ color: '#38BDF8' }} />
+                                <div style={{
+                                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                                  backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                  padding: '2px 6px', fontSize: '10px', fontWeight: '700',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}>
+                                  <span>🎥 Watch Video</span>
+                                  <span>›</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic', padding: '6px 0' }}>
+                            No dispatch packing photos or videos attached yet for this order.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* PRODUCT ITEMS TABLE */}
@@ -9645,43 +9776,7 @@ export default function ProductionViewsEngine(props) {
                       </>
                     ) : (
                       <>
-                        <button
-                          onClick={() => {
-                            const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
-                              ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
-                              ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
-                              ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
-                              ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
-                            );
 
-                            if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                              alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before saving modifications.');
-                              return;
-                            }
-
-                            const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
-                            const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
-                            const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
-
-                            setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
-                              ...b,
-                              companyName: confirmingBomModal.companyName || b.companyName,
-                              paymentType: confirmingBomModal.paymentType || b.paymentType,
-                              billingAddress: bStr,
-                              billingAddressObj: bObj,
-                              deliveryAddress: dStr,
-                              deliveryAddressObj: finalDObj,
-                              deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
-                              items: confirmingBomModal.items,
-                              status: 'Edited / Pending Confirmation',
-                              grandTotal: grandTotalCalc
-                            } : b));
-                            alert('Order modifications & addresses saved! Status updated to: Edited / Pending Confirmation');
-                          }}
-                          style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#334155', height: '38px', padding: '0 20px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                        >
-                          Save Modifications
-                        </button>
 
                         <button
                           onClick={() => {
@@ -10277,6 +10372,36 @@ export default function ProductionViewsEngine(props) {
 
                           <button
                             type="button"
+                            onClick={async () => {
+                              setShowDispatchCameraModal(true);
+                              setDispatchCameraError('');
+                              try {
+                                const stream = await navigator.mediaDevices.getUserMedia({
+                                  video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                                });
+                                dispatchCameraStreamRef.current = stream;
+                                setTimeout(() => {
+                                  if (dispatchCameraVideoRef.current) {
+                                    dispatchCameraVideoRef.current.srcObject = stream;
+                                    dispatchCameraVideoRef.current.play().catch(() => {});
+                                  }
+                                }, 100);
+                              } catch (err) {
+                                setDispatchCameraError('Unable to access camera. Please allow camera permissions or upload images instead.');
+                              }
+                            }}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px',
+                              backgroundColor: '#0E7490', color: '#FFFFFF', border: 'none',
+                              padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                              cursor: 'pointer', boxShadow: '0 2px 6px rgba(14,116,144,0.3)'
+                            }}
+                          >
+                            <Camera size={14} /> Live Camera
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => {
                               const canvas = document.createElement('canvas');
                               canvas.width = 640;
@@ -10463,6 +10588,133 @@ export default function ProductionViewsEngine(props) {
                     </div>
                   </div>
                 </div>
+
+                {/* DISPATCH LIVE CAMERA MODAL */}
+                {showDispatchCameraModal && (
+                  <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 99999, padding: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#0F172A', borderRadius: '16px', border: '1px solid #334155',
+                      width: '100%', maxWidth: '640px', overflow: 'hidden',
+                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column'
+                    }}>
+                      <div style={{
+                        padding: '16px 20px', borderBottom: '1px solid #334155',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Camera size={18} style={{ color: '#38BDF8' }} />
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#FFFFFF' }}>
+                            Dispatch Live Camera — Snap Packed Item
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (dispatchCameraStreamRef.current) {
+                              dispatchCameraStreamRef.current.getTracks().forEach(t => t.stop());
+                              dispatchCameraStreamRef.current = null;
+                            }
+                            setShowDispatchCameraModal(false);
+                          }}
+                          style={{ border: 'none', background: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '20px', lineHeight: 1 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div style={{ position: 'relative', width: '100%', height: '380px', backgroundColor: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {dispatchCameraError ? (
+                          <div style={{ color: '#F87171', padding: '20px', textAlign: 'center', fontSize: '13px' }}>
+                            {dispatchCameraError}
+                          </div>
+                        ) : (
+                          <video
+                            ref={dispatchCameraVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        )}
+                        <canvas ref={dispatchCameraCanvasRef} style={{ display: 'none' }} />
+                      </div>
+
+                      <div style={{
+                        padding: '16px 20px', borderTop: '1px solid #334155',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        backgroundColor: '#1E293B'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (dispatchCameraStreamRef.current) {
+                              dispatchCameraStreamRef.current.getTracks().forEach(t => t.stop());
+                              dispatchCameraStreamRef.current = null;
+                            }
+                            setShowDispatchCameraModal(false);
+                          }}
+                          style={{
+                            padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700',
+                            backgroundColor: '#334155', color: '#CBD5E1', border: 'none', cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={Boolean(dispatchCameraError)}
+                          onClick={() => {
+                            if (dispatchCameraVideoRef.current && dispatchCameraCanvasRef.current) {
+                              const v = dispatchCameraVideoRef.current;
+                              const c = dispatchCameraCanvasRef.current;
+                              c.width = v.videoWidth || 640;
+                              c.height = v.videoHeight || 480;
+                              const ctx = c.getContext('2d');
+                              ctx.drawImage(v, 0, 0, c.width, c.height);
+                              const photoUrl = c.toDataURL('image/jpeg', 0.85);
+
+                              const capturedPhoto = {
+                                id: `pack_photo_live_${Date.now()}`,
+                                name: `Live_Packed_Box_${Date.now().toString().slice(-4)}.jpg`,
+                                size: '1.1 MB',
+                                dataUrl: photoUrl,
+                                uploadedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                              };
+
+                              setDispatchPackingModal(prev => {
+                                const existingMedia = prev?.dispatchPackingMedia || { photos: [], videos: [] };
+                                return {
+                                  ...prev,
+                                  dispatchPackingMedia: { ...existingMedia, photos: [...(existingMedia.photos || []), capturedPhoto] }
+                                };
+                              });
+
+                              if (dispatchCameraStreamRef.current) {
+                                dispatchCameraStreamRef.current.getTracks().forEach(t => t.stop());
+                                dispatchCameraStreamRef.current = null;
+                              }
+                              setShowDispatchCameraModal(false);
+                            }
+                          }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            backgroundColor: '#0E7490', color: '#FFFFFF', border: 'none',
+                            padding: '10px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', boxShadow: '0 4px 12px rgba(14,116,144,0.4)'
+                          }}
+                        >
+                          <Camera size={16} /> Capture Photo
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           }
@@ -10481,15 +10733,21 @@ export default function ProductionViewsEngine(props) {
               ? (accVerif.paymentStatus || (accountsVerificationModal.paymentType === 'Net 30 Days' ? 'Credit Payment' : 'Payment Received — 100%'))
               : (accVerif.paymentStatus || null);
             const hardCopy = isAlreadyCompleted ? true : Boolean(accVerif.hardCopyReceived);
-            const softCopy = isAlreadyCompleted ? true : Boolean(accVerif.softCopyReceived);
-            const softCopyDoc = accVerif.softCopyDoc || (isAlreadyCompleted ? { name: 'Scanned_BOM_SoftCopy.pdf', capturedVia: 'Dispatch Upload' } : null);
             const bomCodeText = (accountsVerificationModal && (accountsVerificationModal.bomCode || accountsVerificationModal.code)) || 'BOM-2026';
             const custNameText = (accountsVerificationModal && (accountsVerificationModal.customerName || accountsVerificationModal.c2)) || 'Customer';
             const payTypeText = (accountsVerificationModal && (accountsVerificationModal.paymentType || accountsVerificationModal.c3)) || 'Net 30 Days';
             const orderValue = parseFloat(accountsVerificationModal.grandTotal || 0);
 
-            const isVerified = hardCopy && softCopy && currentPayStatus;
-            const isPartialVerified = (hardCopy || softCopy) && !isVerified;
+            // Accounts Verification State & Derived Variables (NOT prefilled by default)
+            const currentPayDate = accVerif.paymentDate !== undefined 
+              ? accVerif.paymentDate 
+              : (isAlreadyCompleted ? (accountsVerificationModal.paymentDate || '') : '');
+            const currentTotalAmount = accVerif.totalAmount !== undefined 
+              ? accVerif.totalAmount 
+              : (isAlreadyCompleted ? (orderValue > 0 ? orderValue : '') : '');
+
+            const isVerified = Boolean(currentPayStatus && currentPayDate && currentTotalAmount !== '' && parseFloat(currentTotalAmount) > 0);
+            const isPartialVerified = Boolean(currentPayStatus || currentPayDate || (currentTotalAmount !== '' && parseFloat(currentTotalAmount) > 0)) && !isVerified;
 
             const payStatusConfig = {
               'Payment Received — 100%': { bg: '#DCFCE7', color: '#166534', label: '100% Received', icon: <CheckCircle style={{ width: '18px', height: '18px' }} /> },
@@ -10498,138 +10756,38 @@ export default function ProductionViewsEngine(props) {
             };
             const currentPayConfig = payStatusConfig[currentPayStatus] || payStatusConfig['Payment Received — 100%'];
 
-            // Soft Copy Modal & Camera Handlers
-            const openSoftCopyModal = () => {
-              setSoftCopyMode('upload');
-              setSelectedSoftCopyFile(null);
-              setCapturedPhotoUrl(null);
-              setCameraErrorMsg('');
-              setShowSoftCopyModal(true);
-            };
-
-            const closeSoftCopyModal = () => {
-              if (mediaStreamRef.current) {
-                mediaStreamRef.current.getTracks().forEach(track => track.stop());
-                mediaStreamRef.current = null;
-              }
-              setCameraActive(false);
-              setShowSoftCopyModal(false);
-            };
-
-            const startCamera = async () => {
-              setCameraErrorMsg('');
-              setCapturedPhotoUrl(null);
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                  video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                });
-                mediaStreamRef.current = stream;
-                setCameraActive(true);
-                setTimeout(() => {
-                  if (cameraVideoRef.current) {
-                    cameraVideoRef.current.srcObject = stream;
-                    cameraVideoRef.current.play().catch(() => { });
-                  }
-                }, 100);
-              } catch (err) {
-                setCameraErrorMsg('Camera access is unavailable or denied. Please upload an image/document file instead.');
-                setCameraActive(false);
-              }
-            };
-
-            const stopCamera = () => {
-              if (mediaStreamRef.current) {
-                mediaStreamRef.current.getTracks().forEach(track => track.stop());
-                mediaStreamRef.current = null;
-              }
-              setCameraActive(false);
-            };
-
-            const capturePhoto = () => {
-              if (cameraVideoRef.current && cameraCanvasRef.current) {
-                const video = cameraVideoRef.current;
-                const canvas = cameraCanvasRef.current;
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const photoData = canvas.toDataURL('image/jpeg', 0.85);
-                setCapturedPhotoUrl(photoData);
-                stopCamera();
-              }
-            };
-
-            const handleFileUpload = (e) => {
-              const file = e.target.files && e.target.files[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (uploadEvent) => {
-                  setSelectedSoftCopyFile({
-                    name: file.name,
-                    size: `${(file.size / 1024).toFixed(1)} KB`,
-                    type: file.type,
-                    dataUrl: uploadEvent.target.result
-                  });
-                };
-                reader.readAsDataURL(file);
-              }
-            };
-
-            const confirmSoftCopyAttachment = () => {
-              const attachmentName = capturedPhotoUrl
-                ? `Live_Camera_Capture_${Date.now().toString().slice(-4)}.jpg`
-                : selectedSoftCopyFile
-                  ? selectedSoftCopyFile.name
-                  : `BOM_Scanned_Copy_${bomCodeText}.pdf`;
-
-              const attachmentData = capturedPhotoUrl || (selectedSoftCopyFile && selectedSoftCopyFile.dataUrl) || null;
-
-              setAccountsVerificationModal(prev => prev ? ({
-                ...prev,
-                accountsVerification: {
-                  ...(prev.accountsVerification || {}),
-                  softCopyReceived: true,
-                  softCopyDoc: {
-                    name: attachmentName,
-                    dataUrl: attachmentData,
-                    capturedVia: capturedPhotoUrl ? 'Camera' : 'File Upload',
-                    verifiedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                  }
-                }
-              }) : null);
-
-              closeSoftCopyModal();
-            };
-
             const completeVerification = () => {
-              if (!softCopy) {
-                const proceedWithout = window.confirm('Soft copy is not yet attached. Would you like to take a live camera photo / upload a soft copy document now? Click OK to upload/capture, or Cancel to proceed anyway.');
-                if (proceedWithout) {
-                  openSoftCopyModal();
-                  return;
-                }
+              if (!currentPayDate) {
+                alert('⚠️ Please select the Payment Date before completing accounts verification.');
+                return;
+              }
+              if (currentTotalAmount === '' || isNaN(parseFloat(currentTotalAmount)) || parseFloat(currentTotalAmount) <= 0) {
+                alert('⚠️ Please enter a valid Total Amount (₹) before completing accounts verification.');
+                return;
               }
 
               const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
               const verifiedBOM = accountsVerificationModal;
-              const softDocToSave = verifiedBOM.accountsVerification?.softCopyDoc || null;
               const newInvNo = verifiedBOM.invoiceNo || `INV-2026-${targetCode ? targetCode.replace(/[^0-9]/g, '') : Math.floor(100 + Math.random() * 900)}`;
 
               setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                 ...b,
                 invoiceNo: newInvNo,
+                grandTotal: parseFloat(currentTotalAmount) || 0,
+                paymentDate: currentPayDate,
                 accountsVerification: {
+                  ...(b.accountsVerification || {}),
                   paymentStatus: currentPayStatus,
-                  hardCopyReceived: hardCopy,
-                  softCopyReceived: softCopy,
+                  paymentDate: currentPayDate,
+                  totalAmount: parseFloat(currentTotalAmount) || 0,
+                  hardCopyReceived: true,
                   verified: true,
                   verifiedBy: b.accountsVerification?.verifiedBy || 'Accounts Executive (Venkatesh)',
                   verifiedByRole: 'Accounts Team Lead',
-                  verifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' }),
-                  softCopyDoc: softDocToSave
+                  verifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' })
                 },
-                proofDoc: softDocToSave?.name || b.payments?.proofDoc || b.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
-                proofDocData: softDocToSave?.dataUrl || b.payments?.proofDocData || b.paymentProofDoc?.dataUrl || null,
+                proofDoc: b.payments?.proofDoc || b.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
+                proofDocData: b.payments?.proofDocData || b.paymentProofDoc?.dataUrl || null,
                 status: 'Accounts Verified & Passed to Invoice'
               } : b));
 
@@ -10656,9 +10814,9 @@ export default function ProductionViewsEngine(props) {
                 poNo: targetCode,
                 bomCode: targetCode,
                 grnNo: 'GRN-VERIFIED',
-                invAmt: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                poVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                grnVal: `₹ ${orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                invAmt: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                poVal: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                grnVal: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                 diff: '0.00', match: 'Matched',
                 pay: 'Ready for Payment',
                 status: 'Ready for Payment',
@@ -10672,14 +10830,14 @@ export default function ProductionViewsEngine(props) {
                 sameAsBilling: verifiedBOM.sameAsBilling,
                 accountsVerification: {
                   paymentStatus: currentPayStatus,
+                  paymentDate: currentPayDate,
+                  totalAmount: currentTotalAmount,
                   hardCopyReceived: hardCopy,
-                  softCopyReceived: softCopy,
-                  verified: true,
-                  softCopyDoc: softDocToSave
+                  verified: true
                 },
-                proofDoc: softDocToSave?.name || verifiedBOM.payments?.proofDoc || verifiedBOM.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
-                proofDocData: softDocToSave?.dataUrl || verifiedBOM.payments?.proofDocData || verifiedBOM.paymentProofDoc?.dataUrl || null,
-                paymentProofDoc: verifiedBOM.paymentProofDoc || softDocToSave || null
+                proofDoc: verifiedBOM.payments?.proofDoc || verifiedBOM.paymentProofDoc?.name || 'Payment_Proof_Receipt.pdf',
+                proofDocData: verifiedBOM.payments?.proofDocData || verifiedBOM.paymentProofDoc?.dataUrl || null,
+                paymentProofDoc: verifiedBOM.paymentProofDoc || null
               };
 
               setInvoiceList(prev => {
@@ -10713,20 +10871,6 @@ export default function ProductionViewsEngine(props) {
                   boxShadow: isVerified ? '0 8px 24px rgba(6,78,59,0.35)' : isPartialVerified ? '0 8px 24px rgba(120,53,15,0.35)' : '0 8px 24px rgba(30,58,138,0.35)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <button
-                      onClick={() => setAccountsVerificationModal(null)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
-                        borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: '700',
-                        color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
-                    >
-                      <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back
-                    </button>
-
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.2px' }}>
@@ -10738,15 +10882,10 @@ export default function ProductionViewsEngine(props) {
                         }}>
                           {bomCodeText}
                         </span>
-                        <span style={{
-                          backgroundColor: isAlreadyCompleted ? '#DCFCE7' : isVerified ? '#DCFCE7' : isPartialVerified ? '#FEF3C7' : '#DBEAFE',
-                          color: isAlreadyCompleted ? '#166534' : isVerified ? '#166534' : isPartialVerified ? '#92400E' : '#1E40AF',
-                          padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }}>
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: (isAlreadyCompleted || isVerified) ? '#22C55E' : isPartialVerified ? '#F97316' : '#60A5FA' }}></span>
-                          {isAlreadyCompleted ? 'VERIFICATION COMPLETED & INVOICED' : isVerified ? 'FULLY VERIFIED' : isPartialVerified ? 'PARTIALLY VERIFIED' : 'PENDING VERIFICATION'}
-                        </span>
+                        <StatusBadge
+                          status={(isAlreadyCompleted || isVerified) ? 'ACCOUNTS VERIFIED' : isPartialVerified ? 'PARTIALLY VERIFIED' : 'PENDING VERIFICATION'}
+                          size="sm"
+                        />
                       </div>
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{custNameText}</strong></span>
@@ -10788,8 +10927,8 @@ export default function ProductionViewsEngine(props) {
                   )}
                 </div>
 
-                {/* ─── 4 STAT CARDS ─── */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                {/* ─── 3 STAT CARDS (Payment Type, Total Amount, Payment Date) ─── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                   {/* Payment Status Card */}
                   <div style={{
                     backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
@@ -10810,7 +10949,7 @@ export default function ProductionViewsEngine(props) {
                     </div>
                   </div>
 
-                  {/* Order Value Card */}
+                  {/* Total Amount Card */}
                   <div style={{
                     backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
                     padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
@@ -10825,96 +10964,140 @@ export default function ProductionViewsEngine(props) {
                       <IndianRupee style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Value</div>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Amount</div>
                       <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2 }}>
-                        ₹ {orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {currentTotalAmount !== '' && parseFloat(currentTotalAmount) > 0 ? `₹ ${parseFloat(currentTotalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Hard Copy Status Card */}
+                  {/* Payment Date Card */}
                   <div style={{
-                    backgroundColor: hardCopy ? '#F0FDF4' : '#FFFFFF', borderRadius: '14px', border: `1px solid ${hardCopy ? '#BBF7D0' : '#E2E8F0'}`,
+                    backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0',
                     padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                     display: 'flex', alignItems: 'center', gap: '14px'
                   }}>
                     <div style={{
                       width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                      background: hardCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
+                      background: 'linear-gradient(135deg, #0E7490, #06B6D4)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: hardCopy ? '0 4px 10px rgba(22,101,52,0.25)' : 'none'
+                      boxShadow: '0 4px 10px rgba(14,116,144,0.25)'
                     }}>
-                      <FileText style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                      <Calendar style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hard Copy</div>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: hardCopy ? '#166534' : '#64748B', lineHeight: 1.3 }}>
-                        {hardCopy ? 'Received' : 'Pending'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Soft Copy Status Card */}
-                  <div style={{
-                    backgroundColor: softCopy ? '#F0FDF4' : '#FFFFFF', borderRadius: '14px',
-                    border: `1px solid ${softCopy ? '#BBF7D0' : '#E2E8F0'}`,
-                    padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    display: 'flex', alignItems: 'center', gap: '14px'
-                  }}>
-                    <div style={{
-                      width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                      background: softCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: softCopy ? '0 4px 10px rgba(22,101,52,0.25)' : 'none'
-                    }}>
-                      <Smartphone style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Soft Copy</div>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: softCopy ? '#166534' : '#64748B', lineHeight: 1.3 }}>
-                        {softCopy ? 'Received' : 'Pending'}
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Date</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A', lineHeight: 1.3 }}>
+                        {(() => {
+                          if (!currentPayDate) return '—';
+                          try {
+                            const d = new Date(currentPayDate);
+                            return !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : currentPayDate;
+                          } catch (e) {
+                            return currentPayDate;
+                          }
+                        })()}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* ─── TWO COLUMN LAYOUT: PAYMENT VERIFICATION + DOCUMENT VERIFICATION ─── */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-
-                  {/* SECTION 1: PAYMENT VERIFICATION */}
+                {/* ─── SECTION 1: PAYMENT DETAILS & VERIFICATION ─── */}
+                <div style={{
+                  backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden'
+                }}>
+                  {/* Card Header */}
                   <div style={{
-                    backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden'
+                    padding: '16px 22px', borderBottom: '2px solid #F1F5F9',
+                    background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
+                    display: 'flex', alignItems: 'center', gap: '10px'
                   }}>
-                    {/* Card Header */}
                     <div style={{
-                      padding: '16px 22px', borderBottom: '2px solid #F1F5F9',
-                      background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
-                      display: 'flex', alignItems: 'center', gap: '10px'
+                      width: '32px', height: '32px', borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
                     }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
-                      }}>
-                        <Receipt style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />
-                      </div>
+                      <Receipt style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Payment Details & Verification</h3>
+                      <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Confirm & record customer payment receipt date, total amount, and terms</p>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Payment Date and Total Amount Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Payment Verification</h3>
-                        <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Confirm & record customer payment receipt</p>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                          Payment Date <span style={{ color: '#EF4444' }}>*</span> {isAlreadyCompleted && <span style={{ fontSize: '10px', color: '#166534', fontWeight: '700' }}>(Verified)</span>}
+                        </label>
+                        <input
+                          type="date"
+                          disabled={isAlreadyCompleted}
+                          value={currentPayDate ? currentPayDate.slice(0, 10) : ''}
+                          onChange={(e) => {
+                            if (isAlreadyCompleted) return;
+                            const val = e.target.value;
+                            setAccountsVerificationModal(prev => prev ? ({
+                              ...prev,
+                              paymentDate: val,
+                              accountsVerification: { ...(prev.accountsVerification || {}), paymentDate: val }
+                            }) : null);
+                          }}
+                          style={{
+                            width: '100%', height: '42px', borderRadius: '10px',
+                            border: '1px solid #CBD5E1', padding: '0 12px',
+                            fontSize: '13px', fontWeight: '600', color: '#0F172A',
+                            outline: 'none', backgroundColor: isAlreadyCompleted ? '#F1F5F9' : '#FFFFFF',
+                            cursor: isAlreadyCompleted ? 'not-allowed' : 'pointer',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                          Total Amount (₹) <span style={{ color: '#EF4444' }}>*</span> {isAlreadyCompleted && <span style={{ fontSize: '10px', color: '#166534', fontWeight: '700' }}>(Verified)</span>}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g. 52000.00"
+                          disabled={isAlreadyCompleted}
+                          value={currentTotalAmount}
+                          onChange={(e) => {
+                            if (isAlreadyCompleted) return;
+                            const val = e.target.value;
+                            setAccountsVerificationModal(prev => prev ? ({
+                              ...prev,
+                              grandTotal: parseFloat(val) || 0,
+                              accountsVerification: { ...(prev.accountsVerification || {}), totalAmount: val }
+                            }) : null);
+                          }}
+                          style={{
+                            width: '100%', height: '42px', borderRadius: '10px',
+                            border: '1px solid #CBD5E1', padding: '0 12px',
+                            fontSize: '13px', fontWeight: '700', color: '#0F172A',
+                            outline: 'none', backgroundColor: isAlreadyCompleted ? '#F1F5F9' : '#FFFFFF',
+                            cursor: isAlreadyCompleted ? 'not-allowed' : 'text',
+                            boxSizing: 'border-box'
+                          }}
+                        />
                       </div>
                     </div>
 
-                    <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {/* Payment status dropdown */}
+                    {/* Payment status dropdown */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'center' }}>
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '8px' }}>
                           Customer Payment Status {isAlreadyCompleted && <span style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>(Verified • Read Only)</span>}
                         </label>
                         <select
                           disabled={isAlreadyCompleted}
-                          value={currentPayStatus}
+                          value={currentPayStatus || 'Payment Received — 100%'}
                           onChange={(e) => {
                             if (isAlreadyCompleted) return;
                             const val = e.target.value;
@@ -10938,309 +11121,19 @@ export default function ProductionViewsEngine(props) {
                         </select>
                       </div>
 
-                      {/* Current payment status badge */}
-                      <div style={{
-                        padding: '14px 18px', borderRadius: '12px',
-                        backgroundColor: currentPayConfig.bg,
-                        border: `1px solid ${currentPayConfig.color}30`,
-                        display: 'flex', alignItems: 'center', gap: '12px'
-                      }}>
-                        <div style={{
-                          width: '36px', height: '36px', borderRadius: '10px',
-                          backgroundColor: currentPayConfig.color,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#FFFFFF', flexShrink: 0
-                        }}>
-                          {currentPayConfig.icon}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: currentPayConfig.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Current Status
-                          </div>
-                          <div style={{ fontSize: '14px', fontWeight: '800', color: currentPayConfig.color }}>
-                            {currentPayConfig.label}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Proof Document (Viewable) */}
-                      <div
-                        onClick={() => setViewingProofDocModal(accountsVerificationModal)}
-                        style={{
-                          padding: '14px 18px', borderRadius: '12px',
-                          backgroundColor: '#F8FAFC', border: '1.5px solid #CBD5E1',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          gap: '12px', cursor: 'pointer', transition: 'all 0.15s ease',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#2563EB';
-                          e.currentTarget.style.backgroundColor = '#EFF6FF';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#CBD5E1';
-                          e.currentTarget.style.backgroundColor = '#F8FAFC';
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                          <div style={{
-                            width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0,
-                            backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                          }}>
-                            <FileText style={{ width: '18px', height: '18px', color: '#2563EB' }} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Recorded Proof Document
-                            </div>
-                            <div style={{
-                              fontSize: '13px', fontWeight: '800', color: '#2563EB', marginTop: '2px',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                            }}>
-                              {(accountsVerificationModal.payments && accountsVerificationModal.payments.proofDoc) || 'Uploaded_Payment_Receipt.pdf'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '5px',
-                          padding: '5px 12px', borderRadius: '8px',
-                          backgroundColor: '#2563EB', color: '#FFFFFF',
-                          fontSize: '11px', fontWeight: '800', flexShrink: 0,
-                          boxShadow: '0 2px 4px rgba(37,99,235,0.25)'
-                        }}>
-                          <Eye style={{ width: '13px', height: '13px' }} />
-                          View Proof
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SECTION 2: BOM DOCUMENT COPY VERIFICATION */}
-                  <div style={{
-                    backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden'
-                  }}>
-                    {/* Card Header */}
-                    <div style={{
-                      padding: '16px 22px', borderBottom: '2px solid #F1F5F9',
-                      background: 'linear-gradient(135deg, #FAFBFC 0%, #F8FAFC 100%)',
-                      display: 'flex', alignItems: 'center', gap: '10px'
-                    }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #B45309, #D97706)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 6px rgba(180,83,9,0.25)'
-                      }}>
-                        <FileText style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />
-                      </div>
+                      {/* Current payment status badge matching standard StatusBadge design */}
                       <div>
-                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>BOM Document Copy Verification</h3>
-                        <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Confirm physical & digital copies received from Dispatch</p>
-                      </div>
-                    </div>
-
-                    <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {/* Hard Copy Card */}
-                      <div
-                        onClick={() => {
-                          if (isAlreadyCompleted) return;
-                          setAccountsVerificationModal(prev => prev ? ({
-                            ...prev,
-                            accountsVerification: { ...(prev.accountsVerification || {}), hardCopyReceived: !hardCopy }
-                          }) : null);
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '16px',
-                          padding: '18px 20px', borderRadius: '14px',
-                          border: hardCopy ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
-                          backgroundColor: hardCopy ? '#F0FDF4' : '#FAFBFC',
-                          cursor: isAlreadyCompleted ? 'default' : 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        {/* Custom checkbox */}
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '8px' }}>
+                          Current Status
+                        </label>
                         <div style={{
-                          width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0,
-                          backgroundColor: hardCopy ? '#166534' : '#FFFFFF',
-                          border: hardCopy ? '2px solid #166534' : '2px solid #CBD5E1',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: hardCopy ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
+                          height: '44px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          boxSizing: 'border-box'
                         }}>
-                          {hardCopy && <CheckCircle style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />}
+                          <StatusBadge status={currentPayConfig.label} size="md" />
                         </div>
-
-                        {/* Icon */}
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
-                          background: hardCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: hardCopy ? '0 3px 8px rgba(22,101,52,0.3)' : 'none'
-                        }}>
-                          <FileText style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
-                        </div>
-
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '14px', fontWeight: '800', color: hardCopy ? '#166534' : '#1E293B' }}>
-                            Hard Copy Received
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                            {isAlreadyCompleted ? 'Verified physical paper copy delivered by Dispatch' : 'Physical paper BOM delivered by Dispatch Team'}
-                          </div>
-                        </div>
-
-                        <span style={{
-                          padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
-                          backgroundColor: hardCopy ? '#DCFCE7' : '#F1F5F9',
-                          color: hardCopy ? '#166534' : '#94A3B8',
-                          border: `1px solid ${hardCopy ? '#BBF7D0' : '#E2E8F0'}`
-                        }}>
-                          {hardCopy ? 'Verified' : 'Pending'}
-                        </span>
-                      </div>
-
-                      {/* Soft Copy Card */}
-                      <div
-                        onClick={() => {
-                          if (isAlreadyCompleted) return;
-                          openSoftCopyModal();
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '16px',
-                          padding: '18px 20px', borderRadius: '14px',
-                          border: softCopy ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
-                          backgroundColor: softCopy ? '#F0FDF4' : '#FAFBFC',
-                          cursor: isAlreadyCompleted ? 'default' : 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <div style={{
-                          width: '24px', height: '24px', borderRadius: '7px', flexShrink: 0,
-                          backgroundColor: softCopy ? '#166534' : '#FFFFFF',
-                          border: softCopy ? '2px solid #166534' : '2px solid #CBD5E1',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: softCopy ? '0 2px 6px rgba(22,101,52,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'
-                        }}>
-                          {softCopy && <CheckCircle style={{ width: '16px', height: '16px', color: '#FFFFFF' }} />}
-                        </div>
-
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
-                          background: softCopy ? 'linear-gradient(135deg, #166534, #16A34A)' : 'linear-gradient(135deg, #94A3B8, #CBD5E1)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: softCopy ? '0 3px 8px rgba(22,101,52,0.3)' : 'none'
-                        }}>
-                          <Camera style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
-                        </div>
-
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: softCopy ? '#166534' : '#1E293B' }}>
-                              Soft Copy Received
-                            </span>
-                            {softCopy && (
-                              <span style={{
-                                fontSize: '11px', fontWeight: '700', color: '#166534',
-                                backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '6px',
-                                border: '1px solid #BBF7D0'
-                              }}>
-                                {(softCopyDoc && softCopyDoc.name) || 'Digital Copy Attached'}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                            {isAlreadyCompleted
-                              ? `Verified soft copy attached via ${softCopyDoc?.capturedVia || 'Camera / Upload'}`
-                              : softCopy
-                                ? `Attached via ${softCopyDoc?.capturedVia || 'Camera / Upload'} · Click to replace`
-                                : 'Click to capture live photo with camera or upload soft copy document'}
-                          </div>
-                        </div>
-
-                        <span style={{
-                          padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
-                          backgroundColor: softCopy ? '#DCFCE7' : '#EFF6FF',
-                          color: softCopy ? '#166534' : '#2563EB',
-                          border: `1px solid ${softCopy ? '#BBF7D0' : '#BFDBFE'}`
-                        }}>
-                          {isAlreadyCompleted ? 'Verified' : softCopy ? 'Attached' : 'Upload / Snap Photo'}
-                        </span>
-                      </div>
-
-                      {/* DISPATCH PACKED ITEMS MEDIA VERIFICATION PANEL */}
-                      {(() => {
-                        const packMedia = accountsVerificationModal.dispatchPackingMedia || {};
-                        const packPhotos = packMedia.photos || [];
-                        const packVideos = packMedia.videos || [];
-                        const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
-
-                        return (
-                          <div style={{
-                            padding: '14px 16px', borderRadius: '12px',
-                            backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0',
-                            display: 'flex', flexDirection: 'column', gap: '10px'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Camera size={16} style={{ color: '#0E7490' }} />
-                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
-                                  Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '11px', color: '#64748B' }}>
-                                Captured by Dispatch Team
-                              </span>
-                            </div>
-
-                            {hasMedia ? (
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
-                                {packPhotos.map((ph, pIdx) => (
-                                  <div
-                                    key={pIdx}
-                                    onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name })}
-                                    style={{ height: '70px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', position: 'relative' }}
-                                  >
-                                    <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <span style={{ position: 'absolute', bottom: '2px', left: '4px', fontSize: '9px', color: 'white', backgroundColor: 'rgba(0,0,0,0.6)', padding: '1px 4px', borderRadius: '4px' }}>Photo</span>
-                                  </div>
-                                ))}
-                                {packVideos.map((vd, vIdx) => (
-                                  <div
-                                    key={vIdx}
-                                    onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name })}
-                                    style={{ height: '70px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}
-                                  >
-                                    <Video size={18} style={{ color: '#38BDF8' }} />
-                                    <span style={{ fontSize: '9px' }}>Watch Video</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>
-                                No packed item media attached yet by Dispatch Team.
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Overall status footer */}
-                      <div style={{
-                        marginTop: '4px', padding: '12px 16px', borderRadius: '10px',
-                        backgroundColor: (hardCopy && softCopy) ? '#DCFCE7' : '#FFF7ED',
-                        border: `1px solid ${(hardCopy && softCopy) ? '#BBF7D0' : '#FED7AA'}`,
-                        fontSize: '12px', fontWeight: '700',
-                        color: (hardCopy && softCopy) ? '#166534' : '#C2410C',
-                        display: 'flex', alignItems: 'center', gap: '8px'
-                      }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: (hardCopy && softCopy) ? '#22C55E' : '#F97316', flexShrink: 0 }}></span>
-                        {hardCopy && softCopy
-                          ? 'Both document copies received and verified'
-                          : hardCopy ? 'Hard copy received · Soft copy still pending'
-                            : softCopy ? 'Soft copy received · Hard copy still pending'
-                              : 'Both document copies are pending from Dispatch Team'}
                       </div>
                     </div>
                   </div>
@@ -11296,28 +11189,28 @@ export default function ProductionViewsEngine(props) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
                             width: '36px', height: '36px', borderRadius: '10px',
-                            background: 'linear-gradient(135deg, #0F172A, #334155)',
+                            background: 'linear-gradient(135deg, #1E40AF, #3B82F6)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 6px rgba(15,23,42,0.25)'
+                            boxShadow: '0 2px 8px rgba(30,64,175,0.25)'
                           }}>
-                            <FileCheck style={{ width: '18px', height: '18px', color: '#FFFFFF' }} />
+                            <FileText style={{ width: '18px', height: '18px', color: '#FFFFFF' }} />
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                                BOM Hard Copy Document Inspection
+                                BOM Document & Items Inspection
                               </h3>
                               <span style={{
                                 padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '800',
-                                backgroundColor: hardCopy ? '#DCFCE7' : '#FEF3C7',
-                                color: hardCopy ? '#166534' : '#92400E',
-                                border: `1px solid ${hardCopy ? '#BBF7D0' : '#FDE68A'}`
+                                backgroundColor: '#DCFCE7',
+                                color: '#166534',
+                                border: '1px solid #BBF7D0'
                               }}>
-                                {hardCopy ? 'Hard Copy Delivered' : 'Awaiting Physical Paper'}
+                                Official Order Record
                               </span>
                             </div>
                             <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
-                              Verify items, quantities, and rates against the physical paper BOM delivered by Dispatch.
+                              Verify items, quantities, and rates against the finalized BOM and dispatch packing list.
                             </p>
                           </div>
                         </div>
@@ -11624,117 +11517,9 @@ export default function ProductionViewsEngine(props) {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                   }}>
                     <span style={{ fontSize: '13px', color: '#64748B' }}>
-                      Click any document card to toggle verification status. Or reissue to dispatch for physical re-verification.
+                      Confirm payment date, total amount, and customer payment status to complete accounts clearance.
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targetCode = accountsVerificationModal.bomCode || accountsVerificationModal.code;
-                          const reissueTime = new Date().toISOString();
-
-                          setBomStore(prev => {
-                            const existingBom = prev.find(b => b.bomCode === targetCode || b.code === targetCode);
-                            const currentCount = existingBom?.reissueCount || 0;
-
-                            // If reissued 2nd time (currentCount >= 1), cancel & generate a new sequential BOM code
-                            if (currentCount >= 1) {
-                              const numMatch = targetCode.match(/\d+/);
-                              const baseNum = numMatch ? parseInt(numMatch[0], 10) : 550;
-                              const newBomCode = `BOM-${baseNum + 1}`;
-
-                              let reissuedItem = null;
-                              const remaining = prev.filter(b => {
-                                if (b.bomCode === targetCode || b.code === targetCode) {
-                                  reissuedItem = {
-                                    ...b,
-                                    status: 'Cancelled & Reissued (New BOM Generated)',
-                                    originalBomCode: targetCode,
-                                    bomCode: newBomCode,
-                                    code: newBomCode,
-                                    createdAt: new Date().toISOString(),
-                                    isAccountsDone: false,
-                                    reissuedByAccounts: true,
-                                    reissuedAt: reissueTime,
-                                    reissueCount: currentCount + 1,
-                                    accountsVerification: {
-                                      verified: false,
-                                      paymentStatus: null,
-                                      hardCopyReceived: false,
-                                      softCopyReceived: false,
-                                      reissueRemarks: `Cancelled (2nd Reissue). Upgraded to new BOM Code (${newBomCode}) and returned to Dispatch.`
-                                    },
-                                    dispatchPacking: (b.items || []).map(it => ({
-                                      name: it.name,
-                                      bomQty: it.qty || 1,
-                                      packed: false
-                                    }))
-                                  };
-                                  return false;
-                                }
-                                return true;
-                              });
-
-                              return reissuedItem ? [reissuedItem, ...remaining] : prev;
-                            }
-
-                            // 1st Reissue: prefix with RE- if not already prefixed
-                            const reCode = targetCode.startsWith('RE-') ? targetCode : `RE-${targetCode}`;
-                            let reissuedItem1 = null;
-                            const remaining1 = prev.filter(b => {
-                              if (b.bomCode === targetCode || b.code === targetCode) {
-                                reissuedItem1 = {
-                                  ...b,
-                                  status: 'Cancelled & Reissued to Dispatch',
-                                  bomCode: reCode,
-                                  code: reCode,
-                                  createdAt: new Date().toISOString(),
-                                  isAccountsDone: false,
-                                  reissuedByAccounts: true,
-                                  reissuedAt: reissueTime,
-                                  reissueCount: currentCount + 1,
-                                  accountsVerification: {
-                                    verified: false,
-                                    paymentStatus: null,
-                                    hardCopyReceived: false,
-                                    softCopyReceived: false,
-                                    reissueRemarks: 'Cancelled from accounts and reissued to dispatch for re-verification and re-packing.'
-                                  },
-                                  dispatchPacking: (b.items || []).map(it => ({
-                                    name: it.name,
-                                    bomQty: it.qty || 1,
-                                    packed: false
-                                  }))
-                                };
-                                return false;
-                              }
-                              return true;
-                            });
-                            return reissuedItem1 ? [reissuedItem1, ...remaining1] : prev;
-                          });
-
-                          setAccountsVerificationModal(null);
-                          alert(`🔄 BOM (${targetCode}) marked as Cancelled & Reissued back to Dispatch team!`);
-                        }}
-                        style={{
-                          border: '1px solid #FCA5A5',
-                          backgroundColor: '#FEF2F2',
-                          color: '#DC2626',
-                          height: '42px',
-                          padding: '0 20px',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <RotateCcw style={{ width: '15px', height: '15px' }} />
-                        Reissue to Dispatch
-                      </button>
-
                       <button
                         onClick={completeVerification}
                         style={{
@@ -11749,349 +11534,6 @@ export default function ProductionViewsEngine(props) {
                         <CheckCircle style={{ width: '15px', height: '15px' }} />
                         Complete Verification & Generate Invoice
                       </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── SOFT COPY ATTACHMENT & LIVE CAMERA MODAL ─── */}
-                {showSoftCopyModal && (
-                  <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-                    backdropFilter: 'blur(5px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 10000,
-                    padding: '20px',
-                    fontFamily: "'DM Sans', sans-serif"
-                  }}>
-                    <div style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '20px',
-                      maxWidth: '620px',
-                      width: '100%',
-                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                      overflow: 'hidden',
-                      border: '1px solid #E2E8F0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      maxHeight: '90vh'
-                    }}>
-                      {/* Modal Header */}
-                      <div style={{
-                        padding: '20px 24px',
-                        borderBottom: '1px solid #F1F5F9',
-                        background: 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
-                        color: '#FFFFFF',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '38px', height: '38px', borderRadius: '10px',
-                            backgroundColor: 'rgba(255,255,255,0.2)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                          }}>
-                            <Camera style={{ width: '20px', height: '20px', color: '#FFFFFF' }} />
-                          </div>
-                          <div>
-                            <h2 style={{ fontSize: '17px', fontWeight: '900', margin: 0, color: '#FFFFFF' }}>
-                              Attach BOM Soft Copy Proof
-                            </h2>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '2px 0 0 0' }}>
-                              Upload a digital scan or capture live on-spot photo for {bomCodeText}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={closeSoftCopyModal}
-                          style={{
-                            background: 'rgba(255,255,255,0.15)', border: 'none',
-                            color: '#FFFFFF', width: '32px', height: '32px', borderRadius: '8px',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                          }}
-                        >
-                          <X style={{ width: '18px', height: '18px' }} />
-                        </button>
-                      </div>
-
-                      {/* Mode Switcher Tabs */}
-                      <div style={{ padding: '16px 24px 0 24px', backgroundColor: '#F8FAFC' }}>
-                        <div style={{
-                          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
-                          backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '12px'
-                        }}>
-                          <button
-                            onClick={() => {
-                              stopCamera();
-                              setSoftCopyMode('upload');
-                            }}
-                            style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                              padding: '10px', borderRadius: '9px', border: 'none',
-                              backgroundColor: softCopyMode === 'upload' ? '#FFFFFF' : 'transparent',
-                              color: softCopyMode === 'upload' ? '#1E40AF' : '#64748B',
-                              fontSize: '13px', fontWeight: softCopyMode === 'upload' ? '800' : '600',
-                              cursor: 'pointer',
-                              boxShadow: softCopyMode === 'upload' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            <UploadCloud style={{ width: '16px', height: '16px' }} />
-                            File Upload (PDF / Image)
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSoftCopyMode('camera');
-                              startCamera();
-                            }}
-                            style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                              padding: '10px', borderRadius: '9px', border: 'none',
-                              backgroundColor: softCopyMode === 'camera' ? '#FFFFFF' : 'transparent',
-                              color: softCopyMode === 'camera' ? '#166534' : '#64748B',
-                              fontSize: '13px', fontWeight: softCopyMode === 'camera' ? '800' : '600',
-                              cursor: 'pointer',
-                              boxShadow: softCopyMode === 'camera' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            <Camera style={{ width: '16px', height: '16px' }} />
-                            Live Camera Capture
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Modal Body */}
-                      <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
-                        {softCopyMode === 'upload' ? (
-                          /* ─── UPLOAD MODE ─── */
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <label style={{
-                              border: '2px dashed #CBD5E1', borderRadius: '14px', padding: '32px 20px',
-                              backgroundColor: '#FFFFFF', textAlign: 'center', cursor: 'pointer',
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
-                              transition: 'all 0.15s ease'
-                            }}>
-                              <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                onChange={handleFileUpload}
-                                style={{ display: 'none' }}
-                              />
-                              <div style={{
-                                width: '52px', height: '52px', borderRadius: '14px',
-                                backgroundColor: '#EFF6FF', color: '#2563EB',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                              }}>
-                                <UploadCloud style={{ width: '26px', height: '26px' }} />
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-                                  Click to browse or drop document / photo here
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-                                  Supports PDF, PNG, JPG, JPEG (Max: 10 MB)
-                                </div>
-                              </div>
-                            </label>
-
-                            {/* Selected File Card */}
-                            {selectedSoftCopyFile && (
-                              <div style={{
-                                backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '14px 18px',
-                                border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <div style={{
-                                    width: '36px', height: '36px', borderRadius: '8px',
-                                    backgroundColor: '#DCFCE7', color: '#166534',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                  }}>
-                                    <FileText style={{ width: '18px', height: '18px' }} />
-                                  </div>
-                                  <div>
-                                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
-                                      {selectedSoftCopyFile.name}
-                                    </div>
-                                    <div style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>
-                                      Ready to attach • {selectedSoftCopyFile.size}
-                                    </div>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => setSelectedSoftCopyFile(null)}
-                                  style={{
-                                    border: 'none', background: '#FEE2E2', color: '#DC2626',
-                                    width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                  }}
-                                >
-                                  <Trash2 style={{ width: '14px', height: '14px' }} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          /* ─── LIVE CAMERA MODE ─── */
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-                            <canvas ref={cameraCanvasRef} style={{ display: 'none' }} />
-
-                            {cameraErrorMsg ? (
-                              <div style={{
-                                backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px',
-                                padding: '16px', color: '#B91C1C', fontSize: '13px', textAlign: 'center', width: '100%'
-                              }}>
-                                <div style={{ fontWeight: '800', marginBottom: '4px' }}>Camera Permission Notice</div>
-                                {cameraErrorMsg}
-                                <div style={{ marginTop: '12px' }}>
-                                  <button
-                                    onClick={() => {
-                                      setSoftCopyMode('upload');
-                                    }}
-                                    style={{
-                                      border: 'none', backgroundColor: '#B91C1C', color: '#FFFFFF',
-                                      padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer'
-                                    }}
-                                  >
-                                    Switch to File Upload
-                                  </button>
-                                </div>
-                              </div>
-                            ) : capturedPhotoUrl ? (
-                              /* Photo Captured Preview */
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', width: '100%' }}>
-                                <div style={{
-                                  position: 'relative', width: '100%', maxHeight: '300px', borderRadius: '14px',
-                                  overflow: 'hidden', border: '2px solid #22C55E', backgroundColor: '#000000'
-                                }}>
-                                  <img
-                                    src={capturedPhotoUrl}
-                                    alt="Captured Soft Copy"
-                                    style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'contain', display: 'block' }}
-                                  />
-                                  <div style={{
-                                    position: 'absolute', top: '10px', left: '10px',
-                                    backgroundColor: 'rgba(22,101,52,0.9)', color: '#FFFFFF',
-                                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800'
-                                  }}>
-                                    Photo Captured Ready
-                                  </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                                  <button
-                                    onClick={startCamera}
-                                    style={{
-                                      flex: 1, height: '40px', borderRadius: '10px',
-                                      border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF',
-                                      color: '#475569', fontSize: '13px', fontWeight: '700',
-                                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                                    }}
-                                  >
-                                    <RefreshCw style={{ width: '14px', height: '14px' }} />
-                                    Retake Photo
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              /* Live Camera Stream View */
-                              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
-                                <div style={{
-                                  position: 'relative', width: '100%', minHeight: '260px', borderRadius: '14px',
-                                  overflow: 'hidden', backgroundColor: '#0F172A', border: '2px solid #3B82F6',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                  <video
-                                    ref={cameraVideoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted
-                                    style={{ width: '100%', height: '100%', maxHeight: '300px', objectFit: 'cover' }}
-                                  />
-                                  {!cameraActive && (
-                                    <div style={{ position: 'absolute', color: '#94A3B8', fontSize: '13px', fontWeight: '700' }}>
-                                      Initializing device camera...
-                                    </div>
-                                  )}
-                                  <div style={{
-                                    position: 'absolute', top: '10px', right: '10px',
-                                    backgroundColor: 'rgba(220,38,38,0.85)', color: '#FFFFFF',
-                                    padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800',
-                                    display: 'flex', alignItems: 'center', gap: '4px'
-                                  }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FFFFFF' }}></span>
-                                    LIVE CAMERA
-                                  </div>
-                                </div>
-
-                                <button
-                                  onClick={capturePhoto}
-                                  style={{
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #166534, #16A34A)',
-                                    color: '#FFFFFF', height: '44px', width: '100%',
-                                    borderRadius: '12px', fontSize: '14px', fontWeight: '800',
-                                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(22,101,52,0.3)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                  }}
-                                >
-                                  <Camera style={{ width: '18px', height: '18px' }} />
-                                  Snap Photo On The Spot
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Modal Footer */}
-                      <div style={{
-                        padding: '16px 24px',
-                        backgroundColor: '#FFFFFF',
-                        borderTop: '1px solid #E2E8F0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <button
-                          onClick={closeSoftCopyModal}
-                          style={{
-                            border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF',
-                            color: '#475569', height: '40px', padding: '0 20px',
-                            borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer'
-                          }}
-                        >
-                          Cancel
-                        </button>
-
-                        <button
-                          onClick={confirmSoftCopyAttachment}
-                          disabled={!selectedSoftCopyFile && !capturedPhotoUrl}
-                          style={{
-                            border: 'none',
-                            background: (selectedSoftCopyFile || capturedPhotoUrl)
-                              ? 'linear-gradient(135deg, #064E3B, #166534)'
-                              : '#CBD5E1',
-                            color: '#FFFFFF',
-                            height: '40px',
-                            padding: '0 24px',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            fontWeight: '800',
-                            cursor: (selectedSoftCopyFile || capturedPhotoUrl) ? 'pointer' : 'not-allowed',
-                            boxShadow: (selectedSoftCopyFile || capturedPhotoUrl) ? '0 4px 12px rgba(6,78,59,0.3)' : 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                        >
-                          <CheckCircle style={{ width: '16px', height: '16px' }} />
-                          Confirm & Attach Soft Copy Proof
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -14901,30 +14343,9 @@ export default function ProductionViewsEngine(props) {
                                   )}
                                 </td>
                               )}
-                              {pageConfig.headers.includes('Fulfillment Status') ? (
+                              {pageConfig.headers.includes('Status') && (
                                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                  <span style={{
-                                    backgroundColor: row.stBg,
-                                    color: row.stFg,
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '11px',
-                                    fontWeight: 'bold',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    border: row.stBorder
-                                  }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
-                                    {row.status}
-                                  </span>
-                                </td>
-                              ) : pageConfig.headers.includes('Status') && (
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                  <span style={{ backgroundColor: row.stBg, color: row.stFg, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', border: row.stBorder }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
-                                    {row.status}
-                                  </span>
+                                  <StatusBadge status={row.status} size="sm" />
                                 </td>
                               )}
                             </tr>
@@ -15491,9 +14912,7 @@ export default function ProductionViewsEngine(props) {
                           <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                             {quickPreviewRecord.customerName || quickPreviewRecord.companyName || quickPreviewRecord.c2 || quickPreviewRecord.name || 'Customer'}
                           </h3>
-                          <span style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '12px' }}>
-                            • {quickPreviewRecord.status || quickPreviewRecord.c4 || 'Active'}
-                          </span>
+                          <StatusBadge status={quickPreviewRecord.status || quickPreviewRecord.c4 || 'Active'} size="sm" />
                         </div>
                         <span style={{ fontSize: '12px', color: '#64748B' }}>
                           Ref Code: <strong style={{ color: '#0E7490' }}>{quickPreviewRecord.bomCode || quickPreviewRecord.code || quickPreviewRecord.id || '—'}</strong>
@@ -15624,6 +15043,67 @@ export default function ProductionViewsEngine(props) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Dispatch Packed Items Media Section in Quick Preview */}
+                    {(() => {
+                      const packMedia = quickPreviewRecord.dispatchPackingMedia || {};
+                      const packPhotos = packMedia.photos || [];
+                      const packVideos = packMedia.videos || [];
+                      const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
+
+                      if (!hasMedia && !quickPreviewRecord.status?.includes('Dispatch') && !quickPreviewRecord.status?.includes('Packed') && !quickPreviewRecord.dispatchPacking) {
+                        return null;
+                      }
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Camera size={16} style={{ color: '#0E7490' }} />
+                              <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                                Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
+                              </h4>
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>Captured by Dispatch</span>
+                          </div>
+
+                          {hasMedia ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                              {packPhotos.map((ph, pIdx) => (
+                                <div
+                                  key={pIdx}
+                                  onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name || `Photo ${pIdx + 1}` })}
+                                  style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', position: 'relative' }}
+                                >
+                                  <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '2px 6px', fontSize: '9px', fontWeight: '700', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>📷 Photo</span>
+                                    <span>›</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {packVideos.map((vd, vIdx) => (
+                                <div
+                                  key={vIdx}
+                                  onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name || `Video ${vIdx + 1}` })}
+                                  style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', position: 'relative' }}
+                                >
+                                  <Video size={20} style={{ color: '#38BDF8' }} />
+                                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '2px 6px', fontSize: '9px', fontWeight: '700', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>🎥 Video</span>
+                                    <span>›</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '10px', border: '1px dashed #E2E8F0' }}>
+                              No packing photos or videos attached yet for this order.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                   </div>
                 </div>

@@ -1,5 +1,388 @@
 [
   {
+    "id": "BOM-621",
+    "bomCode": "BOM-621",
+    "code": "BOM-621",
+    "date": "2026-09-08",
+    "customerName": "Tata Power Ltd",
+    "companyName": "Tata Power Ltd",
+    "mobile": "+91 98123 45678",
+    "email": "anish.s@tatapower.com",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "8",
+    "deliveryAddressObj": {
+      "address": "8",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": {
+      "name": "Screenshot 2026-09-08 at 3.37.31 PM.png",
+      "size": "0.42 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-08T11:21:39.357Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "A2B",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "ChatGPT Image Sep 8, 2026, 04_24_31 PM.png",
+      "size": "1.37 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-08T11:25:54.131Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Mohit JV",
+    "items": [
+      {
+        "name": "Universal Mid Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal End Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Locking Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "category": "SS304",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "category": "SS304",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mini Rail 100 mm",
+        "category": "Aluminum Mounting Rail",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 250,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "ChatGPT Image Sep 8, 2026, 04_24_31 PM.png",
+      "proofDocObj": {
+        "name": "ChatGPT Image Sep 8, 2026, 04_24_31 PM.png",
+        "size": "1.37 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-08T11:25:54.131Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 50,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Universal End Clamp",
+        "bomQty": 50,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Locking Clamp",
+        "bomQty": 50,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "bomQty": 50,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "bomQty": 50,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Mini Rail 100 mm",
+        "bomQty": 100,
+        "packed": true,
+        "code": "MR100N"
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": true,
+      "softCopyReceived": true,
+      "verified": true,
+      "verifiedBy": "Accounts Executive (Venkatesh)",
+      "verifiedByRole": "Accounts Team Lead",
+      "verifiedAt": "08 Sept 2026, 17:05",
+      "softCopyDoc": {
+        "name": "ChatGPT Image Sep 8, 2026, 04_24_31 PM.png",
+        "capturedVia": "File Upload",
+        "verifiedAt": "05:03 pm"
+      }
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 25000,
+    "gstAmount": 4500,
+    "cgstAmount": 2250,
+    "sgstAmount": 2250,
+    "grandTotal": 29500,
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-08T11:27:34.772Z",
+    "addressProofReuploadRequested": false,
+    "dispatchPackingMedia": null,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-621",
+    "proofDoc": "ChatGPT Image Sep 8, 2026, 04_24_31 PM.png",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-09-08T11:39:22.301Z",
+    "packedItemsDeducted": [
+      {
+        "code": "PRD-001",
+        "name": "Universal Mid Clamp",
+        "qty": 50,
+        "bomQty": 50,
+        "invQty": 50,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-002",
+        "name": "Universal End Clamp",
+        "qty": 50,
+        "bomQty": 50,
+        "invQty": 50,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-003",
+        "name": "Locking Clamp",
+        "qty": 50,
+        "bomQty": 50,
+        "invQty": 50,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-004",
+        "name": "SS304 M8 Square Nut",
+        "qty": 50,
+        "bomQty": 50,
+        "invQty": 50,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-005",
+        "name": "SS304 Allen Bolt M8*30",
+        "qty": 50,
+        "bomQty": 50,
+        "invQty": 50,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "MR100N",
+        "name": "Mini Rail 100 mm",
+        "qty": 100,
+        "bomQty": 100,
+        "invQty": 100,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      }
+    ]
+  },
+  {
+    "id": "BOM-620",
+    "bomCode": "BOM-620",
+    "code": "BOM-620",
+    "date": "2026-09-08",
+    "customerName": "Tata Power Ltd",
+    "companyName": "Tata Power Ltd",
+    "mobile": "+91 98123 45678",
+    "email": "anish.s@tatapower.com",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "Address, Chennai, tamil nadu - 600049",
+    "deliveryAddressObj": {
+      "address": "Address",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600049"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "polycab-solar-catalogue-2025.pdf",
+      "size": "1.95 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-08T09:35:18.550Z"
+    },
+    "transportMode": "Transport",
+    "transporterName": "A2B",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "polycab-solar--inverter-datasheet-india.pdf",
+      "size": "1.31 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-08T09:40:53.763Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "Done",
+    "status": "Awaiting Vehicle Loading & Dispatch",
+    "salesPerson": "Mohit JV",
+    "items": [
+      {
+        "name": "Mini Rail 100 mm",
+        "category": "Aluminum Mounting Rail",
+        "uom": "NOS",
+        "qty": 1000,
+        "rate": 249,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "polycab-solar--inverter-datasheet-india.pdf",
+      "proofDocObj": {
+        "name": "polycab-solar--inverter-datasheet-india.pdf",
+        "size": "1.31 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-08T09:40:53.763Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Mini Rail 100 mm",
+        "bomQty": 1000,
+        "packed": true,
+        "code": "MR100N"
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": true,
+      "softCopyReceived": true,
+      "verified": true,
+      "verifiedBy": "Accounts Executive (Venkatesh)",
+      "verifiedByRole": "Accounts Team Lead",
+      "verifiedAt": "08 Sept 2026, 15:32",
+      "softCopyDoc": {
+        "name": "Screenshot 2026-09-08 at 2.53.06 PM.png",
+        "capturedVia": "File Upload",
+        "verifiedAt": "03:31 pm"
+      }
+    },
+    "invoiceConfirmed": true,
+    "invoiceDeducted": false,
+    "subTotal": 249000,
+    "gstAmount": 44820,
+    "cgstAmount": 22410,
+    "sgstAmount": 22410,
+    "grandTotal": 293820,
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-08T09:55:11.843Z",
+    "addressProofReuploadRequested": false,
+    "dispatchPackingMedia": {
+      "photos": [
+        {
+          "id": "pack_photo_1788861584669_tpec",
+          "name": "Screenshot 2026-09-08 at 2.53.06 PM.png",
+          "size": "0.03 MB",
+          "uploadedAt": "03:29 pm"
+        }
+      ],
+      "videos": []
+    },
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "invoiceNo": "INV-2026-620",
+    "proofDoc": "Screenshot 2026-09-08 at 2.53.06 PM.png",
+    "stockDeducted": true,
+    "stockDeductionDate": "2026-09-08T10:03:20.555Z",
+    "packedItemsDeducted": [
+      {
+        "code": "MR100N",
+        "name": "Mini Rail 100 mm",
+        "qty": 1000,
+        "bomQty": 1000,
+        "invQty": 1000,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      }
+    ]
+  },
+  {
     "id": "BOM-619",
     "bomCode": "BOM-619",
     "code": "BOM-619",
@@ -44,7 +427,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Sent to Production",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Mini Rail 100 mm",
@@ -237,7 +620,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Awaiting Vehicle Loading & Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Aluminum Sheet",
@@ -348,7 +731,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Packed & Ready for Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -520,7 +903,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Packed & Ready for Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
@@ -697,7 +1080,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Sent to Production",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -870,7 +1253,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Requested Address Proof",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -1045,7 +1428,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -1218,7 +1601,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -1386,7 +1769,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -1559,7 +1942,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Awaiting Vehicle Loading & Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Mid Clamp 35 mm",
@@ -1670,7 +2053,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Awaiting Vehicle Loading & Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Mid Clamp 35 mm",
@@ -1781,7 +2164,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Awaiting Vehicle Loading & Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Mid Clamp 35 mm",
@@ -1892,7 +2275,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Packed & Ready for Dispatch",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -2069,7 +2452,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Sent to Production",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Heavy Column 120x60x30x3.0 (Length 4.0m)",
@@ -2237,7 +2620,7 @@
     "paymentUpdated": false,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -2400,7 +2783,7 @@
     "paymentUpdated": false,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -2558,7 +2941,7 @@
     "paymentUpdated": false,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",
@@ -2726,7 +3109,7 @@
     "paymentUpdated": true,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Mid Clamp 35 mm",
@@ -2805,7 +3188,7 @@
     "paymentUpdated": false,
     "remarks": "",
     "status": "Pending Confirmation",
-    "salesPerson": "Ravi Kumar (Sales Executive)",
+    "salesPerson": "Mohit JV",
     "items": [
       {
         "name": "Column 110x55x30x2.5 (Length 3.2m)",

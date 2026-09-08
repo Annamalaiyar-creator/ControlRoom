@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Check, Trash2, Eye, FileText, Search, AlertCircle, AlertTriangle, X,
   CheckCircle, Clock, Calendar, Edit3, RotateCcw, UploadCloud, ChevronDown, ChevronUp,
-  Truck, ShoppingCart, Upload, Printer, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare
+  Truck, ShoppingCart, Upload, Printer, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare,
+  Camera, Video
 } from 'lucide-react';
 import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS } from '../../vrmHdgProposalPresets';
@@ -234,7 +235,12 @@ export default function BomOrdersView(props) {
               }
             }
           });
-          const merged = Array.from(map.values());
+          const merged = Array.from(map.values()).map(item => {
+            if (item && item.salesPerson && (item.salesPerson.includes('Ravi') || item.salesPerson.includes('Saravanan'))) {
+              return { ...item, salesPerson: 'Mohit JV' };
+            }
+            return item;
+          });
           const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
           try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
           return sanitizedMerged;
@@ -275,6 +281,7 @@ export default function BomOrdersView(props) {
   const [paymentProofFile, setPaymentProofFile] = useState(null);
   const [paymentStageType, setPaymentStageType] = useState('100% Advance');
   const [quickPreviewRecord, setQuickPreviewRecord] = useState(null);
+  const [previewDocModal, setPreviewDocModal] = useState(null); // { title: string, doc: object }
   const [customAlert, setCustomAlert] = useState(null);
   const [bomActionMenuIdx, setBomActionMenuIdx] = useState(null);
 
@@ -288,7 +295,7 @@ export default function BomOrdersView(props) {
   const [newBomDeliveryPincode, setNewBomDeliveryPincode] = useState('');
   const [newBomPaymentType, setNewBomPaymentType] = useState('100% Paid');
   const [newBomCreditDays, setNewBomCreditDays] = useState(7);
-  const [sameAsBilling, setSameAsBilling] = useState(false);
+  const [sameAsBilling, setSameAsBilling] = useState(true);
   const [newBomDeliveryProofDoc, setNewBomDeliveryProofDoc] = useState(null);
   const [newBomPaymentProofDoc, setNewBomPaymentProofDoc] = useState(null);
   const [newBomRemarks, setNewBomRemarks] = useState('');
@@ -296,7 +303,7 @@ export default function BomOrdersView(props) {
   const [newBomTransporterName, setNewBomTransporterName] = useState('');
   const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
   const [newBomLrNo, setNewBomLrNo] = useState('');
-  const loggedInAccountName = (() => {
+  const getEffectiveSalesPerson = () => {
     const storedName = localStorage.getItem('controlroom_logged_user_name');
     if (storedName && storedName.trim() && storedName !== 'undefined' && storedName !== 'null') {
       return storedName.trim();
@@ -306,15 +313,15 @@ export default function BomOrdersView(props) {
       return storedUser.trim();
     }
     if (userRole === 'Sales Head') return 'Vijay';
-    if (userRole === 'Sales Executive') return 'Saravanan';
+    if (userRole === 'Sales Executive') return 'Mohit JV';
     if (userRole === 'Accounts Head') return 'Venkatesh';
     if (userRole === 'Accounts Executive') return 'Priya';
     if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
     if (userRole === 'Procurement Head') return 'ARUN BOOPATHI M';
     if (userRole === 'Production Head') return 'Senthil Kumar';
-    return 'Saravanan';
-  })();
-  const defaultSalesPersonName = loggedInAccountName;
+    return 'Mohit JV';
+  };
+  const defaultSalesPersonName = getEffectiveSalesPerson();
   const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
@@ -417,6 +424,7 @@ export default function BomOrdersView(props) {
 
   // Open Create BOM form handler
   const handleOpenCreateBom = () => {
+    setNewBomSalesPerson(getEffectiveSalesPerson());
     setNewBomProductName('');
     setBomMaterialsList([]);
     setNewBomPaymentProofDoc(null);
@@ -452,7 +460,7 @@ export default function BomOrdersView(props) {
               activeTab === 'BOM' ? 'Standard raw material consumption lists and component requirements' :
               activeTab === 'BOM / Routing' ? 'Multi-level BOM definitions, component ratios, and sequential routing processes' :
               'Create and manage customer order BOMs, product specifications, and payment terms',
-    actionText: '+ Create BOM',
+    actionText: 'Create BOM',
     searchPlaceholder: `Search ${activeTab} (BOM Code, Customer Name, Product)...`,
     tabs: [
       { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
@@ -495,7 +503,11 @@ export default function BomOrdersView(props) {
         code: b.bomCode || b.code || 'BOM-101',
         c2: b.date || new Date().toISOString().split('T')[0],
         c3: b.customerName || b.companyName || 'Customer Order',
-        salesPerson: (b.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
+        salesPerson: (() => {
+          const sp = (b.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
+          if (!sp || sp.includes('Ravi') || sp.includes('Saravanan')) return (defaultSalesPersonName || 'Mohit JV');
+          return sp;
+        })(),
         c4: b.paymentType || '100% Advance',
         c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
         status: isAddressRequested ? 'Address Proof Requested from Sales' : (b.status || 'Pending Sales Confirmation'),
@@ -531,23 +543,30 @@ export default function BomOrdersView(props) {
 
   // Calculate totals for Create BOM form
   const calculateBOMTotals = () => {
-    const sub = bomMaterialsList.reduce((acc, item) => {
+    const sub = (bomMaterialsList || []).reduce((acc, item) => {
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       return acc + (q * r);
     }, 0);
     const disc = 0;
-    const gst = bomMaterialsList.reduce((acc, item) => {
+    const gst = (bomMaterialsList || []).reduce((acc, item) => {
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       const rowTot = q * r;
-      const pct = parseFloat(String(item.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
+      const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
       return acc + (rowTot * (pct / 100));
     }, 0);
     const grand = sub - disc + gst;
     const cgst = gst / 2;
     const sgst = gst / 2;
-    return { sub, disc, gst, grand, cgst, sgst };
+    return {
+      sub: isNaN(sub) ? 0 : sub,
+      disc: isNaN(disc) ? 0 : disc,
+      gst: isNaN(gst) ? 0 : gst,
+      grand: isNaN(grand) ? 0 : grand,
+      cgst: isNaN(cgst) ? 0 : cgst,
+      sgst: isNaN(sgst) ? 0 : sgst
+    };
   };
 
   const totals = calculateBOMTotals();
@@ -557,11 +576,11 @@ export default function BomOrdersView(props) {
   // ==========================================
   if (showBOMForm) {
     const handleAddMaterialRow = () => {
-      setBomMaterialsList(prev => [...prev, { name: '', category: '', uom: 'NOS', qty: '1', wastage: '0%', rate: '', gstRate: newBomGstRate || '18%' }]);
+      setBomMaterialsList(prev => [...(prev || []), { name: '', category: '', uom: 'NOS', qty: '1', wastage: '0%', rate: '', gstRate: '18%' }]);
     };
 
     const handleRemoveMaterialRow = (idx) => {
-      setBomMaterialsList(prev => prev.filter((_, i) => i !== idx));
+      setBomMaterialsList(prev => (prev || []).filter((_, i) => i !== idx));
     };
 
     return (
@@ -667,26 +686,30 @@ export default function BomOrdersView(props) {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#0E7490', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748B', marginBottom: '6px' }}>
                 Sales Person / Creator <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
                 type="text"
-                list="bom-salesperson-options"
-                placeholder="Sales Person Name..."
-                value={newBomSalesPerson}
-                onChange={(e) => setNewBomSalesPerson(e.target.value)}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1.5px solid #0E7490', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', backgroundColor: '#F0FDFA', boxSizing: 'border-box', outline: 'none' }}
+                readOnly
+                disabled
+                value={newBomSalesPerson || defaultSalesPersonName}
+                title="Creator name is tied to the logged-in account and cannot be modified"
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  padding: '0 14px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: '#475569',
+                  backgroundColor: '#F1F5F9',
+                  cursor: 'not-allowed',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
               />
-              <datalist id="bom-salesperson-options">
-                <option value="Saravanan" />
-                <option value="Vijay" />
-                <option value="Venkatesh" />
-                <option value="Priya" />
-                <option value="Senthil Kumar" />
-                <option value="Annamalaiyar" />
-                <option value="ARUN BOOPATHI M" />
-              </datalist>
             </div>
           </div>
         </div>
@@ -717,15 +740,31 @@ export default function BomOrdersView(props) {
                   setNewBomProductName(val);
                   const chosen = customerList.find(c => (c.code || '').toLowerCase() === val.toLowerCase() || (c.c2 || '').toLowerCase() === val.toLowerCase());
                   if (chosen) {
+                    const bObj = chosen.billingAddressObj || {};
+                    const bAddr = bObj.address || chosen.c6 || chosen.billingAddress || '';
                     const dObj = chosen.deliveryAddressObj || {};
                     const dAddr = dObj.address || chosen.c7 || chosen.deliveryAddress || '';
-                    setSameAsBilling(false);
+
+                    const clean = (s) => String(s || '').trim().toLowerCase();
+                    const isSame = !dAddr || (
+                      clean(dAddr) === clean(bAddr) &&
+                      clean(dObj.city || '') === clean(bObj.city || '') &&
+                      clean(dObj.state || '') === clean(bObj.state || '') &&
+                      clean(dObj.pincode || '') === clean(bObj.pincode || '')
+                    );
+
+                    setSameAsBilling(isSame);
                     setNewBomDeliveryProofDoc(null);
-                    if (dAddr) {
+                    if (dAddr && !isSame) {
                       setNewBomDeliveryStreet(dObj.address || chosen.c7 || chosen.deliveryAddress || '');
                       setNewBomDeliveryCity(dObj.city || '');
                       setNewBomDeliveryState(dObj.state || '');
                       setNewBomDeliveryPincode(dObj.pincode || '');
+                    } else {
+                      setNewBomDeliveryStreet(bObj.address || chosen.c6 || chosen.billingAddress || '');
+                      setNewBomDeliveryCity(bObj.city || '');
+                      setNewBomDeliveryState(bObj.state || '');
+                      setNewBomDeliveryPincode(bObj.pincode || '');
                     }
                   }
                 }}
@@ -867,77 +906,106 @@ export default function BomOrdersView(props) {
                         <input type="text" placeholder="e.g. 600058" value={sameAsBilling ? (billingPincode !== '—' ? billingPincode : '') : newBomDeliveryPincode} disabled={sameAsBilling} onChange={(e) => setNewBomDeliveryPincode(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
                       </div>
                     </div>
+                    {(() => {
+                      const effectiveDeliveryStreet = sameAsBilling ? (billingStreet !== '—' ? billingStreet : '') : newBomDeliveryStreet;
+                      const effectiveDeliveryCity = sameAsBilling ? (billingCity !== '—' ? billingCity : '') : newBomDeliveryCity;
+                      const effectiveDeliveryState = sameAsBilling ? (billingState !== '—' ? billingState : '') : newBomDeliveryState;
+                      const effectiveDeliveryPincode = sameAsBilling ? (billingPincode !== '—' ? billingPincode : '') : newBomDeliveryPincode;
 
-                    {!sameAsBilling ? (
-                      <div style={{ marginTop: '6px', padding: '14px 16px', backgroundColor: '#FEF2F2', border: '1px dashed #F87171', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <AlertCircle style={{ width: '14px', height: '14px' }} />
-                            </div>
-                            <div>
-                              <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
-                                Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
-                              </h5>
-                              <span style={{ fontSize: '11px', color: '#B91C1C' }}>
-                                Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease).
-                              </span>
-                            </div>
-                          </div>
-                          {newBomDeliveryProofDoc && (
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <CheckCircle style={{ width: '12px', height: '12px' }} /> Attached
-                            </span>
-                          )}
-                        </div>
+                      const clean = (str) => String(str || '').trim().toLowerCase();
+                      const hasEnteredDeliveryAddress = Boolean(clean(effectiveDeliveryStreet) || clean(effectiveDeliveryCity) || clean(effectiveDeliveryPincode));
 
-                        {newBomDeliveryProofDoc ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                      // Check if delivery matches billing
+                      const isMatchingBilling = Boolean(sameAsBilling) || (
+                        hasEnteredDeliveryAddress &&
+                        clean(effectiveDeliveryStreet) === clean(billingStreet !== '—' ? billingStreet : '') &&
+                        clean(effectiveDeliveryCity) === clean(billingCity !== '—' ? billingCity : '') &&
+                        clean(effectiveDeliveryState) === clean(billingState !== '—' ? billingState : '') &&
+                        clean(effectiveDeliveryPincode) === clean(billingPincode !== '—' ? billingPincode : '')
+                      );
+
+                      // ONLY render proof uploader if addresses do NOT match AND user has specified a different delivery destination
+                      if (isMatchingBilling || !hasEnteredDeliveryAddress) {
+                        return null;
+                      }
+
+                      return (
+                        <div style={{ marginTop: '6px', padding: '14px 16px', backgroundColor: '#FEF2F2', border: '1px dashed #F87171', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <AlertCircle style={{ width: '14px', height: '14px' }} />
+                              </div>
                               <div>
-                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{newBomDeliveryProofDoc.name}</div>
-                                <div style={{ fontSize: '10px', color: '#64748B' }}>{newBomDeliveryProofDoc.size || '1.2 MB'} • Uploaded</div>
+                                <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
+                                  Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                </h5>
+                                <span style={{ fontSize: '11px', color: '#B91C1C' }}>
+                                  Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease).
+                                </span>
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setNewBomDeliveryProofDoc(null)}
-                              style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
-                            </button>
+                            {newBomDeliveryProofDoc && (
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <CheckCircle style={{ width: '12px', height: '12px' }} /> Attached
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                              <Upload style={{ width: '13px', height: '13px' }} />
-                              Upload Address Proof Document
-                              <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                  const file = e.target.files && e.target.files[0];
-                                  if (file) {
-                                    compressAndSaveFile(file, (docMeta) => {
-                                      if (docMeta) {
-                                        saveMediaToCache(docMeta.name, docMeta.dataUrl);
-                                        setNewBomDeliveryProofDoc(docMeta);
-                                      }
-                                    });
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '11px', color: '#166534', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0', padding: '8px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <CheckCircle style={{ width: '13px', height: '13px' }} /> Delivery address matches registered billing address. No additional address proof required.
-                      </div>
-                    )}
+
+                          {newBomDeliveryProofDoc ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{newBomDeliveryProofDoc.name}</div>
+                                  <div style={{ fontSize: '10px', color: '#64748B' }}>{newBomDeliveryProofDoc.size || '1.2 MB'} • Uploaded</div>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewDocModal({ title: 'Delivery Address Proof Document', doc: newBomDeliveryProofDoc })}
+                                  style={{ border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '6px' }}
+                                >
+                                  <Eye style={{ width: '13px', height: '13px' }} /> View Image
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setNewBomDeliveryProofDoc(null)}
+                                  style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                                <Upload style={{ width: '13px', height: '13px' }} />
+                                Upload Address Proof Document
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    const file = e.target.files && e.target.files[0];
+                                    if (file) {
+                                      compressAndSaveFile(file, (docMeta) => {
+                                        if (docMeta) {
+                                          saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                          setNewBomDeliveryProofDoc(docMeta);
+                                        }
+                                      });
+                                    }
+                                  }}
+                                />
+                              </label>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>Supported: PDF, JPG, PNG (&lt; 25 KB auto-compressed)</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </>
@@ -1457,13 +1525,22 @@ export default function BomOrdersView(props) {
                             <div style={{ fontSize: '11px', color: '#64748B' }}>{newBomPaymentProofDoc.size || '1.2 MB'} • Payment Document Attached</div>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setNewBomPaymentProofDoc(null)}
-                          style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewDocModal({ title: 'Payment Proof Document', doc: newBomPaymentProofDoc })}
+                            style={{ border: '1px solid #BBF7D0', background: '#DCFCE7', color: '#166534', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Eye style={{ width: '13px', height: '13px' }} /> View Image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewBomPaymentProofDoc(null)}
+                            style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
+                          </button>
+                        </div>
                       </div>
                       {newBomPaymentProofDoc.dataUrl && (
                         <div style={{ borderTop: '1px solid #BBF7D0', paddingTop: '10px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '10px' }}>
@@ -1663,7 +1740,7 @@ export default function BomOrdersView(props) {
                           uom: item.uom || 'NOS',
                           qty: parseFloat(item.qty) || 0,
                           rate: parseFloat(item.rate) || 0,
-                          gstRate: item.gstRate || newBomGstRate || '18%',
+                          gstRate: item.gstRate || '18%',
                           confirmed: false
                         })),
                         payments: {
@@ -1760,7 +1837,7 @@ export default function BomOrdersView(props) {
   if (confirmingBomModal) {
     const isEditMode = Boolean(
       confirmingBomModal.isEditMode !== false &&
-      ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(confirmingBomModal.status)
+      ['Draft', 'Pending Confirmation', 'Pending Sales Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(confirmingBomModal.status || 'Pending Sales Confirmation')
     );
     const isAlreadyForwarded = !isEditMode;
     const grandTotalCalc = (confirmingBomModal.items || []).reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
@@ -1830,11 +1907,18 @@ export default function BomOrdersView(props) {
                     return;
                   }
 
+                  const currentItemsList = confirmingBomModal.items || [];
+                  const unconfirmedItems = currentItemsList.filter(it => !it.confirmed);
+                  if (unconfirmedItems.length > 0) {
+                    alert(`⚠️ Please confirm all products first!\n\n${unconfirmedItems.length} product(s) still need to be verified with the tick mark (✓) or click "Confirm All Products" below before sending BOM to Dispatch.`);
+                    return;
+                  }
+
                   const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
                   const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
                   const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
 
-                  const finalizedItems = (confirmingBomModal.items || []).map(i => ({ ...i, confirmed: true }));
+                  const finalizedItems = currentItemsList.map(i => ({ ...i, confirmed: true }));
                   const packingItems = (confirmingBomModal.dispatchPacking && confirmingBomModal.dispatchPacking.length > 0)
                     ? confirmingBomModal.dispatchPacking
                     : finalizedItems.map(it => ({
@@ -1854,7 +1938,7 @@ export default function BomOrdersView(props) {
                     deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                     items: finalizedItems,
                     dispatchPacking: packingItems,
-                    salesPerson: (confirmingBomModal.salesPerson || b.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
+                    salesPerson: (confirmingBomModal.salesPerson || b.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim(),
                     status: 'Sales Confirmed - Sent to Dispatch',
                     salesConfirmed: true,
                     salesConfirmedAt: new Date().toISOString(),
@@ -1956,21 +2040,11 @@ export default function BomOrdersView(props) {
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', display: 'block', marginBottom: '6px' }}>
-                SALES PERSON / CREATOR
+                SALES PERSON / CREATOR (🔒 Locked)
               </label>
-              {isAlreadyForwarded ? (
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
-                  👤 {(confirmingBomModal.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="Sales person..."
-                  value={(confirmingBomModal.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim()}
-                  onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, salesPerson: e.target.value })}
-                  style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1.5px solid #0E7490', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', outline: 'none', boxSizing: 'border-box' }}
-                />
-              )}
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                👤 {(confirmingBomModal.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
+              </div>
             </div>
           </div>
 
@@ -2027,7 +2101,16 @@ export default function BomOrdersView(props) {
                             <FileText style={{ width: '13px', height: '13px' }} />
                             Address Proof: {confirmingBomModal.deliveryAddressProofDoc.name}
                           </div>
-                          <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '800' }}>Verified</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewDocModal({ title: 'Delivery Address Proof Document', doc: confirmingBomModal.deliveryAddressProofDoc })}
+                              style={{ border: '1px solid #BBF7D0', background: '#FFFFFF', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Eye style={{ width: '12px', height: '12px' }} /> View Image
+                            </button>
+                            <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '800' }}>Verified</span>
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -2170,7 +2253,14 @@ export default function BomOrdersView(props) {
                                 <div style={{ fontSize: '10px', color: '#64748B' }}>{confirmingBomModal.deliveryAddressProofDoc.size || '1.2 MB'} • Current Version</div>
                               </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDocModal({ title: 'Delivery Address Proof Document', doc: confirmingBomModal.deliveryAddressProofDoc })}
+                                style={{ border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Eye style={{ width: '13px', height: '13px' }} /> View Image
+                              </button>
                               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                                 <Upload style={{ width: '11px', height: '11px' }} /> Upload New Version
                                 <input
@@ -2268,6 +2358,134 @@ export default function BomOrdersView(props) {
               </div>
             );
           })()}
+
+          {/* DISPATCH PACKED ITEMS MEDIA VIEWER FOR SALES */}
+          {(() => {
+            const packMedia = confirmingBomModal.dispatchPackingMedia || {};
+            const packPhotos = packMedia.photos || [];
+            const packVideos = packMedia.videos || [];
+            const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
+
+            if (!hasMedia && !confirmingBomModal.status?.includes('Dispatch') && !confirmingBomModal.status?.includes('Packed') && !confirmingBomModal.dispatchPacking) {
+              return null;
+            }
+
+            return (
+              <div style={{
+                marginTop: '16px',
+                backgroundColor: 'white',
+                padding: '18px 22px',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Camera size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                        Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
+                      </h4>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>
+                        Photos and videos captured by Dispatch Fulfillment Team during packing
+                      </span>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    backgroundColor: hasMedia ? '#DCFCE7' : '#F1F5F9',
+                    color: hasMedia ? '#166534' : '#64748B',
+                    border: `1px solid ${hasMedia ? '#BBF7D0' : '#E2E8F0'}`
+                  }}>
+                    {hasMedia ? '✓ Media Attached' : 'Awaiting Dispatch Media'}
+                  </span>
+                </div>
+
+                {hasMedia ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginTop: '4px' }}>
+                    {packPhotos.map((ph, pIdx) => (
+                      <div
+                        key={pIdx}
+                        onClick={() => setPreviewDocModal({ title: ph.name || `Packed Item Photo ${pIdx + 1}`, doc: { name: ph.name || `Photo ${pIdx + 1}`, dataUrl: ph.dataUrl } })}
+                        style={{
+                          height: '84px',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: '1.5px solid #CBD5E1',
+                          backgroundColor: '#0F172A',
+                          position: 'relative',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{
+                          position: 'absolute', bottom: 0, left: 0, right: 0,
+                          backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                          padding: '2px 6px', fontSize: '10px', fontWeight: '700',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <span>📷 View Photo</span>
+                          <span>›</span>
+                        </div>
+                      </div>
+                    ))}
+                    {packVideos.map((vd, vIdx) => (
+                      <div
+                        key={vIdx}
+                        onClick={() => setPreviewDocModal({ title: vd.name || `Packed Item Video ${vIdx + 1}`, doc: { name: vd.name || `Video ${vIdx + 1}`, dataUrl: vd.dataUrl } })}
+                        style={{
+                          height: '84px',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: '1.5px solid #CBD5E1',
+                          backgroundColor: '#0F172A',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          position: 'relative',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Video size={22} style={{ color: '#38BDF8' }} />
+                        <div style={{
+                          position: 'absolute', bottom: 0, left: 0, right: 0,
+                          backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                          padding: '2px 6px', fontSize: '10px', fontWeight: '700',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <span>🎥 Watch Video</span>
+                          <span>›</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic', padding: '6px 0' }}>
+                    No dispatch packing photos or videos attached yet for this order.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* PRODUCT ITEMS TABLE */}
@@ -2302,7 +2520,21 @@ export default function BomOrdersView(props) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
-                  {!isAlreadyForwarded && <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>✓</th>}
+                  {!isAlreadyForwarded && (
+                    <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        title="Select and confirm all products"
+                        checked={(confirmingBomModal.items || []).length > 0 && (confirmingBomModal.items || []).every(it => it.confirmed)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const updated = (confirmingBomModal.items || []).map(it => ({ ...it, confirmed: checked }));
+                          setConfirmingBomModal({ ...confirmingBomModal, items: updated });
+                        }}
+                        style={{ width: '16px', height: '16px', accentColor: '#166534', cursor: 'pointer' }}
+                      />
+                    </th>
+                  )}
                   <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center' }}>#</th>
                   <th style={{ padding: '12px 10px', width: '25%' }}>Product / Component Name</th>
                   <th style={{ padding: '12px 10px', width: '18%' }}>Description</th>
@@ -2473,47 +2705,8 @@ export default function BomOrdersView(props) {
                 </div>
               </>
             ) : (
-              <>
-                <button
-                  onClick={() => {
-                    const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
-                      ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
-                      ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
-                      ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
-                      ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
-                    );
-
-                    if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                      alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before saving modifications.');
-                      return;
-                    }
-
-                    const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
-                    const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
-                    const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
-
-                    setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
-                      ...b,
-                      companyName: confirmingBomModal.companyName || b.companyName,
-                      paymentType: confirmingBomModal.paymentType || b.paymentType,
-                      billingAddress: bStr,
-                      billingAddressObj: bObj,
-                      deliveryAddress: dStr,
-                      deliveryAddressObj: finalDObj,
-                      deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
-                      items: confirmingBomModal.items,
-                      status: 'Edited / Pending Confirmation',
-                      grandTotal: grandTotalCalc
-                    } : b));
-                    alert('Order modifications & addresses saved! Status updated to: Edited / Pending Confirmation');
-                  }}
-                  style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#334155', height: '38px', padding: '0 20px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Save Modifications
-                </button>
-
-                <button
-                  onClick={() => {
+              <button
+                onClick={() => {
                     const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
                       ((dObj.address || '').trim() === (bObj.address || '').trim()) &&
                       ((dObj.city || '').trim() === (bObj.city || '').trim()) &&
@@ -2552,7 +2745,6 @@ export default function BomOrdersView(props) {
                 >
                   <CheckSquare style={{ width: '14px', height: '14px' }} /> Confirm All Products
                 </button>
-              </>
             )}
           </div>
         </div>
@@ -2837,7 +3029,7 @@ export default function BomOrdersView(props) {
                     <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c3}</td>
                     <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
                       <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        👤 {(row.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
+                        👤 {(row.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
                       </span>
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4}</td>
@@ -3038,87 +3230,123 @@ export default function BomOrdersView(props) {
             </button>
           )}
 
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowFloatingMoreMenu(!showFloatingMoreMenu)}
-              title="More actions"
-              style={{
-                backgroundColor: showFloatingMoreMenu ? '#F1F5F9' : '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                color: '#64748B',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-              }}
-            >
-              <MoreHorizontal size={14} />
-            </button>
+          {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (() => {
+            const isTargetAlreadyConfirmed = (selectedRows || []).every(codeVal => {
+              const row = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => (b.bomCode || b.code) === codeVal);
+              return row && (row.salesConfirmed || ['Sales Confirmed - Sent to Dispatch', 'Sent to Production', 'Confirmed', 'Packed & Ready for Dispatch', 'Partially Packed', 'Closed', 'CLOSED', 'Dispatch Packing Verified - Sent to Accounts'].includes(row.status));
+            });
+            if (isTargetAlreadyConfirmed) return null;
 
-            {showFloatingMoreMenu && (
-              <div style={{
-                position: 'absolute',
-                bottom: '44px',
-                right: '0',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                minWidth: '170px',
-                padding: '6px',
-                zIndex: 10001,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px'
-              }}>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
-                    const targetRow = codeVal
-                      ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
-                      : (filteredRows && filteredRows[0] ? filteredRows[0] : null);
-                    setQuickPreviewRecord(targetRow);
-                    setShowFloatingMoreMenu(false);
-                  }}
-                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#1E293B', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                </button>
+            return (
+              <button
+                onClick={() => {
+                  if (selectedRows.length > 1) {
+                    alert('Please select a single BOM to confirm and review.');
+                  } else if (selectedRows.length === 1) {
+                    const codeVal = selectedRows[0];
+                    const targetRow = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal };
+                    const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Pending Sales Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(targetRow.status);
+                    setConfirmingBomModal({ ...targetRow, isEditMode: isDraftOrPending });
+                  }
+                }}
+                style={{
+                  backgroundColor: '#0E7490',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                }}
+              >
+                <CheckCircle size={14} style={{ color: '#FFFFFF' }} /> Confirm BOM
+              </button>
+            );
+          })()}
 
-                <button
-                  onClick={() => {
-                    const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
-                    const targetRow = codeVal
-                      ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => b.bomCode === codeVal))
-                      : ((bomStore || [])[0] || (filteredRows || [])[0]);
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+              const targetRow = codeVal
+                ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
+                : (filteredRows && filteredRows[0] ? filteredRows[0] : null);
+              setQuickPreviewRecord(targetRow);
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+          </button>
 
-                    if (targetRow) {
-                      setUploadPaymentModal(targetRow);
-                    }
-                    setShowFloatingMoreMenu(false);
-                  }}
-                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#1E293B', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <CreditCard size={14} style={{ color: '#2563EB' }} /> View Payment Details
-                </button>
+          <button
+            onClick={() => {
+              const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+              const targetRow = codeVal
+                ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => b.bomCode === codeVal))
+                : ((bomStore || [])[0] || (filteredRows || [])[0]);
 
-                <button
-                  onClick={() => {
-                    window.print();
-                    setShowFloatingMoreMenu(false);
-                  }}
-                  style={{ width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#1E293B', cursor: 'pointer', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Printer size={14} style={{ color: '#059669' }} /> Export and Print
-                </button>
-              </div>
-            )}
-          </div>
+              if (targetRow) {
+                setUploadPaymentModal(targetRow);
+              }
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <CreditCard size={14} style={{ color: '#2563EB' }} /> Payment Details
+          </button>
+
+          <button
+            onClick={() => {
+              window.print();
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Printer size={14} style={{ color: '#059669' }} /> Export & Print
+          </button>
 
           <button
             onClick={() => {
@@ -3176,6 +3404,7 @@ export default function BomOrdersView(props) {
               </div>
             </div>
 
+            {/* Order Meta Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
               <div>
                 <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>REF CODE</span>
@@ -3197,30 +3426,208 @@ export default function BomOrdersView(props) {
               </div>
             </div>
 
+            {/* Sales & Payment Terms Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#FFFFFF', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block' }}>Sales Creator</span>
+                <strong style={{ fontSize: '13px', color: '#0E7490', fontWeight: '800' }}>
+                  👤 {(quickPreviewRecord.salesPerson || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block' }}>Payment Terms</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                  <strong style={{ fontSize: '13px', color: '#0F172A', fontWeight: '800' }}>
+                    {quickPreviewRecord.paymentType || '100% Paid'}
+                  </strong>
+                  {(quickPreviewRecord.paymentProofDoc || quickPreviewRecord.payments?.proofDoc) && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDocModal({ title: 'Payment Proof Document', doc: quickPreviewRecord.paymentProofDoc || { name: quickPreviewRecord.payments?.proofDoc, dataUrl: quickPreviewRecord.payments?.proofDocData } })}
+                      style={{ border: '1px solid #BBF7D0', backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      <Eye size={10} /> Proof
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Structured Billing & Delivery Addresses */}
+            {(() => {
+              const bObj = quickPreviewRecord.billingAddressObj || {};
+              const dObj = quickPreviewRecord.deliveryAddressObj || {};
+              const bStr = quickPreviewRecord.billingAddress || (bObj.address ? `${bObj.address}, ${bObj.city || ''} ${bObj.state || ''} - ${bObj.pincode || ''}` : 'Billing address on file');
+              const dStr = quickPreviewRecord.deliveryAddress || (dObj.address ? `${dObj.address}, ${dObj.city || ''} ${dObj.state || ''} - ${dObj.pincode || ''}` : bStr);
+              const addrDoc = quickPreviewRecord.deliveryAddressProofDoc;
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: '#2563EB', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
+                      <FileText size={12} /> Billing Address
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#334155', lineHeight: '1.4' }}>
+                      {bStr}
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: '#0E7490' }}>
+                        <Truck size={12} /> Delivery Address
+                      </span>
+                      {quickPreviewRecord.sameAsBilling && (
+                        <span style={{ fontSize: '10px', color: '#166534', fontWeight: '700' }}>Same as Billing</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#334155', lineHeight: '1.4' }}>
+                      {dStr}
+                    </div>
+                    {addrDoc && (
+                      <div style={{ marginTop: '4px', padding: '6px 8px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '10.5px', color: '#166534', fontWeight: '700' }}>
+                          📄 {addrDoc.name || 'Address Proof'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDocModal({ title: 'Delivery Address Proof Document', doc: addrDoc })}
+                          style={{ border: 'none', background: 'transparent', color: '#0E7490', cursor: 'pointer', fontSize: '10.5px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                        >
+                          <Eye size={11} /> View
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Transport & Logistics Section if present */}
+            {(quickPreviewRecord.transportMode || quickPreviewRecord.transporterName || quickPreviewRecord.vehicleNo || quickPreviewRecord.lrNo) && (
+              <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Logistics & Dispatch Information</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', fontSize: '11.5px' }}>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Mode</span>
+                    <strong>{quickPreviewRecord.transportMode || 'Transport'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Transporter</span>
+                    <strong>{quickPreviewRecord.transporterName || '—'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Vehicle No</span>
+                    <strong>{quickPreviewRecord.vehicleNo || '—'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>LR / Docket</span>
+                    <strong>{quickPreviewRecord.lrNo || '—'}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Itemized List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Itemized Products</h4>
-              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Itemized Products & Materials</h4>
+                <span style={{ fontSize: '11px', color: '#64748B' }}>{(quickPreviewRecord.items || []).length} items</span>
+              </div>
+              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '12px', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
-                      <th style={{ padding: '8px 10px' }}>Product</th>
+                      <th style={{ padding: '8px 10px' }}>#</th>
+                      <th style={{ padding: '8px 10px' }}>Product Description</th>
                       <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
                       <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (₹)</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Total (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(quickPreviewRecord.items || []).map((it, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '8px 10px', fontWeight: '700', color: '#0F172A' }}>{it.name || '—'}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>{it.qty || 1}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>₹ {Number(it.rate || 0).toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
+                    {(quickPreviewRecord.items || []).map((it, idx) => {
+                      const q = Number(it.qty || 1);
+                      const r = Number(it.rate || 0);
+                      const lineTotal = q * r;
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px 10px', color: '#94A3B8', fontWeight: '700' }}>{idx + 1}</td>
+                          <td style={{ padding: '8px 10px', fontWeight: '700', color: '#0F172A' }}>
+                            <div>{it.name || '—'}</div>
+                            {it.category && <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '500' }}>{it.category}</span>}
+                          </td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>{q} {it.uom || ''}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#475569' }}>₹ {r.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>₹ {lineTotal.toLocaleString('en-IN')}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
+
+            {/* Dispatch Packed Items Media Section in Quick Preview */}
+            {(() => {
+              const packMedia = quickPreviewRecord.dispatchPackingMedia || {};
+              const packPhotos = packMedia.photos || [];
+              const packVideos = packMedia.videos || [];
+              const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
+
+              if (!hasMedia && !quickPreviewRecord.status?.includes('Dispatch') && !quickPreviewRecord.status?.includes('Packed') && !quickPreviewRecord.dispatchPacking) {
+                return null;
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Camera size={16} style={{ color: '#0E7490' }} />
+                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                        Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>Captured by Dispatch</span>
+                  </div>
+
+                  {hasMedia ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                      {packPhotos.map((ph, pIdx) => (
+                        <div
+                          key={pIdx}
+                          onClick={() => setPreviewDocModal({ title: ph.name || `Photo ${pIdx + 1}`, doc: { name: ph.name || `Photo ${pIdx + 1}`, dataUrl: ph.dataUrl } })}
+                          style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', position: 'relative' }}
+                        >
+                          <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '2px 6px', fontSize: '9px', fontWeight: '700', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>📷 Photo</span>
+                            <span>›</span>
+                          </div>
+                        </div>
+                      ))}
+                      {packVideos.map((vd, vIdx) => (
+                        <div
+                          key={vIdx}
+                          onClick={() => setPreviewDocModal({ title: vd.name || `Video ${vIdx + 1}`, doc: { name: vd.name || `Video ${vIdx + 1}`, dataUrl: vd.dataUrl } })}
+                          style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', position: 'relative' }}
+                        >
+                          <Video size={20} style={{ color: '#38BDF8' }} />
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '2px 6px', fontSize: '9px', fontWeight: '700', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>🎥 Video</span>
+                            <span>›</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '10px', border: '1px dashed #E2E8F0' }}>
+                      No packing photos or videos attached yet for this order.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -3423,6 +3830,64 @@ export default function BomOrdersView(props) {
           </div>
         </div>
       )}
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {previewDocModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.7)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', maxWidth: '750px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewDocModal.title || 'Document Preview'}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B' }}>{previewDocModal.doc?.name || 'Uploaded File'}</p>
+              </div>
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '6px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', backgroundColor: '#F1F5F9' }}>
+              {previewDocModal.doc?.dataUrl ? (
+                previewDocModal.doc.dataUrl.startsWith('data:image/') ? (
+                  <img
+                    src={previewDocModal.doc.dataUrl}
+                    alt={previewDocModal.doc.name || 'Preview'}
+                    style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  />
+                ) : previewDocModal.doc.dataUrl.startsWith('data:video/') ? (
+                  <video
+                    controls
+                    autoPlay
+                    src={previewDocModal.doc.dataUrl}
+                    style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  />
+                ) : (
+                  <iframe
+                    src={previewDocModal.doc.dataUrl}
+                    title={previewDocModal.doc.name || 'Preview'}
+                    style={{ width: '100%', height: '550px', border: 'none', borderRadius: '8px', backgroundColor: '#fff' }}
+                  />
+                )
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748B' }}>
+                  <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>No visual preview available</p>
+                  <p style={{ fontSize: '12px', marginTop: '4px' }}>File attached: {previewDocModal.doc?.name || 'Document'}</p>
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#FFF' }}>
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{ padding: '8px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFF', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
