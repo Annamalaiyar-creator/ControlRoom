@@ -2782,7 +2782,7 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Sales Person</div>
-                        <strong style={{ color: '#0E7490' }}>👤 {inv.salesPerson || matchingBom?.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong>
+                        <strong style={{ color: '#0E7490' }}>👤 {((inv.salesPerson || matchingBom?.salesPerson || 'Saravanan')).replace(/\s*\([^)]*\)/g, '').trim()}</strong>
                       </div>
                       <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Due Date</div>
@@ -4180,7 +4180,7 @@ export default function ProductionViewsEngine(props) {
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
-              headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
+              headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status'],
               rows: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
@@ -4231,7 +4231,7 @@ export default function ProductionViewsEngine(props) {
                   ...b,
                   code: b.bomCode,
                   c2: b.customerName,
-                  salesPerson: b.salesPerson || 'Ravi Kumar (Sales Executive)',
+                  salesPerson: (b.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
                   c3: b.paymentType,
                   c4: isReissued ? `Reissued by Accounts` : isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
                   c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
@@ -9881,7 +9881,7 @@ export default function ProductionViewsEngine(props) {
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.customerName}</strong></span>
                         <span>•</span>
-                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {dispatchPackingModal.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong></span>
+                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {(dispatchPackingModal.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}</strong></span>
                         <span>•</span>
                         <span>Payment: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.paymentType}</strong></span>
                       </div>
@@ -10652,7 +10652,7 @@ export default function ProductionViewsEngine(props) {
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                 vendor: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
                 customerName: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
-                salesPerson: verifiedBOM.salesPerson || 'Ravi Kumar (Sales Executive)',
+                salesPerson: (verifiedBOM.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
                 poNo: targetCode,
                 bomCode: targetCode,
                 grnNo: 'GRN-VERIFIED',
@@ -10751,7 +10751,7 @@ export default function ProductionViewsEngine(props) {
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{custNameText}</strong></span>
                         <span>•</span>
-                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {accountsVerificationModal.salesPerson || accountsVerificationModal.c4 || 'Ravi Kumar (Sales Executive)'}</strong></span>
+                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {((accountsVerificationModal.salesPerson || accountsVerificationModal.c4 || 'Saravanan')).replace(/\s*\([^)]*\)/g, '').trim()}</strong></span>
                         <span>•</span>
                         <span>Payment Terms: <strong style={{ color: '#FFFFFF' }}>{payTypeText}</strong></span>
                       </div>
@@ -14385,7 +14385,14 @@ export default function ProductionViewsEngine(props) {
                                 paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                                 remarks: newBomRemarks || '',
                                 status: isDraft ? 'Draft' : 'Sent to Production',
-                                salesPerson: userRole === 'Sales Head' ? 'Pooja Sharma (Sales Head)' : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)'),
+                                salesPerson: (() => {
+                                  const stored = localStorage.getItem('controlroom_logged_user_name');
+                                  if (stored && stored.trim() && stored !== 'undefined' && stored !== 'null') return stored.trim();
+                                  if (userRole === 'Sales Head') return 'Vijay';
+                                  if (userRole === 'Sales Executive') return 'Saravanan';
+                                  if (userRole === 'Accounts Head') return 'Venkatesh';
+                                  return 'Saravanan';
+                                })(),
                                 items: (bomMaterialsList || []).map(item => ({
                                   name: item.name || 'Custom Item',
                                   category: item.category || '',
@@ -16815,7 +16822,7 @@ export default function ProductionViewsEngine(props) {
             bomCode: bCode,
             invoiceNo: invNo,
             customer: custName,
-            salesPerson: bom.salesPerson || 'Ravi Kumar (Sales Executive)',
+            salesPerson: (bom.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
             deliveryAddress: delAddr,
             packedCount: packedItems.length,
             vehicleLoading: loadingPayload
@@ -16858,7 +16865,7 @@ export default function ProductionViewsEngine(props) {
                       </span>
                     </div>
                     <p style={{ fontSize: '12px', color: '#94A3B8', margin: '3px 0 0 0' }}>
-                      Customer: <strong style={{ color: '#FFFFFF' }}>{custName}</strong> • Sales Creator: <strong style={{ color: '#38BDF8' }}>👤 {bom.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong> • Destination: <span>{delAddr}</span>
+                      Customer: <strong style={{ color: '#FFFFFF' }}>{custName}</strong> • Sales Creator: <strong style={{ color: '#38BDF8' }}>👤 {(bom.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}</strong> • Destination: <span>{delAddr}</span>
                     </p>
                   </div>
                 </div>
@@ -17282,7 +17289,7 @@ export default function ProductionViewsEngine(props) {
                 Order & BOM Flow Successfully Completed!
               </h2>
               <p style={{ fontSize: '13px', color: '#64748B', margin: '6px 0 0 0' }}>
-                BOM Reference: <strong style={{ color: '#2563EB' }}>{completedBomSummaryModal.bomCode}</strong> • Sales Creator: <strong style={{ color: '#0E7490' }}>👤 {completedBomSummaryModal.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong> • Customer: <strong>{completedBomSummaryModal.customer}</strong>
+                BOM Reference: <strong style={{ color: '#2563EB' }}>{completedBomSummaryModal.bomCode}</strong> • Sales Creator: <strong style={{ color: '#0E7490' }}>👤 {(completedBomSummaryModal.salesPerson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}</strong> • Customer: <strong>{completedBomSummaryModal.customer}</strong>
               </p>
             </div>
 
@@ -17453,7 +17460,7 @@ export default function ProductionViewsEngine(props) {
                 <div>
                   <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Delivery Address Proof Attachment</h3>
                   <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                    <span>Uploaded by: <strong style={{ color: '#0F172A' }}>{previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'}</strong></span>
+                    <span>Uploaded by: <strong style={{ color: '#0F172A' }}>{(previewAddressProofModal.uploadedBy || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}</strong></span>
                     <span>•</span>
                     <span>BOM: <strong style={{ color: '#2563EB' }}>{previewAddressProofModal.bomRef || 'BOM Reference'}</strong></span>
                     <span>•</span>
@@ -17490,7 +17497,7 @@ export default function ProductionViewsEngine(props) {
                 <div style={{ color: '#94A3B8', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                   <FileText size={48} style={{ color: '#64748B' }} />
                   <div style={{ fontSize: '15px', fontWeight: '700', color: '#F1F5F9' }}>{previewAddressProofModal.name || 'Attachment Document'}</div>
-                  <div style={{ fontSize: '12px', color: '#64748B' }}>Uploaded by {previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'} • {previewAddressProofModal.size || '0.13 MB'}</div>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>Uploaded by {(previewAddressProofModal.uploadedBy || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()} • {previewAddressProofModal.size || '0.13 MB'}</div>
                 </div>
               )}
             </div>
@@ -17502,7 +17509,7 @@ export default function ProductionViewsEngine(props) {
                   <CheckCircle size={14} /> Official Address Proof
                 </span>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Uploaded by <strong>{previewAddressProofModal.uploadedBy || 'Ravi Kumar (Sales Executive)'}</strong>
+                  Uploaded by <strong>{(previewAddressProofModal.uploadedBy || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}</strong>
                 </span>
               </div>
 

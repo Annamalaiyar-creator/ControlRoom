@@ -296,10 +296,25 @@ export default function BomOrdersView(props) {
   const [newBomTransporterName, setNewBomTransporterName] = useState('');
   const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
   const [newBomLrNo, setNewBomLrNo] = useState('');
-  const [newBomGstRate, setNewBomGstRate] = useState('18%');
-  const defaultSalesPersonName = userRole === 'Sales Head'
-    ? 'Pooja Sharma (Sales Head)'
-    : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)');
+  const loggedInAccountName = (() => {
+    const storedName = localStorage.getItem('controlroom_logged_user_name');
+    if (storedName && storedName.trim() && storedName !== 'undefined' && storedName !== 'null') {
+      return storedName.trim();
+    }
+    const storedUser = localStorage.getItem('controlroom_logged_user');
+    if (storedUser && storedUser.trim() && storedUser !== 'undefined' && storedUser !== 'null') {
+      return storedUser.trim();
+    }
+    if (userRole === 'Sales Head') return 'Vijay';
+    if (userRole === 'Sales Executive') return 'Saravanan';
+    if (userRole === 'Accounts Head') return 'Venkatesh';
+    if (userRole === 'Accounts Executive') return 'Priya';
+    if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+    if (userRole === 'Procurement Head') return 'ARUN BOOPATHI M';
+    if (userRole === 'Production Head') return 'Senthil Kumar';
+    return 'Saravanan';
+  })();
+  const defaultSalesPersonName = loggedInAccountName;
   const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
@@ -446,7 +461,7 @@ export default function BomOrdersView(props) {
       { id: 'AddressAction', label: 'Address Proof Requested', count: (bomStore || []).filter(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales').length, bg: '#fee2e2', fg: '#b91c1c' },
       { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (bomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' }
     ],
-    headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Sales Person', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+    headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Sales Person', 'Payment Type', 'Total (₹)', 'Status'],
     rows: (bomStore || []).filter(Boolean).map(b => {
       const isDraft = b.status === 'Draft';
       const isAddressRequested = b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales';
@@ -480,7 +495,7 @@ export default function BomOrdersView(props) {
         code: b.bomCode || b.code || 'BOM-101',
         c2: b.date || new Date().toISOString().split('T')[0],
         c3: b.customerName || b.companyName || 'Customer Order',
-        salesPerson: b.salesPerson || 'Ravi Kumar (Sales Executive)',
+        salesPerson: (b.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
         c4: b.paymentType || '100% Advance',
         c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
         status: isAddressRequested ? 'Address Proof Requested from Sales' : (b.status || 'Pending Sales Confirmation'),
@@ -664,11 +679,13 @@ export default function BomOrdersView(props) {
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1.5px solid #0E7490', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', backgroundColor: '#F0FDFA', boxSizing: 'border-box', outline: 'none' }}
               />
               <datalist id="bom-salesperson-options">
-                <option value="Ravi Kumar (Sales Executive)" />
-                <option value="Pooja Sharma (Sales Head)" />
-                <option value="Arun (Accounts Head)" />
-                <option value="Senthil Nathan (Senior Sales)" />
-                <option value="Divya Prakash (Sales Manager)" />
+                <option value="Saravanan" />
+                <option value="Vijay" />
+                <option value="Venkatesh" />
+                <option value="Priya" />
+                <option value="Senthil Kumar" />
+                <option value="Annamalaiyar" />
+                <option value="ARUN BOOPATHI M" />
               </datalist>
             </div>
           </div>
@@ -1837,7 +1854,7 @@ export default function BomOrdersView(props) {
                     deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                     items: finalizedItems,
                     dispatchPacking: packingItems,
-                    salesPerson: confirmingBomModal.salesPerson || b.salesPerson || 'Ravi Kumar (Sales Executive)',
+                    salesPerson: (confirmingBomModal.salesPerson || b.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim(),
                     status: 'Sales Confirmed - Sent to Dispatch',
                     salesConfirmed: true,
                     salesConfirmedAt: new Date().toISOString(),
@@ -1943,13 +1960,13 @@ export default function BomOrdersView(props) {
               </label>
               {isAlreadyForwarded ? (
                 <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
-                  👤 {confirmingBomModal.salesPerson || 'Ravi Kumar (Sales Executive)'}
+                  👤 {(confirmingBomModal.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
                 </div>
               ) : (
                 <input
                   type="text"
                   placeholder="Sales person..."
-                  value={confirmingBomModal.salesPerson || ''}
+                  value={(confirmingBomModal.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim()}
                   onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, salesPerson: e.target.value })}
                   style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1.5px solid #0E7490', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', outline: 'none', boxSizing: 'border-box' }}
                 />
@@ -2772,9 +2789,6 @@ export default function BomOrdersView(props) {
                     </th>
                   );
                 })}
-                <th style={{ width: '80px', minWidth: '80px', padding: '12px 14px', fontWeight: 'bold', textAlign: 'center', boxSizing: 'border-box' }}>
-                  Action
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -2823,7 +2837,7 @@ export default function BomOrdersView(props) {
                     <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c3}</td>
                     <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
                       <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        👤 {row.salesPerson || 'Ravi Kumar (Sales Executive)'}
+                        👤 {(row.salesPerson || defaultSalesPersonName || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
                       </span>
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4}</td>
@@ -2833,140 +2847,6 @@ export default function BomOrdersView(props) {
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
                         {row.status}
                       </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', position: 'relative' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setBomActionMenuIdx(bomActionMenuIdx === row.code ? null : row.code);
-                        }}
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#64748B',
-                          cursor: 'pointer',
-                          padding: '6px',
-                          borderRadius: '6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
-
-                      {bomActionMenuIdx === row.code && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            position: 'absolute',
-                            right: '16px',
-                            top: '40px',
-                            backgroundColor: 'white',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: '10px',
-                            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
-                            zIndex: 100,
-                            minWidth: '180px',
-                            padding: '6px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px'
-                          }}
-                        >
-                          <button
-                            onClick={() => {
-                              const isDraftOrPending = ['Draft', 'Pending Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(row.status);
-                              setConfirmingBomModal({ ...row, isEditMode: isDraftOrPending });
-                              setBomActionMenuIdx(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Eye size={14} style={{ color: '#0E7490' }} /> View / Edit BOM
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setUploadPaymentModal(row);
-                              setBomActionMenuIdx(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#1E293B',
-                              cursor: 'pointer',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <CreditCard size={14} style={{ color: '#2563EB' }} /> Payment Details
-                          </button>
-
-                          <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
-
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete BOM (${row.code})?`)) {
-                                setBomStore(prev => {
-                                  const updated = prev.filter(b => (b.bomCode || b.code) !== (row.bomCode || row.code));
-                                  try {
-                                    localStorage.setItem('controlroom_bom_store', JSON.stringify(updated));
-                                    saveCloudStore('bom_store', updated);
-                                  } catch (err) { }
-                                  return updated;
-                                });
-                              }
-                              setBomActionMenuIdx(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              border: 'none',
-                              background: 'transparent',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#DC2626',
-                              cursor: 'pointer',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete BOM
-                          </button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 );
