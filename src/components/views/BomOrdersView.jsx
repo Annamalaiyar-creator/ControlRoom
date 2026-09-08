@@ -297,6 +297,10 @@ export default function BomOrdersView(props) {
   const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
   const [newBomLrNo, setNewBomLrNo] = useState('');
   const [newBomGstRate, setNewBomGstRate] = useState('18%');
+  const defaultSalesPersonName = userRole === 'Sales Head'
+    ? 'Pooja Sharma (Sales Head)'
+    : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)');
+  const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
@@ -438,23 +442,54 @@ export default function BomOrdersView(props) {
     tabs: [
       { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
       { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-      { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-      { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+      { id: 'Pending', label: 'Pending Sales Confirmation', count: (bomStore || []).filter(b => !b.status || b.status === 'Pending Sales Confirmation' || b.status.includes('Pending Confirmation') || b.status === 'Draft').length, bg: '#fef3c7', fg: '#b45309' },
+      { id: 'AddressAction', label: 'Address Proof Requested', count: (bomStore || []).filter(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales').length, bg: '#fee2e2', fg: '#b91c1c' },
+      { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (bomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' }
     ],
-    headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
-    rows: (bomStore || []).filter(Boolean).map(b => ({
-      ...b,
-      code: b.bomCode || b.code || 'BOM-101',
-      c2: b.date || new Date().toISOString().split('T')[0],
-      c3: b.customerName || b.companyName || 'Customer Order',
-      c4: b.paymentType || '100% Advance',
-      c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      status: b.status || 'Pending Confirmation',
-      stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
-      stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
-      stBorder: b.status === 'Draft' ? '1px solid #fed7aa' : (!b.status || b.status.includes('Pending')) ? '1px solid #fde68a' : '1px solid #bbf7d0',
-      tabGroup: b.status === 'Draft' ? 'Draft' : (!b.status || b.status.includes('Pending')) ? 'Pending' : 'Sent'
-    }))
+    headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Sales Person', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
+    rows: (bomStore || []).filter(Boolean).map(b => {
+      const isDraft = b.status === 'Draft';
+      const isAddressRequested = b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales';
+      const isPending = !b.status || b.status === 'Pending Sales Confirmation' || b.status === 'Pending Confirmation' || b.status === 'Pending';
+      const isConfirmed = b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed;
+
+      let stBg = '#dcfce7';
+      let stFg = '#166534';
+      let stBorder = '1px solid #bbf7d0';
+      let tabGroup = 'Sent';
+
+      if (isDraft) {
+        stBg = '#fff7ed';
+        stFg = '#c2410c';
+        stBorder = '1px solid #fed7aa';
+        tabGroup = 'Draft';
+      } else if (isAddressRequested) {
+        stBg = '#fee2e2';
+        stFg = '#b91c1c';
+        stBorder = '1px solid #fca5a5';
+        tabGroup = 'AddressAction';
+      } else if (isPending) {
+        stBg = '#fef3c7';
+        stFg = '#b45309';
+        stBorder = '1px solid #fde68a';
+        tabGroup = 'Pending';
+      }
+
+      return {
+        ...b,
+        code: b.bomCode || b.code || 'BOM-101',
+        c2: b.date || new Date().toISOString().split('T')[0],
+        c3: b.customerName || b.companyName || 'Customer Order',
+        salesPerson: b.salesPerson || 'Ravi Kumar (Sales Executive)',
+        c4: b.paymentType || '100% Advance',
+        c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        status: isAddressRequested ? 'Address Proof Requested from Sales' : (b.status || 'Pending Sales Confirmation'),
+        stBg,
+        stFg,
+        stBorder,
+        tabGroup
+      };
+    })
   };
 
   const filteredRows = (pageConfig.rows || []).filter(r => {
@@ -470,10 +505,11 @@ export default function BomOrdersView(props) {
 
     const matchesTab = subTab === 'all' ||
       subTab === 'all boms' ||
-      rTabGroup === subTab ||
+      rTabGroup.toLowerCase() === subTab ||
+      (subTab === 'addressaction' && (r.addressProofReuploadRequested || rStatus.includes('address proof'))) ||
       (subTab.includes('pending') && (rStatus.includes('pending') || rStatus.includes('draft'))) ||
       (subTab.includes('draft') && rStatus.includes('draft')) ||
-      (subTab.includes('sent') && (rStatus.includes('sent') || rStatus.includes('confirm') || rStatus.includes('production')));
+      (subTab.includes('sent') && (rStatus.includes('sent') || rStatus.includes('confirm') || rStatus.includes('production') || r.salesConfirmed));
 
     return matchesSearch && matchesTab;
   });
@@ -584,7 +620,7 @@ export default function BomOrdersView(props) {
             </h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Date</label>
               <input
@@ -614,6 +650,26 @@ export default function BomOrdersView(props) {
                 readOnly
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#94A3B8', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }}
               />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#0E7490', marginBottom: '6px' }}>
+                Sales Person / Creator <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                list="bom-salesperson-options"
+                placeholder="Sales Person Name..."
+                value={newBomSalesPerson}
+                onChange={(e) => setNewBomSalesPerson(e.target.value)}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1.5px solid #0E7490', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', backgroundColor: '#F0FDFA', boxSizing: 'border-box', outline: 'none' }}
+              />
+              <datalist id="bom-salesperson-options">
+                <option value="Ravi Kumar (Sales Executive)" />
+                <option value="Pooja Sharma (Sales Head)" />
+                <option value="Arun (Accounts Head)" />
+                <option value="Senthil Nathan (Senior Sales)" />
+                <option value="Divya Prakash (Sales Manager)" />
+              </datalist>
             </div>
           </div>
         </div>
@@ -1582,8 +1638,8 @@ export default function BomOrdersView(props) {
                         paymentProofDoc: newBomPaymentProofDoc || null,
                         paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                         remarks: newBomRemarks || '',
-                        status: isDraft ? 'Draft' : 'Sent to Production',
-                        salesPerson: userRole === 'Sales Head' ? 'Pooja Sharma (Sales Head)' : (userRole === 'Accounts Head' ? 'Arun (Accounts Head)' : 'Ravi Kumar (Sales Executive)'),
+                        status: isDraft ? 'Draft' : 'Pending Sales Confirmation',
+                        salesPerson: (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName,
                         items: (bomMaterialsList || []).map(item => ({
                           name: item.name || 'Custom Item',
                           category: item.category || '',
@@ -1654,7 +1710,7 @@ export default function BomOrdersView(props) {
                       setNewBomCode('');
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
-                      alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created and sent to Production & Dispatch!`);
+                      alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created!\nStatus: Pending Sales Confirmation.\nPlease review & confirm the BOM before forwarding to Dispatch.`);
                     }
                   }}
                   style={{
@@ -1781,17 +1837,21 @@ export default function BomOrdersView(props) {
                     deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                     items: finalizedItems,
                     dispatchPacking: packingItems,
-                    status: 'Sent to Production',
+                    salesPerson: confirmingBomModal.salesPerson || b.salesPerson || 'Ravi Kumar (Sales Executive)',
+                    status: 'Sales Confirmed - Sent to Dispatch',
+                    salesConfirmed: true,
+                    salesConfirmedAt: new Date().toISOString(),
+                    addressProofReuploadRequested: false, // cleared if sales re-confirmed
                     subTotal: confirmingBomModal.subTotal || grandTotalCalc,
                     gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
                     grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
                   } : b));
                   setConfirmingBomModal(null);
-                  alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified and sent to Production (Work Orders) & Dispatch Orders!`);
+                  alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified by Sales and forwarded to Dispatch!`);
                 }}
                 style={{
                   border: 'none',
-                  backgroundColor: '#166534',
+                  backgroundColor: '#0E7490',
                   color: 'white',
                   height: '40px',
                   padding: '0 24px',
@@ -1802,11 +1862,11 @@ export default function BomOrdersView(props) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: '0 2px 4px rgba(22,101,52,0.2)'
+                  boxShadow: '0 2px 4px rgba(14,116,144,0.3)'
                 }}
               >
                 <CheckCircle style={{ width: '16px', height: '16px' }} />
-                Send BOM to Production & Dispatch
+                Confirm BOM & Send to Dispatch
               </button>
             )}
           </div>
@@ -1827,7 +1887,7 @@ export default function BomOrdersView(props) {
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '6px' }}>
                 CUSTOMER NAME (🔒 Locked)
@@ -1875,6 +1935,24 @@ export default function BomOrdersView(props) {
                   <option value="50% Advance + 50% Dispatch">50% Advance + 50% Dispatch</option>
                   <option value="Net 30 Days">Net 30 Days</option>
                 </select>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', display: 'block', marginBottom: '6px' }}>
+                SALES PERSON / CREATOR
+              </label>
+              {isAlreadyForwarded ? (
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                  👤 {confirmingBomModal.salesPerson || 'Ravi Kumar (Sales Executive)'}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Sales person..."
+                  value={confirmingBomModal.salesPerson || ''}
+                  onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, salesPerson: e.target.value })}
+                  style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1.5px solid #0E7490', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', outline: 'none', boxSizing: 'border-box' }}
+                />
               )}
             </div>
           </div>
@@ -2065,24 +2143,73 @@ export default function BomOrdersView(props) {
                         )}
                       </div>
 
-                      {confirmingBomModal.deliveryAddressProofDoc ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{confirmingBomModal.deliveryAddressProofDoc.name}</div>
-                              <div style={{ fontSize: '10px', color: '#64748B' }}>{confirmingBomModal.deliveryAddressProofDoc.size || '1.2 MB'} • Uploaded</div>
+                      {confirmingBomModal.deliveryAddressProofDoc && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FECACA' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FileText style={{ width: '16px', height: '16px', color: '#DC2626' }} />
+                              <div>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{confirmingBomModal.deliveryAddressProofDoc.name}</div>
+                                <div style={{ fontSize: '10px', color: '#64748B' }}>{confirmingBomModal.deliveryAddressProofDoc.size || '1.2 MB'} • Current Version</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                                <Upload style={{ width: '11px', height: '11px' }} /> Upload New Version
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    const file = e.target.files && e.target.files[0];
+                                    if (file) {
+                                      compressAndSaveFile(file, (docMeta) => {
+                                        if (docMeta) {
+                                          saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                          const prevDoc = confirmingBomModal.deliveryAddressProofDoc;
+                                          const existingHistory = Array.isArray(prevDoc.history) ? prevDoc.history : [];
+                                          const updatedHistory = [...existingHistory, {
+                                            name: prevDoc.name,
+                                            size: prevDoc.size,
+                                            uploadedAt: prevDoc.uploadedAt || new Date().toISOString(),
+                                            dataUrl: prevDoc.dataUrl
+                                          }];
+                                          setConfirmingBomModal(prev => ({
+                                            ...prev,
+                                            addressProofReuploadRequested: false,
+                                            deliveryAddressProofDoc: {
+                                              ...docMeta,
+                                              uploadedAt: new Date().toISOString(),
+                                              history: updatedHistory
+                                            }
+                                          }));
+                                        }
+                                      });
+                                    }
+                                  }}
+                                />
+                              </label>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmingBomModal({ ...confirmingBomModal, deliveryAddressProofDoc: null })}
-                            style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <Trash2 style={{ width: '13px', height: '13px' }} /> Remove
-                          </button>
+
+                          {/* Render Previous Preserved Versions If Any */}
+                          {confirmingBomModal.deliveryAddressProofDoc.history && confirmingBomModal.deliveryAddressProofDoc.history.length > 0 && (
+                            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                                📁 Previous Address Proof Uploads Preserved ({confirmingBomModal.deliveryAddressProofDoc.history.length}):
+                              </span>
+                              {confirmingBomModal.deliveryAddressProofDoc.history.map((histItem, hIdx) => (
+                                <div key={hIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#475569' }}>
+                                  <span>• {histItem.name} ({histItem.size || 'Cached'})</span>
+                                  <span style={{ fontSize: '10px', color: '#94A3B8' }}>{new Date(histItem.uploadedAt || Date.now()).toLocaleDateString('en-IN')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ) : (
+                      )}
+
+                      {!confirmingBomModal.deliveryAddressProofDoc && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                             <Upload style={{ width: '13px', height: '13px' }} />
@@ -2099,7 +2226,12 @@ export default function BomOrdersView(props) {
                                       saveMediaToCache(docMeta.name, docMeta.dataUrl);
                                       setConfirmingBomModal(prev => ({
                                         ...prev,
-                                        deliveryAddressProofDoc: docMeta
+                                        addressProofReuploadRequested: false,
+                                        deliveryAddressProofDoc: {
+                                          ...docMeta,
+                                          uploadedAt: new Date().toISOString(),
+                                          history: []
+                                        }
                                       }));
                                     }
                                   });
@@ -2468,6 +2600,52 @@ export default function BomOrdersView(props) {
         )}
       </div>
 
+      {/* ADDRESS PROOF RE-UPLOAD REQUEST NOTIFICATION BANNER */}
+      {(bomStore || []).some(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales') && (
+        <div style={{
+          backgroundColor: '#FEF2F2',
+          border: '1px solid #FCA5A5',
+          borderRadius: '12px',
+          padding: '14px 18px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#991B1B' }}>
+                Action Required: Address Proof Re-upload Requested by Accounts / Invoice Desk
+              </div>
+              <div style={{ fontSize: '12px', color: '#B91C1C' }}>
+                Accounts team requested verified address proof document for orders where delivery address differs from billing address. Previous uploads are preserved in document history.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => { setActiveSubTab('AddressAction'); setCurrentPage(1); }}
+            style={{
+              border: 'none',
+              backgroundColor: '#DC2626',
+              color: '#FFFFFF',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            Review Requested Orders
+          </button>
+        </div>
+      )}
+
       {/* 2. FILTERS & SEARCH ROW */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '340px' }}>
@@ -2643,6 +2821,11 @@ export default function BomOrdersView(props) {
                       {row.c2}
                     </td>
                     <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c3}</td>
+                    <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
+                      <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        👤 {row.salesPerson || 'Ravi Kumar (Sales Executive)'}
+                      </span>
+                    </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>{row.c5}</td>
                     <td style={{ padding: '12px 14px', textAlign: 'center' }}>

@@ -2781,6 +2781,10 @@ export default function ProductionViewsEngine(props) {
                         <strong style={{ color: '#2563EB' }}>{customerText}</strong>
                       </div>
                       <div>
+                        <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Sales Person</div>
+                        <strong style={{ color: '#0E7490' }}>👤 {inv.salesPerson || matchingBom?.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong>
+                      </div>
+                      <div>
                         <div style={{ color: '#64748B', fontSize: '11px', fontWeight: '600' }}>Due Date</div>
                         <strong style={{ color: '#1E293B' }}>{invDateText}</strong>
                       </div>
@@ -3493,6 +3497,7 @@ export default function ProductionViewsEngine(props) {
 
                                     setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.bomCode === inv.poNo || b.bomCode === inv.code) ? {
                                       ...b,
+                                      status: 'Address Proof Requested from Sales',
                                       addressProofReuploadRequested: true,
                                       reuploadRequestedAt: nowIso,
                                       reuploadReason: 'Invoice desk requested address proof re-upload'
@@ -3500,11 +3505,12 @@ export default function ProductionViewsEngine(props) {
 
                                     setInvoiceList(prev => prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
                                       ...i,
+                                      status: 'Address Proof Requested from Sales',
                                       addressProofReuploadRequested: true,
                                       reuploadRequestedAt: nowIso
                                     } : i));
 
-                                    alert(`📩 Re-upload Request sent to Sales/BOM desk for (${targetCode || 'Order'}).\nTimestamp: ${timeFormatted}`);
+                                    alert(`📩 Re-upload Request sent to Sales/BOM desk for (${targetCode || 'Order'}).\nStatus updated to 'Address Proof Requested from Sales'.\nTimestamp: ${timeFormatted}`);
                                   }}
                                   style={{ border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#DC2626', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                                 >
@@ -4166,16 +4172,16 @@ export default function ProductionViewsEngine(props) {
               actionText: '',
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
-                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production')) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FFEDD5', fg: '#C2410C' },
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch'].includes(b.status) && !b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled & Reissued to Dispatch', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed && !b.reissuedByAccounts).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
                 { id: 'Reissued', label: 'Reissued to Dispatch', count: (bomStore || []).filter(b => b.status === 'Cancelled & Reissued to Dispatch' || b.reissuedByAccounts).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
-              headers: ['BOM Code', 'Customer Name', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
-              rows: (bomStore || []).filter(b => b.status && !['Draft'].includes(b.status)).map(b => {
+              headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status', 'Total Value (₹)', 'Fulfillment Status', 'Action'],
+              rows: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
@@ -4225,6 +4231,7 @@ export default function ProductionViewsEngine(props) {
                   ...b,
                   code: b.bomCode,
                   c2: b.customerName,
+                  salesPerson: b.salesPerson || 'Ravi Kumar (Sales Executive)',
                   c3: b.paymentType,
                   c4: isReissued ? `Reissued by Accounts` : isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
                   c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
@@ -9767,6 +9774,7 @@ export default function ProductionViewsEngine(props) {
               setBomStore(prev => prev.map(b => (b.bomCode === dispatchPackingModal.bomCode || b.code === dispatchPackingModal.bomCode || b.id === dispatchPackingModal.id) ? {
                 ...b,
                 dispatchPacking: itemsToPack,
+                dispatchPackingMedia: dispatchPackingModal.dispatchPackingMedia || b.dispatchPackingMedia || null,
                 status: nextStatus,
                 pendingSalesDispatchPayment: needsSalesPaymentNotification,
                 reissuedByAccounts: false,
@@ -9872,6 +9880,8 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.customerName}</strong></span>
+                        <span>•</span>
+                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {dispatchPackingModal.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong></span>
                         <span>•</span>
                         <span>Payment: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.paymentType}</strong></span>
                       </div>
@@ -10163,6 +10173,237 @@ export default function ProductionViewsEngine(props) {
                     </table>
                   </div>
 
+                  {/* ─── PACKED ITEMS PHOTOS & VIDEOS VERIFICATION SECTION ─── */}
+                  <div style={{
+                    padding: '20px 24px',
+                    borderTop: '1px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '14px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Camera size={18} style={{ color: '#0E7490' }} />
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                          Packed Items Media Verification (Photos & Videos)
+                        </h4>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>
+                        Stored securely in ControlRoom Media Cache & Cloud Sync
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {!isPackedAndReady && (
+                        <>
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            backgroundColor: '#0E7490', color: '#FFFFFF',
+                            padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                            cursor: 'pointer', boxShadow: '0 2px 4px rgba(14,116,144,0.2)'
+                          }}>
+                            <UploadCloud size={14} /> Upload Packing Photo(s)
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const files = e.target.files;
+                                if (files && files.length > 0) {
+                                  Array.from(files).forEach(f => {
+                                    compressAndSaveFile(f, (docMeta) => {
+                                      if (docMeta) {
+                                        saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                        setDispatchPackingModal(prev => {
+                                          const existingMedia = prev.dispatchPackingMedia || { photos: [], videos: [] };
+                                          const updatedPhotos = [...(existingMedia.photos || []), {
+                                            id: `pack_photo_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                                            name: docMeta.name,
+                                            size: docMeta.size,
+                                            dataUrl: docMeta.dataUrl,
+                                            uploadedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                                          }];
+                                          return {
+                                            ...prev,
+                                            dispatchPackingMedia: { ...existingMedia, photos: updatedPhotos }
+                                          };
+                                        });
+                                      }
+                                    });
+                                  });
+                                }
+                              }}
+                            />
+                          </label>
+
+                          <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            backgroundColor: '#FFFFFF', color: '#0E7490', border: '1px solid #0E7490',
+                            padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                            cursor: 'pointer'
+                          }}>
+                            <Video size={14} /> Upload Packing Video
+                            <input
+                              type="file"
+                              accept="video/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const file = e.target.files && e.target.files[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (evt) => {
+                                    const vItem = {
+                                      id: `pack_video_${Date.now()}`,
+                                      name: file.name,
+                                      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+                                      dataUrl: evt.target.result,
+                                      uploadedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                                    };
+                                    setDispatchPackingModal(prev => {
+                                      const existingMedia = prev.dispatchPackingMedia || { photos: [], videos: [] };
+                                      return {
+                                        ...prev,
+                                        dispatchPackingMedia: { ...existingMedia, videos: [...(existingMedia.videos || []), vItem] }
+                                      };
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const canvas = document.createElement('canvas');
+                              canvas.width = 640;
+                              canvas.height = 400;
+                              const ctx = canvas.getContext('2d');
+                              ctx.fillStyle = '#0F172A';
+                              ctx.fillRect(0, 0, 640, 400);
+                              ctx.fillStyle = '#0E7490';
+                              ctx.fillRect(40, 60, 560, 280);
+                              ctx.fillStyle = '#FFFFFF';
+                              ctx.font = 'bold 20px sans-serif';
+                              ctx.fillText(`PACKED CARTON: ${dispatchPackingModal.bomCode}`, 60, 110);
+                              ctx.font = '14px sans-serif';
+                              ctx.fillText(`Customer: ${dispatchPackingModal.customerName}`, 60, 150);
+                              ctx.fillText(`Verified Packed by Dispatch Desk • ${new Date().toLocaleTimeString()}`, 60, 190);
+                              const sampleUrl = canvas.toDataURL('image/jpeg');
+                              const samplePhoto = {
+                                id: `pack_photo_${Date.now()}`,
+                                name: `Packed_Box_Verified_${Date.now().toString().slice(-4)}.jpg`,
+                                size: '1.2 MB',
+                                dataUrl: sampleUrl,
+                                uploadedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                              };
+                              setDispatchPackingModal(prev => {
+                                const existingMedia = prev.dispatchPackingMedia || { photos: [], videos: [] };
+                                return {
+                                  ...prev,
+                                  dispatchPackingMedia: { ...existingMedia, photos: [...(existingMedia.photos || []), samplePhoto] }
+                                };
+                              });
+                            }}
+                            style={{
+                              border: '1px dashed #CBD5E1', backgroundColor: '#FFFFFF',
+                              color: '#475569', height: '36px', padding: '0 14px',
+                              borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', gap: '6px'
+                            }}
+                          >
+                            + Add Sample Packing Photo
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Media Gallery Thumbnails */}
+                    {((dispatchPackingModal.dispatchPackingMedia?.photos || []).length > 0 || (dispatchPackingModal.dispatchPackingMedia?.videos || []).length > 0) ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                        {(dispatchPackingModal.dispatchPackingMedia?.photos || []).map((ph, phIdx) => (
+                          <div key={ph.id || phIdx} style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', border: '1px solid #E2E8F0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div
+                              onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name })}
+                              style={{ height: '90px', backgroundColor: '#0F172A', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
+                                {ph.name}
+                              </span>
+                              {!isPackedAndReady && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDispatchPackingModal(prev => {
+                                      const existingMedia = prev.dispatchPackingMedia || { photos: [], videos: [] };
+                                      return {
+                                        ...prev,
+                                        dispatchPackingMedia: {
+                                          ...existingMedia,
+                                          photos: existingMedia.photos.filter((_, i) => i !== phIdx)
+                                        }
+                                      };
+                                    });
+                                  }}
+                                  style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {(dispatchPackingModal.dispatchPackingMedia?.videos || []).map((vd, vdIdx) => (
+                          <div key={vd.id || vdIdx} style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', border: '1px solid #E2E8F0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div
+                              onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name })}
+                              style={{ height: '90px', backgroundColor: '#0F172A', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', gap: '4px' }}
+                            >
+                              <Video size={24} style={{ color: '#38BDF8' }} />
+                              <span style={{ fontSize: '10px' }}>Play Video</span>
+                            </div>
+                            <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
+                                {vd.name}
+                              </span>
+                              {!isPackedAndReady && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDispatchPackingModal(prev => {
+                                      const existingMedia = prev.dispatchPackingMedia || { photos: [], videos: [] };
+                                      return {
+                                        ...prev,
+                                        dispatchPackingMedia: {
+                                          ...existingMedia,
+                                          videos: existingMedia.videos.filter((_, i) => i !== vdIdx)
+                                        }
+                                      };
+                                    });
+                                  }}
+                                  style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic' }}>
+                        No packing media uploaded yet. Please attach packed item photos / videos before forwarding to Accounts.
+                      </div>
+                    )}
+                  </div>
+
                   {/* Table Footer */}
                   <div style={{
                     padding: '14px 24px', borderTop: '1px solid #F1F5F9',
@@ -10411,6 +10652,7 @@ export default function ProductionViewsEngine(props) {
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                 vendor: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
                 customerName: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
+                salesPerson: verifiedBOM.salesPerson || 'Ravi Kumar (Sales Executive)',
                 poNo: targetCode,
                 bomCode: targetCode,
                 grnNo: 'GRN-VERIFIED',
@@ -10508,6 +10750,8 @@ export default function ProductionViewsEngine(props) {
                       </div>
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{custNameText}</strong></span>
+                        <span>•</span>
+                        <span>Sales Creator: <strong style={{ color: '#FFFFFF', backgroundColor: 'rgba(14, 116, 144, 0.45)', padding: '2px 8px', borderRadius: '6px' }}>👤 {accountsVerificationModal.salesPerson || accountsVerificationModal.c4 || 'Ravi Kumar (Sales Executive)'}</strong></span>
                         <span>•</span>
                         <span>Payment Terms: <strong style={{ color: '#FFFFFF' }}>{payTypeText}</strong></span>
                       </div>
@@ -10924,6 +11168,63 @@ export default function ProductionViewsEngine(props) {
                           {isAlreadyCompleted ? 'Verified' : softCopy ? 'Attached' : 'Upload / Snap Photo'}
                         </span>
                       </div>
+
+                      {/* DISPATCH PACKED ITEMS MEDIA VERIFICATION PANEL */}
+                      {(() => {
+                        const packMedia = accountsVerificationModal.dispatchPackingMedia || {};
+                        const packPhotos = packMedia.photos || [];
+                        const packVideos = packMedia.videos || [];
+                        const hasMedia = packPhotos.length > 0 || packVideos.length > 0;
+
+                        return (
+                          <div style={{
+                            padding: '14px 16px', borderRadius: '12px',
+                            backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0',
+                            display: 'flex', flexDirection: 'column', gap: '10px'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Camera size={16} style={{ color: '#0E7490' }} />
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                                  Dispatch Packed Items Media ({packPhotos.length} Photos, {packVideos.length} Videos)
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                Captured by Dispatch Team
+                              </span>
+                            </div>
+
+                            {hasMedia ? (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                                {packPhotos.map((ph, pIdx) => (
+                                  <div
+                                    key={pIdx}
+                                    onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name })}
+                                    style={{ height: '70px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', position: 'relative' }}
+                                  >
+                                    <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <span style={{ position: 'absolute', bottom: '2px', left: '4px', fontSize: '9px', color: 'white', backgroundColor: 'rgba(0,0,0,0.6)', padding: '1px 4px', borderRadius: '4px' }}>Photo</span>
+                                  </div>
+                                ))}
+                                {packVideos.map((vd, vIdx) => (
+                                  <div
+                                    key={vIdx}
+                                    onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name })}
+                                    style={{ height: '70px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                                  >
+                                    <Video size={18} style={{ color: '#38BDF8' }} />
+                                    <span style={{ fontSize: '9px' }}>Watch Video</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>
+                                No packed item media attached yet by Dispatch Team.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Overall status footer */}
                       <div style={{
@@ -16514,6 +16815,7 @@ export default function ProductionViewsEngine(props) {
             bomCode: bCode,
             invoiceNo: invNo,
             customer: custName,
+            salesPerson: bom.salesPerson || 'Ravi Kumar (Sales Executive)',
             deliveryAddress: delAddr,
             packedCount: packedItems.length,
             vehicleLoading: loadingPayload
@@ -16556,7 +16858,7 @@ export default function ProductionViewsEngine(props) {
                       </span>
                     </div>
                     <p style={{ fontSize: '12px', color: '#94A3B8', margin: '3px 0 0 0' }}>
-                      Customer: <strong style={{ color: '#FFFFFF' }}>{custName}</strong> • Destination: <span>{delAddr}</span>
+                      Customer: <strong style={{ color: '#FFFFFF' }}>{custName}</strong> • Sales Creator: <strong style={{ color: '#38BDF8' }}>👤 {bom.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong> • Destination: <span>{delAddr}</span>
                     </p>
                   </div>
                 </div>
@@ -16980,7 +17282,7 @@ export default function ProductionViewsEngine(props) {
                 Order & BOM Flow Successfully Completed!
               </h2>
               <p style={{ fontSize: '13px', color: '#64748B', margin: '6px 0 0 0' }}>
-                BOM Reference: <strong style={{ color: '#2563EB' }}>{completedBomSummaryModal.bomCode}</strong> • Customer: <strong>{completedBomSummaryModal.customer}</strong>
+                BOM Reference: <strong style={{ color: '#2563EB' }}>{completedBomSummaryModal.bomCode}</strong> • Sales Creator: <strong style={{ color: '#0E7490' }}>👤 {completedBomSummaryModal.salesPerson || 'Ravi Kumar (Sales Executive)'}</strong> • Customer: <strong>{completedBomSummaryModal.customer}</strong>
               </p>
             </div>
 
@@ -17004,6 +17306,101 @@ export default function ProductionViewsEngine(props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534' }}>
                   <CheckCircle size={15} /> 5. Vehicle Loading Verified with Photos & Videos ({completedBomSummaryModal.vehicleLoading?.vehicleNo})
                 </div>
+              </div>
+            </div>
+
+            {/* Media Storage & Location Info Panel */}
+            <div style={{ backgroundColor: '#F1F5F9', borderRadius: '14px', border: '1px solid #CBD5E1', padding: '14px 18px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#0E7490', textTransform: 'uppercase' }}>
+                  📁 Media Storage & Audit Information
+                </div>
+                <span style={{ fontSize: '10px', color: '#166534', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '8px', fontWeight: '800' }}>
+                  Synced & Quota-Protected
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#334155', lineHeight: '1.4' }}>
+                • <strong>Storage Target:</strong> LocalStorage + Cache API (<code style={{ color: '#0E7490', backgroundColor: '#E0F2FE', padding: '1px 4px', borderRadius: '4px' }}>controlroom_media_cache</code>)<br />
+                • <strong>Loading Photos:</strong> {completedBomSummaryModal.vehicleLoading?.photos?.length || 0} files captured<br />
+                • <strong>Loading Videos:</strong> {completedBomSummaryModal.vehicleLoading?.videos?.length || 0} files captured<br />
+                • <strong>Timestamp:</strong> {completedBomSummaryModal.vehicleLoading?.loadedTimeStr || new Date().toLocaleString()}
+              </div>
+            </div>
+
+            {/* Customer Sharing Actions (WhatsApp / Email) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>
+                Send Dispatch Details, Photos & Videos to Customer:
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cust = completedBomSummaryModal.customer || 'Valued Customer';
+                    const bNum = completedBomSummaryModal.bomCode || 'BOM';
+                    const inv = completedBomSummaryModal.invoiceNo || 'INV';
+                    const vNum = completedBomSummaryModal.vehicleLoading?.vehicleNo || 'TN-09-CB-4821';
+                    const drv = completedBomSummaryModal.vehicleLoading?.driverName || 'Driver';
+                    const dPhone = completedBomSummaryModal.vehicleLoading?.driverPhone || '';
+                    const lr = completedBomSummaryModal.vehicleLoading?.lrNo || 'LR-881204';
+                    const phCount = completedBomSummaryModal.vehicleLoading?.photos?.length || 0;
+                    const vdCount = completedBomSummaryModal.vehicleLoading?.videos?.length || 0;
+
+                    const msg = `📦 *DISPATCH NOTIFICATION - CONTROL ROOM*\n\nDear ${cust},\nYour order has been fully packed, inspected, and loaded into the delivery vehicle.\n\n• *BOM Reference:* ${bNum}\n• *Invoice No:* ${inv}\n• *Vehicle Number:* ${vNum}\n• *Driver:* ${drv} (${dPhone})\n• *LR Number:* ${lr}\n• *Loading Media:* ${phCount} Photo(s), ${vdCount} Video(s) verified on dock.\n\nThank you for choosing us!`;
+                    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+                    window.open(waUrl, '_blank');
+                  }}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: '#16A34A',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(22,163,74,0.3)'
+                  }}
+                >
+                  <span>💬 Send to Customer via WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cust = completedBomSummaryModal.customer || 'Valued Customer';
+                    const bNum = completedBomSummaryModal.bomCode || 'BOM';
+                    const inv = completedBomSummaryModal.invoiceNo || 'INV';
+                    const vNum = completedBomSummaryModal.vehicleLoading?.vehicleNo || 'TN-09-CB-4821';
+                    const drv = completedBomSummaryModal.vehicleLoading?.driverName || 'Driver';
+                    const lr = completedBomSummaryModal.vehicleLoading?.lrNo || 'LR-881204';
+                    const phCount = completedBomSummaryModal.vehicleLoading?.photos?.length || 0;
+                    const vdCount = completedBomSummaryModal.vehicleLoading?.videos?.length || 0;
+
+                    const subject = `Dispatch & Loading Confirmation: ${bNum} (${inv})`;
+                    const body = `Dear ${cust},\n\nWe are pleased to inform you that your shipment is dispatched.\n\nOrder Details:\n• BOM Number: ${bNum}\n• Tax Invoice: ${inv}\n• Vehicle Registration: ${vNum}\n• Driver Name: ${drv}\n• LR Consignment Number: ${lr}\n• Verification Media: ${phCount} loading photos and ${vdCount} videos captured.\n\nBest Regards,\nLogistics & Dispatch Operations Team`;
+                    const mailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.location.href = mailUrl;
+                  }}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    color: '#1E293B',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>✉️ Send via Email</span>
+                </button>
               </div>
             </div>
 
