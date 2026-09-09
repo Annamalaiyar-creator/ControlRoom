@@ -229,7 +229,9 @@ export function saveCloudStore(storeKey, storeData) {
           .from('leaves')
           .update({
             reason: JSON.stringify(dataToSave),
-            status: 'active'
+            status: 'active',
+            dates: new Date().toISOString(),
+            duration: String(Array.isArray(dataToSave) ? dataToSave.length : 1)
           })
           .eq('id', record.id);
       } else {
@@ -239,12 +241,14 @@ export function saveCloudStore(storeKey, storeData) {
             employee: employeeKey,
             reason: JSON.stringify(dataToSave),
             status: 'active',
-            start_date: '2026-01-01',
-            end_date: '2026-01-01',
+            dates: new Date().toISOString(),
+            duration: String(Array.isArray(dataToSave) ? dataToSave.length : 1),
             type: 'Store'
           });
       }
-    } catch (err) {}
+    } catch (err) {
+      console.warn(`[Supabase Store Sync Warn for ${storeKey}]:`, err?.message || err);
+    }
 
     try {
       fetch(`/api/store/${storeKey}`, {

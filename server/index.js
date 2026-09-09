@@ -71,7 +71,11 @@ const syncStoreWithSupabase = async (key, localData) => {
       if (record && record.id) {
         await supabase
           .from('leaves')
-          .update({ reason: JSON.stringify(localData), updated_at: new Date().toISOString() })
+          .update({
+            reason: JSON.stringify(localData),
+            dates: new Date().toISOString(),
+            duration: String(Array.isArray(localData) ? localData.length : 1)
+          })
           .eq('id', record.id);
       } else {
         await supabase
@@ -80,14 +84,14 @@ const syncStoreWithSupabase = async (key, localData) => {
             employee: employeeKey,
             reason: JSON.stringify(localData),
             status: 'active',
-            start_date: '2026-01-01',
-            end_date: '2026-01-01',
+            dates: new Date().toISOString(),
+            duration: String(Array.isArray(localData) ? localData.length : 1),
             type: 'Store'
           });
       }
     }
   } catch (err) {
-    // Silent fallback
+    console.error(`[Supabase Store Sync Error for ${key}]:`, err?.message || err);
   }
   return supabaseMemoryStore[key] || localData;
 };
@@ -107,7 +111,9 @@ const pushStoreToSupabase = async (key, storeData) => {
         .from('leaves')
         .update({
           reason: JSON.stringify(storeData),
-          status: 'active'
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: String(Array.isArray(storeData) ? storeData.length : 1)
         })
         .eq('id', record.id);
     } else {
@@ -117,13 +123,13 @@ const pushStoreToSupabase = async (key, storeData) => {
           employee: employeeKey,
           reason: JSON.stringify(storeData),
           status: 'active',
-          start_date: '2026-01-01',
-          end_date: '2026-01-01',
+          dates: new Date().toISOString(),
+          duration: String(Array.isArray(storeData) ? storeData.length : 1),
           type: 'Store'
         });
     }
   } catch (err) {
-    // Silent fallback
+    console.error(`[Supabase Push Error for ${key}]:`, err?.message || err);
   }
 };
 
@@ -2269,6 +2275,88 @@ app.get('/api/boms/next-code', async (req, res) => {
   }
   const nextBomCode = `BOM-${maxNum + 1}`;
   res.json({ success: true, nextBomCode, maxNum });
+});
+
+// Centralized atomic BOM creation/update endpoint - merges into disk and pushes to Supabase
+app.post('/api/boms', async (req, res) => {
+  try {
+    const { bom } = req.body;
+    if (!bom || (!bom.bomCode && !bom.code)) {
+      return res.status(400).json({ success: false, message: 'Valid bom record required' });
+    }
+
+    const code = bom.bomCode || bom.code;
+    const filePath = getStoreFilePath('bom_store.json');
+    let diskList = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        diskList = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (e) {
+        diskList = [];
+      }
+    }
+    if (!Array.isArray(diskList)) diskList = [];
+
+    // Also get Supabase data to merge completely
+    let cloudList = [];
+    try {
+      const { data: record } = await supabase
+        .from('leaves')
+        .select('reason')
+        .eq('employee', 'BOM_STORE')
+        .maybeSingle();
+      if (record && record.reason) {
+        const parsed = JSON.parse(record.reason);
+        if (Array.isArray(parsed)) cloudList = parsed;
+      }
+    } catch (e) {}
+
+    // Merge map with existing boms
+    const map = new Map();
+    cloudList.forEach(item => {
+      const c = item?.bomCode || item?.code;
+      if (c) map.set(c, item);
+    });
+    diskList.forEach(item => {
+      const c = item?.bomCode || item?.code;
+      if (c) {
+        if (map.has(c)) {
+          map.set(c, { ...map.get(c), ...item });
+        } else {
+          map.set(c, item);
+        }
+      }
+    });
+
+    // Merge or insert new BOM record
+    if (map.has(code)) {
+      map.set(code, { ...map.get(code), ...bom });
+    } else {
+      map.set(code, bom);
+    }
+
+    const mergedList = Array.from(map.values());
+
+    // Save to server disk
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(mergedList, null, 2), 'utf8');
+    } catch (e) {
+      console.error('Error writing bom_store.json:', e);
+    }
+
+    // Save to Supabase
+    try {
+      await pushStoreToSupabase('bom_store', mergedList);
+    } catch (e) {
+      console.error('Error pushing bom_store to Supabase:', e);
+    }
+
+    console.log(`[BOM Store] BOM ${code} saved to central database. Total BOMs: ${mergedList.length}`);
+    return res.json({ success: true, bom, total: mergedList.length });
+  } catch (err) {
+    console.error('Error saving BOM:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Real-time synchronization endpoint retrieving live purchase orders from Zoho Books

@@ -197,51 +197,61 @@ export default function BomOrdersView(props) {
     }
   }, [bomStore]);
 
-  // Initial cloud fetch and cross-tab storage listener
+  // Initial cloud fetch, polling and cross-tab storage listener
   useEffect(() => {
-    fetchCloudStore('bom_store', bomStore).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setBomStore(prev => {
-          const map = new Map();
-          let localCurrent = Array.isArray(prev) ? prev : [];
-          try {
-            const savedStr = localStorage.getItem('controlroom_bom_store');
-            if (savedStr) {
-              const parsed = JSON.parse(savedStr);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                const currentMap = new Map();
-                localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                localCurrent = Array.from(currentMap.values());
-              }
-            }
-          } catch (e) { }
-
-          data.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) map.set(k, item);
-            }
-          });
-          localCurrent.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) {
-                if (map.has(k)) {
-                  map.set(k, { ...map.get(k), ...item });
-                } else {
-                  map.set(k, item);
+    const syncFromCloud = () => {
+      fetchCloudStore('bom_store', []).then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setBomStore(prev => {
+            const map = new Map();
+            let localCurrent = Array.isArray(prev) ? prev : [];
+            try {
+              const savedStr = localStorage.getItem('controlroom_bom_store');
+              if (savedStr) {
+                const parsed = JSON.parse(savedStr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  const currentMap = new Map();
+                  localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                  parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                  localCurrent = Array.from(currentMap.values());
                 }
               }
-            }
+            } catch (e) { }
+
+            // Remote database is primary source
+            data.forEach(item => {
+              if (item) {
+                const k = item.bomCode || item.code;
+                if (k) map.set(k, item);
+              }
+            });
+            // Merge with local items that might be newer or pending
+            localCurrent.forEach(item => {
+              if (item) {
+                const k = item.bomCode || item.code;
+                if (k) {
+                  if (map.has(k)) {
+                    map.set(k, { ...map.get(k), ...item });
+                  } else {
+                    map.set(k, item);
+                  }
+                }
+              }
+            });
+            const merged = Array.from(map.values());
+            const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
+            try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
+            return sanitizedMerged;
           });
-          const merged = Array.from(map.values());
-          const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
-          return sanitizedMerged;
-        });
-      }
-    });
+        }
+      });
+    };
+
+    // Initial fetch
+    syncFromCloud();
+
+    // Auto-poll cloud every 10 seconds so all sales people see newly created BOMs without reloading
+    const pollInterval = setInterval(syncFromCloud, 10000);
 
     const syncFromStorage = () => {
       try {
@@ -265,6 +275,7 @@ export default function BomOrdersView(props) {
     window.addEventListener('controlroom_customer_update', syncFromStorage);
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
       window.removeEventListener('controlroom_customer_update', syncFromStorage);
@@ -2183,17 +2194,26 @@ export default function BomOrdersView(props) {
                         blockInventoryForBom(newBomRecord.items, newBomRecord.bomCode);
                       }
 
+                      const sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
+
+                      // 1. Immediately send to Central Server & Supabase Database
+                      fetch('/api/boms', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bom: sanitizedNewBom })
+                      }).catch(err => console.error('Error in /api/boms sync:', err));
+
+                      // 2. Update local state and persist
                       setBomStore(prev => {
                         const current = Array.isArray(prev) ? prev : [];
                         const filtered = current.filter(item => item && (item.bomCode !== newBomRecord.bomCode && item.code !== newBomRecord.bomCode));
-                        const updatedList = [newBomRecord, ...filtered];
-                        const sanitized = updatedList.map(stripDataUrlsFromRecord);
+                        const updatedList = [sanitizedNewBom, ...filtered];
                         try {
-                          localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
+                          localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
                         } catch (e) {
                           console.warn('Storage quota hit for local storage', e);
                         }
-                        saveCloudStore('bom_store', sanitized);
+                        saveCloudStore('bom_store', updatedList);
                         setShowBOMForm(false);
                         setBomConfirmModal(null);
                         setCurrentPage(1);
