@@ -1,36 +1,5 @@
 [
   {
-    "id": "CUST-VRM-104",
-    "customerCode": "CUST-VRM-104",
-    "customerName": "AK SMART",
-    "companyName": "AK SMART AUTOMATIONS",
-    "customerType": "EPC Contractor",
-    "industry": "",
-    "gstNumber": "33AAACA1234A1Z5",
-    "panNumber": "",
-    "address": "",
-    "city": "",
-    "state": "",
-    "pincode": "",
-    "dispatchAddress": "",
-    "dispatchCity": "",
-    "dispatchState": "",
-    "dispatchPincode": "",
-    "sameAsBilling": true,
-    "creditLimit": 2500000,
-    "creditDays": 30,
-    "paymentTerms": "50% Advance + 50% Dispatch",
-    "assignedSalesperson": "Mohith JV",
-    "source": "Direct",
-    "primaryContact": {
-      "name": "Anand Kumar",
-      "phone": "+91 98401 23456",
-      "email": "anand@aksmart.in"
-    },
-    "createdAt": "2026-09-09T09:54:05.475Z",
-    "zohoContactId": "4080449000000372001"
-  },
-  {
     "code": "Vikram Solar Pvt Ltd",
     "c2": "Vikram Solar Pvt Ltd",
     "gstNo": "33AABCU9603R1ZM",
