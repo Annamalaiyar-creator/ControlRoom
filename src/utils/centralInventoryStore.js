@@ -1,6 +1,6 @@
 import { VRM_PRODUCTS } from './vrmProductsData';
 
-// Initial Seed Item Master derived strictly from official VRM catalog
+// Initial Seed Item Master derived strictly from official VRM catalog (All items initialized with 5000 units stock)
 export const INITIAL_CENTRAL_ITEMS = VRM_PRODUCTS.map((p, idx) => ({
   code: p.code,
   name: p.name,
@@ -9,10 +9,11 @@ export const INITIAL_CENTRAL_ITEMS = VRM_PRODUCTS.map((p, idx) => ({
   uom: p.uom || 'Nos',
   minLevel: 20,
   reorderLevel: 50,
-  maxLevel: 1000,
+  maxLevel: 10000,
   location: p.material === 'HDG' ? 'Finished Goods Bay - HDG' : p.material === 'GAL' ? 'Finished Goods Bay - GAL' : 'Finished Goods Bay - Aluminium',
-  unitRate: 1200 + (idx * 50) % 2500,
-  openingStock: 250 + (idx * 15) % 800
+  unitRate: p.price || (1200 + (idx * 50) % 2500),
+  openingStock: 5000,
+  stock: 5000
 }));
 
 // Transaction Types

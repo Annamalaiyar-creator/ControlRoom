@@ -1334,6 +1334,16 @@ export default function StockStatusView(props) {
   const [selectedItemStatus, setSelectedItemStatus] = useState('All Status');
   const [itemsLoading, setItemsLoading] = useState(true);
 
+  // Dedicated states for Stock Status list table view
+  const [stockStatusSearchQuery, setStockStatusSearchQuery] = useState('');
+  const [stockStatusWarehouse, setStockStatusWarehouse] = useState('All Warehouses');
+  const [stockStatusCategory, setStockStatusCategory] = useState('All Categories');
+  const [stockStatusStatus, setStockStatusStatus] = useState('All Status');
+  const [stockStatusPage, setStockStatusPage] = useState(1);
+  const [stockStatusRowsPerPage, setStockStatusRowsPerPage] = useState(10);
+  const [stockStatusGoToInput, setStockStatusGoToInput] = useState('');
+  const [stockStatusStorageTrigger, setStockStatusStorageTrigger] = useState(0);
+
   useEffect(() => {
     let isMounted = true;
     const fetchZohoItems = async () => {
@@ -1375,6 +1385,42 @@ export default function StockStatusView(props) {
     };
     fetchZohoItems();
     return () => { isMounted = false; };
+  }, []);
+
+  // Listen to live inventory changes and storage events so stock reductions reflect immediately
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      setStockStatusStorageTrigger(prev => prev + 1);
+      try {
+        const rawStoreStr = localStorage.getItem('controlroom_items_list') || localStorage.getItem('controlroom_item_store');
+        if (rawStoreStr) {
+          const parsed = JSON.parse(rawStoreStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItemsList(prev => {
+              const itemMap = new Map();
+              (prev || []).forEach(it => itemMap.set(String(it.code || it.sku || it.itemId || it.id || it.name).toLowerCase(), it));
+              parsed.forEach(it => {
+                const key = String(it.code || it.sku || it.itemId || it.id || it.name).toLowerCase();
+                if (key) {
+                  itemMap.set(key, { ...itemMap.get(key), ...it });
+                }
+              });
+              return Array.from(itemMap.values());
+            });
+          }
+        }
+      } catch (_) {}
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('controlroom_storage_update', handleStorageUpdate);
+    window.addEventListener('controlroom_raw_materials_update', handleStorageUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('controlroom_storage_update', handleStorageUpdate);
+      window.removeEventListener('controlroom_raw_materials_update', handleStorageUpdate);
+    };
   }, []);
 
   const handleCreateProductInZoho = async () => {
@@ -2156,55 +2202,109 @@ export default function StockStatusView(props) {
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr auto auto', gap: '16px', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input type="text" placeholder="Search by Material / SKU / Code..." style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} />
+                  <input
+                    type="text"
+                    value={stockStatusSearchQuery}
+                    onChange={(e) => {
+                      setStockStatusSearchQuery(e.target.value);
+                      setStockStatusPage(1);
+                    }}
+                    placeholder="Search by Material / SKU / Code..."
+                    style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
+                  />
                   <Search style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', left: '12px' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                  <option>All Warehouses</option>
+                <select
+                  value={stockStatusWarehouse}
+                  onChange={(e) => {
+                    setStockStatusWarehouse(e.target.value);
+                    setStockStatusPage(1);
+                  }}
+                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
+                >
+                  <option value="All Warehouses">All Warehouses</option>
+                  <option value="Main Warehouse">Main Warehouse</option>
+                  <option value="HDG Yard">HDG Yard</option>
+                  <option value="Regional Warehouse">Regional Warehouse</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                  <option>All Categories</option>
+                <select
+                  value={stockStatusCategory}
+                  onChange={(e) => {
+                    setStockStatusCategory(e.target.value);
+                    setStockStatusPage(1);
+                  }}
+                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
+                >
+                  <option value="All Categories">All Categories</option>
+                  <option value="Rails">Rails</option>
+                  <option value="Clamps">Clamps</option>
+                  <option value="Fasteners">Fasteners</option>
+                  <option value="Accessories">Accessories</option>
+                  <option value="Raw Material">Raw Material</option>
+                  <option value="General">General</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#64748B' }}>
-                  <option>All Status</option>
+                <select
+                  value={stockStatusStatus}
+                  onChange={(e) => {
+                    setStockStatusStatus(e.target.value);
+                    setStockStatusPage(1);
+                  }}
+                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
+                >
+                  <option value="All Status">All Status</option>
+                  <option value="In Stock">In Stock</option>
+                  <option value="Low Stock">Low Stock</option>
+                  <option value="Out of Stock">Out of Stock</option>
                 </select>
               </div>
               <div>
-                <button style={{
-                  height: '38px',
-                  padding: '0 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #E2E8F0',
-                  backgroundColor: '#FFFFFF',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}>
+                <button
+                  onClick={() => {}}
+                  style={{
+                    height: '38px',
+                    padding: '0 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
                   <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
                   Filters
                 </button>
               </div>
               <div>
-                <button style={{
-                  height: '38px',
-                  padding: '0 8px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: '#2563EB',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}>
+                <button
+                  onClick={() => {
+                    setStockStatusSearchQuery('');
+                    setStockStatusWarehouse('All Warehouses');
+                    setStockStatusCategory('All Categories');
+                    setStockStatusStatus('All Status');
+                    setStockStatusPage(1);
+                  }}
+                  style={{
+                    height: '38px',
+                    padding: '0 8px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: '#2563EB',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
                   Reset
                 </button>
               </div>
@@ -2212,312 +2312,538 @@ export default function StockStatusView(props) {
           </div>
 
           {/* Top Widget Row (Stock Health, Top Low Stock Items) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+          {(() => {
+            // Calculate dynamic health metrics from computed stock items
+            let inStockCount = 0;
+            let lowStockCount = 0;
+            let outOfStockCount = 0;
 
-            {/* Stock Health Card */}
-            <div className="section-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '16px 24px 0 24px' }}>
-                <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#0F172A' }}>Stock Health</span>
-              </div>
+            // 1. Calculate reserved quantities from active BOMs
+            const bomReservedMap = new Map();
+            if (Array.isArray(bomStore)) {
+              bomStore.forEach(b => {
+                const bStatus = String(b.status || '').toLowerCase();
+                if (bStatus !== 'cancelled' && bStatus !== 'dispatched' && bStatus !== 'delivered') {
+                  (b.items || []).forEach(pItem => {
+                    const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
+                    const pCode = String(pItem.code || '').toLowerCase().trim();
+                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                  });
+                }
+              });
+            }
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 24px', position: 'relative' }}>
-                {/* SVG Donut */}
-                <div style={{ position: 'relative', width: '150px', height: '150px' }}>
-                  <svg viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F1F5F9" strokeWidth="4"></circle>
-                    {/* In Stock segment: 86% */}
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10B981" strokeWidth="4" strokeDasharray="86 14" strokeDashoffset="0"></circle>
-                    {/* Low Stock segment: 10% */}
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F59E0B" strokeWidth="4" strokeDasharray="10 90" strokeDashoffset="-86"></circle>
-                    {/* Out of Stock segment: 4% */}
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#EF4444" strokeWidth="4" strokeDasharray="4 96" strokeDashoffset="-96"></circle>
-                  </svg>
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: 'none'
-                  }}>
-                    <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#0F172A', fontFamily: 'Inter, system-ui' }}>86%</span>
-                    <span style={{ fontSize: '13px', color: '#10B981', fontWeight: '500', marginTop: '2px' }}>Healthy</span>
+            let localRawMats = [];
+            try {
+              const rawStr = localStorage.getItem('controlroom_raw_materials_store');
+              if (rawStr) {
+                const parsed = JSON.parse(rawStr);
+                if (Array.isArray(parsed)) localRawMats = parsed;
+              }
+            } catch (_) {}
+
+            const rawMatMap = new Map();
+            localRawMats.forEach(m => {
+              const mCode = String(m.code || '').toLowerCase().trim();
+              const mName = String(m.name || '').toLowerCase().trim();
+              if (mCode) rawMatMap.set(mCode, m);
+              if (mName) rawMatMap.set(mName, m);
+            });
+
+            const stockDataset = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
+              const codeKey = String(it.code || it.sku || it.itemId || '').toLowerCase().trim();
+              const nameKey = String(it.name || '').toLowerCase().trim();
+              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
+
+              let stockVal = 5000;
+              if (matchedMat && matchedMat.stock !== undefined && matchedMat.stock !== null) {
+                stockVal = Math.max(0, Number(matchedMat.stock));
+              } else if (it.stock !== undefined && it.stock !== null) {
+                stockVal = Math.max(0, Number(it.stock));
+              } else if (it.openingStock !== undefined && it.openingStock !== null) {
+                stockVal = Math.max(0, Number(it.openingStock));
+              }
+
+              const activeBlocked = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || Number(matchedMat?.reserved || it.reserved || 0);
+              const availableQty = Math.max(0, stockVal - activeBlocked);
+              const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+
+              let statusText = 'In Stock';
+              if (availableQty === 0) statusText = 'Out of Stock';
+              else if (availableQty <= minLvl) statusText = 'Low Stock';
+
+              return {
+                name: it.name,
+                stock: availableQty,
+                minLevel: minLvl,
+                status: statusText
+              };
+            }) : stockRegistry.map(it => {
+              const rawNum = Math.max(0, parseFloat(String(it.stock).replace(/,/g, '')) || 0);
+              const allocNum = parseFloat(String(it.allocated).replace(/,/g, '')) || 0;
+              const avail = Math.max(0, rawNum - allocNum);
+              return {
+                name: it.item,
+                stock: avail,
+                minLevel: Number(it.minLevel || 50),
+                status: it.status
+              };
+            });
+
+            stockDataset.forEach(s => {
+              if (s.status === 'Out of Stock' || s.stock === 0) outOfStockCount++;
+              else if (s.status === 'Low Stock' || s.stock <= s.minLevel) lowStockCount++;
+              else inStockCount++;
+            });
+
+            const total = stockDataset.length || 1;
+            const inStockPct = ((inStockCount / total) * 100).toFixed(1);
+            const lowStockPct = ((lowStockCount / total) * 100).toFixed(1);
+            const outOfStockPct = ((outOfStockCount / total) * 100).toFixed(1);
+
+            // Sort ascending to get lowest stock items
+            const lowestItems = [...stockDataset].sort((a, b) => a.stock - b.stock).slice(0, 8);
+
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                {/* Stock Health Card */}
+                <div className="section-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '16px 24px 0 24px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#0F172A' }}>Stock Health</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 24px', position: 'relative' }}>
+                    {/* SVG Donut */}
+                    <div style={{ position: 'relative', width: '150px', height: '150px' }}>
+                      <svg viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F1F5F9" strokeWidth="4"></circle>
+                        {/* In Stock segment */}
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10B981" strokeWidth="4" strokeDasharray={`${inStockPct} ${100 - inStockPct}`} strokeDashoffset="0"></circle>
+                        {/* Low Stock segment */}
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F59E0B" strokeWidth="4" strokeDasharray={`${lowStockPct} ${100 - lowStockPct}`} strokeDashoffset={`-${inStockPct}`}></circle>
+                        {/* Out of Stock segment */}
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#EF4444" strokeWidth="4" strokeDasharray={`${outOfStockPct} ${100 - outOfStockPct}`} strokeDashoffset={`-${parseFloat(inStockPct) + parseFloat(lowStockPct)}`}></circle>
+                      </svg>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        pointerEvents: 'none'
+                      }}>
+                        <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#0F172A', fontFamily: 'Inter, system-ui' }}>{inStockPct}%</span>
+                        <span style={{ fontSize: '13px', color: '#10B981', fontWeight: '500', marginTop: '2px' }}>Healthy</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divided Bottom section: Stock Health Breakdown */}
+                  <div style={{ borderTop: '1px solid #E2E8F0', padding: '16px 24px', backgroundColor: '#fafbfc' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E293B', display: 'block', marginBottom: '12px' }}>
+                      Stock Health Breakdown
+                    </span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { name: 'In Stock', count: `${inStockCount.toLocaleString('en-IN')} Items`, percentage: `${inStockPct}%`, color: '#10B981' },
+                        { name: 'Low Stock', count: `${lowStockCount.toLocaleString('en-IN')} Items`, percentage: `${lowStockPct}%`, color: '#F59E0B' },
+                        { name: 'Out of Stock', count: `${outOfStockCount.toLocaleString('en-IN')} Items`, percentage: `${outOfStockPct}%`, color: '#EF4444' }
+                      ].map((legend, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', color: '#334155' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: legend.color, borderRadius: '50%', flexShrink: 0 }}></span>
+                            <span style={{ fontWeight: '500' }}>{legend.name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b' }}>{legend.count}</span>
+                            <strong style={{ color: '#1e293b', minWidth: '40px', textAlign: 'right' }}>{legend.percentage}</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Low Stock Items Card */}
+                <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>Top Low Stock Items</strong>
+                      <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold' }}>Live Data</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {lowestItems.map((item, idx) => {
+                        let color = '#10B981';
+                        if (item.stock === 0) color = '#EF4444';
+                        else if (item.stock <= item.minLevel) color = '#F59E0B';
+
+                        return (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx === lowestItems.length - 1 ? 'none' : '1px solid #F8FAFC', paddingBottom: idx === lowestItems.length - 1 ? 0 : '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '500', color: '#475569' }}>{item.name}</span>
+                            <strong style={{ fontSize: '12px', color }}>{item.stock.toLocaleString('en-IN')}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Divided Bottom section: Stock Health Breakdown */}
-              <div style={{ borderTop: '1px solid #E2E8F0', padding: '16px 24px', backgroundColor: '#fafbfc' }}>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1E293B', display: 'block', marginBottom: '12px' }}>
-                  Stock Health Breakdown
-                </span>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {[
-                    { name: 'In Stock', count: '1,102 Items', percentage: '86.0%', color: '#10B981' },
-                    { name: 'Low Stock', count: '126 Items', percentage: '10.0%', color: '#F59E0B' },
-                    { name: 'Out of Stock', count: '56 Items', percentage: '4.0%', color: '#EF4444' }
-                  ].map((legend, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', color: '#334155' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: legend.color, borderRadius: '50%', flexShrink: 0 }}></span>
-                        <span style={{ fontWeight: '500' }}>{legend.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>{legend.count}</span>
-                        <strong style={{ color: '#1e293b', minWidth: '40px', textAlign: 'right' }}>{legend.percentage}</strong>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Top Low Stock Items Card */}
-            <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <strong style={{ fontSize: '14px', color: '#0F172A' }}>Top Low Stock Items</strong>
-                  <a href="#" style={{ fontSize: '11px', color: '#2563EB', fontWeight: 'bold', textDecoration: 'none' }}>View All</a>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {[
-                    { name: 'Aluminium Rail 4.2m', stock: '120', color: '#EF4444' },
-                    { name: 'Mid Clamp', stock: '926', color: '#F59E0B' },
-                    { name: 'GI Nut Bolt M8 x 25', stock: '0', color: '#EF4444' },
-                    { name: 'L-Foot', stock: '160', color: '#F59E0B' },
-                    { name: 'GI Nut Bolt M10 x 30', stock: '1,800', color: '#F59E0B' },
-                    { name: 'UV Cable Tie 300mm', stock: '260', color: '#F59E0B' },
-                    { name: 'Hex Bolt M10', stock: '150', color: '#F59E0B' },
-                    { name: 'Self Drilling Screw', stock: '600', color: '#F59E0B' }
-                  ].map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx === 7 ? 'none' : '1px solid #F8FAFC', paddingBottom: idx === 7 ? 0 : '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '500', color: '#475569' }}>{item.name}</span>
-                      <strong style={{ fontSize: '12px', color: item.color }}>{item.stock}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
+            );
+          })()}
 
           {/* Bottom Row: Stock Status List Table (Full Width) */}
-          <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <strong style={{ fontSize: '15px', color: '#0F172A' }}>Stock Status List (1,284 Items)</strong>
+          {(() => {
+            const isSalesUser = userRole === 'Sales Executive' || userRole === 'Sales Head' || String(userRole || '').toLowerCase().includes('sales');
 
-            <div style={{ overflowX: 'auto' }}>
-              <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>#</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Category</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Available Qty</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reserved Qty</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Incoming Qty</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Stock Value (₹)</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const combinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
-                      const stockVal = Number(it.stock !== undefined ? it.stock : (it.openingStock || 0));
-                      const rateVal = Number(it.rate || it.price || 250);
-                      const totalVal = stockVal * rateVal;
-                      const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+            // 1. Calculate reserved quantities from active BOMs
+            const bomReservedMap = new Map();
+            if (Array.isArray(bomStore)) {
+              bomStore.forEach(b => {
+                const bStatus = String(b.status || '').toLowerCase();
+                if (bStatus !== 'cancelled' && bStatus !== 'dispatched' && bStatus !== 'delivered') {
+                  (b.items || []).forEach(pItem => {
+                    const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
+                    const pCode = String(pItem.code || '').toLowerCase().trim();
+                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                  });
+                }
+              });
+            }
 
-                      let statusText = 'In Stock';
-                      if (stockVal === 0) statusText = 'Out of Stock';
-                      else if (stockVal <= minLvl) statusText = 'Low Stock';
+            // 2. Read latest raw materials store for overrides
+            let localRawMats = [];
+            try {
+              const rawStr = localStorage.getItem('controlroom_raw_materials_store');
+              if (rawStr) {
+                const parsed = JSON.parse(rawStr);
+                if (Array.isArray(parsed)) localRawMats = parsed;
+              }
+            } catch (_) {}
 
-                      return {
-                        code: it.code || it.sku || it.itemId || 'VRM-ITEM',
-                        item: it.name,
-                        category: it.category || it.material || 'Raw Material',
-                        location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),
-                        stock: stockVal.toLocaleString('en-IN'),
-                        allocated: '0',
-                        incoming: '0',
-                        minLevel: minLvl.toLocaleString('en-IN'),
-                        val: `₹ ${totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                        status: statusText,
-                        rawStockNum: stockVal
-                      };
-                    }) : stockRegistry;
+            const rawMatMap = new Map();
+            localRawMats.forEach(m => {
+              const mCode = String(m.code || '').toLowerCase().trim();
+              const mName = String(m.name || '').toLowerCase().trim();
+              if (mCode) rawMatMap.set(mCode, m);
+              if (mName) rawMatMap.set(mName, m);
+            });
 
-                    return combinedList.map((row, idx) => {
-                      let qtyColor = '#10B981'; // Green
-                      if (row.rawStockNum === 0 || row.status === 'Out of Stock') {
-                        qtyColor = '#EF4444'; // Red
-                      } else if (row.status === 'Low Stock') {
-                        qtyColor = '#F59E0B'; // Orange
-                      }
+            // 3. Build comprehensive item list
+            const combinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
+              const codeKey = String(it.code || it.sku || it.itemId || '').toLowerCase().trim();
+              const nameKey = String(it.name || '').toLowerCase().trim();
+              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
 
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                          <td style={{ padding: '13px 16px', color: '#94A3B8' }}>{idx + 1}</td>
-                          <td style={{ padding: '13px 16px' }}>
-                            <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
-                            <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
-                          </td>
-                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.category}</td>
-                          <td style={{ padding: '13px 16px', color: '#475569' }}>{row.location}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
-                          <td style={{ padding: '13px 16px', textAlign: 'center' }}>
-                            {(() => {
-                              let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-                              if (row.status === 'In Stock') {
-                                colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
-                              } else if (row.status === 'Low Stock') {
-                                colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
-                              } else if (row.status === 'Out of Stock') {
-                                colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
-                              }
-                              return (
-                                <span style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '5px',
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  backgroundColor: colors.bg,
-                                  color: colors.color,
-                                  border: `1px solid ${colors.border}`,
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-                                  {row.status}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                            <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
+              // Compute real stock: strictly honor 0 and deductions
+              let stockVal = 5000;
+              if (matchedMat && matchedMat.stock !== undefined && matchedMat.stock !== null) {
+                stockVal = Math.max(0, Number(matchedMat.stock));
+              } else if (it.stock !== undefined && it.stock !== null) {
+                stockVal = Math.max(0, Number(it.stock));
+              } else if (it.openingStock !== undefined && it.openingStock !== null) {
+                stockVal = Math.max(0, Number(it.openingStock));
+              }
+
+              // Compute reserved/blocked qty
+              const activeBlocked = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || Number(matchedMat?.reserved || it.reserved || 0);
+              const availableQty = Math.max(0, stockVal - activeBlocked);
+
+              const rateVal = Number(it.rate || it.price || 250);
+              const totalVal = availableQty * rateVal;
+              const minLvl = Number(it.reorderLevel || it.minLevel || 50);
+
+              let statusText = 'In Stock';
+              if (availableQty === 0) statusText = 'Out of Stock';
+              else if (availableQty <= minLvl) statusText = 'Low Stock';
+
+              return {
+                code: it.code || it.sku || it.itemId || 'VRM-ITEM',
+                item: it.name,
+                category: it.category || it.material || 'Raw Material',
+                location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),
+                stock: availableQty.toLocaleString('en-IN'),
+                allocated: activeBlocked.toLocaleString('en-IN'),
+                incoming: it.incoming ? String(it.incoming) : '0',
+                minLevel: minLvl.toLocaleString('en-IN'),
+                val: `₹ ${totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                status: statusText,
+                rawStockNum: availableQty
+              };
+            }) : stockRegistry.map(it => {
+              const rawNum = Math.max(0, parseFloat(String(it.stock).replace(/,/g, '')) || 0);
+              const allocNum = parseFloat(String(it.allocated).replace(/,/g, '')) || 0;
+              const avail = Math.max(0, rawNum - allocNum);
+              return {
+                ...it,
+                stock: avail.toLocaleString('en-IN'),
+                rawStockNum: avail
+              };
+            });
+
+            // 4. Apply search & dropdown filters
+            const filteredList = combinedList.filter(row => {
+              if (stockStatusSearchQuery.trim()) {
+                const q = stockStatusSearchQuery.toLowerCase().trim();
+                const matchItem = String(row.item || '').toLowerCase().includes(q);
+                const matchCode = String(row.code || '').toLowerCase().includes(q);
+                const matchCat = String(row.category || '').toLowerCase().includes(q);
+                if (!matchItem && !matchCode && !matchCat) return false;
+              }
+              if (stockStatusWarehouse !== 'All Warehouses' && row.location !== stockStatusWarehouse) {
+                return false;
+              }
+              if (stockStatusCategory !== 'All Categories' && row.category !== stockStatusCategory) {
+                return false;
+              }
+              if (stockStatusStatus !== 'All Status' && row.status !== stockStatusStatus) {
+                return false;
+              }
+              return true;
+            });
+
+            // 5. Paginate
+            const totalItems = filteredList.length;
+            const totalPages = Math.ceil(totalItems / stockStatusRowsPerPage) || 1;
+            const safePage = Math.min(stockStatusPage, totalPages);
+            const startIndex = (safePage - 1) * stockStatusRowsPerPage;
+            const displayedRows = filteredList.slice(startIndex, startIndex + stockStatusRowsPerPage);
+
+            return (
+              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>
+                    Stock Status List ({totalItems.toLocaleString('en-IN')} Items)
+                  </strong>
+                  {stockStatusSearchQuery || stockStatusWarehouse !== 'All Warehouses' || stockStatusCategory !== 'All Categories' || stockStatusStatus !== 'All Status' ? (
+                    <span style={{ fontSize: '12px', color: '#0E7490', fontWeight: '600' }}>
+                      Filtered: Showing {totalItems.toLocaleString('en-IN')} of {combinedList.length.toLocaleString('en-IN')} items
+                    </span>
+                  ) : null}
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>#</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Category</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Available Qty</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reserved Qty</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Incoming Qty</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
+                        {!isSalesUser && (
+                          <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Stock Value (₹)</th>
+                        )}
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={isSalesUser ? 10 : 11} style={{ padding: '32px 16px', textAlign: 'center', color: '#64748B' }}>
+                            No stock items match the selected filters.
                           </td>
                         </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        displayedRows.map((row, idx) => {
+                          let qtyColor = '#10B981'; // Green
+                          if (row.rawStockNum === 0 || row.status === 'Out of Stock') {
+                            qtyColor = '#EF4444'; // Red
+                          } else if (row.status === 'Low Stock') {
+                            qtyColor = '#F59E0B'; // Orange
+                          }
 
-            {/* Pagination footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginTop: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748B' }}>Showing 1 to 8 of 1,284 items</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                    <ChevronLeft style={{ width: '14px', height: '14px' }} />
-                  </button>
-                  {[1, 2, 3, 4].map((page) => (
-                    <button key={page} style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '6px',
-                      backgroundColor: page === 1 ? '#2563EB' : '#FFFFFF',
-                      color: page === 1 ? '#FFFFFF' : '#475569',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}>
-                      {page}
-                    </button>
-                  ))}
-                  <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#64748B', cursor: 'pointer' }}>
-                    <ChevronRight style={{ width: '14px', height: '14px' }} />
-                  </button>
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                              <td style={{ padding: '13px 16px', color: '#94A3B8' }}>{startIndex + idx + 1}</td>
+                              <td style={{ padding: '13px 16px' }}>
+                                <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
+                                <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
+                              </td>
+                              <td style={{ padding: '13px 16px', color: '#475569' }}>{row.category}</td>
+                              <td style={{ padding: '13px 16px', color: '#475569' }}>{row.location}</td>
+                              <td style={{ padding: '13px 16px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
+                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
+                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
+                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
+                              {!isSalesUser && (
+                                <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
+                              )}
+                              <td style={{ padding: '13px 16px', textAlign: 'center' }}>
+                                {(() => {
+                                  let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+                                  if (row.status === 'In Stock') {
+                                    colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
+                                  } else if (row.status === 'Low Stock') {
+                                    colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
+                                  } else if (row.status === 'Out of Stock') {
+                                    colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
+                                  }
+                                  return (
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      padding: '4px 10px',
+                                      borderRadius: '6px',
+                                      fontSize: '11px',
+                                      fontWeight: 'bold',
+                                      backgroundColor: colors.bg,
+                                      color: colors.color,
+                                      border: `1px solid ${colors.border}`,
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
+                                      {row.status}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                              <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
+                                <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-                <select style={{ height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: '#FFFFFF', color: '#475569' }}>
-                  <option>10 / page</option>
-                </select>
+
+                {/* Standard Pagination Footer Layout */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginTop: '6px' }}>
+                  {/* Left Side: Rows per page selector restricted strictly to 5, 10 + Showing X to Y of Z entries */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>Showing per page</span>
+                      <select
+                        value={stockStatusRowsPerPage}
+                        onChange={(e) => {
+                          setStockStatusRowsPerPage(Number(e.target.value));
+                          setStockStatusPage(1);
+                        }}
+                        style={{ height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: '#FFFFFF', color: '#475569', fontWeight: '600' }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                      </select>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>
+                      Showing {totalItems === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + stockStatusRowsPerPage, totalItems)} of {totalItems} entries
+                    </span>
+                  </div>
+
+                  {/* Right Side: Page buttons adjacent to Go to page */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        disabled={safePage <= 1}
+                        onClick={() => setStockStatusPage(1)}
+                        style={{ border: '1px solid #E2E8F0', background: safePage <= 1 ? '#F8FAFC' : '#FFFFFF', cursor: safePage <= 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                      >
+                        &laquo;
+                      </button>
+                      <button
+                        disabled={safePage <= 1}
+                        onClick={() => setStockStatusPage(prev => Math.max(prev - 1, 1))}
+                        style={{ border: '1px solid #E2E8F0', background: safePage <= 1 ? '#F8FAFC' : '#FFFFFF', cursor: safePage <= 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                      >
+                        &lt;
+                      </button>
+
+                      {(() => {
+                        let start = Math.max(1, safePage - 1);
+                        let end = start + 2;
+                        if (end > totalPages) {
+                          end = totalPages;
+                          start = Math.max(1, end - 2);
+                        }
+                        return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i).map(page => (
+                          <button
+                            key={page}
+                            onClick={() => setStockStatusPage(page)}
+                            style={{
+                              border: '1px solid #E2E8F0',
+                              background: page === safePage ? '#0E7490' : '#FFFFFF',
+                              color: page === safePage ? '#FFFFFF' : '#475569',
+                              cursor: 'pointer',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontWeight: page === safePage ? 'bold' : '500'
+                            }}
+                          >
+                            {page}
+                          </button>
+                        ));
+                      })()}
+
+                      <button
+                        disabled={safePage >= totalPages}
+                        onClick={() => setStockStatusPage(prev => Math.min(prev + 1, totalPages))}
+                        style={{ border: '1px solid #E2E8F0', background: safePage >= totalPages ? '#F8FAFC' : '#FFFFFF', cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                      >
+                        &gt;
+                      </button>
+                      <button
+                        disabled={safePage >= totalPages}
+                        onClick={() => setStockStatusPage(totalPages)}
+                        style={{ border: '1px solid #E2E8F0', background: safePage >= totalPages ? '#F8FAFC' : '#FFFFFF', cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                      >
+                        &raquo;
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>Go to page</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={totalPages || 1}
+                        value={stockStatusGoToInput}
+                        onChange={(e) => setStockStatusGoToInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = parseInt(stockStatusGoToInput, 10);
+                            if (val >= 1 && val <= totalPages) {
+                              setStockStatusPage(val);
+                              setStockStatusGoToInput('');
+                            }
+                          }
+                        }}
+                        placeholder={String(safePage)}
+                        style={{ width: '44px', height: '32px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}
+                      />
+                      <button
+                        onClick={() => {
+                          const val = parseInt(stockStatusGoToInput, 10);
+                          if (val >= 1 && val <= totalPages) {
+                            setStockStatusPage(val);
+                            setStockStatusGoToInput('');
+                          }
+                        }}
+                        style={{ height: '32px', padding: '0 10px', borderRadius: '6px', border: '1px solid #0E7490', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                      >
+                        Go &rsaquo;
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Quick Actions Card (Full Width Row) */}
-          <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <strong style={{ fontSize: '14px', color: '#0F172A' }}>Quick Actions</strong>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
-              {[
-                {
-                  label: 'Stock Adjustment',
-                  icon: Edit3,
-                  color: '#8B5CF6',
-                  action: () => setShowAddStockForm(true)
-                },
-                {
-                  label: 'Stock Transfer',
-                  svg: (
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10B981' }}>
-                      <polyline points="17 1 21 5 17 9"></polyline>
-                      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                      <polyline points="7 23 3 19 7 15"></polyline>
-                      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                    </svg>
-                  ),
-                  action: () => setShowAddStockForm(true)
-                },
-                { label: 'Create Purchase Request', icon: ShoppingCart, action: () => onChangeTab('requisitions') },
-                { label: 'Reorder Report', icon: FileCheck, action: () => window.print() },
-                { label: 'Stock Movement', icon: TrendingUp, action: () => alert('Stock Movement Report generated for current warehouse.') },
-                { label: 'Stock Valuation', icon: DollarSign, action: () => alert('Total Stock Valuation: ₹42,85,000 across all warehouses.') }
-              ].map((act, idx) => {
-                const ActIcon = act.icon || null;
-                return (
-                  <button key={idx}
-                    onClick={act.action || null}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '12px 6px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      height: '75px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F8FAFC';
-                      e.currentTarget.style.borderColor = '#CBD5E1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#E2E8F0';
-                    }}>
-                    {ActIcon ? (
-                      <ActIcon style={{ width: '18px', height: '18px', color: act.color || '#2563EB' }} />
-                    ) : (
-                      act.svg
-                    )}
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#475569', textAlign: 'center', lineHeight: '1.2' }}>{act.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Bottom Info bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#EFF6FF', borderRadius: '12px', padding: '14px 20px', border: '1px solid #DBEAFE' }}>

@@ -233,7 +233,27 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'BOM Orders', icon: GitBranch },
+            { label: 'Preset Management', icon: Layers },
             { label: 'Material Calculation Engine', icon: Calculator }
+          ]
+        }
+      ];
+    } else if (role === 'Tech Support' || role === 'Technical Support') {
+      sections = [
+        {
+          category: 'MAIN MENU',
+          items: [
+            { label: 'Dashboard', icon: LayoutDashboard },
+            { label: 'Preset Management', icon: Layers },
+            { label: 'BOM Orders', icon: GitBranch },
+            { label: 'Stock Status', icon: Warehouse }
+          ]
+        },
+        {
+          category: 'TOOLS & ENGINE',
+          items: [
+            { label: 'Material Calculation Engine', icon: Calculator },
+            { label: 'Raw Material Directory', icon: Layers }
           ]
         }
       ];
@@ -279,7 +299,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
               icon: ShoppingCart, 
               badge: realPendingPOCount > 0 ? String(realPendingPOCount) : undefined 
             },
-            { label: 'Proforma Invoice', icon: FileText }
+            { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Preset Management', icon: Layers }
           ]
         },
         {

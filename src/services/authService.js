@@ -108,6 +108,17 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
         department: 'Sales & Business',
         status: 'Active',
         created_at: new Date().toISOString()
+      },
+      {
+        id: 'EMP-TS-001',
+        employee_name: 'Karthik Raja',
+        employee_code: 'TS-VRM001',
+        code: 'TS-VRM001',
+        role: 'Tech Support',
+        email: 'techsupport@vrm.com',
+        department: 'Technical Support',
+        status: 'Active',
+        created_at: new Date().toISOString()
       }
     ];
 
@@ -208,6 +219,16 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
         role: 'Sales Head',
         email: cleanUsername || 'sales@vrm.com',
         department: 'Sales & Business',
+        status: 'Active'
+      };
+    } else if (upperEmpId.startsWith('TS-') || upperEmpId === 'TS-VRM001' || cleanUsername === 'techsupport@vrm.com') {
+      accountRecord = {
+        id: 'EMP-TS-001',
+        employee_name: 'Karthik Raja',
+        employee_code: cleanEmpId || 'TS-VRM001',
+        role: 'Tech Support',
+        email: cleanUsername || 'techsupport@vrm.com',
+        department: 'Technical Support',
         status: 'Active'
       };
     }

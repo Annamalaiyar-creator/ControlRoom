@@ -34,7 +34,11 @@ export async function getSafeZohoItems() {
         map.set(key, { ...existing, ...it });
       }
     });
-    const result = Array.from(map.values());
+    const result = Array.from(map.values()).map(item => ({
+      ...item,
+      stock: (item.stock !== undefined && item.stock !== null) ? Number(item.stock) : 5000,
+      openingStock: (item.openingStock !== undefined && item.openingStock !== null) ? Number(item.openingStock) : 5000
+    }));
     try {
       localStorage.setItem('controlroom_item_store', JSON.stringify(result));
     } catch (_) {}

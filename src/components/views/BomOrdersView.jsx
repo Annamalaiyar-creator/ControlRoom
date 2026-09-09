@@ -6,7 +6,8 @@ import {
   Camera, Video
 } from 'lucide-react';
 import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
-import { VRM_HDG_PRESETS } from '../../vrmHdgProposalPresets';
+import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
+import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
 
 export default function BomOrdersView(props) {
@@ -126,6 +127,9 @@ export default function BomOrdersView(props) {
     ];
   });
 
+  // Active Presets state (loaded from master JSON + localStorage/cloud)
+  const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
+
   // Items List for Product Dropdown & Suggestions
   const [itemsList, setItemsList] = useState(() => {
     try {
@@ -136,39 +140,34 @@ export default function BomOrdersView(props) {
       }
     } catch (e) { }
 
-    // Fallback default products catalog extracted from standard presets & inventory
-    const defaultCatalog = [
+    // Standardized products catalog synchronized from VRM - Product - Standardized Names.xlsx
+    const defaultCatalog = Array.isArray(VRM_PRODUCTS) && VRM_PRODUCTS.length > 0 ? VRM_PRODUCTS.map(p => ({
+      code: p.code || '',
+      name: p.name || '',
+      category: p.material || 'General',
+      uom: p.uom || 'NOS',
+      price: String(p.price || p.rate || '0'),
+      rate: String(p.price || p.rate || '0')
+    })) : [
       { code: 'MR-40-300', name: 'Mini Rail 40mm x 300mm', category: 'Aluminum Rail', uom: 'NOS', price: '250', rate: '250' },
       { code: 'MR-40-200', name: 'Mini Rail 40mm x 200mm', category: 'Aluminum Rail', uom: 'NOS', price: '180', rate: '180' },
       { code: 'MR-100', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', uom: 'NOS', price: '250', rate: '250' },
       { code: 'MC-30', name: 'Mid Clamp 30mm', category: '6063T6 Clamp', uom: 'NOS', price: '45', rate: '45' },
       { code: 'MC-35', name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', uom: 'NOS', price: '45', rate: '45' },
       { code: 'EC-30', name: 'End Clamp 30 mm', category: '6063T6 Clamp', uom: 'NOS', price: '40', rate: '40' },
-      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40' },
-      { code: 'TN-10', name: 'T nut 10mm', category: '6063T6 Nut', uom: 'NOS', price: '15', rate: '15' },
-      { code: 'AB-M8-20', name: 'SS304 Allen Bolt M8*20', category: 'SS304 Fastener', uom: 'NOS', price: '12', rate: '12' },
-      { code: 'AB-M8-25', name: 'SS304 Allen Bolt M8*25', category: 'SS304 Fastener', uom: 'NOS', price: '14', rate: '14' },
-      { code: 'AB-M8-30', name: 'SS304 Allen Bolt M8*30', category: 'SS304 Fastener', uom: 'NOS', price: '16', rate: '16' },
-      { code: 'ST-6.3-25', name: 'Self Drilling Screw 6.3*25 with EPDM', category: 'Fasteners', uom: 'NOS', price: '8', rate: '8' },
-      { code: 'EPDM-50-2', name: 'EPDM Rubber Strip 50*2 mm', category: 'Rubber Seals', uom: 'NOS', price: '10', rate: '10' },
-      { code: 'LR-3000', name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', uom: 'NOS', price: '1800', rate: '1800' },
-      { code: 'LR-4200', name: 'Long Rail 4200 mm', category: '4.2 Meter Heavy Duty Rail', uom: 'NOS', price: '2400', rate: '2400' },
-      { code: 'TR-15-DEG', name: 'Triangle Structure 15 Degree', category: 'Solar Structure', uom: 'SET', price: '1250', rate: '1250' },
-      { code: 'TR-20-DEG', name: 'Triangle Structure 20 Degree', category: 'Solar Structure', uom: 'SET', price: '1450', rate: '1450' },
-      { code: 'HDG-RAF-3900', name: 'HDG Rafter 3900mm', category: 'HDG Structure', uom: 'NOS', price: '3200', rate: '3200' },
-      { code: 'HDG-COL-1500', name: 'HDG Column 1500mm', category: 'HDG Structure', uom: 'NOS', price: '1800', rate: '1800' },
-      { code: 'GAL-RAF-3900', name: 'GAL Structure Rafter 3900mm', category: 'GAL Structure', uom: 'NOS', price: '2900', rate: '2900' }
+      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40' }
     ];
 
-    // Extract any unique items from VRM_HDG_PRESETS
-    if (typeof VRM_HDG_PRESETS === 'object' && VRM_HDG_PRESETS !== null) {
+    // Extract any unique items from activePresetsMap or VRM_HDG_PRESETS
+    const currentPresets = activePresetsMap || VRM_HDG_PRESETS;
+    if (typeof currentPresets === 'object' && currentPresets !== null) {
       const presetMap = new Map();
       defaultCatalog.forEach(c => presetMap.set(c.name.toLowerCase(), c));
-      Object.values(VRM_HDG_PRESETS).forEach(p => {
+      Object.values(currentPresets).forEach(p => {
         (p.items || []).forEach(it => {
           if (it.name && !presetMap.has(it.name.toLowerCase())) {
             presetMap.set(it.name.toLowerCase(), {
-              code: it.category ? `RM-${it.category.replace(/[^a-zA-Z0-9]/g, '')}` : 'RM-GEN',
+              code: it.code || (it.category ? `RM-${it.category.replace(/[^a-zA-Z0-9]/g, '')}` : 'RM-GEN'),
               name: it.name,
               category: it.category || 'Solar Accessories',
               uom: it.uom || 'NOS',
@@ -329,6 +328,17 @@ export default function BomOrdersView(props) {
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
   const [bomMaterialsList, setBomMaterialsList] = useState([]);
+
+  // Listen to preset updates from Tech Support preset manager
+  useEffect(() => {
+    const handlePresetUpdate = (e) => {
+      if (e.detail) {
+        setActivePresetsMap(e.detail);
+      }
+    };
+    window.addEventListener('vrm_presets_updated', handlePresetUpdate);
+    return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
+  }, []);
 
   // Permission Check for Cancel BOM (Strictly Dispatch, Production, and Billing Logins)
   const canCancelBom = [
@@ -1251,9 +1261,10 @@ export default function BomOrdersView(props) {
                   setSelectedPreset(val);
                   setSelectedBomItemIndexes([]);
 
-                  if (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]) {
+                  const targetPreset = activePresetsMap && activePresetsMap[val] ? activePresetsMap[val] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]);
+                  if (targetPreset && targetPreset.items) {
                     const multiplier = parseInt(presetSetCount) || 1;
-                    setBomMaterialsList(VRM_HDG_PRESETS[val].items.map(it => {
+                    setBomMaterialsList(targetPreset.items.map(it => {
                       const baseQ = parseFloat(it.qty) || 1;
                       return {
                         ...it,
@@ -1265,17 +1276,22 @@ export default function BomOrdersView(props) {
                 }}
                 style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
               >
-                <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset (30 Presets Available)...</option>
+                <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset ({Object.keys(activePresetsMap || {}).length} Presets Available)...</option>
                 {(() => {
-                  const presetsList = Object.values(VRM_HDG_PRESETS || {});
+                  const presetsList = Object.values(activePresetsMap || VRM_HDG_PRESETS || {});
                   const categories = [
-                    { name: 'DCR BOS Solar Proposal Kits', match: (p) => p.label.includes('BOS KITS') },
-                    { name: 'Mini Rail Kits', match: (p) => p.label.includes('Mini rail') },
-                    { name: 'Adhesive Rail Kits', match: (p) => p.label.includes('Adhesive') },
-                    { name: 'Long Rail Kits', match: (p) => p.label.includes('rail') || p.label.includes('Rail') },
-                    { name: 'Triangle Structure Kits', match: (p) => p.label.includes('Triangle') },
-                    { name: 'HDG Structure Tables (3900 Rafter)', match: (p) => p.label.includes('HDG Structure') },
-                    { name: 'GAL Structure Tables (3900 Rafter)', match: (p) => p.label.includes('GAL Structure') },
+                    { name: 'GAL Hat Purline Structures (2 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (2 Row)' || (p.label && p.label.includes('GAL Hat Purline (2 Row)')) },
+                    { name: 'GAL Hat Purline Structures (3 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (3 Row)' || (p.label && p.label.includes('GAL Hat Purline (3 Row)')) },
+                    { name: 'GAL Hat Purline Structures (1 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (1 Row)' || (p.label && p.label.includes('GAL Hat Purline (1 Row)')) },
+                    { name: 'HDG C Purlin Structures (2 Row)', match: (p) => p.category === 'HDG C Purlin Structures (2 Row)' || (p.label && p.label.includes('HDG C Purlin (2 Row)')) },
+                    { name: 'HDG C Purlin Structures (3 Row)', match: (p) => p.category === 'HDG C Purlin Structures (3 Row)' || (p.label && p.label.includes('HDG C Purlin (3 Row)')) },
+                    { name: 'HDG C Purlin Structures (1 Row)', match: (p) => p.category === 'HDG C Purlin Structures (1 Row)' || (p.label && p.label.includes('HDG C Purlin (1 Row)')) },
+                    { name: 'Mini Rail Kits (6063T6 Aluminum)', match: (p) => p.category === 'Mini Rail Kits' || (p.label && p.label.toLowerCase().includes('mini rail')) },
+                    { name: 'Adhesive Rail Kits (Penetrative / Non-Penetrative)', match: (p) => p.category === 'Adhesive Rail Kits' || (p.label && p.label.toLowerCase().includes('adhesive')) },
+                    { name: 'Long Rail & Double C Rail Kits', match: (p) => p.category === 'Long Rail & Double C Kits' || p.category === 'Long Rail Kits' || (p.label && (p.label.includes('Rail') || p.label.includes('rail'))) },
+                    { name: 'Reverse Tilt Triangle Structures (North / East-West / Ballast)', match: (p) => p.category === 'Reverse Tilt Triangle Structures' || p.category === 'Triangle Structure Kits' || (p.label && p.label.toLowerCase().includes('triangle')) },
+                    { name: 'DCR BOS Solar Proposal Kits (Polycab / Waree)', match: (p) => p.category === 'DCR BOS Solar Kits' || p.category === 'BOS Solar Kits' || (p.label && p.label.includes('BOS KITS')) },
+                    { name: 'Tech Support & Custom Presets', match: (p) => p.isCustom || (p.id && p.id.includes('custom')) }
                   ];
 
                   const rendered = new Set();
@@ -1309,8 +1325,9 @@ export default function BomOrdersView(props) {
                     const newCount = rawVal === '' ? '' : Math.max(1, parseInt(rawVal) || 1);
                     setPresetSetCount(newCount);
                     const multiplier = parseInt(rawVal) || 1;
-                    if (selectedPreset && VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]) {
-                      const baseItems = VRM_HDG_PRESETS[selectedPreset].items;
+                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
+                    if (targetPreset && targetPreset.items) {
+                      const baseItems = targetPreset.items;
                       setBomMaterialsList(baseItems.map(it => {
                         const baseQ = parseFloat(it.qty) || 1;
                         return {

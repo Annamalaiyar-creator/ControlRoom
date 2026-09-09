@@ -3749,13 +3749,18 @@ app.get('/api/zoho/items', async (req, res) => {
             uom: item.unit || localMatch?.uom || 'NOS',
             material: localMatch?.material || 'General Component',
             category: localMatch?.category || 'General',
-            stock: localMatch?.stock !== undefined ? localMatch.stock : (item.initial_stock || 0),
+            stock: (localMatch?.stock !== undefined && localMatch.stock !== null) ? Number(localMatch.stock) : 5000,
+            openingStock: (localMatch?.openingStock !== undefined && localMatch.openingStock !== null) ? Number(localMatch.openingStock) : 5000,
             reorderLevel: localMatch?.reorderLevel || 100
           };
         });
 
         const zohoKeys = new Set(translatedZoho.map(z => String(z.sku || z.itemId || z.name).toLowerCase()));
-        const uniqueLocal = localItems.filter(l => !zohoKeys.has(String(l.sku || l.itemId || l.name).toLowerCase()));
+        const uniqueLocal = localItems.filter(l => !zohoKeys.has(String(l.sku || l.itemId || l.name).toLowerCase())).map(l => ({
+          ...l,
+          stock: (l.stock !== undefined && l.stock !== null) ? Number(l.stock) : 5000,
+          openingStock: (l.openingStock !== undefined && l.openingStock !== null) ? Number(l.openingStock) : 5000
+        }));
         const mergedAll = [...uniqueLocal, ...translatedZoho];
 
         // Save fresh merged items back to server local store & Supabase
@@ -3767,8 +3772,12 @@ app.get('/api/zoho/items', async (req, res) => {
   } catch (err) {
     console.error('Zoho items fetch notice:', err.message);
   }
-
-  res.json(localItems);
+  const guaranteedItems = (localItems || []).map(l => ({
+    ...l,
+    stock: (l.stock !== undefined && l.stock !== null) ? Number(l.stock) : 5000,
+    openingStock: (l.openingStock !== undefined && l.openingStock !== null) ? Number(l.openingStock) : 5000
+  }));
+  res.json(guaranteedItems);
 });
 
 // Helper to delete an Item in Zoho Books

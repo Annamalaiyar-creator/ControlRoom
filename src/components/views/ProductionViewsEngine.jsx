@@ -4702,7 +4702,7 @@ export default function ProductionViewsEngine(props) {
                   // STRICT REQUIREMENT: Only show Aluminum by default, or other raw materials if received via GRN
                   if (!isAluItem && !grnReceived) return;
 
-                  const stockVal = grnReceived ? Number(grnReceived.receivedQty || 0) : Number(it.stock !== undefined && it.stock !== 0 ? it.stock : (it.openingStock || 0));
+                  const stockVal = grnReceived ? Number(grnReceived.receivedQty || 0) : Number(it.stock !== undefined && it.stock !== null && it.stock !== 0 ? it.stock : (it.openingStock !== undefined && it.openingStock !== 0 ? it.openingStock : 5000));
                   const minLvl = Number(it.reorderLevel || it.minLevel || 50);
                   let statusText = 'In Stock';
                   if (stockVal === 0) statusText = 'Out of Stock';

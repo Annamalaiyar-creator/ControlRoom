@@ -15,6 +15,7 @@ import ProcurementReportsView from './views/ProcurementReportsView';
 import DispatchDashboardView from './views/DispatchDashboardView';
 import ProductionViewsEngine from './views/ProductionViewsEngine';
 import BomOrdersView from './views/BomOrdersView';
+import PresetManagementView from './views/PresetManagementView';
 import SalesCrmEngine from './crm/SalesCrmEngine';
 import { RefreshCw } from 'lucide-react';
 
@@ -133,6 +134,11 @@ export default function OtherViews(props) {
           <BomOrdersView {...props} />
         )}
 
+        {/* Preset Management dedicated view (Tech Support & Admin) */}
+        {['Preset Management', 'Presets', 'BOM Presets'].includes(activeTab) && (
+          <PresetManagementView {...props} />
+        )}
+
         {/* Production & BOM & Invoices engine */}
         {(![
           'Requests for Purchase', 'Vendor Management', 'Quotations',
@@ -141,6 +147,7 @@ export default function OtherViews(props) {
           'Stock Status', 'Price Comparison', 'Items Directory',
           'Procurement Reports', 'Spend Reports', 'Supplier Reports',
           'Dispatch Dashboard', 'BOM Orders', 'BOM', 'Sales BOM', 'BOM / Routing',
+          'Preset Management', 'Presets', 'BOM Presets',
           'Sales CRM', 'CRM', 'Sales & CRM', 'Leads', 'Customers', 'Customer Management', 'Opportunities', 'Follow-ups', 'WhatsApp Inbox', 'Quotations', 'Product Catalog', 'Sales Reports'
         ].includes(activeTab) || ['Work Orders', 'Planning & Scheduling', 'Production Monitoring',
           'Quality Control', 'Machine Maintenance', 'Inventory',
