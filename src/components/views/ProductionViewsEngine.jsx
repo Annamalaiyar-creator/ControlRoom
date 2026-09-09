@@ -13146,6 +13146,52 @@ export default function ProductionViewsEngine(props) {
                         }}
                       />
 
+                      {/* Append Additional Preset Button */}
+                      {selectedPreset && bomMaterialsList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
+                            if (targetPreset && targetPreset.items) {
+                              const multiplier = parseInt(presetSetCount) || 1;
+                              const additionalItems = targetPreset.items.map(it => {
+                                const baseQ = parseFloat(it.qty) || 1;
+                                return {
+                                  ...it,
+                                  baseQty: baseQ,
+                                  qty: String(Math.round(baseQ * multiplier)),
+                                  rate: '0',
+                                  isPresetItem: true
+                                };
+                              });
+                              setBomMaterialsList(prev => [...prev, ...additionalItems]);
+                              const addPrice = parseFloat(presetKitPrice) || (targetPreset.price || targetPreset.rate || 0);
+                              if (addPrice) {
+                                setPresetKitPrice(prev => String((parseFloat(prev) || 0) + addPrice));
+                              }
+                            }
+                          }}
+                          title="Add another set of this preset kit without replacing existing items"
+                          style={{
+                            backgroundColor: '#EEF2FF',
+                            border: '1px solid #818CF8',
+                            color: '#4338CA',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            height: '36px',
+                            padding: '0 10px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <Plus size={13} /> + Add Another Preset
+                        </button>
+                      )}
+
                       {/* SET COUNT / MULTIPLIER INPUT */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>
                         <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>No. of Sets:</span>

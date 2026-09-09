@@ -266,15 +266,17 @@ export default function SearchablePresetSelector({
             padding: '6px 0'
           }}
         >
-          <div style={{ padding: '6px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              All Presets Catalog ({totalPresetsCount})
-            </span>
-            {searchTerm && (
-              <span style={{ fontSize: '11px', color: accentColor, fontWeight: '700' }}>
-                Filtered
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Preset Kits ({totalPresetsCount})
               </span>
-            )}
+              {searchTerm && (
+                <span style={{ fontSize: '11px', color: accentColor, fontWeight: '700' }}>
+                  Filtered
+                </span>
+              )}
+            </div>
           </div>
 
           {categorizedPresets.length === 0 ? (

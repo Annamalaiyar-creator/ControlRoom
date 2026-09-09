@@ -1061,6 +1061,49 @@ export default function CrmQuotationsView({
                 }}
               />
 
+              {/* Append Additional Preset Button */}
+              {selectedPreset && quoteItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
+                    if (targetPreset && targetPreset.items) {
+                      const multiplier = parseInt(presetSetCount) || 1;
+                      const additional = targetPreset.items.map(it => {
+                        const baseQ = parseFloat(it.qty) || 1;
+                        return {
+                          name: it.name,
+                          category: it.category || 'MMS Scope',
+                          uom: it.uom || 'NOS',
+                          qty: String(Math.round(baseQ * multiplier)),
+                          rate: String(it.rate || 0),
+                          gstRate: it.gstRate || '18%'
+                        };
+                      });
+                      setQuoteItems(prev => [...prev, ...additional]);
+                    }
+                  }}
+                  title="Add another set of this preset kit without replacing existing items"
+                  style={{
+                    backgroundColor: '#F0FDFA',
+                    border: '1px solid #5EEAD4',
+                    color: '#0E7490',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    height: '38px',
+                    padding: '0 10px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Plus size={13} /> + Add Another Preset
+                </button>
+              )}
+
               {/* Set Count Multiplier */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '38px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>Sets:</span>

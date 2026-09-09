@@ -46,11 +46,11 @@ const syncStoreWithSupabase = async (key, localData) => {
           if (Array.isArray(localData) && localData.length > 0) {
             const itemMap = new Map();
             cloudParsed.forEach(item => {
-              const id = item?.employee_code || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
+              const id = item?.employee_code || item?.bomCode || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
               if (id) itemMap.set(String(id).toLowerCase(), item);
             });
             localData.forEach(item => {
-              const id = item?.employee_code || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
+              const id = item?.employee_code || item?.bomCode || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
               if (id) {
                 const existing = itemMap.get(String(id).toLowerCase());
                 itemMap.set(String(id).toLowerCase(), { ...existing, ...item });
@@ -2240,6 +2240,35 @@ app.get('/api/zoho/next-po-number', async (req, res) => {
 
   const nextPoNo = 'PO-' + String(maxNum + 1).padStart(5, '0');
   res.json({ nextPoNo });
+});
+
+// Centralized Next BOM Code generator guaranteeing unique sequential codes across all users
+app.get('/api/boms/next-code', async (req, res) => {
+  let maxNum = 621; // Default seed based on existing records
+  try {
+    const filePath = getStoreFilePath('bom_store.json');
+    let allRecords = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        allRecords = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (e) {}
+    }
+    if (supabaseMemoryStore.bom_store && Array.isArray(supabaseMemoryStore.bom_store)) {
+      allRecords = [...allRecords, ...supabaseMemoryStore.bom_store];
+    }
+    allRecords.forEach(b => {
+      const str = String(b.bomCode || b.code || b.id || '');
+      const match = str.match(/^BOM-(\d+)/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (val > maxNum) maxNum = val;
+      }
+    });
+  } catch (err) {
+    console.error('Error computing next BOM code:', err);
+  }
+  const nextBomCode = `BOM-${maxNum + 1}`;
+  res.json({ success: true, nextBomCode, maxNum });
 });
 
 // Real-time synchronization endpoint retrieving live purchase orders from Zoho Books

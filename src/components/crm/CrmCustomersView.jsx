@@ -66,7 +66,7 @@ export default function CrmCustomersView({
   const [formCust, setFormCust] = useState(initialFormState);
 
   // Sync with Zoho Books on component mount & manual trigger
-  const handleSyncWithZoho = async () => {
+  const handleSyncWithZoho = async (isManual = false) => {
     setIsSyncingZoho(true);
     try {
       const res = await fetch('/api/zoho/customers');
@@ -78,9 +78,9 @@ export default function CrmCustomersView({
               onSaveCustomer(c);
             }
           });
-          setZohoSyncMessage({ type: 'success', text: `Synchronized ${data.length} customer account(s) with Zoho Books!` });
-        } else {
-          setZohoSyncMessage({ type: 'info', text: 'All customer accounts are up to date with Zoho Books.' });
+          if (isManual) {
+            setZohoSyncMessage({ type: 'success', text: `Synchronized ${data.length} customer account(s) with Zoho Books!` });
+          }
         }
       }
     } catch (err) {
@@ -963,7 +963,7 @@ export default function CrmCustomersView({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            onClick={handleSyncWithZoho}
+            onClick={() => handleSyncWithZoho(true)}
             disabled={isSyncingZoho}
             style={{
               backgroundColor: '#FFFFFF',

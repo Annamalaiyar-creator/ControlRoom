@@ -235,12 +235,7 @@ export default function BomOrdersView(props) {
               }
             }
           });
-          const merged = Array.from(map.values()).map(item => {
-            if (item && item.salesPerson && (item.salesPerson.includes('Ravi') || item.salesPerson.includes('Saravanan') || item.salesPerson.includes('Mohit JV'))) {
-              return { ...item, salesPerson: 'Mohith JV' };
-            }
-            return item;
-          });
+          const merged = Array.from(map.values());
           const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
           try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
           return sanitizedMerged;
@@ -653,9 +648,25 @@ export default function BomOrdersView(props) {
     setNewBomDeliveryCity('');
     setNewBomDeliveryState('');
     setNewBomDeliveryPincode('');
-    const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-    const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 600;
-    setNewBomCode(`BOM-${maxNum + 1}`);
+
+    // Fetch next sequential BOM code from server with fallback to local store
+    fetch('/api/boms/next-code')
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.nextBomCode) {
+          setNewBomCode(d.nextBomCode);
+        } else {
+          const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+          const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 621;
+          setNewBomCode(`BOM-${maxNum + 1}`);
+        }
+      })
+      .catch(() => {
+        const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+        const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 621;
+        setNewBomCode(`BOM-${maxNum + 1}`);
+      });
+
     setShowBOMForm(true);
   };
 
@@ -694,7 +705,8 @@ export default function BomOrdersView(props) {
       const isCancelled = b.status === 'Cancelled & Stock Restored' || b.cancelled;
       const isAddressRequested = b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales';
       const isPending = !b.status || b.status === 'Pending Sales Confirmation' || b.status === 'Pending Confirmation' || b.status === 'Pending';
-      const isConfirmed = b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed;
+      const isPackedOrDispatch = (b.status || '').toLowerCase().includes('dispatch') || (b.status || '').toLowerCase().includes('packed') || (b.status || '').toLowerCase().includes('loading');
+      const isConfirmed = b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed || isPackedOrDispatch;
 
       let stBg = '#dcfce7';
       let stFg = '#166534';
@@ -721,6 +733,11 @@ export default function BomOrdersView(props) {
         stFg = '#b45309';
         stBorder = '1px solid #fde68a';
         tabGroup = 'Pending';
+      } else if (isPackedOrDispatch) {
+        stBg = '#e0e7ff';
+        stFg = '#3730a3';
+        stBorder = '1px solid #c7d2fe';
+        tabGroup = 'Sent';
       }
 
       return {
@@ -730,7 +747,7 @@ export default function BomOrdersView(props) {
         c3: b.customerName || b.companyName || 'Customer Order',
         salesPerson: (() => {
           const sp = (b.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
-          if (!sp || sp.includes('Ravi') || sp.includes('Saravanan') || sp.includes('Mohit JV')) return (defaultSalesPersonName || 'Mohith JV');
+          if (!sp) return (defaultSalesPersonName || 'Sales Executive');
           return sp;
         })(),
         c4: b.paymentType || '100% Advance',
@@ -1331,8 +1348,7 @@ export default function BomOrdersView(props) {
 
                   if (targetPreset && targetPreset.items) {
                     const multiplier = parseInt(presetSetCount) || 1;
-                    // For presets, line items have rate: '0' (bundled kit price), with baseQty preserved
-                    setBomMaterialsList(targetPreset.items.map(it => {
+                    const newItems = targetPreset.items.map(it => {
                       const baseQ = parseFloat(it.qty) || 1;
                       return {
                         ...it,
@@ -1341,7 +1357,11 @@ export default function BomOrdersView(props) {
                         rate: '0',
                         isPresetItem: true
                       };
-                    }));
+                    });
+
+                    // Set materials list
+                    setBomMaterialsList(newItems);
+
                     // If the preset has a defined kit price or sum of item prices, populate kit price
                     if (targetPreset.price || targetPreset.rate) {
                       setPresetKitPrice(String(targetPreset.price || targetPreset.rate));
@@ -1355,6 +1375,53 @@ export default function BomOrdersView(props) {
                   }
                 }}
               />
+
+              {/* Append Additional Preset Button */}
+              {selectedPreset && bomMaterialsList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
+                    if (targetPreset && targetPreset.items) {
+                      const multiplier = parseInt(presetSetCount) || 1;
+                      const additionalItems = targetPreset.items.map(it => {
+                        const baseQ = parseFloat(it.qty) || 1;
+                        return {
+                          ...it,
+                          baseQty: baseQ,
+                          qty: String(Math.round(baseQ * multiplier)),
+                          rate: '0',
+                          isPresetItem: true
+                        };
+                      });
+                      setBomMaterialsList(prev => [...prev, ...additionalItems]);
+                      // Add preset kit price if set
+                      const addPrice = parseFloat(presetKitPrice) || (targetPreset.price || targetPreset.rate || 0);
+                      if (addPrice) {
+                        setPresetKitPrice(prev => String((parseFloat(prev) || 0) + addPrice));
+                      }
+                    }
+                  }}
+                  title="Add another set of this preset kit without replacing existing items"
+                  style={{
+                    backgroundColor: '#EEF2FF',
+                    border: '1px solid #818CF8',
+                    color: '#4338CA',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    height: '36px',
+                    padding: '0 10px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Plus size={13} /> + Add Another Preset
+                </button>
+              )}
 
               {/* Set Count Multiplier */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>
@@ -2038,8 +2105,8 @@ export default function BomOrdersView(props) {
                         ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                         : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                      const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-                      const maxNumRec = existingNumsRec.length > 0 ? Math.max(...existingNumsRec) : 600;
+                      const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+                      const maxNumRec = existingNumsRec.length > 0 ? Math.max(621, ...existingNumsRec) : 621;
                       const finalCode = newBomCode || `BOM-${maxNumRec + 1}`;
 
                       const hasPaymentProof = Boolean(newBomPaymentProofDoc);
