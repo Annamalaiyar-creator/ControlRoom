@@ -244,7 +244,7 @@ export default function DashboardFullReference({ userRole }) {
                 if (userRole === 'Accounts Head') return 'Venkatesh';
                 if (userRole === 'Accounts Executive') return 'Priya';
                 if (userRole === 'Sales Head') return 'Vijay';
-                if (userRole === 'Sales Executive') return 'Saravanan';
+                if (userRole === 'Sales Executive') return 'Mohith JV';
                 if (userRole === 'Design Engineer') return 'Dinesh';
                 if (userRole === 'Design Executive') return 'Kavitha';
                 if (userRole === 'Invoice Executive') return 'Anand';

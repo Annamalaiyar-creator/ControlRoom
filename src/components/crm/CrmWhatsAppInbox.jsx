@@ -51,7 +51,7 @@ export default function CrmWhatsAppInbox({
     const newMsg = {
       id: `MSG-${Date.now()}`,
       sender: 'agent',
-      senderName: localStorage.getItem('controlroom_logged_user_name') || 'Saravanan',
+      senderName: localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV',
       text: messageInput.trim(),
       timestamp: new Date().toISOString(),
       status: 'sent'
@@ -80,7 +80,7 @@ export default function CrmWhatsAppInbox({
     if (!tmplText) return;
     let formatted = tmplText
       .replace('{{customer_name}}', activeConv?.customerName?.split(' ')[0] || 'Sir')
-      .replace('{{sales_person}}', localStorage.getItem('controlroom_logged_user_name') || 'Saravanan');
+      .replace('{{sales_person}}', localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV');
     setMessageInput(formatted);
   };
 

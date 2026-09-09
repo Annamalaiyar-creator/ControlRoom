@@ -235,8 +235,8 @@ export default function BomOrdersView(props) {
             }
           });
           const merged = Array.from(map.values()).map(item => {
-            if (item && item.salesPerson && (item.salesPerson.includes('Ravi') || item.salesPerson.includes('Saravanan'))) {
-              return { ...item, salesPerson: 'Mohit JV' };
+            if (item && item.salesPerson && (item.salesPerson.includes('Ravi') || item.salesPerson.includes('Saravanan') || item.salesPerson.includes('Mohit JV'))) {
+              return { ...item, salesPerson: 'Mohith JV' };
             }
             return item;
           });
@@ -266,10 +266,12 @@ export default function BomOrdersView(props) {
 
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
+    window.addEventListener('controlroom_customer_update', syncFromStorage);
 
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
+      window.removeEventListener('controlroom_customer_update', syncFromStorage);
     };
   }, []);
 
@@ -312,13 +314,13 @@ export default function BomOrdersView(props) {
       return storedUser.trim();
     }
     if (userRole === 'Sales Head') return 'Vijay';
-    if (userRole === 'Sales Executive') return 'Mohit JV';
+    if (userRole === 'Sales Executive') return 'Mohith JV';
     if (userRole === 'Accounts Head') return 'Venkatesh';
     if (userRole === 'Accounts Executive') return 'Priya';
     if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
     if (userRole === 'Procurement Head') return 'ARUN BOOPATHI M';
     if (userRole === 'Production Head') return 'Senthil Kumar';
-    return 'Mohit JV';
+    return 'Mohith JV';
   };
   const defaultSalesPersonName = getEffectiveSalesPerson();
   const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
@@ -726,7 +728,7 @@ export default function BomOrdersView(props) {
         c3: b.customerName || b.companyName || 'Customer Order',
         salesPerson: (() => {
           const sp = (b.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
-          if (!sp || sp.includes('Ravi') || sp.includes('Saravanan')) return (defaultSalesPersonName || 'Mohit JV');
+          if (!sp || sp.includes('Ravi') || sp.includes('Saravanan') || sp.includes('Mohit JV')) return (defaultSalesPersonName || 'Mohith JV');
           return sp;
         })(),
         c4: b.paymentType || '100% Advance',
@@ -960,59 +962,87 @@ export default function BomOrdersView(props) {
                 onChange={(e) => {
                   const val = e.target.value;
                   setNewBomProductName(val);
-                  const chosen = customerList.find(c => (c.code || '').toLowerCase() === val.toLowerCase() || (c.c2 || '').toLowerCase() === val.toLowerCase());
+                  const target = (val || '').toLowerCase().trim();
+                  if (!target) return;
+
+                  const chosen = customerList.find(c => {
+                    const code = (c.code || '').toLowerCase().trim();
+                    const c2 = (c.c2 || '').toLowerCase().trim();
+                    const cName = (c.customerName || '').toLowerCase().trim();
+                    const comp = (c.companyName || '').toLowerCase().trim();
+                    return code === target || c2 === target || cName === target || comp === target ||
+                           (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
+                           (cName && cName.startsWith(target)) || (comp && comp.startsWith(target)) ||
+                           (c2 && c2.includes(target)) || (comp && comp.includes(target));
+                  });
+
                   if (chosen) {
                     const bObj = chosen.billingAddressObj || {};
-                    const bAddr = bObj.address || chosen.c6 || chosen.billingAddress || '';
+                    const bAddr = bObj.address || chosen.c6 || chosen.billingAddress || chosen.address || '';
                     const dObj = chosen.deliveryAddressObj || {};
-                    const dAddr = dObj.address || chosen.c7 || chosen.deliveryAddress || '';
+                    const dAddr = dObj.address || chosen.c7 || chosen.deliveryAddress || chosen.dispatchAddress || '';
 
                     const clean = (s) => String(s || '').trim().toLowerCase();
                     const isSame = !dAddr || (
                       clean(dAddr) === clean(bAddr) &&
-                      clean(dObj.city || '') === clean(bObj.city || '') &&
-                      clean(dObj.state || '') === clean(bObj.state || '') &&
-                      clean(dObj.pincode || '') === clean(bObj.pincode || '')
+                      clean(dObj.city || chosen.city || '') === clean(bObj.city || chosen.city || '') &&
+                      clean(dObj.state || chosen.state || '') === clean(bObj.state || chosen.state || '') &&
+                      clean(dObj.pincode || chosen.pincode || '') === clean(bObj.pincode || chosen.pincode || '')
                     );
 
                     setSameAsBilling(isSame);
                     setNewBomDeliveryProofDoc(null);
                     if (dAddr && !isSame) {
-                      setNewBomDeliveryStreet(dObj.address || chosen.c7 || chosen.deliveryAddress || '');
-                      setNewBomDeliveryCity(dObj.city || '');
-                      setNewBomDeliveryState(dObj.state || '');
-                      setNewBomDeliveryPincode(dObj.pincode || '');
+                      setNewBomDeliveryStreet(dObj.address || chosen.c7 || chosen.deliveryAddress || chosen.dispatchAddress || '');
+                      setNewBomDeliveryCity(dObj.city || chosen.dispatchCity || chosen.city || '');
+                      setNewBomDeliveryState(dObj.state || chosen.dispatchState || chosen.state || '');
+                      setNewBomDeliveryPincode(dObj.pincode || chosen.dispatchPincode || chosen.pincode || '');
                     } else {
-                      setNewBomDeliveryStreet(bObj.address || chosen.c6 || chosen.billingAddress || '');
-                      setNewBomDeliveryCity(bObj.city || '');
-                      setNewBomDeliveryState(bObj.state || '');
-                      setNewBomDeliveryPincode(bObj.pincode || '');
+                      setNewBomDeliveryStreet(bObj.address || chosen.c6 || chosen.billingAddress || chosen.address || '');
+                      setNewBomDeliveryCity(bObj.city || chosen.city || '');
+                      setNewBomDeliveryState(bObj.state || chosen.state || '');
+                      setNewBomDeliveryPincode(bObj.pincode || chosen.pincode || '');
                     }
                   }
                 }}
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
               />
               <datalist id="bom-customer-name-suggestions">
-                {customerList.map((c, idx) => (
-                  <option key={idx} value={c.code}>
-                    {c.c2 && c.c2 !== c.code ? `${c.code} (${c.c2})` : c.code}
-                  </option>
-                ))}
+                {customerList.map((c, idx) => {
+                  const val = c.code || c.customerName || c.companyName;
+                  const label = c.c2 || c.companyName;
+                  return (
+                    <option key={idx} value={val}>
+                      {label && label !== val ? `${val} (${label})` : val}
+                    </option>
+                  );
+                })}
               </datalist>
             </div>
           </div>
 
           {(() => {
-            const selCust = customerList.find(c => c.code === newBomProductName);
-            const companyName = selCust ? (selCust.c2 || selCust.code) : (newBomProductName || '—');
-            const mobileNo = selCust ? (selCust.c4 || '—') : '—';
-            const emailAddr = selCust ? (selCust.c5 || '—') : '—';
+            const target = (newBomProductName || '').toLowerCase().trim();
+            const selCust = target ? customerList.find(c => {
+              const code = (c.code || '').toLowerCase().trim();
+              const c2 = (c.c2 || '').toLowerCase().trim();
+              const cName = (c.customerName || '').toLowerCase().trim();
+              const comp = (c.companyName || '').toLowerCase().trim();
+              return code === target || c2 === target || cName === target || comp === target ||
+                     (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
+                     (cName && cName.startsWith(target)) || (comp && comp.startsWith(target)) ||
+                     (c2 && c2.includes(target)) || (comp && comp.includes(target));
+            }) : null;
+
+            const companyName = selCust ? (selCust.c2 || selCust.companyName || selCust.customerName || selCust.code) : (newBomProductName || '—');
+            const mobileNo = selCust ? (selCust.c4 || selCust.primaryContact?.phone || selCust.phone || selCust.primaryContact?.whatsapp || '—') : '—';
+            const emailAddr = selCust ? (selCust.c5 || selCust.primaryContact?.email || selCust.email || '—') : '—';
 
             const bObj = selCust?.billingAddressObj || {};
-            const billingStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '—';
-            const billingCity = bObj.city || '—';
-            const billingState = bObj.state || '—';
-            const billingPincode = bObj.pincode || '—';
+            const billingStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || selCust?.address || '—';
+            const billingCity = bObj.city || selCust?.city || '—';
+            const billingState = bObj.state || selCust?.state || '—';
+            const billingPincode = bObj.pincode || selCust?.pincode || '—';
 
             return (
               <>
@@ -1911,10 +1941,17 @@ export default function BomOrdersView(props) {
                       setBomConfirmModal(null);
                     } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
                       const isDraft = bomConfirmModal === 'draft';
-                      const selCust = customerList.find(c =>
-                        (c.code || '').toLowerCase() === (newBomProductName || '').toLowerCase() ||
-                        (c.c2 || '').toLowerCase() === (newBomProductName || '').toLowerCase()
-                      );
+                      const target = (newBomProductName || '').toLowerCase().trim();
+                      const selCust = target ? customerList.find(c => {
+                        const code = (c.code || '').toLowerCase().trim();
+                        const c2 = (c.c2 || '').toLowerCase().trim();
+                        const cName = (c.customerName || '').toLowerCase().trim();
+                        const comp = (c.companyName || '').toLowerCase().trim();
+                        return code === target || c2 === target || cName === target || comp === target ||
+                               (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
+                               (cName && cName.startsWith(target)) || (comp && comp.startsWith(target)) ||
+                               (c2 && c2.includes(target)) || (comp && comp.includes(target));
+                      }) : null;
 
                       const bObj = selCust?.billingAddressObj || {};
                       const bStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '';

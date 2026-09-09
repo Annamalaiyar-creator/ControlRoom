@@ -17,7 +17,7 @@ export default function CrmReportsView({
   // Group by salesperson
   const repStats = {};
   opportunities.forEach(o => {
-    const rep = o.assignedSalesperson || 'Saravanan';
+    const rep = o.assignedSalesperson || 'Mohith JV';
     if (!repStats[rep]) {
       repStats[rep] = { name: rep, deals: 0, wonCount: 0, wonValue: 0, totalValue: 0 };
     }

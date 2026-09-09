@@ -250,20 +250,87 @@ export default function CrmCustomersView({
       ? (editingCustomer.customerCode || editingCustomer.id)
       : `CUST-VRM-${String(100 + customers.length + 1)}`;
 
+    const formatAddr = (addr, city, state, pin) => {
+      const parts = [];
+      if (addr && addr.trim()) parts.push(addr.trim());
+      if (city && city.trim()) parts.push(city.trim());
+      if (state && state.trim() && pin && pin.trim()) {
+        parts.push(`${state.trim()} - ${pin.trim()}`);
+      } else {
+        if (state && state.trim()) parts.push(state.trim());
+        if (pin && pin.trim()) parts.push(pin.trim());
+      }
+      return parts.join(', ');
+    };
+
+    const billingStr = formatAddr(formCust.address, formCust.city, formCust.state, formCust.pincode);
+    const dispatchStr = formCust.sameAsBilling
+      ? billingStr
+      : formatAddr(formCust.dispatchAddress, formCust.dispatchCity, formCust.dispatchState, formCust.dispatchPincode);
+
+    const billingObj = {
+      address: (formCust.address || '').trim(),
+      city: (formCust.city || '').trim(),
+      state: (formCust.state || '').trim(),
+      pincode: (formCust.pincode || '').trim()
+    };
+
+    const deliveryObj = formCust.sameAsBilling ? { ...billingObj } : {
+      address: (formCust.dispatchAddress || '').trim(),
+      city: (formCust.dispatchCity || '').trim(),
+      state: (formCust.dispatchState || '').trim(),
+      pincode: (formCust.dispatchPincode || '').trim()
+    };
+
+    const loggedRep = localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV';
+
     const record = {
       id: customerCode,
       customerCode: customerCode,
       ...formCust,
+      code: formCust.customerName || formCust.companyName,
+      c2: formCust.companyName || formCust.customerName,
+      c3: formCust.primaryContact?.name || '',
+      c4: formCust.primaryContact?.phone || '',
+      c5: formCust.primaryContact?.email || '',
+      c6: billingStr,
+      billingAddress: billingStr,
+      billingAddressObj: billingObj,
+      c7: dispatchStr,
+      deliveryAddress: dispatchStr,
+      deliveryAddressObj: deliveryObj,
+      gstNo: formCust.gstNumber || '',
+      status: 'ACTIVE',
+      assignedSalesperson: loggedRep,
       updatedAt: new Date().toISOString()
     };
     if (!editingCustomer) {
       record.createdAt = new Date().toISOString();
     }
 
-    // 1. Immediately save locally & dispatch update
+    // 1. Immediately save to CRM store
     onSaveCustomer(record);
 
-    // 2. Post to Zoho Books sync API
+    // 2. Also save to BOM customer store so BOM Creation picks it up instantly
+    try {
+      const existingBOMCust = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
+      const filtered = existingBOMCust.filter(c => {
+        const cCode = (c.code || c.customerName || c.customerCode || '').toLowerCase().trim();
+        const cComp = (c.c2 || c.companyName || '').toLowerCase().trim();
+        const targetName = (record.code || '').toLowerCase().trim();
+        const targetComp = (record.c2 || '').toLowerCase().trim();
+        return cCode !== targetName && cComp !== targetComp;
+      });
+      const updatedBOMCust = [record, ...filtered];
+      localStorage.setItem('controlroom_customer_store', JSON.stringify(updatedBOMCust));
+      localStorage.setItem('controlroom_customer_list', JSON.stringify(updatedBOMCust));
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+      window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: record }));
+    } catch (e) {
+      console.error('Error syncing customer to BOM store:', e);
+    }
+
+    // 3. Post to Zoho Books sync API
     try {
       const response = await fetch('/api/zoho/customers', {
         method: 'POST',
@@ -272,7 +339,20 @@ export default function CrmCustomersView({
       });
       const resJson = await response.json();
       if (resJson.customer) {
-        onSaveCustomer(resJson.customer);
+        const mergedFinal = { ...record, ...resJson.customer };
+        onSaveCustomer(mergedFinal);
+        try {
+          const list = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
+          const idx = list.findIndex(c => c.id === record.id || c.code === record.code);
+          if (idx >= 0) {
+            list[idx] = { ...list[idx], ...resJson.customer };
+          } else {
+            list.unshift(mergedFinal);
+          }
+          localStorage.setItem('controlroom_customer_store', JSON.stringify(list));
+          localStorage.setItem('controlroom_customer_list', JSON.stringify(list));
+          window.dispatchEvent(new Event('controlroom_storage_update'));
+        } catch (e) {}
       }
       setZohoSyncMessage({
         type: 'success',
@@ -1168,7 +1248,7 @@ export default function CrmCustomersView({
                       {/* Assigned Rep Badge */}
                       <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
                         <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          👤 {(cust.assignedSalesperson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
+                          👤 {(cust.assignedSalesperson || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim()}
                         </span>
                       </td>
                     </tr>

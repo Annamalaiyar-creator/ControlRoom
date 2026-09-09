@@ -110,6 +110,17 @@ export const authenticateUser = (empId, username, password, selectedRoleObj = nu
         created_at: new Date().toISOString()
       },
       {
+        id: 'EMP-SE-001',
+        employee_name: 'Mohith JV',
+        employee_code: 'SE-VRM001',
+        code: 'SE-VRM001',
+        role: 'Sales Executive',
+        email: 'mohith@vrm.com',
+        department: 'Sales & Business',
+        status: 'Active',
+        created_at: new Date().toISOString()
+      },
+      {
         id: 'EMP-TS-001',
         employee_name: 'Karthik Raja',
         employee_code: 'TS-VRM001',

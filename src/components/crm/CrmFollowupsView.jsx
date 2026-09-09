@@ -20,7 +20,7 @@ export default function CrmFollowupsView({
     date: new Date().toISOString().split('T')[0],
     time: '11:00 AM',
     notes: '',
-    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Saravanan'
+    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV'
   });
 
   const todayStr = new Date().toISOString().split('T')[0];

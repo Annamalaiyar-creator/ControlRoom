@@ -23,7 +23,7 @@ export const INITIAL_CRM_CUSTOMERS = [
     creditLimit: 5000000,
     creditDays: 30,
     paymentTerms: 'Net 30 Days',
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     source: 'Website',
     primaryContact: {
       name: 'Rajesh Kannan',
@@ -75,7 +75,7 @@ export const INITIAL_CRM_CUSTOMERS = [
     creditLimit: 3000000,
     creditDays: 15,
     paymentTerms: '100% Advance',
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     source: 'WhatsApp',
     primaryContact: {
       name: 'Dharmesh Patel',
@@ -102,7 +102,7 @@ export const INITIAL_CRM_LEADS = [
     source: 'WhatsApp',
     requirement: '100 kW Rooftop Solar Mounting Structure (Alu Rail 2414mm + Mid/End Clamps)',
     estimatedValue: 480000,
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     status: 'Requirement Received', // New Lead | Contacted | Qualified | Requirement Received | Opportunity Created | Won | Lost
     priority: 'HIGH',
     nextFollowup: new Date(Date.now() + 2 * 3600000).toISOString(),
@@ -142,7 +142,7 @@ export const INITIAL_CRM_LEADS = [
     source: 'Referral',
     requirement: '25 kW Commercial Shed Mini Rail Kit with SS Fasteners',
     estimatedValue: 135000,
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     status: 'New Lead',
     priority: 'MEDIUM',
     nextFollowup: new Date(Date.now() + 24 * 3600000).toISOString(),
@@ -162,7 +162,7 @@ export const INITIAL_CRM_LEADS = [
     source: 'WhatsApp',
     requirement: '75 kW Ballasted Flat Roof Mounting Structure',
     estimatedValue: 390000,
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     status: 'Qualified',
     priority: 'HIGH',
     nextFollowup: new Date(Date.now() - 2 * 3600000).toISOString(), // Overdue
@@ -207,7 +207,7 @@ export const INITIAL_CRM_OPPORTUNITIES = [
     stage: 'Negotiation', // 1. New Lead | 2. Contacted | 3. Qualified | 4. Requirement Received | 5. BOM / Quotation | 6. Quotation Sent | 7. Negotiation | 8. Confirmation Pending | 9. Won | 10. Lost
     probability: 75,
     expectedClosingDate: '2026-09-20',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'HIGH',
     bomCode: 'BOM-101',
     quotationNumber: 'QT-2026-012',
@@ -252,7 +252,7 @@ export const INITIAL_CRM_OPPORTUNITIES = [
     stage: 'Confirmation Pending',
     probability: 90,
     expectedClosingDate: '2026-09-12',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'HIGH',
     bomCode: 'BOM-102',
     quotationNumber: 'QT-2026-018',
@@ -274,7 +274,7 @@ export const INITIAL_CRM_OPPORTUNITIES = [
     stage: 'BOM / Quotation',
     probability: 40,
     expectedClosingDate: '2026-10-05',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'MEDIUM',
     lastActivity: 'Draft BOM prepared with engineering team',
     nextFollowup: new Date(Date.now() + 8 * 3600000).toISOString(),
@@ -316,7 +316,7 @@ export const INITIAL_CRM_OPPORTUNITIES = [
     stage: 'Lost',
     probability: 0,
     expectedClosingDate: '2026-08-28',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'LOW',
     lossReason: 'Customer selected local competitor offering lower steel grade',
     lastActivity: 'Customer confirmed selection of competitor on pricing basis',
@@ -351,7 +351,7 @@ export const INITIAL_CRM_FOLLOWUPS = [
     status: 'Upcoming', // Upcoming | Completed | Overdue
     notes: 'Follow up with Rajesh regarding revised quotation and delivery timeline to Oragadam.',
     outcome: '',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'HIGH'
   },
   {
@@ -366,7 +366,7 @@ export const INITIAL_CRM_FOLLOWUPS = [
     status: 'Upcoming',
     notes: 'Send proforma invoice details and request advance payment proof upload.',
     outcome: '',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'HIGH'
   },
   {
@@ -380,7 +380,7 @@ export const INITIAL_CRM_FOLLOWUPS = [
     status: 'Overdue',
     notes: 'Review ballasted mounting wind speed calculations with technical director.',
     outcome: '',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     priority: 'HIGH'
   },
   {
@@ -460,9 +460,9 @@ export const INITIAL_WHATSAPP_CONVERSATIONS = [
     customerId: 'CUST-VRM-101',
     leadId: null,
     oppId: 'OPP-2026-101',
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     unreadCount: 0,
-    lastMessage: 'Sure Saravanan, please send the revised offer with 2% discount on aluminium rails.',
+    lastMessage: 'Sure Mohith JV, please send the revised offer with 2% discount on aluminium rails.',
     lastMessageTime: new Date(Date.now() - 45 * 60000).toISOString(),
     status: 'Active',
     messages: [
@@ -490,7 +490,7 @@ export const INITIAL_WHATSAPP_CONVERSATIONS = [
       {
         id: 'MSG-004',
         sender: 'customer',
-        text: 'Sure Saravanan, please send the revised offer with 2% discount on aluminium rails.',
+        text: 'Sure Mohith JV, please send the revised offer with 2% discount on aluminium rails.',
         time: new Date(Date.now() - 45 * 60000).toISOString(),
         status: 'read'
       }
@@ -503,7 +503,7 @@ export const INITIAL_WHATSAPP_CONVERSATIONS = [
     companyName: 'Adani Green Energy Ltd',
     leadId: 'LEAD-2026-001',
     oppId: 'OPP-2026-104',
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     unreadCount: 1,
     lastMessage: 'Hi, I need solar structure for 100 panels. What is the price?',
     lastMessageTime: new Date(Date.now() - 25 * 60000).toISOString(),
@@ -525,7 +525,7 @@ export const INITIAL_WHATSAPP_CONVERSATIONS = [
     companyName: 'Waaree Energies Ltd',
     customerId: 'CUST-VRM-103',
     oppId: 'OPP-2026-103',
-    assignedSalesperson: 'Saravanan',
+    assignedSalesperson: 'Mohith JV',
     unreadCount: 0,
     lastMessage: 'Payment of 100% advance initiated via RTGS. Will share UTR receipt in 30 mins.',
     lastMessageTime: new Date(Date.now() - 120 * 60000).toISOString(),
@@ -563,7 +563,7 @@ export const INITIAL_CRM_QUOTATIONS = [
     billingAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai 600066',
     deliveryAddress: 'Oragadam Industrial Corridor, Kanchipuram, Tamil Nadu',
     oppId: 'OPP-2026-101',
-    salesperson: 'Saravanan',
+    salesperson: 'Mohith JV',
     status: 'Sent', // Draft | Sent | Accepted | Revised | Cancelled
     paymentTerms: '50% Advance + 50% Dispatch',
     deliveryTerms: 'Ex-Works Chennai, within 7 working days from advance receipt',
@@ -630,7 +630,7 @@ export const INITIAL_CRM_ACTIVITIES = [
     customerName: 'Adani Green Energy Ltd',
     type: 'auto_lead_created',
     title: 'Lead Automatically Created via WhatsApp',
-    description: 'Auto-created Lead #LEAD-001 from incoming WhatsApp +91 98111 22334. Assigned to Saravanan.',
+    description: 'Auto-created Lead #LEAD-001 from incoming WhatsApp +91 98111 22334. Assigned to Mohith JV.',
     actor: 'System Bot',
     timestamp: new Date(Date.now() - 24 * 60000).toISOString()
   },
@@ -642,7 +642,7 @@ export const INITIAL_CRM_ACTIVITIES = [
     type: 'quotation_sent',
     title: 'Quotation #QT-2026-012 Sent',
     description: 'Sent quotation PDF via WhatsApp & Email to Rajesh Kannan (Deal value: ₹ 12.5 L).',
-    actor: 'Saravanan',
+    actor: 'Mohith JV',
     timestamp: new Date(Date.now() - 2 * 3600000).toISOString()
   },
   {
@@ -653,7 +653,7 @@ export const INITIAL_CRM_ACTIVITIES = [
     type: 'customer_confirmation',
     title: 'Commercial Confirmation Received',
     description: 'Dharmesh Patel confirmed order for 250 kW Tin Shed System. Waiting for advance RTGS proof.',
-    actor: 'Saravanan',
+    actor: 'Mohith JV',
     timestamp: new Date(Date.now() - 120 * 60000).toISOString()
   }
 ];

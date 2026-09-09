@@ -832,7 +832,7 @@ app.post('/api/zoho/customers', async (req, res) => {
     creditLimit: incoming.creditLimit || 2500000,
     creditDays: incoming.creditDays || 30,
     paymentTerms: incoming.paymentTerms || '50% Advance + 50% Dispatch',
-    assignedSalesperson: incoming.assignedSalesperson || 'All Sales',
+    assignedSalesperson: incoming.assignedSalesperson || 'Mohith JV',
     source: incoming.source || 'Direct',
     primaryContact: incoming.primaryContact || {
       name: incoming.contactPerson || incoming.contactName || '',
@@ -840,6 +840,26 @@ app.post('/api/zoho/customers', async (req, res) => {
       whatsapp: incoming.whatsapp || incoming.phone || incoming.mobile || '',
       email: incoming.email || ''
     },
+    code: incoming.code || incoming.customerName || incoming.companyName || 'New Customer',
+    c2: incoming.c2 || incoming.companyName || incoming.customerName || 'New Customer',
+    c3: incoming.c3 || (incoming.primaryContact && incoming.primaryContact.name) || incoming.contactPerson || '',
+    c4: incoming.c4 || (incoming.primaryContact && incoming.primaryContact.phone) || incoming.phone || incoming.mobile || '',
+    c5: incoming.c5 || (incoming.primaryContact && incoming.primaryContact.email) || incoming.email || '',
+    c6: incoming.c6 || incoming.billingAddress || incoming.address || '',
+    billingAddressObj: incoming.billingAddressObj || {
+      address: incoming.address || '',
+      city: incoming.city || '',
+      state: incoming.state || '',
+      pincode: incoming.pincode || ''
+    },
+    c7: incoming.c7 || incoming.deliveryAddress || incoming.dispatchAddress || incoming.address || '',
+    deliveryAddressObj: incoming.deliveryAddressObj || {
+      address: incoming.dispatchAddress || incoming.address || '',
+      city: incoming.dispatchCity || incoming.city || '',
+      state: incoming.dispatchState || incoming.state || '',
+      pincode: incoming.dispatchPincode || incoming.pincode || ''
+    },
+    status: incoming.status || 'ACTIVE',
     createdAt: new Date().toISOString()
   };
 
@@ -960,7 +980,7 @@ app.get('/api/zoho/customers', async (req, res) => {
           creditLimit: c.credit_limit || 2500000,
           creditDays: c.payment_terms || 30,
           paymentTerms: c.payment_terms_label || (c.payment_terms ? `Net ${c.payment_terms} Days` : '50% Advance + 50% Dispatch'),
-          assignedSalesperson: 'Saravanan',
+          assignedSalesperson: 'Mohith JV',
           source: 'Zoho Books',
           zohoContactId: c.contact_id,
           primaryContact: {

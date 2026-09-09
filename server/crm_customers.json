@@ -14,7 +14,7 @@
     "creditLimit": 2500000,
     "creditDays": 30,
     "paymentTerms": "Due on Receipt",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "source": "Zoho Books",
     "zohoContactId": "4080449000000357001",
     "primaryContact": {
@@ -67,7 +67,7 @@
     "creditLimit": 5000000,
     "creditDays": 30,
     "paymentTerms": "Net 30 Days",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "source": "Website",
     "primaryContact": {
       "name": "Rajesh Kannan",
@@ -119,7 +119,7 @@
     "creditLimit": 3000000,
     "creditDays": 15,
     "paymentTerms": "100% Advance",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "source": "WhatsApp",
     "primaryContact": {
       "name": "Dharmesh Patel",

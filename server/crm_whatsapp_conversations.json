@@ -7,9 +7,9 @@
     "customerId": "CUST-VRM-101",
     "leadId": null,
     "oppId": "OPP-2026-101",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "unreadCount": 0,
-    "lastMessage": "Sure Saravanan, please send the revised offer with 2% discount on aluminium rails.",
+    "lastMessage": "Sure Mohith JV, please send the revised offer with 2% discount on aluminium rails.",
     "lastMessageTime": "2026-09-08T07:19:30.566Z",
     "status": "Active",
     "messages": [
@@ -37,7 +37,7 @@
       {
         "id": "MSG-004",
         "sender": "customer",
-        "text": "Sure Saravanan, please send the revised offer with 2% discount on aluminium rails.",
+        "text": "Sure Mohith JV, please send the revised offer with 2% discount on aluminium rails.",
         "time": "2026-09-08T07:19:30.566Z",
         "status": "read"
       },
@@ -74,7 +74,7 @@
     "companyName": "Adani Green Energy Ltd",
     "leadId": "LEAD-2026-001",
     "oppId": "OPP-2026-104",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "unreadCount": 1,
     "lastMessage": "Hi, I need solar structure for 100 panels. What is the price?",
     "lastMessageTime": "2026-09-08T07:39:30.566Z",
@@ -96,7 +96,7 @@
     "companyName": "Waaree Energies Ltd",
     "customerId": "CUST-VRM-103",
     "oppId": "OPP-2026-103",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "unreadCount": 0,
     "lastMessage": "Payment of 100% advance initiated via RTGS. Will share UTR receipt in 30 mins.",
     "lastMessageTime": "2026-09-08T06:04:30.566Z",

@@ -120,7 +120,7 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              Welcome back, {userRole === 'Sales Head' ? 'Vijay' : 'Saravanan'}!
+              Welcome back, {userRole === 'Sales Head' ? 'Vijay' : (localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV')}!
             </h2>
             <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0', fontWeight: '500' }}>
               Here is your sales performance, active quotations & revenue conversion metrics for today.
