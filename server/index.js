@@ -474,6 +474,12 @@ const saveLocalCustomers = (customers) => {
   } catch (err) {
     console.error('Error saving local customers:', err);
   }
+  try {
+    const crmPath = getStoreFilePath('crm_customers.json');
+    fs.writeFileSync(crmPath, JSON.stringify(customers, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error syncing crm_customers.json:', err);
+  }
 };
 
 const loadLocalItems = () => {
@@ -905,9 +911,12 @@ app.post('/api/zoho/customers', async (req, res) => {
       country: 'India'
     };
 
+    const contactNameVal = String(localCustomerRecord.customerName || localCustomerRecord.companyName || incoming.code || 'Valued Customer').trim();
+    const companyNameVal = String(localCustomerRecord.companyName || localCustomerRecord.customerName || incoming.code || 'Valued Customer').trim();
+
     const zohoPayload = {
-      contact_name: localCustomerRecord.customerName || localCustomerRecord.companyName,
-      company_name: localCustomerRecord.companyName,
+      contact_name: contactNameVal,
+      company_name: companyNameVal,
       contact_type: 'customer',
       customer_sub_type: 'business',
       currency_code: 'INR',
@@ -915,7 +924,7 @@ app.post('/api/zoho/customers', async (req, res) => {
       billing_address: billingAddress,
       shipping_address: shippingAddress,
       contact_persons: contactPersons.length > 0 ? contactPersons : undefined,
-      notes: `Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
+      notes: `Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
     };
 
     const result = await createZohoCustomer(accessToken, zohoPayload);

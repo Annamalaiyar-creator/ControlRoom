@@ -326,6 +326,7 @@ export default function BomOrdersView(props) {
   const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
+  const [presetKitPrice, setPresetKitPrice] = useState('');
   const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
@@ -767,24 +768,37 @@ export default function BomOrdersView(props) {
 
   // Calculate totals for Create BOM form
   const calculateBOMTotals = () => {
-    const sub = (bomMaterialsList || []).reduce((acc, item) => {
+    // If a preset is selected and has a package price, add preset kit subtotal
+    const kitUnitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
+    const kitMultiplier = parseInt(presetSetCount) || 1;
+    const kitSubtotal = kitUnitPrice * kitMultiplier;
+
+    const itemsSub = (bomMaterialsList || []).reduce((acc, item) => {
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       return acc + (q * r);
     }, 0);
+
+    const sub = itemsSub + kitSubtotal;
     const disc = 0;
-    const gst = (bomMaterialsList || []).reduce((acc, item) => {
+
+    // GST calculation: sum of item GSTs plus preset kit GST (standard 18%)
+    const itemsGst = (bomMaterialsList || []).reduce((acc, item) => {
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       const rowTot = q * r;
       const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
       return acc + (rowTot * (pct / 100));
     }, 0);
+    const kitGst = kitSubtotal * 0.18;
+    const gst = itemsGst + kitGst;
+
     const grand = sub - disc + gst;
     const cgst = gst / 2;
     const sgst = gst / 2;
     return {
       sub: isNaN(sub) ? 0 : sub,
+      kitSubtotal: isNaN(kitSubtotal) ? 0 : kitSubtotal,
       disc: isNaN(disc) ? 0 : disc,
       gst: isNaN(gst) ? 0 : gst,
       grand: isNaN(grand) ? 0 : grand,
@@ -1231,28 +1245,49 @@ export default function BomOrdersView(props) {
                               </div>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626', padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                                <Upload style={{ width: '13px', height: '13px' }} />
-                                Upload Address Proof Document
-                                <input
-                                  type="file"
-                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files && e.target.files[0];
-                                    if (file) {
-                                      compressAndSaveFile(file, (docMeta) => {
-                                        if (docMeta) {
-                                          saveMediaToCache(docMeta.name, docMeta.dataUrl);
-                                          setNewBomDeliveryProofDoc(docMeta);
-                                        }
-                                      });
+                            <div
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                                if (file) {
+                                  compressAndSaveFile(file, (docMeta) => {
+                                    if (docMeta) {
+                                      if (docMeta.name && docMeta.dataUrl) saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                      setNewBomDeliveryProofDoc(docMeta);
                                     }
-                                  }}
-                                />
-                              </label>
-                              <span style={{ fontSize: '11px', color: '#64748B' }}>Supported: PDF, JPG, PNG (&lt; 25 KB auto-compressed)</span>
+                                  });
+                                }
+                              }}
+                              style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '16px 20px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
+                            >
+                              <UploadCloud style={{ width: '28px', height: '28px', color: '#DC2626' }} />
+                              <span style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+                                Drag & drop address proof document here or
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', border: '1px solid #DC2626', color: '#DC2626', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                                  <Upload style={{ width: '13px', height: '13px' }} />
+                                  Browse Files
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        compressAndSaveFile(file, (docMeta) => {
+                                          if (docMeta) {
+                                            if (docMeta.name && docMeta.dataUrl) saveMediaToCache(docMeta.name, docMeta.dataUrl);
+                                            setNewBomDeliveryProofDoc(docMeta);
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                              <span style={{ fontSize: '11px', color: '#94A3B8' }}>Supported: PDF, JPG, PNG (720p HD auto-compressed)</span>
                             </div>
                           )}
                         </div>
@@ -1294,14 +1329,27 @@ export default function BomOrdersView(props) {
                   const targetPreset = activePresetsMap && activePresetsMap[val] ? activePresetsMap[val] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]);
                   if (targetPreset && targetPreset.items) {
                     const multiplier = parseInt(presetSetCount) || 1;
+                    // For presets, line items have rate: '0' (bundled kit price), with baseQty preserved
                     setBomMaterialsList(targetPreset.items.map(it => {
                       const baseQ = parseFloat(it.qty) || 1;
                       return {
                         ...it,
                         baseQty: baseQ,
-                        qty: String(Math.round(baseQ * multiplier))
+                        qty: String(Math.round(baseQ * multiplier)),
+                        rate: '0',
+                        isPresetItem: true
                       };
                     }));
+                    // If the preset has a defined kit price or sum of item prices, populate kit price
+                    if (targetPreset.price || targetPreset.rate) {
+                      setPresetKitPrice(String(targetPreset.price || targetPreset.rate));
+                    } else {
+                      // Calculate original sum of items as recommended kit price
+                      const origSum = targetPreset.items.reduce((acc, it) => acc + (parseFloat(it.qty || 1) * parseFloat(it.rate || 0)), 0);
+                      setPresetKitPrice(origSum > 0 ? String(origSum) : '');
+                    }
+                  } else {
+                    setPresetKitPrice('');
                   }
                 }}
                 style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
@@ -1325,7 +1373,7 @@ export default function BomOrdersView(props) {
                   ];
 
                   const rendered = new Set();
-                  return categories.map(cat => {
+                  const groups = categories.map(cat => {
                     const items = presetsList.filter(p => !rendered.has(p.id) && cat.match(p));
                     items.forEach(p => rendered.add(p.id));
                     if (items.length === 0) return null;
@@ -1339,6 +1387,22 @@ export default function BomOrdersView(props) {
                       </optgroup>
                     );
                   });
+
+                  // Catch-all group for any preset not matched in the predefined categories
+                  const remaining = presetsList.filter(p => !rendered.has(p.id));
+                  if (remaining.length > 0) {
+                    groups.push(
+                      <optgroup key="Other Tech Support Presets" label={`--- Other Tech Support Presets (${remaining.length}) ---`}>
+                        {remaining.map(preset => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.label || preset.id}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  }
+
+                  return groups;
                 })()}
               </select>
 
@@ -1363,7 +1427,9 @@ export default function BomOrdersView(props) {
                         return {
                           ...it,
                           baseQty: baseQ,
-                          qty: String(Math.round(baseQ * multiplier))
+                          qty: String(Math.round(baseQ * multiplier)),
+                          rate: '0',
+                          isPresetItem: true
                         };
                       }));
                     }
@@ -1371,6 +1437,26 @@ export default function BomOrdersView(props) {
                   style={{ width: '54px', height: '26px', borderRadius: '6px', border: '1px solid #94A3B8', padding: '0 6px', fontSize: '13px', fontWeight: '800', color: '#4F46E5', textAlign: 'center', outline: 'none', backgroundColor: 'white' }}
                 />
               </div>
+
+              {/* Dedicated Preset Kit Full Package Price Input */}
+              {selectedPreset && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '0 10px', borderRadius: '8px', height: '36px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#4338CA', whiteSpace: 'nowrap' }}>Preset Kit Full Price (₹):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 25000"
+                    value={presetKitPrice}
+                    onChange={(e) => setPresetKitPrice(e.target.value)}
+                    style={{ width: '100px', height: '26px', borderRadius: '6px', border: '1px solid #818CF8', padding: '0 8px', fontSize: '13px', fontWeight: '800', color: '#1E1B4B', textAlign: 'right', outline: 'none', backgroundColor: 'white' }}
+                  />
+                  {presetSetCount > 1 && presetKitPrice && (
+                    <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>
+                      (Total: ₹{((parseFloat(presetKitPrice) || 0) * (parseInt(presetSetCount) || 1)).toLocaleString('en-IN')})
+                    </span>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={() => {
@@ -1569,25 +1655,32 @@ export default function BomOrdersView(props) {
                         />
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="number"
-                          value={item.rate}
-                          placeholder="0.00"
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
-                          }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
-                        />
+                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px', backgroundColor: '#EEF2FF', border: '1px dashed #A5B4FC', borderRadius: '8px', padding: '0 8px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338CA' }}>Included in Kit</span>
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            value={item.rate}
+                            placeholder="0.00"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                            }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                         <select
                           value={item.gstRate || '18%'}
+                          disabled={Boolean(selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0))}
                           onChange={(e) => {
                             const val = e.target.value;
                             setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
                           }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: (selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0)) ? '#F8FAFC' : '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
                         >
                           <option value="18%">18% GST</option>
                           <option value="12%">12% GST</option>
@@ -1595,8 +1688,20 @@ export default function BomOrdersView(props) {
                           <option value="0%">0% Exempt</option>
                         </select>
                       </td>
-                      <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>₹{taxable.toFixed(2)}</td>
-                      <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>₹{rowTot.toFixed(2)}</td>
+                      <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
+                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
+                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
+                        ) : (
+                          `₹${taxable.toFixed(2)}`
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
+                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
+                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
+                        ) : (
+                          `₹${rowTot.toFixed(2)}`
+                        )}
+                      </td>
                       <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                         <button
                           onClick={() => handleRemoveMaterialRow(i)}
@@ -1866,6 +1971,12 @@ export default function BomOrdersView(props) {
 
           {/* Subtotals & GST Tax Calculation Breakdown */}
           <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
+            {selectedPreset && totals.kitSubtotal > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#4338CA', backgroundColor: '#EEF2FF', padding: '6px 10px', borderRadius: '6px' }}>
+                <span style={{ fontWeight: '700' }}>Preset Kit ({presetSetCount} Set{presetSetCount > 1 ? 's' : ''})</span>
+                <strong style={{ color: '#3730A3' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B' }}>
               <span>Taxable Subtotal (Before GST)</span>
               <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
@@ -1939,6 +2050,9 @@ export default function BomOrdersView(props) {
                     if (bomConfirmModal === 'cancel') {
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
+                      setSelectedPreset('');
+                      setPresetKitPrice('');
+                      setPresetSetCount(1);
                     } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
                       const isDraft = bomConfirmModal === 'draft';
                       const target = (newBomProductName || '').toLowerCase().trim();
@@ -2037,6 +2151,9 @@ export default function BomOrdersView(props) {
                         invoiceDeducted: false,
                         stockBlocked: !isDraft,
                         stockBlockedAt: !isDraft ? new Date().toISOString() : null,
+                        presetName: selectedPreset || null,
+                        presetKitPrice: (selectedPreset && presetKitPrice !== '') ? parseFloat(presetKitPrice) : null,
+                        presetSetCount: selectedPreset ? (parseInt(presetSetCount) || 1) : null,
                         subTotal: totals.sub || 0,
                         gstAmount: totals.gst || 0,
                         cgstAmount: totals.cgst || 0,
@@ -2079,6 +2196,9 @@ export default function BomOrdersView(props) {
                       setNewBomPaymentType('100% Paid');
                       setNewBomProductName('');
                       setBomMaterialsList([]);
+                      setSelectedPreset('');
+                      setPresetKitPrice('');
+                      setPresetSetCount(1);
                       setNewBomCode('');
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
@@ -3995,8 +4115,8 @@ export default function BomOrdersView(props) {
               const proofObj = uploadPaymentModal.paymentProofDoc || uploadPaymentModal.payments?.proofDocObj;
               const hasProof = Boolean(proofObj || uploadPaymentModal.payments?.proofDoc);
               const proofName = typeof proofObj === 'object' ? proofObj?.name : (uploadPaymentModal.payments?.proofDoc || proofObj);
-              const proofData = typeof proofObj === 'object' ? proofObj?.dataUrl : uploadPaymentModal.payments?.proofDocData;
-              const isImage = proofData && proofData.startsWith('data:image/');
+              const proofData = (typeof proofObj === 'object' ? proofObj?.dataUrl : uploadPaymentModal.payments?.proofDocData) || getMediaFromCache(proofName);
+              const isImage = proofData && (proofData.startsWith('data:image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(proofName || ''));
 
               return (
                 <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -4032,7 +4152,7 @@ export default function BomOrdersView(props) {
                     <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '4px' }}>
                       <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '8px' }}>Payment Proof Document:</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '12px 14px' }}>
-                        {isImage ? (
+                        {isImage && proofData ? (
                           <img src={proofData} alt="Proof" style={{ width: '46px', height: '46px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #E2E8F0' }} />
                         ) : (
                           <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -4045,23 +4165,18 @@ export default function BomOrdersView(props) {
                           </div>
                           <span style={{ fontSize: '11px', color: '#059669', fontWeight: '600' }}>Verified</span>
                         </div>
-                        {proofData && (
-                          <button
-                            onClick={() => {
-                              const win = window.open('');
-                              if (win) {
-                                if (proofData.startsWith('data:image/')) {
-                                  win.document.write(`<!DOCTYPE html><html><head><title>${proofName || 'Payment Proof'}</title></head><body style="margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${proofData}" style="max-width:95vw;max-height:95vh;object-fit:contain;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border-radius:12px;"/></body></html>`);
-                                } else {
-                                  win.location.href = proofData;
-                                }
-                              }
-                            }}
-                            style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '6px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-                          >
-                            <Eye size={13} /> View File
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewDocModal({
+                              title: 'Payment Proof Document',
+                              doc: typeof proofObj === 'object' && proofObj !== null ? { ...proofObj, dataUrl: proofData } : { name: proofName, dataUrl: proofData }
+                            });
+                          }}
+                          style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '6px 12px', borderRadius: '8px', border: '1px solid #BFDBFE', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <Eye size={13} /> View Image
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -4190,33 +4305,43 @@ export default function BomOrdersView(props) {
               </button>
             </div>
             <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', backgroundColor: '#F1F5F9' }}>
-              {previewDocModal.doc?.dataUrl ? (
-                previewDocModal.doc.dataUrl.startsWith('data:image/') ? (
-                  <img
-                    src={previewDocModal.doc.dataUrl}
-                    alt={previewDocModal.doc.name || 'Preview'}
-                    style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                  />
-                ) : previewDocModal.doc.dataUrl.startsWith('data:video/') ? (
-                  <video
-                    controls
-                    autoPlay
-                    src={previewDocModal.doc.dataUrl}
-                    style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                  />
-                ) : (
+              {(() => {
+                const resolvedData = previewDocModal.doc?.dataUrl || getMediaFromCache(previewDocModal.doc?.name);
+                if (!resolvedData) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748B' }}>
+                      <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>No visual preview available</p>
+                      <p style={{ fontSize: '12px', marginTop: '4px' }}>File attached: {previewDocModal.doc?.name || 'Document'}</p>
+                    </div>
+                  );
+                }
+                if (resolvedData.startsWith('data:image/')) {
+                  return (
+                    <img
+                      src={resolvedData}
+                      alt={previewDocModal.doc?.name || 'Preview'}
+                      style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                    />
+                  );
+                }
+                if (resolvedData.startsWith('data:video/')) {
+                  return (
+                    <video
+                      controls
+                      autoPlay
+                      src={resolvedData}
+                      style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                    />
+                  );
+                }
+                return (
                   <iframe
-                    src={previewDocModal.doc.dataUrl}
-                    title={previewDocModal.doc.name || 'Preview'}
+                    src={resolvedData}
+                    title={previewDocModal.doc?.name || 'Preview'}
                     style={{ width: '100%', height: '550px', border: 'none', borderRadius: '8px', backgroundColor: '#fff' }}
                   />
-                )
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748B' }}>
-                  <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>No visual preview available</p>
-                  <p style={{ fontSize: '12px', marginTop: '4px' }}>File attached: {previewDocModal.doc?.name || 'Document'}</p>
-                </div>
-              )}
+                );
+              })()}
             </div>
             <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#FFF' }}>
               <button

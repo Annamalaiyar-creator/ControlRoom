@@ -60,10 +60,11 @@ export const readCompressedImage = (file, callback) => {
 export const compressAndSaveFile = (file, callback) => {
   if (!file) return callback(null);
   const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(file.name || "");
+  const isVid = (file.type && file.type.startsWith("video/")) || /\.(mp4|webm|mov|mkv|avi)$/i.test(file.name || "");
   const baseMeta = {
     name: file.name,
     size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-    type: file.type || (isImg ? "image/png" : "application/pdf"),
+    type: file.type || (isImg ? "image/jpeg" : isVid ? "video/mp4" : "application/pdf"),
     uploadedAt: new Date().toISOString()
   };
 
@@ -78,9 +79,10 @@ export const compressAndSaveFile = (file, callback) => {
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          let width = img.width || 600;
-          let height = img.height || 400;
-          const maxDim = 600;
+          let width = img.width || 1280;
+          let height = img.height || 720;
+          // 720p HD maximum dimension standard (1280x720)
+          const maxDim = 1280;
           if (width > maxDim || height > maxDim) {
             if (width > height) {
               height = Math.round((height * maxDim) / width);
@@ -94,7 +96,8 @@ export const compressAndSaveFile = (file, callback) => {
           canvas.height = height;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
-          const compressedData = canvas.toDataURL("image/jpeg", 0.6);
+          // Crisp 720p quality: 0.85
+          const compressedData = canvas.toDataURL("image/jpeg", 0.85);
           baseMeta.dataUrl = compressedData;
           if (baseMeta.name) {
             saveMediaToCache(baseMeta.name, compressedData);
