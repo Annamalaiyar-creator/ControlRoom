@@ -330,6 +330,210 @@ export default function BomOrdersView(props) {
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
   const [bomMaterialsList, setBomMaterialsList] = useState([]);
 
+  // Permission Check for Cancel BOM (Strictly Dispatch, Production, and Billing Logins)
+  const canCancelBom = [
+    'Dispatch Head', 'Dispatch Executive',
+    'Production Head', 'Technical Administrator', 'CEO', 'Floor Supervisor',
+    'Billing', 'Invoice Executive', 'Accounts Head', 'Accounts Executive'
+  ].includes(userRole);
+
+  // Helper to Block / Deduct Inventory immediately upon BOM Creation or Verification
+  const blockInventoryForBom = (bomItems = [], bomCode = '') => {
+    if (!Array.isArray(bomItems) || bomItems.length === 0) return;
+    try {
+      // 1. Update controlroom_raw_materials_store
+      const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
+      let currentMats = [];
+      if (rawStoreStr) {
+        try { currentMats = JSON.parse(rawStoreStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentMats)) currentMats = [];
+
+      // 2. Update controlroom_items_list
+      const itemsListStr = localStorage.getItem('controlroom_items_list');
+      let currentItems = [];
+      if (itemsListStr) {
+        try { currentItems = JSON.parse(itemsListStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentItems)) currentItems = [];
+
+      bomItems.forEach(pItem => {
+        const qtyToBlock = parseFloat(pItem.qty || pItem.bomQty || 1) || 0;
+        const pCode = (pItem.code || '').toUpperCase().trim();
+        const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+
+        // Match in raw materials store
+        let match = currentMats.find(m => {
+          const mCode = (m.code || '').toUpperCase().trim();
+          const mName = (m.name || '').toLowerCase().trim();
+          if (pCode && mCode === pCode) return true;
+          if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
+          return false;
+        });
+
+        if (match) {
+          const currStock = Math.max(0, parseFloat(String(match.stock).replace(/,/g, '')) || 0);
+          const newStock = Math.max(0, currStock - qtyToBlock);
+          match.stock = newStock;
+          match.reserved = (parseFloat(match.reserved) || 0) + qtyToBlock;
+          match.blockedForBom = (match.blockedForBom || 0) + qtyToBlock;
+          const minL = parseFloat(String(match.minLevel || '100').replace(/,/g, '')) || 100;
+          match.status = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
+          match.lastUpdated = `Blocked for BOM ${bomCode}`;
+        } else if (pName) {
+          // If not existing in current store, register it with 0 available stock
+          currentMats.push({
+            code: pCode || `FG-${Date.now().toString().slice(-4)}`,
+            name: pItem.name || 'Finished Good Item',
+            cat: pItem.category || 'Finished Goods',
+            unit: pItem.uom || 'Nos',
+            stock: 0,
+            reserved: qtyToBlock,
+            blockedForBom: qtyToBlock,
+            minLevel: 10,
+            status: 'Out of Stock',
+            store: 'Main Store',
+            lastUpdated: `Blocked for BOM ${bomCode}`
+          });
+        }
+
+        // Match in items list
+        let itemMatch = currentItems.find(it => {
+          const itCode = (it.code || '').toUpperCase().trim();
+          const itName = (it.name || '').toLowerCase().trim();
+          if (pCode && itCode === pCode) return true;
+          if (pName && (itName === pName || itName.includes(pName) || pName.includes(itName))) return true;
+          return false;
+        });
+        if (itemMatch) {
+          const currStock = Math.max(0, parseFloat(String(itemMatch.stock || itemMatch.availableStock || 0).replace(/,/g, '')) || 0);
+          const newStock = Math.max(0, currStock - qtyToBlock);
+          itemMatch.stock = newStock;
+          itemMatch.availableStock = newStock;
+          itemMatch.reserved = (parseFloat(itemMatch.reserved) || 0) + qtyToBlock;
+          itemMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
+        }
+      });
+
+      localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(currentMats));
+      if (currentItems.length > 0) localStorage.setItem('controlroom_items_list', JSON.stringify(currentItems));
+      saveCloudStore('raw_materials_store', currentMats);
+      window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+      setItemsList(currentMats);
+    } catch (err) {
+      console.error('Error blocking inventory for BOM:', err);
+    }
+  };
+
+  // Helper to Restore / Unblock Inventory when a BOM is Cancelled
+  const restoreInventoryForBom = (bomItems = [], bomCode = '') => {
+    if (!Array.isArray(bomItems) || bomItems.length === 0) return;
+    try {
+      const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
+      let currentMats = [];
+      if (rawStoreStr) {
+        try { currentMats = JSON.parse(rawStoreStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentMats)) currentMats = [];
+
+      const itemsListStr = localStorage.getItem('controlroom_items_list');
+      let currentItems = [];
+      if (itemsListStr) {
+        try { currentItems = JSON.parse(itemsListStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentItems)) currentItems = [];
+
+      bomItems.forEach(pItem => {
+        const qtyToRestore = parseFloat(pItem.qty || pItem.bomQty || 1) || 0;
+        const pCode = (pItem.code || '').toUpperCase().trim();
+        const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+
+        let match = currentMats.find(m => {
+          const mCode = (m.code || '').toUpperCase().trim();
+          const mName = (m.name || '').toLowerCase().trim();
+          if (pCode && mCode === pCode) return true;
+          if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
+          return false;
+        });
+
+        if (match) {
+          const currStock = parseFloat(String(match.stock).replace(/,/g, '')) || 0;
+          const newStock = currStock + qtyToRestore;
+          match.stock = newStock;
+          match.reserved = Math.max(0, (parseFloat(match.reserved) || 0) - qtyToRestore);
+          match.blockedForBom = Math.max(0, (match.blockedForBom || 0) - qtyToRestore);
+          const minL = parseFloat(String(match.minLevel || '100').replace(/,/g, '')) || 100;
+          match.status = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
+          match.lastUpdated = `Restored from Cancelled BOM ${bomCode}`;
+        }
+
+        let itemMatch = currentItems.find(it => {
+          const itCode = (it.code || '').toUpperCase().trim();
+          const itName = (it.name || '').toLowerCase().trim();
+          if (pCode && itCode === pCode) return true;
+          if (pName && (itName === pName || itName.includes(pName) || pName.includes(itName))) return true;
+          return false;
+        });
+        if (itemMatch) {
+          const currStock = parseFloat(String(itemMatch.stock || itemMatch.availableStock || 0).replace(/,/g, '')) || 0;
+          const newStock = currStock + qtyToRestore;
+          itemMatch.stock = newStock;
+          itemMatch.availableStock = newStock;
+          itemMatch.reserved = Math.max(0, (parseFloat(itemMatch.reserved) || 0) - qtyToRestore);
+          itemMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
+        }
+      });
+
+      localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(currentMats));
+      if (currentItems.length > 0) localStorage.setItem('controlroom_items_list', JSON.stringify(currentItems));
+      saveCloudStore('raw_materials_store', currentMats);
+      window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+      setItemsList(currentMats);
+    } catch (err) {
+      console.error('Error restoring inventory for BOM:', err);
+    }
+  };
+
+  // Execution function for Cancel BOM
+  const handleCancelBomOrder = (bomToCancel) => {
+    if (!bomToCancel) return;
+    if (!canCancelBom) {
+      alert('⛔ Access Restricted!\nOnly Dispatch, Production, or Billing logins are authorized to cancel a BOM and release reserved inventory.');
+      return;
+    }
+
+    const bCode = bomToCancel.bomCode || bomToCancel.code;
+    const confirmCancel = window.confirm(`⚠️ Are you sure you want to CANCEL BOM ${bCode}?\n\nThis will immediately release and restore all blocked items back into live inventory so other sales persons can book them.`);
+    if (!confirmCancel) return;
+
+    // 1. Restore Inventory
+    restoreInventoryForBom(bomToCancel.items || bomToCancel.dispatchPacking, bCode);
+
+    // 2. Update BOM status
+    setBomStore(prev => {
+      const updated = prev.map(b => (b.bomCode === bCode || b.code === bCode) ? {
+        ...b,
+        status: 'Cancelled & Stock Restored',
+        cancelled: true,
+        stockBlocked: false,
+        cancelledBy: getEffectiveSalesPerson(),
+        cancelledAt: new Date().toISOString()
+      } : b);
+      const sanitized = updated.map(stripDataUrlsFromRecord);
+      try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized)); } catch (_) {}
+      saveCloudStore('bom_store', sanitized);
+      return sanitized;
+    });
+
+    if (confirmingBomModal && (confirmingBomModal.bomCode === bCode || confirmingBomModal.code === bCode)) {
+      setConfirmingBomModal(prev => prev ? { ...prev, status: 'Cancelled & Stock Restored', cancelled: true, stockBlocked: false } : null);
+    }
+
+    alert(`✅ BOM (${bCode}) has been successfully CANCELLED.\nAll items have been restored and unblocked in live inventory.`);
+  };
+
   // Alert function
   const showCustomAlert = (msg, title = null, type = null) => {
     let detectedType = type;
@@ -467,11 +671,13 @@ export default function BomOrdersView(props) {
       { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
       { id: 'Pending', label: 'Pending Sales Confirmation', count: (bomStore || []).filter(b => !b.status || b.status === 'Pending Sales Confirmation' || b.status.includes('Pending Confirmation') || b.status === 'Draft').length, bg: '#fef3c7', fg: '#b45309' },
       { id: 'AddressAction', label: 'Address Proof Requested', count: (bomStore || []).filter(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales').length, bg: '#fee2e2', fg: '#b91c1c' },
-      { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (bomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' }
+      { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (bomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' },
+      { id: 'Cancelled', label: 'Cancelled & Restored', count: (bomStore || []).filter(b => b.status === 'Cancelled & Stock Restored' || b.cancelled).length, bg: '#f1f5f9', fg: '#64748b' }
     ],
     headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Sales Person', 'Payment Type', 'Total (₹)', 'Status'],
     rows: (bomStore || []).filter(Boolean).map(b => {
       const isDraft = b.status === 'Draft';
+      const isCancelled = b.status === 'Cancelled & Stock Restored' || b.cancelled;
       const isAddressRequested = b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales';
       const isPending = !b.status || b.status === 'Pending Sales Confirmation' || b.status === 'Pending Confirmation' || b.status === 'Pending';
       const isConfirmed = b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed;
@@ -481,7 +687,12 @@ export default function BomOrdersView(props) {
       let stBorder = '1px solid #bbf7d0';
       let tabGroup = 'Sent';
 
-      if (isDraft) {
+      if (isCancelled) {
+        stBg = '#f1f5f9';
+        stFg = '#64748b';
+        stBorder = '1px solid #cbd5e1';
+        tabGroup = 'Cancelled';
+      } else if (isDraft) {
         stBg = '#fff7ed';
         stFg = '#c2410c';
         stBorder = '1px solid #fed7aa';
@@ -534,9 +745,10 @@ export default function BomOrdersView(props) {
       subTab === 'all boms' ||
       rTabGroup.toLowerCase() === subTab ||
       (subTab === 'addressaction' && (r.addressProofReuploadRequested || rStatus.includes('address proof'))) ||
-      (subTab.includes('pending') && (rStatus.includes('pending') || rStatus.includes('draft'))) ||
-      (subTab.includes('draft') && rStatus.includes('draft')) ||
-      (subTab.includes('sent') && (rStatus.includes('sent') || rStatus.includes('confirm') || rStatus.includes('production') || r.salesConfirmed));
+      (subTab.includes('cancel') && (rStatus.includes('cancel') || r.cancelled)) ||
+      (subTab.includes('pending') && (rStatus.includes('pending') || rStatus.includes('draft')) && !r.cancelled) ||
+      (subTab.includes('draft') && rStatus.includes('draft') && !r.cancelled) ||
+      (subTab.includes('sent') && (rStatus.includes('sent') || rStatus.includes('confirm') || rStatus.includes('production') || r.salesConfirmed) && !r.cancelled);
 
     return matchesSearch && matchesTab;
   });
@@ -937,11 +1149,11 @@ export default function BomOrdersView(props) {
                                 <AlertCircle style={{ width: '14px', height: '14px' }} />
                               </div>
                               <div>
-                                <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
-                                  Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                                  Delivery Address Proof Document <span style={{ color: '#64748B', fontWeight: '600' }}>(Optional)</span>
                                 </h5>
-                                <span style={{ fontSize: '11px', color: '#B91C1C' }}>
-                                  Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease).
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease) if available.
                                 </span>
                               </div>
                             </div>
@@ -1249,11 +1461,16 @@ export default function BomOrdersView(props) {
                             }}
                           />
                           <datalist id={`product-list-${i}`}>
-                            {(itemsList || []).map((prod, pidx) => (
-                              <option key={pidx} value={prod.name}>
-                                {prod.code ? `[${prod.code}] ${prod.name}` : prod.name}
-                              </option>
-                            ))}
+                            {(itemsList || []).map((prod, pidx) => {
+                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
+                              const isOutOfStock = st <= 0;
+                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                              return (
+                                <option key={pidx} value={prod.name}>
+                                  {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                </option>
+                              );
+                            })}
                           </datalist>
                         </div>
                       </td>
@@ -1764,12 +1981,19 @@ export default function BomOrdersView(props) {
                         },
                         invoiceConfirmed: false,
                         invoiceDeducted: false,
+                        stockBlocked: !isDraft,
+                        stockBlockedAt: !isDraft ? new Date().toISOString() : null,
                         subTotal: totals.sub || 0,
                         gstAmount: totals.gst || 0,
                         cgstAmount: totals.cgst || 0,
                         sgstAmount: totals.sgst || 0,
                         grandTotal: totals.grand || 0
                       };
+
+                      // Block and reserve inventory immediately so other sales reps see 0 stock
+                      if (!isDraft && Array.isArray(newBomRecord.items) && newBomRecord.items.length > 0) {
+                        blockInventoryForBom(newBomRecord.items, newBomRecord.bomCode);
+                      }
 
                       setBomStore(prev => {
                         const current = Array.isArray(prev) ? prev : [];
@@ -1892,6 +2116,30 @@ export default function BomOrdersView(props) {
               Back to BOM Dashboard
             </button>
 
+            {canCancelBom && confirmingBomModal.status !== 'Cancelled & Stock Restored' && (
+              <button
+                onClick={() => handleCancelBomOrder(confirmingBomModal)}
+                style={{
+                  border: '1px solid #FECACA',
+                  backgroundColor: '#FEF2F2',
+                  color: '#DC2626',
+                  height: '40px',
+                  padding: '0 18px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <XCircle style={{ width: '16px', height: '16px' }} />
+                Cancel BOM & Restore Stock
+              </button>
+            )}
+
             {!isAlreadyForwarded && (
               <button
                 onClick={() => {
@@ -1902,10 +2150,7 @@ export default function BomOrdersView(props) {
                     ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
                   );
 
-                  if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                    alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before sending BOM.');
-                    return;
-                  }
+
 
                   const currentItemsList = confirmingBomModal.items || [];
                   const unconfirmedItems = currentItemsList.filter(it => !it.confirmed);
@@ -1927,6 +2172,11 @@ export default function BomOrdersView(props) {
                       packed: false
                     }));
 
+                  // Ensure inventory is blocked upon verification if not already blocked
+                  if (!confirmingBomModal.stockBlocked) {
+                    blockInventoryForBom(finalizedItems, confirmingBomModal.bomCode);
+                  }
+
                   setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
                     ...b,
                     companyName: confirmingBomModal.companyName || b.companyName,
@@ -1942,6 +2192,8 @@ export default function BomOrdersView(props) {
                     status: 'Sales Confirmed - Sent to Dispatch',
                     salesConfirmed: true,
                     salesConfirmedAt: new Date().toISOString(),
+                    stockBlocked: true,
+                    stockBlockedAt: b.stockBlockedAt || new Date().toISOString(),
                     addressProofReuploadRequested: false, // cleared if sales re-confirmed
                     subTotal: confirmingBomModal.subTotal || grandTotalCalc,
                     gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
@@ -2230,10 +2482,10 @@ export default function BomOrdersView(props) {
                             <AlertCircle style={{ width: '14px', height: '14px' }} />
                           </div>
                           <div>
-                            <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
-                              Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                            <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                              Delivery Address Proof Document <span style={{ color: '#64748B', fontWeight: '600' }}>(Optional)</span>
                             </h5>
-                            <span style={{ fontSize: '11px', color: '#B91C1C' }}>Upload proof (GST / Electricity Bill / Lease Agreement).</span>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>Upload proof (GST / Electricity Bill / Lease Agreement) if available.</span>
                           </div>
                         </div>
                         {confirmingBomModal.deliveryAddressProofDoc && (
@@ -2614,11 +2866,16 @@ export default function BomOrdersView(props) {
                             }}
                           />
                           <datalist id={`confirm-product-list-${idx}`}>
-                            {(itemsList || []).map((prod, pidx) => (
-                              <option key={pidx} value={prod.name}>
-                                {prod.code ? `[${prod.code}] ${prod.name}` : prod.name}
-                              </option>
-                            ))}
+                            {(itemsList || []).map((prod, pidx) => {
+                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
+                              const isOutOfStock = st <= 0;
+                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                              return (
+                                <option key={pidx} value={prod.name}>
+                                  {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                </option>
+                              );
+                            })}
                           </datalist>
                         </div>
                       </td>
@@ -2714,10 +2971,7 @@ export default function BomOrdersView(props) {
                       ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
                     );
 
-                    if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                      alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before confirming items.');
-                      return;
-                    }
+
 
                     const currentItems = confirmingBomModal.items || [];
                     const allCheckedItems = currentItems.map(it => ({ ...it, confirmed: true }));
@@ -3325,6 +3579,40 @@ export default function BomOrdersView(props) {
           >
             <CreditCard size={14} style={{ color: '#2563EB' }} /> Payment Details
           </button>
+
+          {canCancelBom && (() => {
+            const hasCancellable = (selectedRows || []).some(codeVal => {
+              const row = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => (b.bomCode || b.code) === codeVal);
+              return row && row.status !== 'Cancelled & Stock Restored';
+            });
+            if (!hasCancellable) return null;
+
+            return (
+              <button
+                onClick={() => {
+                  const targetCode = selectedRows[0];
+                  const targetBom = (filteredRows || []).find(r => r.code === targetCode || r.id === targetCode || r.bomCode === targetCode) || (bomStore || []).find(b => (b.bomCode || b.code) === targetCode);
+                  if (targetBom) handleCancelBomOrder(targetBom);
+                }}
+                style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#DC2626',
+                  borderRadius: '10px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(220, 38, 38, 0.1)'
+                }}
+              >
+                <XCircle size={14} style={{ color: '#DC2626' }} /> Cancel BOM
+              </button>
+            );
+          })()}
 
           <button
             onClick={() => {

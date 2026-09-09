@@ -216,7 +216,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'BOM Orders', icon: GitBranch },
             { label: 'Proforma Invoice', icon: Receipt },
-            { label: 'Product Catalog', targetTab: 'Items Directory', icon: Boxes },
             { label: 'Stock Status', icon: Layers }
           ]
         },

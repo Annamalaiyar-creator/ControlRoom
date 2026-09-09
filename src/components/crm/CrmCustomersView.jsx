@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Search, Plus, Phone, MessageSquare, Mail, Building2, MapPin,
   CreditCard, FileText, CheckCircle2, ChevronRight, X, AlertTriangle,
-  Layers, Truck, DollarSign, Calendar, Eye, Edit3, ShieldAlert
+  Layers, Truck, DollarSign, Calendar, Eye, Edit3, ShieldAlert, RotateCcw,
+  Trash2, Printer, Save, ArrowLeft, Check, RefreshCw, Briefcase, UserCheck
 } from 'lucide-react';
 
 export default function CrmCustomersView({
@@ -13,39 +14,90 @@ export default function CrmCustomersView({
   onOpenWhatsAppChat,
   onNavigateTab
 }) {
+  // Page mode: 'table' or 'create' (like Create BOM dedicated page)
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'create'
+  const [isSyncingZoho, setIsSyncingZoho] = useState(false);
+  const [zohoSyncMessage, setZohoSyncMessage] = useState(null);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterCustomerType, setFilterCustomerType] = useState('All');
+  const [activeSubTab, setActiveSubTab] = useState('All');
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [profileTab, setProfileTab] = useState('Overview');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
   const [dupError, setDupError] = useState(null);
 
-  // Form State
-  const [newCust, setNewCust] = useState({
+  // Form State for Dedicated Create/Edit Page
+  const initialFormState = {
+    customerName: '',
     companyName: '',
     customerType: 'EPC Contractor',
-    industry: 'Solar Energy / Utility Scale',
     gstNumber: '',
     panNumber: '',
+    // Billing Address
     address: '',
     city: '',
     state: '',
     pincode: '',
+    // Dispatch Address
+    dispatchAddress: '',
+    dispatchCity: '',
+    dispatchState: '',
+    dispatchPincode: '',
+    sameAsBilling: true,
+    // Background defaults (no longer required in UI)
     creditLimit: 2500000,
     creditDays: 30,
     paymentTerms: '50% Advance + 50% Dispatch',
-    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Saravanan',
-    source: 'Website',
+    source: 'Direct Client',
+    notes: '',
     primaryContact: {
       name: '',
-      designation: 'Procurement Head',
       phone: '',
       whatsapp: '',
       email: ''
     }
-  });
+  };
+
+  const [formCust, setFormCust] = useState(initialFormState);
+
+  // Sync with Zoho Books on component mount & manual trigger
+  const handleSyncWithZoho = async () => {
+    setIsSyncingZoho(true);
+    try {
+      const res = await fetch('/api/zoho/customers');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(c => {
+            if (typeof onSaveCustomer === 'function') {
+              onSaveCustomer(c);
+            }
+          });
+          setZohoSyncMessage({ type: 'success', text: `Synchronized ${data.length} customer account(s) with Zoho Books!` });
+        } else {
+          setZohoSyncMessage({ type: 'info', text: 'All customer accounts are up to date with Zoho Books.' });
+        }
+      }
+    } catch (err) {
+      console.warn('Zoho customer sync notice:', err.message);
+    } finally {
+      setIsSyncingZoho(false);
+      setTimeout(() => setZohoSyncMessage(null), 5000);
+    }
+  };
+
+  // Initial Zoho sync on load
+  useEffect(() => {
+    handleSyncWithZoho();
+  }, []);
 
   // Real-time duplicate validation
-  const validateDuplicates = (field, value) => {
+  const validateDuplicates = (field, value, currentId = null) => {
     const val = String(value || '').trim().toLowerCase();
     if (!val) {
       setDupError(null);
@@ -53,6 +105,7 @@ export default function CrmCustomersView({
     }
 
     const dup = customers.find(c => {
+      if (currentId && (c.id === currentId || c.customerCode === currentId)) return false;
       if (field === 'phone') {
         const p1 = c.primaryContact?.phone?.replace(/\D/g, '');
         const p2 = val.replace(/\D/g, '');
@@ -76,42 +129,167 @@ export default function CrmCustomersView({
     });
 
     if (dup) {
-      setDupError(`Duplicate Alert: A customer already exists with this ${field}: "${dup.companyName}" (${dup.customerCode}).`);
+      setDupError(`⚠️ Warning: Duplicate detected! Existing customer with this ${field}: ${dup.companyName} (${dup.customerCode})`);
     } else {
       setDupError(null);
     }
   };
 
+  // Sub-tabs config matching BOM design pattern
+  const pageTabs = useMemo(() => [
+    { id: 'All', label: 'All Accounts', count: customers.length, bg: '#E2E8F0', fg: '#475569' },
+    { id: 'EPC', label: 'EPC Contractors', count: customers.filter(c => (c.customerType || '').includes('EPC')).length, bg: '#DCFCE7', fg: '#166534' },
+    { id: 'IPP', label: 'IPP Developers', count: customers.filter(c => (c.customerType || '').includes('IPP') || (c.customerType || '').includes('Independent')).length, bg: '#DBEAFE', fg: '#1E40AF' },
+    { id: 'Rooftop', label: 'Rooftop Installers', count: customers.filter(c => (c.customerType || '').includes('Rooftop')).length, bg: '#FEF3C7', fg: '#B45309' },
+    { id: 'Distributor', label: 'Distributors', count: customers.filter(c => (c.customerType || '').includes('Distributor') || (c.customerType || '').includes('Reseller')).length, bg: '#F3E8FF', fg: '#7E22CE' }
+  ], [customers]);
+
+  // Filtered customers matching BOM filtering logic
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
       const q = searchTerm.toLowerCase();
-      return !searchTerm ||
+      const matchesSearch = !searchTerm ||
         c.companyName?.toLowerCase().includes(q) ||
         c.customerCode?.toLowerCase().includes(q) ||
         c.primaryContact?.name?.toLowerCase().includes(q) ||
         c.primaryContact?.phone?.includes(q) ||
-        c.gstNumber?.toLowerCase().includes(q);
-    });
-  }, [customers, searchTerm]);
+        c.gstNumber?.toLowerCase().includes(q) ||
+        c.city?.toLowerCase().includes(q);
 
-  const handleCreateCustomerSubmit = (e) => {
-    e.preventDefault();
-    if (!newCust.companyName || !newCust.primaryContact.name || !newCust.primaryContact.phone) {
-      alert('Company Name, Contact Person, and Phone Number are mandatory.');
+      const subTab = activeSubTab.toLowerCase();
+      const cType = (c.customerType || '').toLowerCase();
+      let matchesTab = true;
+      if (subTab === 'epc') matchesTab = cType.includes('epc');
+      else if (subTab === 'ipp') matchesTab = cType.includes('ipp') || cType.includes('independent');
+      else if (subTab === 'rooftop') matchesTab = cType.includes('rooftop');
+      else if (subTab === 'distributor') matchesTab = cType.includes('distributor') || cType.includes('reseller');
+
+      const matchesTypeFilter = filterCustomerType === 'All' || c.customerType === filterCustomerType;
+
+      return matchesSearch && matchesTab && matchesTypeFilter;
+    });
+  }, [customers, searchTerm, activeSubTab, filterCustomerType]);
+
+  // Pagination calculation strictly matching BOM Table Rules
+  const totalPages = Math.ceil(filteredCustomers.length / rowsPerPage) || 1;
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filteredCustomers.slice(indexOfFirstRow, indexOfLastRow);
+
+  // Row selection handler
+  const handleSelectRow = (code) => {
+    setSelectedRows(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    );
+  };
+
+  // Open Create Customer Page
+  const handleOpenCreatePage = () => {
+    setEditingCustomer(null);
+    setFormCust(initialFormState);
+    setDupError(null);
+    setViewMode('create');
+  };
+
+  // Open Edit Customer Page
+  const handleOpenEditPage = (cust) => {
+    setEditingCustomer(cust);
+    setFormCust({
+      customerName: cust.customerName || cust.companyName || '',
+      companyName: cust.companyName || '',
+      customerType: cust.customerType || 'EPC Contractor',
+      gstNumber: cust.gstNumber || '',
+      panNumber: cust.panNumber || '',
+      address: cust.address || '',
+      city: cust.city || '',
+      state: cust.state || '',
+      pincode: cust.pincode || '',
+      dispatchAddress: cust.dispatchAddress || cust.address || '',
+      dispatchCity: cust.dispatchCity || cust.city || '',
+      dispatchState: cust.dispatchState || cust.state || '',
+      dispatchPincode: cust.dispatchPincode || cust.pincode || '',
+      sameAsBilling: cust.sameAsBilling !== undefined ? cust.sameAsBilling : (!cust.dispatchAddress || cust.dispatchAddress === cust.address),
+      creditLimit: cust.creditLimit || 2500000,
+      creditDays: cust.creditDays || 30,
+      paymentTerms: cust.paymentTerms || '50% Advance + 50% Dispatch',
+      source: cust.source || 'Direct Client',
+      notes: cust.notes || '',
+      primaryContact: {
+        name: cust.primaryContact?.name || '',
+        phone: cust.primaryContact?.phone || '',
+        whatsapp: cust.primaryContact?.whatsapp || '',
+        email: cust.primaryContact?.email || ''
+      }
+    });
+    setDupError(null);
+    setViewMode('create');
+  };
+
+  // Submit Handler for Dedicated Customer Creation & Dual Sync with Zoho Books
+  const handleSaveCustomerForm = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!formCust.customerName || !formCust.customerName.trim()) {
+      alert('⚠️ Customer Name is mandatory.');
+      return;
+    }
+    if (!formCust.companyName || !formCust.companyName.trim()) {
+      alert('⚠️ Company / Organization Legal Name is mandatory.');
+      return;
+    }
+    if (!formCust.primaryContact.name || !formCust.primaryContact.name.trim()) {
+      alert('⚠️ Authorized Contact Person Name is mandatory.');
+      return;
+    }
+    if (!formCust.primaryContact.phone || !formCust.primaryContact.phone.trim()) {
+      alert('⚠️ Contact Phone Number is mandatory.');
       return;
     }
 
-    const nextCode = `CUST-VRM-${String(100 + customers.length + 1)}`;
-    const record = {
-      id: nextCode,
-      customerCode: nextCode,
-      ...newCust,
-      createdAt: new Date().toISOString()
-    };
+    const customerCode = editingCustomer
+      ? (editingCustomer.customerCode || editingCustomer.id)
+      : `CUST-VRM-${String(100 + customers.length + 1)}`;
 
+    const record = {
+      id: customerCode,
+      customerCode: customerCode,
+      ...formCust,
+      updatedAt: new Date().toISOString()
+    };
+    if (!editingCustomer) {
+      record.createdAt = new Date().toISOString();
+    }
+
+    // 1. Immediately save locally & dispatch update
     onSaveCustomer(record);
-    setShowCreateModal(false);
+
+    // 2. Post to Zoho Books sync API
+    try {
+      const response = await fetch('/api/zoho/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+      const resJson = await response.json();
+      if (resJson.customer) {
+        onSaveCustomer(resJson.customer);
+      }
+      setZohoSyncMessage({
+        type: 'success',
+        text: resJson.message || '✅ Customer created and synchronized with Zoho Books!'
+      });
+    } catch (err) {
+      console.warn('Zoho Customer Sync warning:', err);
+      setZohoSyncMessage({
+        type: 'info',
+        text: 'Customer created locally in Control Room. Zoho Books sync will retry automatically.'
+      });
+    }
+
+    setViewMode('table');
+    setEditingCustomer(null);
     setDupError(null);
+    setSelectedCustomer(record);
   };
 
   // 11 Customer Profile Tabs
@@ -129,176 +307,1093 @@ export default function CrmCustomersView({
     'Activity Audit'
   ];
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-      {/* Top Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        padding: '16px 20px',
-        borderRadius: '12px',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            backgroundColor: '#0E7490',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Users size={20} />
+  // =========================================================================
+  // RENDER 1: DEDICATED SEPARATE PAGE - ADD / EDIT B2B SOLAR CUSTOMER
+  // (Styled exactly like the Create BOM separate page)
+  // =========================================================================
+  if (viewMode === 'create') {
+    const nextCodePreview = editingCustomer
+      ? (editingCustomer.customerCode || editingCustomer.id)
+      : `CUST-VRM-${String(100 + customers.length + 1)}`;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
+        
+        {/* Top Header Banner (Matching Create BOM Vibrant Gradient Bar) */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0E7490 0%, #155E75 100%)',
+          borderRadius: '18px',
+          padding: '24px 28px',
+          color: '#FFFFFF',
+          boxShadow: '0 10px 25px -5px rgba(14, 116, 144, 0.4)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building2 style={{ width: '26px', height: '26px', color: '#FFFFFF' }} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
+                {editingCustomer ? `Edit Customer Account: ${editingCustomer.companyName}` : 'Add New B2B Solar Customer'}
+              </h1>
+              <p style={{ fontSize: '13px', color: '#CFFAFE', margin: '4px 0 0 0' }}>
+                Configure client directory, enterprise KYC, billing & delivery addresses, commercial payment terms & Zoho Books sync
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-              Customer Directory (B2B Solar Accounts)
-            </h2>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
-              Centralized repository with 11-point 360° account intelligence & duplicate prevention
-            </p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => { setViewMode('table'); setEditingCustomer(null); setDupError(null); }}
+              style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <ArrowLeft size={15} /> Back to Directory
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCustomerForm}
+              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Save size={16} />
+              {editingCustomer ? 'Update & Sync to Zoho →' : 'Save & Sync to Zoho →'}
+            </button>
           </div>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: '#0E7490',
-            color: '#FFFFFF',
-            border: 'none',
-            padding: '9px 16px',
-            borderRadius: '8px',
+        {/* Real-time duplicate error banner */}
+        {dupError && (
+          <div style={{
+            padding: '14px 18px',
+            backgroundColor: '#FEF2F2',
+            borderRadius: '12px',
+            border: '1px solid #FCA5A5',
+            color: '#B91C1C',
             fontSize: '13px',
             fontWeight: '700',
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)'
-          }}
-        >
-          <Plus size={16} /> New B2B Customer
-        </button>
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
+          }}>
+            <ShieldAlert size={20} />
+            <span>{dupError}</span>
+          </div>
+        )}
+
+        {/* SECTION 1: ACCOUNT IDENTIFICATION */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              1
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              ACCOUNT IDENTIFICATION
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Customer Code</label>
+              <input
+                type="text"
+                value={nextCodePreview}
+                readOnly
+                disabled
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0E7490', fontWeight: '800', backgroundColor: '#F0FDFA', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Creation Date</label>
+              <input
+                type="date"
+                value={new Date().toISOString().split('T')[0]}
+                disabled
+                readOnly
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#64748B', backgroundColor: '#F1F5F9', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Acquisition Source</label>
+              <select
+                value={formCust.source}
+                onChange={(e) => setFormCust({ ...formCust, source: e.target.value })}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+              >
+                <option value="Direct Client">Direct Client / Walk-in</option>
+                <option value="Website">Official Website Lead</option>
+                <option value="WhatsApp">WhatsApp Business</option>
+                <option value="Referral">Client / EPC Referral</option>
+                <option value="Trade Exhibition">Intersolar / Renewable Expo</option>
+                <option value="Zoho Books">Zoho Books Integrated</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 2: COMPANY PROFILE & STATUTORY DETAILS */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              2
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              COMPANY PROFILE & STATUTORY DETAILS
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Customer Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Vikram Solar"
+                value={formCust.customerName}
+                onChange={(e) => {
+                  setFormCust({ ...formCust, customerName: e.target.value });
+                  validateDuplicates('companyName', e.target.value, editingCustomer?.id);
+                }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Company / Organization Legal Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Vikram Solar Limited"
+                value={formCust.companyName}
+                onChange={(e) => {
+                  setFormCust({ ...formCust, companyName: e.target.value });
+                  validateDuplicates('companyName', e.target.value, editingCustomer?.id);
+                }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Customer Account Type
+              </label>
+              <select
+                value={formCust.customerType}
+                onChange={(e) => setFormCust({ ...formCust, customerType: e.target.value })}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
+              >
+                <option value="EPC Contractor">EPC Contractor</option>
+                <option value="Independent Power Producer (IPP)">Independent Power Producer (IPP)</option>
+                <option value="Module & Structure Manufacturer">Module & Structure Manufacturer</option>
+                <option value="Rooftop Installer">Rooftop Solar Installer</option>
+                <option value="Distributor">Solar Distributor / Reseller</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                GSTIN / Tax ID (15 Digits)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 33AABCV1234F1Z5"
+                value={formCust.gstNumber}
+                onChange={(e) => {
+                  setFormCust({ ...formCust, gstNumber: e.target.value.toUpperCase() });
+                  validateDuplicates('gstNumber', e.target.value, editingCustomer?.id);
+                }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Permanent Account Number (PAN)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. AABCV1234F"
+                value={formCust.panNumber}
+                onChange={(e) => setFormCust({ ...formCust, panNumber: e.target.value.toUpperCase() })}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: AUTHORIZED PRIMARY CONTACT PERSON */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              3
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              AUTHORIZED PRIMARY CONTACT PERSON
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Contact Person Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Rajesh Kannan"
+                value={formCust.primaryContact.name}
+                onChange={(e) => setFormCust({ ...formCust, primaryContact: { ...formCust.primaryContact, name: e.target.value } })}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Mobile / Phone <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="+91 98765 43210"
+                value={formCust.primaryContact.phone}
+                onChange={(e) => {
+                  setFormCust({ ...formCust, primaryContact: { ...formCust.primaryContact, phone: e.target.value } });
+                  validateDuplicates('phone', e.target.value, editingCustomer?.id);
+                }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="rajesh@vikramsolar.com"
+                value={formCust.primaryContact.email}
+                onChange={(e) => {
+                  setFormCust({ ...formCust, primaryContact: { ...formCust.primaryContact, email: e.target.value } });
+                  validateDuplicates('email', e.target.value, editingCustomer?.id);
+                }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4: BILLING ADDRESS & DISPATCH ADDRESS (SEPARATED) */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              4
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              BILLING & DISPATCH ADDRESS
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            {/* 4A: BILLING ADDRESS */}
+            <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                  <FileText style={{ width: '16px', height: '16px' }} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address for official invoices & tax records</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Billing Street / Premise Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. No 1427, GNT Road, Nagappa Industrial Estate, Puzhal"
+                  value={formCust.address}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormCust(prev => ({
+                      ...prev,
+                      address: val,
+                      dispatchAddress: prev.sameAsBilling ? val : prev.dispatchAddress
+                    }));
+                  }}
+                  style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>City</label>
+                  <input
+                    type="text"
+                    placeholder="Chennai"
+                    value={formCust.city}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormCust(prev => ({
+                        ...prev,
+                        city: val,
+                        dispatchCity: prev.sameAsBilling ? val : prev.dispatchCity
+                      }));
+                    }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>State</label>
+                  <input
+                    type="text"
+                    placeholder="Tamil Nadu"
+                    value={formCust.state}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormCust(prev => ({
+                        ...prev,
+                        state: val,
+                        dispatchState: prev.sameAsBilling ? val : prev.dispatchState
+                      }));
+                    }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Pincode</label>
+                  <input
+                    type="text"
+                    placeholder="600066"
+                    value={formCust.pincode}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormCust(prev => ({
+                        ...prev,
+                        pincode: val,
+                        dispatchPincode: prev.sameAsBilling ? val : prev.dispatchPincode
+                      }));
+                    }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 4B: DISPATCH ADDRESS */}
+            <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
+                    <Truck style={{ width: '16px', height: '16px' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Dispatch / Delivery Address</h4>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>Destination location for physical goods dispatch</span>
+                  </div>
+                </div>
+
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #A5F3FC' }}>
+                  <input
+                    type="checkbox"
+                    checked={formCust.sameAsBilling}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormCust(prev => ({
+                        ...prev,
+                        sameAsBilling: checked,
+                        dispatchAddress: checked ? prev.address : prev.dispatchAddress,
+                        dispatchCity: checked ? prev.city : prev.dispatchCity,
+                        dispatchState: checked ? prev.state : prev.dispatchState,
+                        dispatchPincode: checked ? prev.pincode : prev.dispatchPincode
+                      }));
+                    }}
+                    style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                  />
+                  Same as Billing
+                </label>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Dispatch Street / Warehouse / Site Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Solar Project Site / Warehouse No 8, SIPCOT"
+                  value={formCust.sameAsBilling ? formCust.address : formCust.dispatchAddress}
+                  disabled={formCust.sameAsBilling}
+                  onChange={(e) => setFormCust({ ...formCust, dispatchAddress: e.target.value })}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    padding: '0 14px',
+                    fontSize: '13px',
+                    color: formCust.sameAsBilling ? '#64748B' : '#0F172A',
+                    backgroundColor: formCust.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    cursor: formCust.sameAsBilling ? 'not-allowed' : 'text'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Chennai"
+                    value={formCust.sameAsBilling ? formCust.city : formCust.dispatchCity}
+                    disabled={formCust.sameAsBilling}
+                    onChange={(e) => setFormCust({ ...formCust, dispatchCity: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      padding: '0 14px',
+                      fontSize: '13px',
+                      color: formCust.sameAsBilling ? '#64748B' : '#0F172A',
+                      backgroundColor: formCust.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      cursor: formCust.sameAsBilling ? 'not-allowed' : 'text'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>State</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tamil Nadu"
+                    value={formCust.sameAsBilling ? formCust.state : formCust.dispatchState}
+                    disabled={formCust.sameAsBilling}
+                    onChange={(e) => setFormCust({ ...formCust, dispatchState: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      padding: '0 14px',
+                      fontSize: '13px',
+                      color: formCust.sameAsBilling ? '#64748B' : '#0F172A',
+                      backgroundColor: formCust.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      cursor: formCust.sameAsBilling ? 'not-allowed' : 'text'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Pincode</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 600066"
+                    value={formCust.sameAsBilling ? formCust.pincode : formCust.dispatchPincode}
+                    disabled={formCust.sameAsBilling}
+                    onChange={(e) => setFormCust({ ...formCust, dispatchPincode: e.target.value })}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      padding: '0 14px',
+                      fontSize: '13px',
+                      color: formCust.sameAsBilling ? '#64748B' : '#0F172A',
+                      backgroundColor: formCust.sameAsBilling ? '#F1F5F9' : '#FFFFFF',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      cursor: formCust.sameAsBilling ? 'not-allowed' : 'text'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Submission Action Bar */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', paddingBottom: '20px' }}>
+          <button
+            type="button"
+            onClick={() => { setViewMode('table'); setEditingCustomer(null); setDupError(null); }}
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveCustomerForm}
+            style={{ backgroundColor: '#0E7490', border: 'none', color: '#FFFFFF', padding: '12px 32px', borderRadius: '10px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(14, 116, 144, 0.35)' }}
+          >
+            <Save size={16} />
+            {editingCustomer ? 'Update & Synchronize to Zoho Books' : 'Save Customer & Synchronize to Zoho Books'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // RENDER 2: DEFAULT CUSTOMER DIRECTORY TABLE
+  // =========================================================================
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+      
+      {/* Zoho synchronization notification banner */}
+      {zohoSyncMessage && (
+        <div style={{
+          padding: '12px 18px',
+          borderRadius: '10px',
+          fontSize: '13px',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          backgroundColor: zohoSyncMessage.type === 'success' ? '#ECFDF5' : '#EFF6FF',
+          border: `1px solid ${zohoSyncMessage.type === 'success' ? '#A7F3D0' : '#BFDBFE'}`,
+          color: zohoSyncMessage.type === 'success' ? '#065F46' : '#1E40AF',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+        }}>
+          <CheckCircle2 size={18} />
+          <span>{zohoSyncMessage.text}</span>
+        </div>
+      )}
+
+      {/* 1. TOP HEADER WITH CREATE CUSTOMER BUTTON (MATCHING BOM PAGE TITLE & ACTION STYLE) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+            Customer Directory (B2B Solar Accounts)
+          </h2>
+          <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+            Centralized repository with 11-point 360° account intelligence, credit limits & automatic Zoho Books synchronization
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={handleSyncWithZoho}
+            disabled={isSyncingZoho}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              color: '#0E7490',
+              height: '40px',
+              padding: '0 16px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: isSyncingZoho ? 'not-allowed' : 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <RefreshCw size={15} className={isSyncingZoho ? 'animate-spin' : ''} />
+            <span>{isSyncingZoho ? 'Syncing Zoho...' : 'Sync Zoho Books'}</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreatePage}
+            style={{
+              backgroundColor: '#0E7490',
+              border: 'none',
+              color: '#FFFFFF',
+              height: '40px',
+              padding: '0 6px 0 20px',
+              borderRadius: '50px',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span>+ Add Customer</span>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              backgroundColor: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#0E7490'
+            }}>
+              <Plus size={16} strokeWidth={3} />
+            </div>
+          </button>
+        </div>
       </div>
 
-      {/* Search Bar */}
+      {/* 2. FILTERS & SEARCH ROW (EXACT BOM SEARCH & FILTER DESIGN) */}
       <div style={{
         display: 'flex',
+        flexWrap: 'wrap',
+        gap: '16px',
+        padding: '12px 16px',
+        backgroundColor: '#fafbfc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
         alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        padding: '10px 16px',
-        borderRadius: '10px'
+        width: '100%',
+        boxSizing: 'border-box',
+        justifyContent: 'space-between'
       }}>
-        <Search size={16} color="#64748B" />
-        <input
-          type="text"
-          placeholder="Search by Company Name, Code, GSTIN, Contact Person, Phone..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#0F172A' }}
-        />
-        {searchTerm && <X size={16} color="#94A3B8" style={{ cursor: 'pointer' }} onClick={() => setSearchTerm('')} />}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          border: '1px solid #cbd5e1',
+          borderRadius: '8px',
+          padding: '0 12px',
+          height: '38px',
+          backgroundColor: '#f8fafc',
+          width: '360px'
+        }}>
+          <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
+          <input
+            type="text"
+            placeholder="Search Customers (Company Name, Code, GSTIN, Contact)..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
+          />
+          {searchTerm && <X size={15} color="#94A3B8" style={{ cursor: 'pointer' }} onClick={() => setSearchTerm('')} />}
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: 'white' }}>
+            <Building2 style={{ width: '14px', height: '14px', color: '#64748b' }} />
+            <select
+              value={filterCustomerType}
+              onChange={(e) => { setFilterCustomerType(e.target.value); setCurrentPage(1); }}
+              style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'transparent', cursor: 'pointer' }}
+            >
+              <option value="All">All Customer Types</option>
+              <option value="EPC Contractor">EPC Contractor</option>
+              <option value="Independent Power Producer (IPP)">Independent Power Producer (IPP)</option>
+              <option value="Module & Structure Manufacturer">Module & Structure Manufacturer</option>
+              <option value="Rooftop Installer">Rooftop Solar Installer</option>
+              <option value="Distributor">Solar Distributor / Reseller</option>
+            </select>
+          </div>
+
+          <button
+            onClick={() => { setSearchTerm(''); setFilterCustomerType('All'); setActiveSubTab('All'); setCurrentPage(1); }}
+            title="Clear Filters"
+            style={{
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
+              color: '#475569',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              height: '38px',
+              width: '38px'
+            }}
+          >
+            <RotateCcw style={{ width: '15px', height: '15px' }} />
+          </button>
+        </div>
       </div>
 
-      {/* Customers Table */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '12px',
-        border: '1px solid #E2E8F0',
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-      }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+      {/* 3. STATUS SUB-TABS ROW (EXACT BOM PILL TABS DESIGN) */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', padding: '4px 0', alignItems: 'center', flexWrap: 'wrap' }}>
+        {pageTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveSubTab(tab.id); setCurrentPage(1); }}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              padding: '10px 4px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              color: activeSubTab === tab.id ? '#2563eb' : '#64748b',
+              borderBottom: activeSubTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {tab.label}
+            <span style={{
+              fontSize: '10px',
+              padding: '2px 7px',
+              borderRadius: '12px',
+              backgroundColor: tab.bg,
+              color: tab.fg,
+              fontWeight: 'bold'
+            }}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* 4. MAIN DATA TABLE WITH INTERACTIVE ROW SELECTION & ACCENT LINES (STRICT BOM DESIGN) */}
+      <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table className="custom-table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Customer Code</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Company Name</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Type & Industry</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Primary Contact</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>GST Number</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Payment Terms</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569' }}>Assigned Rep</th>
-                <th style={{ padding: '12px 16px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>360° Profile</th>
+              <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
+                <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                  <input
+                    type="checkbox"
+                    style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
+                    checked={filteredCustomers.length > 0 && filteredCustomers.every(r => selectedRows.includes(r.customerCode || r.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedRows(filteredCustomers.map(r => r.customerCode || r.id));
+                      } else {
+                        setSelectedRows([]);
+                      }
+                    }}
+                  />
+                </th>
+                <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Customer Code</th>
+                <th style={{ minWidth: '220px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Company Name</th>
+                <th style={{ width: '180px', minWidth: '180px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Type & Industry</th>
+                <th style={{ minWidth: '180px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Primary Contact</th>
+                <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>GST Number</th>
+                <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Payment Terms</th>
+                <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Assigned Rep</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCustomers.length === 0 ? (
+              {currentRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>
-                    No customers found.
+                    No customer accounts found matching your filters.
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map(cust => (
-                  <tr key={cust.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: '700', color: '#0E7490' }}>
-                      <span
-                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                currentRows.map((cust, idx) => {
+                  const custCode = cust.customerCode || cust.id;
+                  const isChecked = selectedRows.includes(custCode);
+
+                  return (
+                    <tr
+                      key={cust.id || idx}
+                      style={{
+                        borderBottom: '1px solid #F1F5F9',
+                        transition: 'all 0.15s ease',
+                        backgroundColor: isChecked ? '#ECFEFF' : 'transparent'
+                      }}
+                      className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
+                    >
+                      {/* Checkbox cell with 4px left accent line */}
+                      <td style={{
+                        width: '48px',
+                        minWidth: '48px',
+                        padding: '12px 0',
+                        textAlign: 'center',
+                        verticalAlign: 'middle',
+                        boxSizing: 'border-box',
+                        borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                      }}>
+                        <input
+                          type="checkbox"
+                          style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
+                          checked={isChecked}
+                          onChange={() => handleSelectRow(custCode)}
+                        />
+                      </td>
+
+                      {/* Customer Code (Clickable blue like BOM Code) */}
+                      <td
                         onClick={() => setSelectedCustomer(cust)}
+                        style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                       >
-                        {cust.customerCode}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: '700', color: '#0F172A' }}>{cust.companyName}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B' }}>{cust.city}, {cust.state}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: '600', color: '#334155' }}>{cust.customerType}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>{cust.industry}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: '600', color: '#0F172A' }}>{cust.primaryContact?.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B' }}>{cust.primaryContact?.phone}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: '600', color: '#475569' }}>
-                      {cust.gstNumber || 'Not Registered'}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#B45309' }}>
-                        {cust.paymentTerms || 'Standard'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontWeight: '600', color: '#334155' }}>
-                      {cust.assignedSalesperson}
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => setSelectedCustomer(cust)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #0E7490',
-                          backgroundColor: '#F0FDFA',
-                          color: '#0E7490',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Eye size={13} /> View 360°
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        {cust.customerCode || cust.id}
+                      </td>
+
+                      {/* Company Name & Location */}
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{cust.companyName}</span>
+                          {cust.source === 'Zoho Books' && (
+                            <span style={{ fontSize: '10px', backgroundColor: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF', padding: '1px 5px', borderRadius: '4px', fontWeight: '800' }}>
+                              ZOHO
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>{cust.city || '—'}, {cust.state || ''}</div>
+                      </td>
+
+                      {/* Type & Industry */}
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: '600', color: '#334155' }}>{cust.customerType}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>{cust.industry}</div>
+                      </td>
+
+                      {/* Primary Contact */}
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: '600', color: '#0F172A' }}>{cust.primaryContact?.name || '—'}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>{cust.primaryContact?.phone || '—'}</div>
+                      </td>
+
+                      {/* GST Number */}
+                      <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: '600', color: '#475569' }}>
+                        {cust.gstNumber || 'Not Registered'}
+                      </td>
+
+                      {/* Payment Terms Badge */}
+                      <td style={{ padding: '12px 14px' }}>
+                        <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#B45309' }}></span>
+                          {cust.paymentTerms || '100% Advance'}
+                        </span>
+                      </td>
+
+                      {/* Assigned Rep Badge */}
+                      <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
+                        <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          👤 {(cust.assignedSalesperson || 'Saravanan').replace(/\s*\([^)]*\)/g, '').trim()}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* 5. PAGINATION FOOTER - STRICT RULES MATCH (LEFT: ROWS PER PAGE [5,10] + SHOWING X TO Y; RIGHT: << < 1 2 > >> + GO TO PAGE) */}
+        {filteredCustomers.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', fontSize: '13px', color: '#64748B', borderTop: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
+            {/* Left Side: Rows per page selector + Showing X to Y entries */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Showing per page</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                  style={{ height: '32px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', padding: '0 8px', backgroundColor: 'white', fontWeight: 'bold' }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                </select>
+              </div>
+              <span>Showing {filteredCustomers.length === 0 ? 0 : indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredCustomers.length)} of {filteredCustomers.length} entries</span>
+            </div>
+
+            {/* Right Side: Page navigation controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                  style={{ border: '1px solid #E2E8F0', background: currentPage === 1 ? '#F8FAFC' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                >
+                  &laquo;
+                </button>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  style={{ border: '1px solid #E2E8F0', background: currentPage === 1 ? '#F8FAFC' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                >
+                  &lt;
+                </button>
+
+                {(() => {
+                  let start = Math.max(1, currentPage - 1);
+                  let end = start + 2;
+                  if (end > totalPages) {
+                    end = totalPages;
+                    start = Math.max(1, end - 2);
+                  }
+                  return Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        border: '1px solid #E2E8F0',
+                        background: page === currentPage ? '#0E7490' : 'white',
+                        color: page === currentPage ? 'white' : '#475569',
+                        cursor: 'pointer',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontWeight: page === currentPage ? 'bold' : '500'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ));
+                })()}
+
+                <button
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  style={{ border: '1px solid #E2E8F0', background: (currentPage === totalPages || totalPages === 0) ? '#F8FAFC' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B' }}
+                >
+                  &gt;
+                </button>
+                <button
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(totalPages)}
+                  style={{ border: '1px solid #E2E8F0', background: (currentPage === totalPages || totalPages === 0) ? '#F8FAFC' : 'white', cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', padding: '6px 8px', borderRadius: '6px', color: '#64748B', fontWeight: 'bold' }}
+                >
+                  &raquo;
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>Go to page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages || 1}
+                  defaultValue={currentPage}
+                  id="crm-customers-goto-page-input"
+                  style={{ width: '42px', height: '32px', border: '1px solid #CBD5E1', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <button
+                  onClick={() => {
+                    const val = parseInt(document.getElementById('crm-customers-goto-page-input')?.value || '1', 10);
+                    if (val >= 1 && val <= totalPages) setCurrentPage(val);
+                  }}
+                  style={{ height: '32px', padding: '0 10px', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#0E7490', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Go &rsaquo;
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 11-Tab Customer Profile Modal */}
+      {/* 6. FLOATING BOTTOM ACTION BAR FOR SELECTED ROWS (EXACT BOM FLOATING PILL BAR) */}
+      {selectedRows.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '16px',
+          boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          zIndex: 10000,
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+            <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
+          </span>
+
+          <button
+            onClick={() => {
+              if (selectedRows.length > 1) {
+                alert('You can only edit one customer at a time.');
+              } else if (selectedRows.length === 1) {
+                const codeVal = selectedRows[0];
+                const targetCust = customers.find(c => c.customerCode === codeVal || c.id === codeVal);
+                if (targetCust) handleOpenEditPage(targetCust);
+              }
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+          </button>
+
+          <button
+            onClick={() => {
+              if (selectedRows.length === 1) {
+                const codeVal = selectedRows[0];
+                const targetCust = customers.find(c => c.customerCode === codeVal || c.id === codeVal);
+                if (targetCust) setSelectedCustomer(targetCust);
+              } else {
+                alert('Please select a single customer to view 360° details.');
+              }
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Eye size={14} style={{ color: '#0E7490' }} /> View 360°
+          </button>
+
+          <button
+            onClick={() => {
+              window.print();
+            }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              color: '#1E293B',
+              borderRadius: '10px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Printer size={14} style={{ color: '#059669' }} /> Export & Print
+          </button>
+
+          <button
+            onClick={() => setSelectedRows([])}
+            title="Deselect all"
+            style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* 7. CUSTOMER 360° PROFILE MODAL */}
       {selectedCustomer && (
         <div style={{
           position: 'fixed',
@@ -343,6 +1438,11 @@ export default function CrmCustomersView({
                     <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#334155', color: '#94A3B8' }}>
                       {selectedCustomer.customerCode}
                     </span>
+                    {selectedCustomer.source === 'Zoho Books' && (
+                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#7E22CE', color: '#FFFFFF', fontWeight: '800' }}>
+                        ZOHO CONNECTED
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>
                     {selectedCustomer.customerType} • {selectedCustomer.city}, {selectedCustomer.state} • Rep: {selectedCustomer.assignedSalesperson}
@@ -368,6 +1468,28 @@ export default function CrmCustomersView({
                   }}
                 >
                   <MessageSquare size={14} /> WhatsApp Chat
+                </button>
+                <button
+                  onClick={() => {
+                    const cust = selectedCustomer;
+                    setSelectedCustomer(null);
+                    handleOpenEditPage(cust);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#0E7490',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Edit3 size={14} /> Edit Customer
                 </button>
                 <button
                   onClick={() => setSelectedCustomer(null)}
@@ -418,19 +1540,22 @@ export default function CrmCustomersView({
                       <div><strong>Customer Code:</strong> {selectedCustomer.customerCode}</div>
                       <div><strong>Type:</strong> {selectedCustomer.customerType}</div>
                       <div><strong>Industry:</strong> {selectedCustomer.industry}</div>
-                      <div><strong>Address:</strong> {selectedCustomer.address}</div>
-                      <div><strong>Location:</strong> {selectedCustomer.city}, {selectedCustomer.state} - {selectedCustomer.pincode}</div>
+                      <div><strong>Address:</strong> {selectedCustomer.address || '—'}</div>
+                      <div><strong>Location:</strong> {selectedCustomer.city || '—'}, {selectedCustomer.state || ''} - {selectedCustomer.pincode || ''}</div>
+                      {selectedCustomer.zohoContactId && (
+                        <div><strong>Zoho Contact ID:</strong> {selectedCustomer.zohoContactId}</div>
+                      )}
                     </div>
                   </div>
 
                   <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Commercial & Financial Terms</h4>
                     <div style={{ fontSize: '13px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div><strong>GSTIN:</strong> {selectedCustomer.gstNumber}</div>
-                      <div><strong>PAN:</strong> {selectedCustomer.panNumber}</div>
+                      <div><strong>GSTIN:</strong> {selectedCustomer.gstNumber || 'Not Registered'}</div>
+                      <div><strong>PAN:</strong> {selectedCustomer.panNumber || '—'}</div>
                       <div><strong>Payment Terms:</strong> {selectedCustomer.paymentTerms}</div>
                       <div><strong>Credit Days:</strong> {selectedCustomer.creditDays} Days</div>
-                      <div><strong>Credit Limit:</strong> ₹ {Number(selectedCustomer.creditLimit).toLocaleString()}</div>
+                      <div><strong>Credit Limit:</strong> ₹ {Number(selectedCustomer.creditLimit || 0).toLocaleString()}</div>
                       <div><strong>Assigned Salesperson:</strong> {selectedCustomer.assignedSalesperson}</div>
                     </div>
                   </div>
@@ -444,7 +1569,7 @@ export default function CrmCustomersView({
                     <div><strong>Name:</strong> {selectedCustomer.primaryContact?.name}</div>
                     <div><strong>Designation:</strong> {selectedCustomer.primaryContact?.designation}</div>
                     <div><strong>Phone:</strong> {selectedCustomer.primaryContact?.phone}</div>
-                    <div><strong>WhatsApp:</strong> {selectedCustomer.primaryContact?.whatsapp}</div>
+                    <div><strong>WhatsApp:</strong> {selectedCustomer.primaryContact?.whatsapp || selectedCustomer.primaryContact?.phone}</div>
                     <div><strong>Email:</strong> {selectedCustomer.primaryContact?.email}</div>
                   </div>
                 </div>
@@ -502,230 +1627,6 @@ export default function CrmCustomersView({
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create Customer Modal with Duplicate Prevention */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.6)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '700px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
-            border: '1px solid #E2E8F0'
-          }}>
-            <div style={{
-              padding: '18px 24px',
-              borderBottom: '1px solid #E2E8F0',
-              backgroundColor: '#F8FAFC',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div>
-                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                  Add New B2B Solar Customer
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>
-                  Includes automatic duplicate detection on Phone, WhatsApp, Email, and GSTIN
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCustomerSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {dupError && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#FEF2F2',
-                  borderRadius: '8px',
-                  border: '1px solid #FCA5A5',
-                  color: '#B91C1C',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <ShieldAlert size={18} />
-                  <span>{dupError}</span>
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Company Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Vikram Solar Ltd"
-                    value={newCust.companyName}
-                    onChange={(e) => {
-                      setNewCust({ ...newCust, companyName: e.target.value });
-                      validateDuplicates('companyName', e.target.value);
-                    }}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Customer Type
-                  </label>
-                  <select
-                    value={newCust.customerType}
-                    onChange={(e) => setNewCust({ ...newCust, customerType: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
-                  >
-                    <option value="EPC Contractor">EPC Contractor</option>
-                    <option value="Independent Power Producer (IPP)">Independent Power Producer (IPP)</option>
-                    <option value="Module & Structure Manufacturer">Module & Structure Manufacturer</option>
-                    <option value="Rooftop Installer">Rooftop Solar Installer</option>
-                    <option value="Distributor">Solar Distributor / Reseller</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    GST Number (15 digits)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="33AABCV1234F1Z5"
-                    value={newCust.gstNumber}
-                    onChange={(e) => {
-                      setNewCust({ ...newCust, gstNumber: e.target.value });
-                      validateDuplicates('gstNumber', e.target.value);
-                    }}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Payment Terms
-                  </label>
-                  <select
-                    value={newCust.paymentTerms}
-                    onChange={(e) => setNewCust({ ...newCust, paymentTerms: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', backgroundColor: '#FFFFFF' }}
-                  >
-                    <option value="100% Advance">100% Advance before dispatch</option>
-                    <option value="50% Advance + 50% Dispatch">50% Advance + 50% Against Proforma</option>
-                    <option value="Net 30 Days">Credit: Net 30 Days</option>
-                    <option value="Net 45 Days">Credit: Net 45 Days</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Primary Contact Details */}
-              <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '10px' }}>
-                  Authorized Contact Details
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                      Contact Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Rajesh Kannan"
-                      value={newCust.primaryContact.name}
-                      onChange={(e) => setNewCust({ ...newCust, primaryContact: { ...newCust.primaryContact, name: e.target.value } })}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                      Designation
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Procurement Head"
-                      value={newCust.primaryContact.designation}
-                      onChange={(e) => setNewCust({ ...newCust, primaryContact: { ...newCust.primaryContact, designation: e.target.value } })}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                      Phone *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+91 98765 43210"
-                      value={newCust.primaryContact.phone}
-                      onChange={(e) => {
-                        setNewCust({ ...newCust, primaryContact: { ...newCust.primaryContact, phone: e.target.value } });
-                        validateDuplicates('phone', e.target.value);
-                      }}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="rajesh@company.com"
-                      value={newCust.primaryContact.email}
-                      onChange={(e) => {
-                        setNewCust({ ...newCust, primaryContact: { ...newCust.primaryContact, email: e.target.value } });
-                        validateDuplicates('email', e.target.value);
-                      }}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Save Customer
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

@@ -76,10 +76,10 @@ class ViewErrorBoundary extends Component {
             </button>
           </div>
           {this.state.error && (
-            <details style={{ marginTop: '14px', textAlign: 'left', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#64748B' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: '700', color: '#DC2626' }}>View Technical Details</summary>
-              <pre style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#991B1B' }}>
-                {this.state.error.toString()}
+            <details open style={{ marginTop: '14px', textAlign: 'left', backgroundColor: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#64748B' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: '700', color: '#DC2626' }}>Technical Details</summary>
+              <pre style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#991B1B', fontFamily: 'monospace' }}>
+                {this.state.error.stack || this.state.error.toString()}
               </pre>
             </details>
           )}
@@ -98,7 +98,6 @@ export default function OtherViews(props) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         {activeTab === 'Requests for Purchase' && <RfpView {...props} />}
         {activeTab === 'Vendor Management' && <VendorManagementView {...props} />}
-        {activeTab === 'Quotations' && <QuotationsView {...props} />}
         {(activeTab === 'Goods Receipt Note' || activeTab === 'Goods Receipt Note (GRN)') && <GoodsReceiptNoteView {...props} />}
         {activeTab === 'Upload Invoice' && <InvoiceUploadView {...props} />}
         {activeTab === 'Payments' && <PaymentsView {...props} />}
@@ -107,7 +106,16 @@ export default function OtherViews(props) {
         {activeTab === 'Material Reorder' && <MaterialReorderView {...props} />}
         {activeTab === 'Stock Status' && <StockStatusView {...props} />}
         {activeTab === 'Price Comparison' && <PriceComparisonView {...props} />}
-        {activeTab === 'Items Directory' && <ItemsDirectoryView {...props} />}
+        {activeTab === 'Items Directory' && (
+          (userRole === 'Sales Head' || userRole === 'Sales Executive') ? (
+            <div style={{ padding: '32px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', marginBottom: '8px' }}>Access Restricted</h3>
+              <p style={{ fontSize: '13px', color: '#64748B' }}>Items & Materials Catalog is restricted for Sales accounts.</p>
+            </div>
+          ) : (
+            <ItemsDirectoryView {...props} />
+          )
+        )}
         {(activeTab === 'Procurement Reports' || activeTab === 'Spend Reports' || activeTab === 'Supplier Reports') && <ProcurementReportsView {...props} />}
         {(activeTab === 'Dispatch Dashboard' || (userRole === 'Dispatch Head' && activeTab === 'Dashboard')) && <DispatchDashboardView {...props} />}
 

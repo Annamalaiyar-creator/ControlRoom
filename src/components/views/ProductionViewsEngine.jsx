@@ -2473,11 +2473,15 @@ export default function ProductionViewsEngine(props) {
                             ? (itemsList || []).filter(item => Boolean(item.selected))
                             : (itemsList || []);
 
-                          // 2. Reduce stock in stockRegistry
-                          setStockRegistry(prevRegistry => {
-                            const updated = [...prevRegistry];
-                            packedItemsToDeduct.forEach(pItem => {
-                              const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
+                          // Check if matching BOM already blocked/deducted stock at creation/verification time
+                          const isStockAlreadyBlocked = Boolean(matchingBom?.stockBlocked || inv.stockDeducted || inv.stockBlocked);
+
+                          if (!isStockAlreadyBlocked) {
+                            // 2. Reduce stock in stockRegistry
+                            setStockRegistry(prevRegistry => {
+                              const updated = [...prevRegistry];
+                              packedItemsToDeduct.forEach(pItem => {
+                                const qtyToDeduct = parseInt(pItem.invQty || pItem.bomQty || pItem.qty || 1, 10) || 0;
                               const matchIdx = updated.findIndex(r =>
                                 (r.code && pItem.code && r.code.toLowerCase().trim() === pItem.code.toLowerCase().trim()) ||
                                 (r.item && pItem.name && (
@@ -2628,6 +2632,7 @@ export default function ProductionViewsEngine(props) {
                             saveCloudStore('raw_materials_store', currentMats);
                             window.dispatchEvent(new Event('controlroom_raw_materials_update'));
                           } catch (err) { console.error('Error updating raw materials store:', err); }
+                        } // end if (!isStockAlreadyBlocked)
 
                           // 5. Update Invoice status & persist to localStorage / cloud store
                           setViewingInvoiceModal(prev => prev ? {
@@ -8934,10 +8939,7 @@ export default function ProductionViewsEngine(props) {
                             ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
                           );
 
-                          if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                            alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before sending BOM.');
-                            return;
-                          }
+
 
                           const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
                           const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
@@ -9394,11 +9396,11 @@ export default function ProductionViewsEngine(props) {
                                     <AlertCircle style={{ width: '14px', height: '14px' }} />
                                   </div>
                                   <div>
-                                    <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
-                                      Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                    <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                                      Delivery Address Proof Document <span style={{ color: '#64748B', fontWeight: '600' }}>(Optional)</span>
                                     </h5>
-                                    <span style={{ fontSize: '11px', color: '#B91C1C' }}>
-                                      Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Lease Agreement).
+                                    <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                      Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Lease Agreement) if available.
                                     </span>
                                   </div>
                                 </div>
@@ -9787,10 +9789,7 @@ export default function ProductionViewsEngine(props) {
                               ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
                             );
 
-                            if (!isDeliveryMatching && !confirmingBomModal.deliveryAddressProofDoc) {
-                              alert('⚠️ Delivery Address differs from Billing Address!\n\nPlease upload the mandatory Delivery Address Proof document before confirming items.');
-                              return;
-                            }
+
 
                             const currentItems = confirmingBomModal.items || [];
                             const allCheckedItems = currentItems.map(it => ({ ...it, confirmed: true }));
@@ -12156,6 +12155,28 @@ export default function ProductionViewsEngine(props) {
                             setNewBomDeliveryAddress(billingStr);
                             setSameAsBilling(true);
                           }
+
+                          // Synchronize to Zoho Books in the background
+                          try {
+                            fetch('/api/zoho/customers', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                companyName: company,
+                                customerCode: name,
+                                gstNumber: gstNo,
+                                address: billingStr,
+                                city: custFormBillingCity,
+                                state: custFormBillingState,
+                                pincode: custFormBillingPincode,
+                                primaryContact: {
+                                  name: name,
+                                  phone: mobile,
+                                  email: email
+                                }
+                              })
+                            }).catch(() => {});
+                          } catch (e) {}
                         }
 
                         // Reset form fields
@@ -12904,8 +12925,8 @@ export default function ProductionViewsEngine(props) {
                                       <AlertCircle style={{ width: '14px', height: '14px' }} />
                                     </div>
                                     <div>
-                                      <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#991B1B' }}>
-                                        Delivery Address Proof Document <span style={{ color: '#DC2626' }}>* (Mandatory)</span>
+                                      <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                                        Delivery Address Proof Document <span style={{ color: '#64748B', fontWeight: '600' }}>(Optional)</span>
                                       </h5>
                                       <span style={{ fontSize: '11px', color: '#B91C1C' }}>
                                         Delivery address differs from billing address. Upload proof (GST / Electricity Bill / Consignee Lease).

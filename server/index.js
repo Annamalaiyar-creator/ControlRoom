@@ -449,6 +449,33 @@ const saveLocalVendors = (vendors) => {
   }
 };
 
+const loadLocalCustomers = () => {
+  if (supabaseMemoryStore.customer_store && supabaseMemoryStore.customer_store.length > 0) {
+    return supabaseMemoryStore.customer_store;
+  }
+  try {
+    const filePath = getStoreFilePath('customer_store.json');
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      pushStoreToSupabase('customer_store', data);
+      return data;
+    }
+  } catch (err) {
+    console.error('Error loading local customers:', err);
+  }
+  return [];
+};
+
+const saveLocalCustomers = (customers) => {
+  pushStoreToSupabase('customer_store', customers);
+  try {
+    const filePath = getStoreFilePath('customer_store.json');
+    fs.writeFileSync(filePath, JSON.stringify(customers, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error saving local customers:', err);
+  }
+};
+
 const loadLocalItems = () => {
   if (supabaseMemoryStore.item_store && Array.isArray(supabaseMemoryStore.item_store) && supabaseMemoryStore.item_store.length > 0) {
     return supabaseMemoryStore.item_store;
@@ -709,6 +736,276 @@ app.post('/api/zoho/vendors', async (req, res) => {
     console.error('[ZOHO VENDOR CREATE ERROR]', err);
     res.status(500).json({ error: 'Failed to create vendor in Zoho Books: ' + err.message });
   }
+});
+
+// Helper to fetch customer contacts from Zoho Books
+const fetchZohoCustomers = (accessToken) => {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'www.zohoapis.in',
+      port: 443,
+      path: `/books/v3/contacts?organization_id=${zohoSession.orgId}&contact_type=customer`,
+      method: 'GET',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(parsed);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', (e) => reject(e));
+    req.end();
+  });
+};
+
+// Helper to create a new Customer contact in Zoho Books
+const createZohoCustomer = (accessToken, customerPayload) => {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(customerPayload);
+    const options = {
+      hostname: 'www.zohoapis.in',
+      port: 443,
+      path: `/books/v3/contacts?organization_id=${zohoSession.orgId}`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(parsed);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', (e) => reject(e));
+    req.write(postData);
+    req.end();
+  });
+};
+
+// Endpoint to create a new customer in Zoho Books
+app.post('/api/zoho/customers', async (req, res) => {
+  const localCustomers = loadLocalCustomers();
+  const incoming = req.body;
+
+  // Build local customer record
+  const customerId = incoming.customerCode || incoming.id || `CUST-VRM-${100 + localCustomers.length + 1}`;
+  const localCustomerRecord = {
+    id: customerId,
+    customerCode: customerId,
+    customerName: incoming.customerName || incoming.companyName || incoming.name || 'New Customer',
+    companyName: incoming.companyName || incoming.customerName || incoming.name || 'New Customer',
+    customerType: incoming.customerType || 'EPC Contractor',
+    industry: incoming.industry || '',
+    gstNumber: incoming.gstNumber || incoming.gstin || '',
+    panNumber: incoming.panNumber || incoming.pan || '',
+    address: incoming.address || incoming.streetAddress || '',
+    city: incoming.city || '',
+    state: incoming.state || '',
+    pincode: incoming.pincode || '',
+    dispatchAddress: incoming.dispatchAddress || incoming.address || '',
+    dispatchCity: incoming.dispatchCity || incoming.city || '',
+    dispatchState: incoming.dispatchState || incoming.state || '',
+    dispatchPincode: incoming.dispatchPincode || incoming.pincode || '',
+    sameAsBilling: incoming.sameAsBilling !== undefined ? incoming.sameAsBilling : true,
+    creditLimit: incoming.creditLimit || 2500000,
+    creditDays: incoming.creditDays || 30,
+    paymentTerms: incoming.paymentTerms || '50% Advance + 50% Dispatch',
+    assignedSalesperson: incoming.assignedSalesperson || 'All Sales',
+    source: incoming.source || 'Direct',
+    primaryContact: incoming.primaryContact || {
+      name: incoming.contactPerson || incoming.contactName || '',
+      phone: incoming.phone || incoming.mobile || '',
+      whatsapp: incoming.whatsapp || incoming.phone || incoming.mobile || '',
+      email: incoming.email || ''
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  // 1. Immediately persist to disk storage & Supabase
+  const updatedCustomers = [
+    localCustomerRecord,
+    ...localCustomers.filter(c => (c.customerCode || c.id) !== localCustomerRecord.customerCode && c.companyName !== localCustomerRecord.companyName)
+  ];
+  saveLocalCustomers(updatedCustomers);
+
+  if (!zohoSession.connected) {
+    return res.json({ success: true, message: 'Saved locally in Control Room (Zoho not connected)', customer: localCustomerRecord });
+  }
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const contactPersons = [];
+    if (localCustomerRecord.primaryContact && localCustomerRecord.primaryContact.name) {
+      const names = localCustomerRecord.primaryContact.name.trim().split(' ');
+      contactPersons.push({
+        first_name: names[0] || 'Contact',
+        last_name: names.slice(1).join(' ') || 'Person',
+        email: localCustomerRecord.primaryContact.email || undefined,
+        phone: localCustomerRecord.primaryContact.phone || undefined,
+        mobile: localCustomerRecord.primaryContact.whatsapp || localCustomerRecord.primaryContact.phone || undefined,
+        is_primary_contact: true
+      });
+    }
+
+    const billingAddress = {
+      address: (localCustomerRecord.address || '').slice(0, 80),
+      city: (localCustomerRecord.city || '').slice(0, 40),
+      state: (localCustomerRecord.state || '').slice(0, 40),
+      zip: (localCustomerRecord.pincode || '').slice(0, 20),
+      country: 'India'
+    };
+
+    const shippingAddress = {
+      address: (localCustomerRecord.dispatchAddress || localCustomerRecord.address || '').slice(0, 80),
+      city: (localCustomerRecord.dispatchCity || localCustomerRecord.city || '').slice(0, 40),
+      state: (localCustomerRecord.dispatchState || localCustomerRecord.state || '').slice(0, 40),
+      zip: (localCustomerRecord.dispatchPincode || localCustomerRecord.pincode || '').slice(0, 20),
+      country: 'India'
+    };
+
+    const zohoPayload = {
+      contact_name: localCustomerRecord.customerName || localCustomerRecord.companyName,
+      company_name: localCustomerRecord.companyName,
+      contact_type: 'customer',
+      customer_sub_type: 'business',
+      currency_code: 'INR',
+      pan_no: localCustomerRecord.panNumber ? String(localCustomerRecord.panNumber).trim().slice(0, 10) : undefined,
+      billing_address: billingAddress,
+      shipping_address: shippingAddress,
+      contact_persons: contactPersons.length > 0 ? contactPersons : undefined,
+      notes: `Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
+    };
+
+    const result = await createZohoCustomer(accessToken, zohoPayload);
+    if (result && (result.code === 0 || result.contact)) {
+      if (result.contact && result.contact.contact_id) {
+        localCustomerRecord.zohoContactId = result.contact.contact_id;
+        const finalized = updatedCustomers.map(c => c.customerCode === localCustomerRecord.customerCode ? { ...c, zohoContactId: result.contact.contact_id } : c);
+        saveLocalCustomers(finalized);
+      }
+      return res.json({
+        success: true,
+        message: 'Customer registered in Control Room and synchronized to Zoho Books successfully!',
+        customer: localCustomerRecord,
+        zohoContact: result.contact
+      });
+    } else {
+      console.warn('[ZOHO CUSTOMER CREATE NOTICE]', result);
+      return res.json({
+        success: true,
+        warning: `Customer saved in Control Room, but Zoho Books responded: ${(result && result.message) || 'Unknown response'}`,
+        customer: localCustomerRecord
+      });
+    }
+  } catch (err) {
+    console.error('[ZOHO CUSTOMER CREATE ERROR]', err);
+    return res.json({
+      success: true,
+      warning: `Customer saved in Control Room. Zoho API synchronization notice: ${err.message}`,
+      customer: localCustomerRecord
+    });
+  }
+});
+
+// Real-time synchronization endpoint retrieving live customers from Zoho Books
+app.get('/api/zoho/customers', async (req, res) => {
+  const localCustomers = loadLocalCustomers();
+
+  if (!zohoSession.connected) {
+    return res.json(localCustomers);
+  }
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const data = await fetchZohoCustomers(accessToken);
+
+    if (data && data.contacts && Array.isArray(data.contacts)) {
+      // Map Zoho Books customer contacts
+      const zohoCustomers = data.contacts.map((c, idx) => {
+        const bAddr = c.billing_address || {};
+        return {
+          id: c.contact_id || `CUST-ZOHO-${idx + 1}`,
+          customerCode: c.contact_id ? `CUST-${String(c.contact_id).slice(-4)}` : `CUST-VRM-${100 + idx + 1}`,
+          companyName: c.company_name || c.contact_name,
+          customerType: 'EPC Contractor',
+          industry: 'Solar Energy / Utility Scale',
+          gstNumber: c.gst_no || c.gstin || '',
+          panNumber: c.pan_no || c.pan || '',
+          address: bAddr.address || c.address || '',
+          city: bAddr.city || c.city || '',
+          state: bAddr.state || c.state || '',
+          pincode: bAddr.zip || c.zip || '',
+          creditLimit: c.credit_limit || 2500000,
+          creditDays: c.payment_terms || 30,
+          paymentTerms: c.payment_terms_label || (c.payment_terms ? `Net ${c.payment_terms} Days` : '50% Advance + 50% Dispatch'),
+          assignedSalesperson: 'Saravanan',
+          source: 'Zoho Books',
+          zohoContactId: c.contact_id,
+          primaryContact: {
+            name: c.primary_contact_name || c.contact_name || '—',
+            designation: 'Procurement Head',
+            phone: c.phone || c.mobile || '',
+            whatsapp: c.mobile || c.phone || '',
+            email: c.email || ''
+          },
+          createdAt: c.created_time || new Date().toISOString()
+        };
+      });
+
+      // Merge Zoho customers with local customers without wiping Control Room custom metadata
+      const mergedMap = new Map();
+      localCustomers.forEach(cust => {
+        const key = (cust.companyName || cust.customerCode || cust.id || '').toLowerCase().trim();
+        if (key) mergedMap.set(key, cust);
+      });
+
+      zohoCustomers.forEach(zCust => {
+        const key = (zCust.companyName || zCust.customerCode || '').toLowerCase().trim();
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          mergedMap.set(key, {
+            ...zCust,
+            ...existing,
+            zohoContactId: zCust.zohoContactId,
+            gstNumber: existing.gstNumber || zCust.gstNumber,
+            panNumber: existing.panNumber || zCust.panNumber
+          });
+        } else {
+          mergedMap.set(key, zCust);
+        }
+      });
+
+      const mergedList = Array.from(mergedMap.values());
+      saveLocalCustomers(mergedList);
+      return res.json(mergedList);
+    }
+  } catch (err) {
+    console.error('Zoho customers fetch notice:', err.message);
+  }
+
+  res.json(localCustomers);
 });
 
 // Real-time synchronization endpoint retrieving live vendors from Zoho Books

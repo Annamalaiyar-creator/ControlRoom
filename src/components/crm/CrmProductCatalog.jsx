@@ -65,25 +65,6 @@ export default function CrmProductCatalog({ onNavigateTab }) {
             </p>
           </div>
         </div>
-
-        <button
-          onClick={() => onNavigateTab('Items Directory')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: '#FFFFFF',
-            color: '#0E7490',
-            border: '1px solid #0E7490',
-            padding: '8px 14px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: '700',
-            cursor: 'pointer'
-          }}
-        >
-          Open Master Inventory <ArrowRight size={14} />
-        </button>
       </div>
 
       {/* Filters */}

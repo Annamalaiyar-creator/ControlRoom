@@ -56,6 +56,14 @@
         "text": "Hello! Thank you for reaching out to VRM Structures. For a  Aluminium Mounting Structures requirement, we manufacture premium extruded aluminium (6063 T6) and hot-dip galvanized steel systems conforming to strict IS structural standards. May I know your project location and panel wattage so I can generate a tailored commercial quotation?",
         "timestamp": "2026-09-08T09:53:27.341Z",
         "status": "sent"
+      },
+      {
+        "id": "MSG-1788931625615",
+        "sender": "agent",
+        "senderName": "Mohit JV",
+        "text": "Hi Rajesh, please review the attached Bill of Materials #{{bom_number}} for {{company}}. Please reply with your confirmation to allocate inventory and initiate dispatch packing.",
+        "timestamp": "2026-09-09T05:27:05.615Z",
+        "status": "sent"
       }
     ]
   },

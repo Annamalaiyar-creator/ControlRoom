@@ -2098,6 +2098,16 @@ export default function ItemsDirectoryView(props) {
   };
 
 
+  const isSalesRole = userRole === 'Sales Head' || userRole === 'Sales Executive';
+  if (isSalesRole) {
+    return (
+      <div style={{ padding: '40px 24px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', margin: '20px 0' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', marginBottom: '8px' }}>Access Restricted</h3>
+        <p style={{ fontSize: '13px', color: '#64748B' }}>Items & Materials Catalog is not accessible for Sales accounts.</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {activeTab === 'Items Directory' && (

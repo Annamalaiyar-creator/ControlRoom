@@ -99,6 +99,16 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
+      // If procurement store is checked but sales has records, check if user has converted PIs
+      if (!isSalesRole) {
+        const salesSaved = localStorage.getItem('controlroom_sales_pi_store');
+        if (salesSaved) {
+          const salesParsed = JSON.parse(salesSaved);
+          if (Array.isArray(salesParsed) && salesParsed.length > 0) {
+            return [...salesParsed, ...defaultProcurementPIs];
+          }
+        }
+      }
     } catch (e) {}
     return isSalesRole ? defaultSalesPIs : defaultProcurementPIs;
   });
@@ -111,6 +121,16 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPiList(parsed);
           return;
+        }
+      }
+      if (!isSalesRole) {
+        const salesSaved = localStorage.getItem('controlroom_sales_pi_store');
+        if (salesSaved) {
+          const salesParsed = JSON.parse(salesSaved);
+          if (Array.isArray(salesParsed) && salesParsed.length > 0) {
+            setPiList([...salesParsed, ...defaultProcurementPIs]);
+            return;
+          }
         }
       }
     } catch (e) {}
@@ -135,7 +155,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       customerName: pi.vendor || '',
       gstNo: pi.gstNo || '',
       productName: pi.productName || 'Solar Mounting Rails & Accessories',
-      items: [
+      items: (pi.items && pi.items.length > 0) ? pi.items : [
         {
           name: pi.productName || 'Structural Steel Beams',
           category: 'PI Converted Materials',
@@ -147,6 +167,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       ],
       remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
     };
+
+    // Update PI record status to 'Converted to BOM' for accurate tracking
+    const updatedList = piList.map(item => item.piNo === pi.piNo ? { ...item, status: 'Converted to BOM', statusType: 'converted' } : item);
+    updatePiList(updatedList);
 
     try {
       localStorage.setItem('controlroom_pending_pi_to_bom', JSON.stringify(conversionData));
@@ -332,8 +356,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setGstNo(pi.gstNo);
     setProductName(pi.productName || '');
     setProductsList(pi.productName ? pi.productName.split(', ') : ['']);
-    setValue(pi.unitValue.toString());
-    setQuantity(pi.quantity.toString());
+    setValue(pi.unitValue !== undefined && pi.unitValue !== null ? String(pi.unitValue) : '0');
+    setQuantity(pi.quantity !== undefined && pi.quantity !== null ? String(pi.quantity) : '1');
     setApprovalRequired(pi.approvalRequired || 'Yes');
     setApprover(pi.approver || 'Velmurugan Rathinam (CEO)');
     setApprovalPriority(pi.approvalPriority || 'High');
@@ -467,8 +491,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)', minWidth: 0, width: '100%' }}>
             {/* Header section with Action Button */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: '200px' }}>
                 <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                   Performa Invoices
                 </h2>
@@ -498,23 +522,24 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   backgroundColor: '#0E7490',
                   border: 'none',
                   color: 'white',
-                  height: '44px',
-                  fontSize: '14px',
-                  fontWeight: '600',
+                  height: '40px',
+                  fontSize: '13px',
+                  fontWeight: '700',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  padding: '4px 6px 4px 22px',
-                  borderRadius: '24px',
+                  padding: '0 6px 0 20px',
+                  borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(14, 116, 144, 0.25)',
-                  transition: 'all 0.2s ease-in-out'
+                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)',
+                  transition: 'all 0.2s ease-in-out',
+                  flexShrink: 0
                 }}
               >
                 <span>Create PI</span>
                 <div style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
                   backgroundColor: '#FFFFFF',
                   color: '#0E7490',
@@ -523,7 +548,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   justifyContent: 'center',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}>
-                  <ArrowRight style={{ width: '18px', height: '18px', color: '#0E7490' }} />
+                  <ArrowRight style={{ width: '16px', height: '16px', color: '#0E7490' }} />
                 </div>
               </button>
             </div>
@@ -531,19 +556,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
 
             {/* 1. FILTERS & SEARCH ROW CARD */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', width: '380px' }}>
-                <Search style={{ width: '15px', height: '15px', color: '#64748b' }} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px 16px', backgroundColor: '#fafbfc', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center', width: '100%', boxSizing: 'border-box', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', flex: '1 1 240px', maxWidth: '380px', minWidth: '200px' }}>
+                <Search style={{ width: '15px', height: '15px', color: '#64748b', flexShrink: 0 }} />
                 <input
                   type="text"
                   placeholder="Search Performa Invoices (PI No, Customer Name, GST No)..."
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#334155' }}
+                  style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', minWidth: 0, color: '#334155' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', height: '38px', cursor: 'pointer', backgroundColor: 'white', fontSize: '13px', color: '#475569' }}>
                   <span>Date Range</span>
                   <Calendar style={{ width: '14px', height: '14px', color: '#64748b' }} />
@@ -586,12 +611,14 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
 
             {/* 2. STATUS SUB-TABS ROW & EXPORT BUTTON (EXACT WORK ORDERS REFERENCE DESIGN) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                 {[
-                  { id: 'All', label: 'All Invoices', count: piList.length },
+                  { id: 'All', label: 'All Invoices (Total Sent)', count: piList.length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: piList.filter(pi => pi.status === 'Converted to BOM').length },
                   { id: 'Pending Approval', label: 'Pending Approval', count: piList.filter(pi => pi.status === 'Pending Approval').length },
                   { id: 'Approved', label: 'Approved', count: piList.filter(pi => pi.status === 'Approved').length },
+                  { id: 'Cancelled', label: 'Cancelled', count: piList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: piList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
                   <button
@@ -603,17 +630,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       padding: '12px 0',
                       fontSize: '13px',
                       fontWeight: 'bold',
-                      color: piTab === tab.id ? '#2563eb' : '#64748b',
-                      borderBottom: piTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
-                      cursor: 'pointer'
+                      color: piTab === tab.id ? '#0E7490' : '#64748b',
+                      borderBottom: piTab === tab.id ? '2px solid #0E7490' : '2px solid transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}
                   >
                     {tab.label}
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '2px 7px',
+                      borderRadius: '12px',
+                      backgroundColor: tab.id === 'Converted to BOM' ? '#ecfdf5' : tab.id === 'Cancelled' ? '#fef2f2' : '#f1f5f9',
+                      color: tab.id === 'Converted to BOM' ? '#059669' : tab.id === 'Cancelled' ? '#b91c1c' : '#475569',
+                      fontWeight: 'bold'
+                    }}>
+                      {tab.count}
+                    </span>
                   </button>
                 ))}
               </div>
 
-              <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', backgroundColor: 'white', fontSize: '13px', fontWeight: 'bold', color: '#475569', cursor: 'pointer', marginBottom: '8px' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', backgroundColor: 'white', fontSize: '13px', fontWeight: 'bold', color: '#475569', cursor: 'pointer', marginBottom: '8px', flexShrink: 0 }}>
                 <Download style={{ width: '14px', height: '14px' }} />
                 Export
               </button>
@@ -622,7 +662,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             {/* 3. MAIN DATA TABLE MATCHING EXACT REFERENCE DESIGN */}
             <div className="section-card" style={{ padding: 0, backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
               <div style={{ overflowX: 'auto', width: '100%' }}>
-                <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                <table className="custom-table" style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
                       <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
@@ -633,13 +673,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                         />
                       </th>
-                      <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', boxSizing: 'border-box' }}>PI No.</th>
-                      <th style={{ width: '180px', minWidth: '180px', padding: '12px 14px', boxSizing: 'border-box' }}>Product</th>
-                      <th style={{ minWidth: '220px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Project</th>
-                      <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', boxSizing: 'border-box' }}>GST No.</th>
-                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 14px', boxSizing: 'border-box' }}>PI Date</th>
-                      <th style={{ width: '140px', minWidth: '140px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Total Amount</th>
-                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
+                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', boxSizing: 'border-box' }}>PI No.</th>
+                      <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', boxSizing: 'border-box' }}>Product</th>
+                      <th style={{ minWidth: '180px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Project</th>
+                      <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', boxSizing: 'border-box' }}>GST No.</th>
+                      <th style={{ width: '110px', minWidth: '110px', padding: '12px 14px', boxSizing: 'border-box' }}>PI Date</th>
+                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Total Amount</th>
+                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -652,9 +692,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         if (pi.status === 'Approved') {
                           statusBg = '#f0fdf4';
                           statusFg = '#16a34a';
+                        } else if (pi.status === 'Converted to BOM') {
+                          statusBg = '#ecfdf5';
+                          statusFg = '#059669';
                         } else if (pi.status === 'Pending Approval') {
                           statusBg = '#fffbebe6';
                           statusFg = '#d97706';
+                        } else if (pi.status === 'Cancelled') {
+                          statusBg = '#fef2f2';
+                          statusFg = '#b91c1c';
                         } else if (pi.status === 'Draft' || pi.status === 'Overdue') {
                           statusBg = '#fef2f2';
                           statusFg = '#dc2626';
@@ -670,7 +716,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             }}
                             className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
                           >
-                            <td style={{ width: '48px', minWidth: '48px', padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                            <td style={{
+                              width: '48px',
+                              minWidth: '48px',
+                              padding: '12px 14px',
+                              textAlign: 'center',
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box',
+                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                            }}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -720,10 +774,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         >
                           <option value={5}>5</option>
                           <option value={10}>10</option>
-                          <option value={15}>15</option>
-                          <option value={20}>20</option>
-                          <option value={25}>25</option>
-                          <option value={50}>50</option>
                         </select>
                       </div>
                       <span>Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredPIList.length)} of {filteredPIList.length} entries</span>
@@ -1635,7 +1685,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Value Of Product</span>
                   <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>
-                    ₹{selectedPi.unitValue.toLocaleString('en-IN')}
+                    ₹{(Number(selectedPi.unitValue) || 0).toLocaleString('en-IN')}
                   </span>
                 </div>
 
@@ -1680,6 +1730,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               >
                 Close Details
               </button>
+              {selectedPi.status !== 'Cancelled' && selectedPi.status !== 'Converted to BOM' && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to mark Proforma Invoice ${selectedPi.piNo} as Cancelled?`)) {
+                      const updated = piList.map(p => p.piNo === selectedPi.piNo ? { ...p, status: 'Cancelled', statusType: 'cancelled' } : p);
+                      updatePiList(updated);
+                      setSelectedPi(null);
+                    }
+                  }}
+                  style={{
+                    height: '40px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FCA5A5',
+                    color: '#DC2626',
+                    borderRadius: '10px',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    padding: '0 14px'
+                  }}
+                >
+                  Cancel PI
+                </button>
+              )}
               <button
                 onClick={() => {
                   const pi = selectedPi;

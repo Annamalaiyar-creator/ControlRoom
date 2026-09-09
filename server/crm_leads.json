@@ -1,5 +1,22 @@
 [
   {
+    "id": "LEAD-2026-0831",
+    "leadNumber": "LEAD-009",
+    "companyName": "Vikram Solar Pvt Ltd",
+    "contactPerson": "Rajesh Kannan",
+    "designation": "Solar Inquirer",
+    "phone": "+91 98765 43210",
+    "whatsapp": "+91 98765 43210",
+    "email": "",
+    "source": "WhatsApp",
+    "status": "Converted",
+    "assignedSalesperson": "Mohit JV",
+    "estimatedKw": 100,
+    "category": "Aluminium Mounting Structures",
+    "notes": "Inbound WhatsApp conversation automatically converted to CRM lead.",
+    "createdAt": "2026-09-09T05:27:10.831Z"
+  },
+  {
     "id": "LEAD-2026-7895",
     "leadNumber": "LEAD-008",
     "companyName": "Vikram Solar Pvt Ltd",

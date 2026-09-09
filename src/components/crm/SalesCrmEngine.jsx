@@ -300,11 +300,15 @@ export default function SalesCrmEngine({
 
         {activeTab === 'Quotations' && (
           <CrmQuotationsView
+            userRole={userRole}
             quotations={quotations}
             onSaveQuotation={handleSaveQuotation}
             onNavigateTab={(tab) => {
-              if (tab === 'Sales BOM' || tab === 'BOM') onNavigateTab(tab);
-              else setActiveTab(tab);
+              if (['Performa Invoice', 'Proforma Invoice', 'Sales BOM', 'BOM', 'Items Directory', 'BOM Orders'].includes(tab) || (onNavigateTab && !['Leads', 'Customers', 'Opportunities', 'Follow-ups', 'WhatsApp', 'Quotations', 'Products', 'Reports', 'Dashboard'].includes(tab))) {
+                if (onNavigateTab) onNavigateTab(tab);
+              } else {
+                setActiveTab(tab);
+              }
             }}
             onOpenWhatsAppChat={() => setActiveTab('WhatsApp')}
           />
