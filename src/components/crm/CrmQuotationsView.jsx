@@ -5,7 +5,8 @@ import {
   RotateCcw, Edit3, Trash2, CheckCircle, Clock, AlertCircle, Layers,
   Truck, ArrowRight, Copy, RefreshCw, Send, Mail, Boxes, User, Landmark
 } from 'lucide-react';
-import { VRM_HDG_PRESETS } from '../../vrmHdgProposalPresets';
+import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
+import SearchablePresetSelector from '../SearchablePresetSelector';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -188,8 +189,17 @@ export default function CrmQuotationsView({
 
   // Preset Selection in Quote Creation
   const [selectedPreset, setSelectedPreset] = useState('');
+  const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [selectedItemIndexes, setSelectedItemIndexes] = useState([]);
+
+  useEffect(() => {
+    const handlePresetUpdate = (e) => {
+      if (e.detail) setActivePresetsMap(e.detail);
+    };
+    window.addEventListener('vrm_presets_updated', handlePresetUpdate);
+    return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
+  }, []);
 
   // Resolve currently logged in account user's name dynamically (matching Header & auth state)
   const getActiveUserName = () => {
@@ -1024,16 +1034,19 @@ export default function CrmQuotationsView({
 
             {/* Presets Kit Selector Matching BOM Page */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <select
+              <SearchablePresetSelector
                 value={selectedPreset}
-                onChange={(e) => {
-                  const val = e.target.value;
+                activePresetsMap={activePresetsMap}
+                accentColor="#0E7490"
+                width="340px"
+                placeholder="Type or pick Preset Kit..."
+                onChange={(val, targetPreset) => {
                   setSelectedPreset(val);
                   setSelectedItemIndexes([]);
 
-                  if (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]) {
+                  if (targetPreset && targetPreset.items) {
                     const multiplier = parseInt(presetSetCount) || 1;
-                    setQuoteItems(VRM_HDG_PRESETS[val].items.map(it => {
+                    setQuoteItems(targetPreset.items.map(it => {
                       const baseQ = parseFloat(it.qty) || 1;
                       return {
                         name: it.name,
@@ -1046,38 +1059,7 @@ export default function CrmQuotationsView({
                     }));
                   }
                 }}
-                style={{ height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '700' }}
-              >
-                <option value="" disabled>Select Preset Structure Kit (30 Presets Available)...</option>
-                {(() => {
-                  const presetsList = Object.values(VRM_HDG_PRESETS || {});
-                  const categories = [
-                    { name: 'DCR BOS Solar Proposal Kits', match: (p) => p.label.includes('BOS KITS') },
-                    { name: 'Mini Rail Kits', match: (p) => p.label.includes('Mini rail') },
-                    { name: 'Adhesive Rail Kits', match: (p) => p.label.includes('Adhesive') },
-                    { name: 'Long Rail Kits', match: (p) => p.label.includes('rail') || p.label.includes('Rail') },
-                    { name: 'Triangle Structure Kits', match: (p) => p.label.includes('Triangle') },
-                    { name: 'HDG Structure Tables', match: (p) => p.label.includes('HDG Structure') },
-                    { name: 'GAL Structure Tables', match: (p) => p.label.includes('GAL Structure') },
-                  ];
-
-                  const rendered = new Set();
-                  return categories.map(cat => {
-                    const items = presetsList.filter(p => !rendered.has(p.id) && cat.match(p));
-                    items.forEach(p => rendered.add(p.id));
-                    if (items.length === 0) return null;
-                    return (
-                      <optgroup key={cat.name} label={`--- ${cat.name} (${items.length}) ---`}>
-                        {items.map(preset => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  });
-                })()}
-              </select>
+              />
 
               {/* Set Count Multiplier */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '38px' }}>

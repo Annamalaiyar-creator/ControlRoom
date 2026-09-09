@@ -21,6 +21,7 @@ import VRMTaxInvoicePrintTemplate from '../VRMTaxInvoicePrintTemplate';
 import * as XLSX from 'xlsx';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
 import StatusBadge from '../StatusBadge';
+import SearchablePresetSelector from '../SearchablePresetSelector';
 
 
 export default function ProductionViewsEngine(props) {
@@ -13111,15 +13112,16 @@ export default function ProductionViewsEngine(props) {
                         <Layers style={{ width: '14px', height: '14px', color: '#4F46E5' }} />
                         <span style={{ fontSize: '12px', fontWeight: '700', color: '#4338CA' }}>Preset Kit:</span>
                       </div>
-                      <select
-                        id="preset-selector"
+                      <SearchablePresetSelector
                         value={selectedPreset}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        activePresetsMap={activePresetsMap}
+                        accentColor="#4F46E5"
+                        width="340px"
+                        placeholder="Type or pick Preset Kit..."
+                        onChange={(val, targetPreset) => {
                           setSelectedPreset(val);
                           setSelectedBomItemIndexes([]);
 
-                          const targetPreset = activePresetsMap && activePresetsMap[val] ? activePresetsMap[val] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[val]);
                           if (targetPreset && targetPreset.items) {
                             const multiplier = parseInt(presetSetCount) || 1;
                             setBomMaterialsList(targetPreset.items.map(it => {
@@ -13142,58 +13144,7 @@ export default function ProductionViewsEngine(props) {
                             setPresetKitPrice('');
                           }
                         }}
-                        style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: selectedPreset ? '#0F172A' : '#475569', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontWeight: '600' }}
-                      >
-                        <option value="" disabled style={{ color: '#94A3B8' }}>Select BOM Kit / Structure Preset ({Object.keys(activePresetsMap || {}).length} Presets Available)...</option>
-                        {(() => {
-                          const presetsList = Object.values(activePresetsMap || VRM_HDG_PRESETS || {});
-                          const categories = [
-                            { name: 'GAL Hat Purline Structures (2 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (2 Row)' || (p.label && p.label.includes('GAL Hat Purline (2 Row)')) },
-                            { name: 'GAL Hat Purline Structures (3 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (3 Row)' || (p.label && p.label.includes('GAL Hat Purline (3 Row)')) },
-                            { name: 'GAL Hat Purline Structures (1 Row)', match: (p) => p.category === 'GAL Hat Purline Structures (1 Row)' || (p.label && p.label.includes('GAL Hat Purline (1 Row)')) },
-                            { name: 'HDG C Purlin Structures (2 Row)', match: (p) => p.category === 'HDG C Purlin Structures (2 Row)' || (p.label && p.label.includes('HDG C Purlin (2 Row)')) },
-                            { name: 'HDG C Purlin Structures (3 Row)', match: (p) => p.category === 'HDG C Purlin Structures (3 Row)' || (p.label && p.label.includes('HDG C Purlin (3 Row)')) },
-                            { name: 'HDG C Purlin Structures (1 Row)', match: (p) => p.category === 'HDG C Purlin Structures (1 Row)' || (p.label && p.label.includes('HDG C Purlin (1 Row)')) },
-                            { name: 'Mini Rail Kits (6063T6 Aluminum)', match: (p) => p.category === 'Mini Rail Kits' || (p.label && p.label.toLowerCase().includes('mini rail')) },
-                            { name: 'Adhesive Rail Kits (Penetrative / Non-Penetrative)', match: (p) => p.category === 'Adhesive Rail Kits' || (p.label && p.label.toLowerCase().includes('adhesive')) },
-                            { name: 'Long Rail & Double C Rail Kits', match: (p) => p.category === 'Long Rail & Double C Kits' || p.category === 'Long Rail Kits' || (p.label && (p.label.includes('Rail') || p.label.includes('rail'))) },
-                            { name: 'Reverse Tilt Triangle Structures (North / East-West / Ballast)', match: (p) => p.category === 'Reverse Tilt Triangle Structures' || p.category === 'Triangle Structure Kits' || (p.label && p.label.toLowerCase().includes('triangle')) },
-                            { name: 'DCR BOS Solar Proposal Kits (Polycab / Waree)', match: (p) => p.category === 'DCR BOS Solar Kits' || p.category === 'BOS Solar Kits' || (p.label && p.label.includes('BOS KITS')) },
-                            { name: 'Tech Support & Custom Presets', match: (p) => p.isCustom || (p.id && p.id.includes('custom')) }
-                          ];
-
-                          const rendered = new Set();
-                          const groups = categories.map(cat => {
-                            const items = presetsList.filter(p => !rendered.has(p.id) && cat.match(p));
-                            items.forEach(p => rendered.add(p.id));
-                            if (items.length === 0) return null;
-                            return (
-                              <optgroup key={cat.name} label={`--- ${cat.name} (${items.length}) ---`}>
-                                {items.map(preset => (
-                                  <option key={preset.id} value={preset.id}>
-                                    {preset.label}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            );
-                          });
-
-                          const remaining = presetsList.filter(p => !rendered.has(p.id));
-                          if (remaining.length > 0) {
-                            groups.push(
-                              <optgroup key="Other Tech Support Presets" label={`--- Other Tech Support Presets (${remaining.length}) ---`}>
-                                {remaining.map(preset => (
-                                  <option key={preset.id} value={preset.id}>
-                                    {preset.label || preset.id}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            );
-                          }
-
-                          return groups;
-                        })()}
-                      </select>
+                      />
 
                       {/* SET COUNT / MULTIPLIER INPUT */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>

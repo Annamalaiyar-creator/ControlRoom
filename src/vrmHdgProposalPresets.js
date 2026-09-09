@@ -37,7 +37,8 @@ export function getAllActivePresets() {
     console.error("Error reading controlroom_presets_store", e);
   }
 
-  return { ...basePresets, ...customMap };
+  // Combine standard base presets (all 270 items) and user/tech-support created presets
+  return { ...(basePresets || {}), ...customMap };
 }
 
 /**
