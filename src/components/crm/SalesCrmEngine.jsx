@@ -59,7 +59,62 @@ export default function SalesCrmEngine({
   const [conversations, setConversations] = useState(() => getCrmStore('whatsapp_conversations', INITIAL_WHATSAPP_CONVERSATIONS));
   const [quotations, setQuotations] = useState(() => getCrmStore('quotations', INITIAL_CRM_QUOTATIONS));
 
+  // Live Zoho customers sync on mount
+  useEffect(() => {
+    let isMounted = true;
+    const syncLiveCustomers = async () => {
+      try {
+        const res = await fetch('/api/zoho/customers');
+        if (res.ok) {
+          const liveList = await res.json();
+          if (isMounted && Array.isArray(liveList) && liveList.length > 0) {
+            setCustomers(prev => {
+              const map = new Map();
+              prev.forEach(c => {
+                const k = (c.customerCode || c.id || c.zohoContactId || '').toLowerCase().trim();
+                if (k) map.set(k, c);
+              });
+              liveList.forEach(c => {
+                const k = (c.customerCode || c.id || c.zohoContactId || '').toLowerCase().trim();
+                if (k) {
+                  map.set(k, { ...(map.get(k) || {}), ...c });
+                }
+              });
+              const unified = Array.from(map.values());
+              saveCrmStore('customers', unified);
+              return unified;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Initial Zoho customers sync:', err);
+      }
+    };
+    syncLiveCustomers();
+    return () => { isMounted = false; };
+  }, []);
+
   // Save Handlers
+  const handleBatchUpdateCustomers = (customerList) => {
+    if (!Array.isArray(customerList) || customerList.length === 0) return;
+    setCustomers(prev => {
+      const map = new Map();
+      prev.forEach(c => {
+        const k = (c.customerCode || c.id || c.zohoContactId || '').toLowerCase().trim();
+        if (k) map.set(k, c);
+      });
+      customerList.forEach(c => {
+        const k = (c.customerCode || c.id || c.zohoContactId || '').toLowerCase().trim();
+        if (k) {
+          map.set(k, { ...(map.get(k) || {}), ...c });
+        }
+      });
+      const unified = Array.from(map.values());
+      saveCrmStore('customers', unified);
+      return unified;
+    });
+  };
+
   const handleSaveLead = (lead) => {
     const updated = [lead, ...leads.filter(l => l.id !== lead.id)];
     setLeads(updated);
@@ -312,6 +367,7 @@ export default function SalesCrmEngine({
             opportunities={opportunities}
             quotations={quotations}
             onSaveCustomer={handleSaveCustomer}
+            onBatchUpdateCustomers={handleBatchUpdateCustomers}
             onNavigateTab={(tab) => {
               if (tab === 'Sales BOM' || tab === 'BOM') onNavigateTab(tab);
               else setActiveTab(tab);

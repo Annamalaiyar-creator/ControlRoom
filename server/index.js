@@ -1024,8 +1024,10 @@ app.post('/api/zoho/customers', async (req, res) => {
       country: 'India'
     };
 
-    const contactNameVal = String(localCustomerRecord.customerName || localCustomerRecord.companyName || incoming.code || 'Valued Customer').trim();
-    const companyNameVal = String(localCustomerRecord.companyName || localCustomerRecord.customerName || incoming.code || 'Valued Customer').trim();
+    const baseCompanyName = String(localCustomerRecord.companyName || localCustomerRecord.customerName || incoming.code || 'Valued Customer').trim();
+    const custIdentifier = localCustomerRecord.customerCode || customerId;
+    const contactNameVal = `${baseCompanyName} [${custIdentifier}]`;
+    const companyNameVal = baseCompanyName;
 
     const zohoPayload = {
       contact_name: contactNameVal,
@@ -1037,7 +1039,7 @@ app.post('/api/zoho/customers', async (req, res) => {
       billing_address: billingAddress,
       shipping_address: shippingAddress,
       contact_persons: contactPersons.length > 0 ? contactPersons : undefined,
-      notes: `Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
+      notes: `Customer Code: ${custIdentifier} | Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
     };
 
     let result = await createZohoCustomer(accessToken, zohoPayload);

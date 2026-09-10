@@ -15,6 +15,7 @@ export default function CrmCustomersView({
   opportunities = [],
   quotations = [],
   onSaveCustomer,
+  onBatchUpdateCustomers,
   onOpenWhatsAppChat,
   onNavigateTab
 }) {
@@ -199,11 +200,11 @@ export default function CrmCustomersView({
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          data.forEach(c => {
-            if (typeof onSaveCustomer === 'function') {
-              onSaveCustomer(c);
-            }
-          });
+          if (typeof onBatchUpdateCustomers === 'function') {
+            onBatchUpdateCustomers(data);
+          } else if (typeof onSaveCustomer === 'function') {
+            data.forEach(c => onSaveCustomer(c));
+          }
           if (isManual) {
             setZohoSyncMessage({
               type: 'success',
