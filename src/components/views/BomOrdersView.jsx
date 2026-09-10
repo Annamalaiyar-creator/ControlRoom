@@ -90,10 +90,21 @@ export default function BomOrdersView(props) {
           } else {
             setBomStore(prev => {
               const map = new Map();
+              // Preserve any locally added/pending BOMs from previous state so background polling never wipes them
+              if (Array.isArray(prev)) {
+                prev.forEach(item => {
+                  if (item) {
+                    const k = item.bomCode || item.code || item.id;
+                    if (k) map.set(k, item);
+                  }
+                });
+              }
               data.forEach(item => {
                 if (item) {
-                  const k = item.bomCode || item.code;
-                  if (k) map.set(k, item);
+                  const k = item.bomCode || item.code || item.id;
+                  if (k) {
+                    map.set(k, { ...(map.get(k) || {}), ...item });
+                  }
                 }
               });
               const parseBomSeq = (code) => {
@@ -319,11 +330,13 @@ export default function BomOrdersView(props) {
       if (curCode && spCode && spCode === curCode) return true;
 
       const spName = (b.salesPerson || b.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
-      if (curName && spName) {
-        if (spName === curName) return true;
-        const cleanSp = spName.replace(/\s+/g, '');
+      const creatorName = (b.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (curName) {
+        if (spName && (spName === curName || spName.includes(curName) || curName.includes(spName))) return true;
+        if (creatorName && (creatorName === curName || creatorName.includes(curName) || curName.includes(creatorName))) return true;
         const cleanCur = curName.replace(/\s+/g, '');
-        if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
+        if (spName && spName.replace(/\s+/g, '').includes(cleanCur)) return true;
+        if (creatorName && creatorName.replace(/\s+/g, '').includes(cleanCur)) return true;
       }
 
       if (curEmail && (b.salesPersonEmail || b.email || '').toLowerCase() === curEmail) {
