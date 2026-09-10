@@ -14398,11 +14398,11 @@ export default function ProductionViewsEngine(props) {
                                 const current = Array.isArray(prev) ? prev : [];
                                 const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
                                 const updatedList = [sanitizedNewBom, ...filtered];
-                                saveCloudStore('bom_store', updatedList);
                                 setShowBOMForm(false);
                                 setBomConfirmModal(null);
                                 setCurrentPage(1);
                                 try {
+                                  window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: sanitizedNewBom } }));
                                   window.dispatchEvent(new Event('controlroom_storage_update'));
                                 } catch (e) { }
                                 return updatedList;

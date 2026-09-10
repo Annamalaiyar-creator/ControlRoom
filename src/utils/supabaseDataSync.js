@@ -260,6 +260,22 @@ export function saveCloudStore(storeKey, storeData) {
  * @returns {Promise<string>} Next BOM code (e.g., 'BOM-625')
  */
 export async function getAndReserveNextBomCode(commit = true) {
+  // First attempt atomic server reservation to guarantee 0-collision across concurrent users
+  try {
+    const endpoint = commit ? '/api/boms/reserve-code' : '/api/boms/next-code';
+    const method = commit ? 'POST' : 'GET';
+    const apiRes = await fetch(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data && data.nextBomCode) {
+        return data.nextBomCode;
+      }
+    }
+  } catch (_) {}
+
   let highestNum = 0;
 
   try {

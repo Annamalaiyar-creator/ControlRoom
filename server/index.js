@@ -643,8 +643,9 @@ app.post('/api/store/:key', async (req, res) => {
     const filePath = getStoreFilePath(`${key}.json`);
     let finalDataToSave = storeData;
 
-    // For array stores (like customer_store, po_store), merge smartly so concurrent users don't overwrite each other
-    if (Array.isArray(storeData) && key !== 'bom_store' && key !== 'invoice_store') {
+    // For all array stores (including bom_store, invoice_store, customer_store, po_store),
+    // merge smartly so concurrent users NEVER overwrite each other
+    if (Array.isArray(storeData)) {
       let existingList = [];
       if (fs.existsSync(filePath)) {
         try {
@@ -654,6 +655,10 @@ app.post('/api/store/:key', async (req, res) => {
         } catch (e) {
           existingList = [];
         }
+      }
+
+      if (supabaseMemoryStore[key] && Array.isArray(supabaseMemoryStore[key])) {
+        existingList = [...existingList, ...supabaseMemoryStore[key]];
       }
 
       const getId = (item) => {
@@ -2482,58 +2487,101 @@ app.get('/api/zoho/next-po-number', async (req, res) => {
   res.json({ nextPoNo });
 });
 
-// Centralized Next BOM Code generator guaranteeing unique sequential codes across all users
-app.get('/api/boms/next-code', async (req, res) => {
-  let maxNum = 0; // Default seed 0 when starting fresh
-  try {
-    const filePath = getStoreFilePath('bom_store.json');
-    let allRecords = [];
-    if (fs.existsSync(filePath)) {
+let serverBomSequenceCounter = null;
+let serverBomReservationLock = Promise.resolve();
+
+const getOrReserveNextBomAtomic = async (commit = false) => {
+  return new Promise((resolve, reject) => {
+    serverBomReservationLock = serverBomReservationLock.then(async () => {
       try {
-        allRecords = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      } catch (e) {}
-    }
-    if (supabaseMemoryStore.bom_store && Array.isArray(supabaseMemoryStore.bom_store)) {
-      allRecords = [...allRecords, ...supabaseMemoryStore.bom_store];
-    }
+        let maxNum = 0;
+        const filePath = getStoreFilePath('bom_store.json');
+        let allRecords = [];
+        if (fs.existsSync(filePath)) {
+          try {
+            allRecords = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          } catch (e) {}
+        }
+        if (supabaseMemoryStore.bom_store && Array.isArray(supabaseMemoryStore.bom_store)) {
+          allRecords = [...allRecords, ...supabaseMemoryStore.bom_store];
+        }
 
-    // Also fetch from Supabase BOM_SEQUENCE and BOM_STORE
-    try {
-      const [seqRes, storeRes] = await Promise.all([
-        supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').order('id', { ascending: false }).limit(1),
-        supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').order('id', { ascending: false }).limit(1)
-      ]);
-      const seqRecord = seqRes.data?.[0];
-      const storeRecord = storeRes.data?.[0];
-      if (seqRecord && seqRecord.reason) {
         try {
-          const parsed = JSON.parse(seqRecord.reason);
-          const seqVal = parseInt(parsed?.lastNumber || parsed?.counter || 0);
-          if (seqVal > maxNum) maxNum = seqVal;
+          const [seqRes, storeRes] = await Promise.all([
+            supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').order('id', { ascending: false }).limit(1),
+            supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').order('id', { ascending: false }).limit(1)
+          ]);
+          const seqRecord = seqRes.data?.[0];
+          const storeRecord = storeRes.data?.[0];
+          if (seqRecord && seqRecord.reason) {
+            try {
+              const parsed = JSON.parse(seqRecord.reason);
+              const seqVal = parseInt(parsed?.lastNumber || parsed?.counter || 0);
+              if (Number.isFinite(seqVal) && seqVal > maxNum) maxNum = seqVal;
+            } catch (_) {}
+          }
+          if (storeRecord && storeRecord.reason) {
+            try {
+              const cloudBoms = JSON.parse(storeRecord.reason);
+              if (Array.isArray(cloudBoms)) allRecords = [...allRecords, ...cloudBoms];
+            } catch (_) {}
+          }
         } catch (_) {}
-      }
-      if (storeRecord && storeRecord.reason) {
-        try {
-          const cloudBoms = JSON.parse(storeRecord.reason);
-          if (Array.isArray(cloudBoms)) allRecords = [...allRecords, ...cloudBoms];
-        } catch (_) {}
-      }
-    } catch (_) {}
 
-    allRecords.forEach(b => {
-      const str = String(b.bomCode || b.code || b.id || '');
-      const match = str.match(/^BOM-(\d+)$/i);
-      if (match) {
-        const val = parseInt(match[1], 10);
-        if (Number.isFinite(val) && val > maxNum) maxNum = val;
+        allRecords.forEach(b => {
+          const str = String(b?.bomCode || b?.code || b?.id || '');
+          const match = str.match(/^BOM-(\d+)$/i);
+          if (match) {
+            const val = parseInt(match[1], 10);
+            if (Number.isFinite(val) && val > maxNum) maxNum = val;
+          }
+        });
+
+        if (serverBomSequenceCounter !== null && serverBomSequenceCounter > maxNum) {
+          maxNum = serverBomSequenceCounter;
+        }
+
+        const nextNum = maxNum + 1;
+        const nextBomCode = `BOM-${String(nextNum).padStart(3, '0')}`;
+
+        if (commit) {
+          serverBomSequenceCounter = nextNum;
+          try {
+            await supabase.from('leaves').update({
+              reason: JSON.stringify({ lastNumber: nextNum, updatedAt: new Date().toISOString() }),
+              duration: String(nextNum),
+              dates: new Date().toISOString()
+            }).eq('employee', 'BOM_SEQUENCE');
+          } catch (_) {}
+        }
+
+        resolve({ success: true, nextBomCode, maxNum: nextNum });
+      } catch (err) {
+        reject(err);
       }
-    });
+    }).catch(reject);
+  });
+};
+
+// Centralized Next BOM Code generator with optional atomic reservation
+app.get('/api/boms/next-code', async (req, res) => {
+  try {
+    const isReserve = req.query.reserve === 'true';
+    const result = await getOrReserveNextBomAtomic(isReserve);
+    res.json(result);
   } catch (err) {
-    console.error('Error computing next BOM code:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
-  maxNum = (Number.isFinite(maxNum) && maxNum >= 0) ? maxNum : 0;
-  const nextBomCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
-  res.json({ success: true, nextBomCode, maxNum });
+});
+
+// Atomic sequential reservation endpoint for concurrent salespeople
+app.post('/api/boms/reserve-code', async (req, res) => {
+  try {
+    const result = await getOrReserveNextBomAtomic(true);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Centralized GET all BOMs endpoint - reads authoritative list from disk & Supabase
@@ -2628,120 +2676,146 @@ app.post('/api/reset-all-testing-data', async (req, res) => {
 
 // Centralized atomic BOM creation/update endpoint - guarantees sequential non-clashing codes
 app.post('/api/boms', async (req, res) => {
-  try {
-    let { bom, isNew } = req.body;
-    if (!bom) {
-      return res.status(400).json({ success: false, message: 'Valid bom record required' });
-    }
-
-    const filePath = getStoreFilePath('bom_store.json');
-    let diskList = [];
-    if (fs.existsSync(filePath)) {
+  return new Promise((resolveOuter) => {
+    serverBomReservationLock = serverBomReservationLock.then(async () => {
       try {
-        diskList = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      } catch (e) {
-        diskList = [];
-      }
-    }
-    if (!Array.isArray(diskList)) diskList = [];
-
-    // Also get Supabase data to merge completely
-    let cloudList = [];
-    try {
-      const { data: record } = await supabase
-        .from('leaves')
-        .select('reason')
-        .eq('employee', 'BOM_STORE')
-        .maybeSingle();
-      if (record && record.reason) {
-        const parsed = JSON.parse(record.reason);
-        if (Array.isArray(parsed)) cloudList = parsed;
-      }
-    } catch (e) {}
-
-    // Merge map with existing boms
-    const map = new Map();
-    cloudList.forEach(item => {
-      const c = item?.bomCode || item?.code || item?.id;
-      if (c) map.set(c, item);
-    });
-    diskList.forEach(item => {
-      const c = item?.bomCode || item?.code || item?.id;
-      if (c) {
-        if (map.has(c)) {
-          map.set(c, { ...map.get(c), ...item });
-        } else {
-          map.set(c, item);
+        let { bom, isNew } = req.body;
+        if (!bom) {
+          res.status(400).json({ success: false, message: 'Valid bom record required' });
+          return resolveOuter();
         }
+
+        const filePath = getStoreFilePath('bom_store.json');
+        let diskList = [];
+        if (fs.existsSync(filePath)) {
+          try {
+            diskList = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          } catch (e) {
+            diskList = [];
+          }
+        }
+        if (!Array.isArray(diskList)) diskList = [];
+
+        // Also get Supabase data to merge completely
+        let cloudList = [];
+        try {
+          const { data: record } = await supabase
+            .from('leaves')
+            .select('reason')
+            .eq('employee', 'BOM_STORE')
+            .maybeSingle();
+          if (record && record.reason) {
+            const parsed = JSON.parse(record.reason);
+            if (Array.isArray(parsed)) cloudList = parsed;
+          }
+        } catch (e) {}
+
+        // Merge map with existing boms
+        const map = new Map();
+        cloudList.forEach(item => {
+          const c = item?.bomCode || item?.code || item?.id;
+          if (c) map.set(c, item);
+        });
+        diskList.forEach(item => {
+          const c = item?.bomCode || item?.code || item?.id;
+          if (c) {
+            if (map.has(c)) {
+              map.set(c, { ...map.get(c), ...item });
+            } else {
+              map.set(c, item);
+            }
+          }
+        });
+
+        // Compute true max sequence number across ALL existing BOMs
+        let maxNum = 0;
+        for (const key of map.keys()) {
+          const match = String(key).match(/^BOM-(\d+)/i);
+          if (match) {
+            const val = parseInt(match[1], 10);
+            if (Number.isFinite(val) && val > maxNum) maxNum = val;
+          }
+        }
+
+        if (serverBomSequenceCounter !== null && serverBomSequenceCounter > maxNum) {
+          maxNum = serverBomSequenceCounter;
+        }
+
+        const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
+        // Determine if this is a brand new creation or an update to an existing confirmed BOM
+        const alreadyExists = incomingCode && map.has(incomingCode);
+        const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
+        
+        // Only assign a new code if incoming code is missing, invalid, or already exists for a different new BOM
+        const shouldAssignNewCode = !isValidIncomingCode || (alreadyExists && isNew && !bom.isUpdate);
+
+        if (shouldAssignNewCode) {
+          maxNum += 1;
+          const assignedCode = `BOM-${String(maxNum).padStart(3, '0')}`;
+          bom.bomCode = assignedCode;
+          bom.code = assignedCode;
+          bom.id = assignedCode;
+        } else if (isValidIncomingCode) {
+          bom.bomCode = incomingCode;
+          bom.code = incomingCode;
+          bom.id = incomingCode;
+          const numMatch = incomingCode.match(/^BOM-(\d+)/i);
+          if (numMatch) {
+            const cNum = parseInt(numMatch[1], 10);
+            if (Number.isFinite(cNum) && cNum > maxNum) maxNum = cNum;
+          }
+        }
+
+        serverBomSequenceCounter = Math.max(serverBomSequenceCounter || 0, maxNum);
+
+        const finalCode = bom.bomCode || bom.code || bom.id;
+
+        // Merge or insert new BOM record
+        if (map.has(finalCode)) {
+          map.set(finalCode, { ...map.get(finalCode), ...bom });
+        } else {
+          map.set(finalCode, bom);
+        }
+
+        const mergedList = Array.from(map.values());
+
+        // Save to server disk
+        try {
+          fs.writeFileSync(filePath, JSON.stringify(mergedList, null, 2), 'utf8');
+        } catch (e) {
+          console.error('Error writing bom_store.json:', e);
+        }
+
+        // Save to Supabase
+        try {
+          await pushStoreToSupabase('bom_store', mergedList);
+        } catch (e) {
+          console.error('Error pushing bom_store to Supabase:', e);
+        }
+
+        // Asynchronously update BOM_SEQUENCE in Supabase
+        try {
+          await supabase.from('leaves').update({
+            reason: JSON.stringify({ lastNumber: serverBomSequenceCounter, updatedAt: new Date().toISOString() }),
+            duration: String(serverBomSequenceCounter),
+            dates: new Date().toISOString()
+          }).eq('employee', 'BOM_SEQUENCE');
+        } catch (_) {}
+
+        console.log(`[BOM Store] BOM ${finalCode} saved (isNew: ${shouldAssignNewCode}). Status: ${bom.status}. Total BOMs: ${mergedList.length}`);
+        res.json({ success: true, bom, bomCode: finalCode, total: mergedList.length });
+        resolveOuter();
+      } catch (err) {
+        console.error('Error saving BOM:', err);
+        res.status(500).json({ success: false, message: err.message });
+        resolveOuter();
       }
+    }).catch(err => {
+      console.error('Lock error in /api/boms:', err);
+      res.status(500).json({ success: false, message: err?.message || 'Server lock error' });
+      resolveOuter();
     });
-
-    // Compute true max sequence number across ALL existing BOMs
-    let maxNum = 0;
-    for (const key of map.keys()) {
-      const match = String(key).match(/^BOM-(\d+)/i);
-      if (match) {
-        const val = parseInt(match[1], 10);
-        if (Number.isFinite(val) && val > maxNum) maxNum = val;
-      }
-    }
-
-    const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
-    // Determine if this is a brand new creation or an update to an existing confirmed BOM
-    const alreadyExists = incomingCode && map.has(incomingCode);
-    const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
-    
-    // Only assign a new code if incoming code is missing, invalid, or already exists for a different new BOM
-    const shouldAssignNewCode = !isValidIncomingCode || (alreadyExists && isNew && !bom.isUpdate);
-
-    if (shouldAssignNewCode) {
-      maxNum += 1;
-      const assignedCode = `BOM-${String(maxNum).padStart(3, '0')}`;
-      bom.bomCode = assignedCode;
-      bom.code = assignedCode;
-      bom.id = assignedCode;
-    } else if (isValidIncomingCode) {
-      bom.bomCode = incomingCode;
-      bom.code = incomingCode;
-      bom.id = incomingCode;
-      const numMatch = incomingCode.match(/^BOM-(\d+)/i);
-      if (numMatch) {
-        const cNum = parseInt(numMatch[1], 10);
-        if (Number.isFinite(cNum) && cNum > maxNum) maxNum = cNum;
-      }
-    }
-
-    const finalCode = bom.bomCode || bom.code || bom.id;
-
-    // Merge or insert new BOM record
-    if (map.has(finalCode)) {
-      map.set(finalCode, { ...map.get(finalCode), ...bom });
-    } else {
-      map.set(finalCode, bom);
-    }
-
-    const mergedList = Array.from(map.values());
-
-    // Save to server disk
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(mergedList, null, 2), 'utf8');
-    } catch (e) {
-      console.error('Error writing bom_store.json:', e);
-    }
-
-    // Save to Supabase
-    try {
-      await pushStoreToSupabase('bom_store', mergedList);
-    } catch (e) {
-      console.error('Error pushing bom_store to Supabase:', e);
-    }
-
-    console.log(`[BOM Store] BOM ${finalCode} saved (isNew: ${shouldAssignNewCode}). Status: ${bom.status}. Total BOMs: ${mergedList.length}`);
-    return res.json({ success: true, bom, bomCode: finalCode, total: mergedList.length });
-  } catch (err) {
-    console.error('Error saving BOM:', err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
+  });
 });
 
 // Real-time synchronization endpoint retrieving live purchase orders from Zoho Books

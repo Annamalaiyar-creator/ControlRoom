@@ -5932,5 +5932,4487 @@
     "cgstAmount": 1260.99,
     "sgstAmount": 1260.99,
     "grandTotal": 16532.98
+  },
+  {
+    "bomCode": "BOM-627",
+    "customerName": "Kalaiselvi Solar Project",
+    "companyName": "Kalaiselvi Solar Project",
+    "salesPerson": "Kalaiselvi T",
+    "salesPersonCode": "EMP-SE-02",
+    "createdBy": "Kalaiselvi T",
+    "createdById": "EMP-SE-02",
+    "grandTotal": 25000,
+    "subTotal": 21186.44,
+    "gstAmount": 3813.56,
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "paymentType": "100% Paid",
+    "code": "BOM-627",
+    "id": "BOM-627"
+  },
+  {
+    "id": "BOM-629",
+    "bomCode": "BOM-629",
+    "code": "BOM-629",
+    "date": "2026-09-10",
+    "customerName": "Designer private limited",
+    "companyName": "Designer private limited",
+    "mobile": "702996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "8/1 nagar, Chennai, tamil nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "8/1 nagar",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "1234565",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "size": "0.71 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-10T10:18:45.097Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T10:18:47.651Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "100mm mini rail (new)",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 240,
+        "rate": 145,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+        "size": "0.71 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-10T10:18:45.097Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "100mm mini rail (new)",
+        "bomQty": 240,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T10:18:47.651Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 221000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789035496133_1jlj",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "221000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 255800,
+    "gstAmount": 46044,
+    "cgstAmount": 23022,
+    "sgstAmount": 23022,
+    "grandTotal": 301844
+  },
+  {
+    "id": "BOM-630",
+    "bomCode": "BOM-630",
+    "code": "BOM-630",
+    "date": "2026-09-10",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "billingAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T10:39:49.202Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "HDG",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T10:39:49.203Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 20000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789036775420_1ib0",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "20000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 20000,
+    "gstAmount": 3600,
+    "cgstAmount": 1800,
+    "sgstAmount": 1800,
+    "grandTotal": 23600
+  },
+  {
+    "id": "BOM-632",
+    "bomCode": "BOM-632",
+    "code": "BOM-632",
+    "date": "2026-09-10",
+    "customerName": "Test Node Company 99",
+    "companyName": "Test Node Company 99",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "PRIYA'S HOME, CHENNAI, TAMIL NADU, Pincode: 600058",
+    "deliveryAddressObj": {
+      "address": "PRIYA'S HOME",
+      "city": "CHENNAI",
+      "state": "TAMIL NADU",
+      "pincode": "600058"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 12.48.49 PM (3).jpeg",
+      "size": "0.10 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T10:40:07.796Z"
+    },
+    "transportMode": "Own Vehicle",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "size": "0.10 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T10:41:01.256Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "50%",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T10:41:08.598Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "100mm mini rail (old)",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1000,
+        "rate": 129,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+        "size": "0.10 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T10:41:01.256Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "100mm mini rail (old)",
+        "bomQty": 1000,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T10:41:08.598Z",
+    "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789036814342_hmud",
+        "presetId": "hp_2_3_hp__500_x_1000_",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 141000,
+    "gstAmount": 25380,
+    "cgstAmount": 12690,
+    "sgstAmount": 12690,
+    "grandTotal": 166380
+  },
+  {
+    "id": "BOM-634",
+    "bomCode": "BOM-634",
+    "code": "BOM-634",
+    "date": "2026-09-10",
+    "customerName": "Sunpower EPC Ltd",
+    "companyName": "Sunpower EPC Ltd",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "Customer Scope",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 4.35.13 PM.jpeg",
+      "size": "0.01 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:11:15.476Z"
+    },
+    "paymentUpdated": false,
+    "remarks": ",",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:11:25.767Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-10 at 4.35.13 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-10 at 4.35.13 PM.jpeg",
+        "size": "0.01 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:11:15.476Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:11:25.767Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 9800,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789038646048_6iu1",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "9800",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 9800,
+    "gstAmount": 1764,
+    "cgstAmount": 882,
+    "sgstAmount": 882,
+    "grandTotal": 11564
+  },
+  {
+    "id": "BOM-635",
+    "bomCode": "BOM-635",
+    "code": "BOM-635",
+    "date": "2026-09-10",
+    "customerName": "Test Auto Energy Corp",
+    "companyName": "Test Auto Energy Corp",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "size": "0.10 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:12:12.196Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:12:59.236Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+        "size": "0.10 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:12:12.196Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:12:59.236Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 20000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789038712446_iaae",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "20000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 20000,
+    "gstAmount": 3600,
+    "cgstAmount": 1800,
+    "sgstAmount": 1800,
+    "grandTotal": 23600
+  },
+  {
+    "id": "BOM-636",
+    "bomCode": "BOM-636",
+    "code": "BOM-636",
+    "date": "2026-09-10",
+    "customerName": "Test Auto Energy Corp",
+    "companyName": "Test Auto Energy Corp",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "size": "0.10 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:12:12.196Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:13:00.539Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-10 at 3.34.04 PM.jpeg",
+        "size": "0.10 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:12:12.196Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:13:00.539Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 20000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789038712446_iaae",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "20000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 20000,
+    "gstAmount": 3600,
+    "cgstAmount": 1800,
+    "sgstAmount": 1800,
+    "grandTotal": 23600
+  },
+  {
+    "id": "BOM-637",
+    "bomCode": "BOM-637",
+    "code": "BOM-637",
+    "date": "2026-09-10",
+    "customerName": "AK SMART AUTOMATIONS",
+    "companyName": "AK SMART AUTOMATIONS",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "a2b",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "20180504_212145.jpg",
+      "size": "1.01 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:39.043Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:21:43.682Z",
+    "salesPerson": "AHILESH",
+    "salesPersonCode": "SE-VRM011",
+    "createdBy": "AHILESH",
+    "createdById": "SE-VRM011",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "20180504_212145.jpg",
+      "proofDocObj": {
+        "name": "20180504_212145.jpg",
+        "size": "1.01 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:21:39.043Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:21:43.682Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 3333,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039267875_oke8",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "3333",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 3333,
+    "gstAmount": 599.9399999999999,
+    "cgstAmount": 299.96999999999997,
+    "sgstAmount": 299.96999999999997,
+    "grandTotal": 3932.94
+  },
+  {
+    "id": "BOM-638",
+    "bomCode": "BOM-638",
+    "code": "BOM-638",
+    "date": "2026-09-10",
+    "customerName": "AK SMART AUTOMATIONS",
+    "companyName": "AK SMART AUTOMATIONS",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "a2b",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "20180504_212145.jpg",
+      "size": "1.01 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:39.043Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:21:45.190Z",
+    "salesPerson": "AHILESH",
+    "salesPersonCode": "SE-VRM011",
+    "createdBy": "AHILESH",
+    "createdById": "SE-VRM011",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "20180504_212145.jpg",
+      "proofDocObj": {
+        "name": "20180504_212145.jpg",
+        "size": "1.01 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:21:39.043Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:21:45.190Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 3333,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039267875_oke8",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "3333",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 3333,
+    "gstAmount": 599.9399999999999,
+    "cgstAmount": 299.96999999999997,
+    "sgstAmount": 299.96999999999997,
+    "grandTotal": 3932.94
+  },
+  {
+    "id": "BOM-639",
+    "bomCode": "BOM-639",
+    "code": "BOM-639",
+    "date": "2026-09-10",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "billingAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:22:10.112Z",
+    "salesPerson": "Hashwin Kaanth",
+    "salesPersonCode": "SE-VRM012",
+    "createdBy": "Hashwin Kaanth",
+    "createdById": "SE-VRM012",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:22:10.112Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 10000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039217495_4sfb",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "10000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 10000,
+    "gstAmount": 1800,
+    "cgstAmount": 900,
+    "sgstAmount": 900,
+    "grandTotal": 11800
+  },
+  {
+    "id": "BOM-642",
+    "bomCode": "BOM-642",
+    "code": "BOM-642",
+    "date": "2026-09-10",
+    "customerName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "companyName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "NO.257 ,nagappa industril estate , chennai, Tamilnadu, Pincode: 600052",
+    "deliveryAddressObj": {
+      "address": "NO.257 ,nagappa industril estate ",
+      "city": "chennai",
+      "state": "Tamilnadu",
+      "pincode": "600052"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:25.234Z"
+    },
+    "transportMode": "Own Vehicle",
+    "transportScope": "VRM Structures",
+    "transporterName": "vrm",
+    "vehicleNo": "TN18BC1593",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:22:11.523Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:22:17.283Z",
+    "salesPerson": "PAVI",
+    "salesPersonCode": "SE-VRM 10",
+    "createdBy": "PAVI",
+    "createdById": "SE-VRM 10",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+        "size": "0.08 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:22:11.523Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:22:17.283Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039221032_f8i3",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160
+  },
+  {
+    "id": "BOM-643",
+    "bomCode": "BOM-643",
+    "code": "BOM-643",
+    "date": "2026-09-10",
+    "customerName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "companyName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "NO.257 ,nagappa industril estate , chennai, Tamilnadu, Pincode: 600052",
+    "deliveryAddressObj": {
+      "address": "NO.257 ,nagappa industril estate ",
+      "city": "chennai",
+      "state": "Tamilnadu",
+      "pincode": "600052"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:25.234Z"
+    },
+    "transportMode": "Own Vehicle",
+    "transportScope": "VRM Structures",
+    "transporterName": "vrm",
+    "vehicleNo": "TN18BC1593",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:22:11.523Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:22:18.605Z",
+    "salesPerson": "PAVI",
+    "salesPersonCode": "SE-VRM 10",
+    "createdBy": "PAVI",
+    "createdById": "SE-VRM 10",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+        "size": "0.08 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:22:11.523Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:22:18.605Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039221032_f8i3",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160
+  },
+  {
+    "id": "BOM-644",
+    "bomCode": "BOM-644",
+    "code": "BOM-644",
+    "date": "2026-09-10",
+    "customerName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "companyName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "NO.257 ,nagappa industril estate , chennai, Tamilnadu, Pincode: 600052",
+    "deliveryAddressObj": {
+      "address": "NO.257 ,nagappa industril estate ",
+      "city": "chennai",
+      "state": "Tamilnadu",
+      "pincode": "600052"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:25.234Z"
+    },
+    "transportMode": "Own Vehicle",
+    "transportScope": "VRM Structures",
+    "transporterName": "vrm",
+    "vehicleNo": "TN18BC1593",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:22:11.523Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:22:20.026Z",
+    "salesPerson": "PAVI",
+    "salesPersonCode": "SE-VRM 10",
+    "createdBy": "PAVI",
+    "createdById": "SE-VRM 10",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+        "size": "0.08 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:22:11.523Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:22:20.026Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039221032_f8i3",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160
+  },
+  {
+    "id": "BOM-645",
+    "bomCode": "BOM-645",
+    "code": "BOM-645",
+    "date": "2026-09-10",
+    "customerName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "companyName": "VRM Structures India Private Limited [CUST-VRM-105]",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "NO.257 ,nagappa industril estate , chennai, Tamilnadu, Pincode: 600052",
+    "deliveryAddressObj": {
+      "address": "NO.257 ,nagappa industril estate ",
+      "city": "chennai",
+      "state": "Tamilnadu",
+      "pincode": "600052"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:21:25.234Z"
+    },
+    "transportMode": "Own Vehicle",
+    "transportScope": "VRM Structures",
+    "transporterName": "vrm",
+    "vehicleNo": "TN18BC1593",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:22:11.523Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:22:20.313Z",
+    "salesPerson": "PAVI",
+    "salesPersonCode": "SE-VRM 10",
+    "createdBy": "PAVI",
+    "createdById": "SE-VRM 10",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+        "size": "0.08 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:22:11.523Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:22:20.314Z",
+    "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039221032_f8i3",
+        "presetId": "hp_2_4_hp__500_x_1000_",
+        "presetName": "2*4 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160
+  },
+  {
+    "id": "BOM-646",
+    "bomCode": "BOM-646",
+    "code": "BOM-646",
+    "date": "2026-09-10",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "billingAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "TN18BC1593",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "size": "0.08 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:23:55.329Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:24:31.242Z",
+    "salesPerson": "PAVI",
+    "salesPersonCode": "SE-VRM 10",
+    "createdBy": "PAVI",
+    "createdById": "SE-VRM 10",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-03 at 21.51.38.jpeg",
+        "size": "0.08 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:23:55.329Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:24:31.242Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 2000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039422220_t6n4",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "2000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 2000,
+    "gstAmount": 360,
+    "cgstAmount": 180,
+    "sgstAmount": 180,
+    "grandTotal": 2360
+  },
+  {
+    "id": "BOM-647",
+    "bomCode": "BOM-647",
+    "code": "BOM-647",
+    "date": "2026-09-10",
+    "customerName": "Sunpower EPC Ltd",
+    "companyName": "Sunpower EPC Ltd",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "125mm mini rail .jpeg",
+      "size": "0.39 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-10T11:24:30.816Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-10T11:24:43.993Z",
+    "salesPerson": "Hashwin Kaanth",
+    "salesPersonCode": "SE-VRM012",
+    "createdBy": "Hashwin Kaanth",
+    "createdById": "SE-VRM012",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "125mm mini rail .jpeg",
+      "proofDocObj": {
+        "name": "125mm mini rail .jpeg",
+        "size": "0.39 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-10T11:24:30.816Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-10T11:24:43.993Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 10000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789039421594_4h1i",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "10000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 10000,
+    "gstAmount": 1800,
+    "cgstAmount": 900,
+    "sgstAmount": 900,
+    "grandTotal": 11800
   }
 ]

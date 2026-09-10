@@ -768,9 +768,9 @@ export default function BomOrdersView(props) {
     setNewBomDeliveryState('');
     setNewBomDeliveryPincode('');
 
-    // Fetch next sequential BOM code from Supabase Central Cloud Sequence
+    // Atomically reserve next unique sequential BOM code from Central Server & Cloud Sequence
     try {
-      const code = await getAndReserveNextBomCode(false);
+      const code = await getAndReserveNextBomCode(true);
       if (code) {
         setNewBomCode(code);
       }
@@ -2718,7 +2718,7 @@ export default function BomOrdersView(props) {
 
                       // 1. Atomically reserve unique sequential code from Supabase Cloud Sequence
                       let finalAssignedCode = finalCode;
-                      if (!isDraft) {
+                      if (!isDraft && (!finalAssignedCode || !/^BOM-\d+$/i.test(finalAssignedCode))) {
                         try {
                           const reservedCode = await getAndReserveNextBomCode(true);
                           if (reservedCode && /^BOM-\d+$/i.test(reservedCode)) {
@@ -2733,6 +2733,7 @@ export default function BomOrdersView(props) {
                       sanitizedNewBom.id = finalAssignedCode;
 
                       // 2. Synchronize with server backend & Supabase Cloud Store IMMEDIATELY
+                      // The server's atomic lock guarantees uniqueness and merges directly into both disk and Supabase
                       try {
                         const sRes = await fetch('/api/boms', {
                           method: 'POST',
@@ -2752,16 +2753,10 @@ export default function BomOrdersView(props) {
                         console.error('Error syncing /api/boms:', err);
                       }
 
+                      // Update local React state without clobbering concurrent records in the cloud
                       const current = Array.isArray(bomStore) ? bomStore : [];
                       const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
                       const updatedList = [sanitizedNewBom, ...filtered];
-
-                      try {
-                        await saveCloudStoreImmediate('bom_store', updatedList);
-                      } catch (err) {
-                        console.error('Error saving to Supabase:', err);
-                      }
-
                       setBomStore(updatedList);
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
