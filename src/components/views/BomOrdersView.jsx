@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
@@ -821,7 +821,7 @@ export default function BomOrdersView(props) {
   }, [convertingPiData]);
 
   // Open Create BOM form handler
-  const handleOpenCreateBom = () => {
+  const handleOpenCreateBom = async () => {
     setNewBomSalesPerson(getEffectiveSalesPerson());
     setNewBomProductName('');
     setBomMaterialsList([]);
@@ -834,23 +834,18 @@ export default function BomOrdersView(props) {
     setNewBomDeliveryState('');
     setNewBomDeliveryPincode('');
 
-    // Fetch next sequential BOM code from server with fallback to local store
-    fetch('/api/boms/next-code')
-      .then(r => r.json())
-      .then(d => {
-        if (d && d.nextBomCode) {
-          setNewBomCode(d.nextBomCode);
-        } else {
-          const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-          const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 621;
-          setNewBomCode(`BOM-${maxNum + 1}`);
-        }
-      })
-      .catch(() => {
-        const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-        const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 621;
-        setNewBomCode(`BOM-${maxNum + 1}`);
-      });
+    // Fetch next sequential BOM code from Supabase Central Cloud Sequence
+    try {
+      const code = await getAndReserveNextBomCode(false);
+      if (code) {
+        setNewBomCode(code);
+      }
+    } catch (err) {
+      console.error('Error reserving next BOM code:', err);
+      const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
+      const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 624;
+      setNewBomCode(`BOM-${maxNum + 1}`);
+    }
 
     setShowBOMForm(true);
   };
@@ -2775,31 +2770,35 @@ export default function BomOrdersView(props) {
 
                       let sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
 
-                      // 1. Immediately send to Central Server with isNew flag to guarantee unique sequential number
+                      // 1. Atomically reserve unique sequential code from Supabase Cloud Sequence
                       let finalAssignedCode = finalCode;
+                      if (!isDraft) {
+                        try {
+                          const reservedCode = await getAndReserveNextBomCode(true);
+                          if (reservedCode) {
+                            finalAssignedCode = reservedCode;
+                          }
+                        } catch (err) {
+                          console.error('Error reserving atomic BOM code:', err);
+                        }
+                      }
+                      sanitizedNewBom.bomCode = finalAssignedCode;
+                      sanitizedNewBom.code = finalAssignedCode;
+                      sanitizedNewBom.id = finalAssignedCode;
+
+                      // Synchronize with server disk cache asynchronously
                       try {
-                        const sRes = await fetch('/api/boms', {
+                        fetch('/api/boms', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
-                        });
-                        if (sRes.ok) {
-                          const sData = await sRes.json();
-                          if (sData && (sData.bomCode || sData.bom?.bomCode)) {
-                            finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
-                            sanitizedNewBom.bomCode = finalAssignedCode;
-                            sanitizedNewBom.code = finalAssignedCode;
-                            sanitizedNewBom.id = finalAssignedCode;
-                          }
-                        }
-                      } catch (err) {
-                        console.error('Error in /api/boms sync:', err);
-                      }
+                        }).catch(() => {});
+                      } catch (err) {}
 
                       // 2. Update local state and persist
                       setBomStore(prev => {
                         const current = Array.isArray(prev) ? prev : [];
-                        const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
+                        const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
                         const updatedList = [sanitizedNewBom, ...filtered];
                         try {
                           localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
@@ -2847,7 +2846,6 @@ export default function BomOrdersView(props) {
                       setNewBomCode('');
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
-                      alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created!\nStatus: Pending Sales Confirmation.\nPlease review & confirm the BOM before forwarding to Dispatch.`);
                     }
                   }}
                   style={{

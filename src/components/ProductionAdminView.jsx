@@ -10,6 +10,7 @@ import POStatusOverview from './POStatusOverview';
 import DailyProductionTrendChart from './DailyProductionTrendChart';
 import StatusBadge from './StatusBadge';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
+import { fetchCloudStore } from '../utils/supabaseDataSync';
 
 export default function ProductionAdminView({ activeTab, userRole }) {
   const isDispatchView = userRole === 'Dispatch Head' || activeTab === 'Dispatch Dashboard';
@@ -18,6 +19,35 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   const [selectedYear, setSelectedYear] = useState('2026');
   const [trendFilter, setTrendFilter] = useState('Daily');
   const [activeTrendIndex, setActiveTrendIndex] = useState(6);
+
+  // Live BOM Store for Dispatch views
+  const [bomStore, setBomStore] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_bom_store');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [];
+  });
+
+  useEffect(() => {
+    const loadBoms = async () => {
+      try {
+        const cloudBoms = await fetchCloudStore('bom_store', []);
+        if (Array.isArray(cloudBoms) && cloudBoms.length > 0) {
+          setBomStore(cloudBoms);
+        }
+      } catch (_) {}
+    };
+    loadBoms();
+    const handleUpdate = () => {
+      try {
+        const saved = localStorage.getItem('controlroom_bom_store');
+        if (saved) setBomStore(JSON.parse(saved));
+      } catch (_) {}
+    };
+    window.addEventListener('controlroom_storage_update', handleUpdate);
+    return () => window.removeEventListener('controlroom_storage_update', handleUpdate);
+  }, []);
 
   // Live Zoho Inventory Work Orders State
   const [workOrders, setWorkOrders] = useState([]);
@@ -1198,17 +1228,32 @@ export default function ProductionAdminView({ activeTab, userRole }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(isDispatchView ? [
-                    { workOrderNo: 'WO-1', productName: 'ABC Solar Pvt Ltd', plannedQty: '500 Nos', delayDays: '2 Days', status: 'Overdue' },
-                    { workOrderNo: 'WO-2', productName: 'Sun Power EPC', plannedQty: '200 Nos', delayDays: '2 Days', status: 'Overdue' },
-                    { workOrderNo: 'WO-3', productName: 'Green Infra Ltd', plannedQty: '1500 Nos', delayDays: '1 Day', status: 'Pending' },
-                    { workOrderNo: 'WO-4', productName: 'Bright Energy', plannedQty: '400 Nos', delayDays: '1 Day', status: 'Pending' }
-                  ] : displayOrders).map((ord, idx) => (
-                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? 3 : displayOrders.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
+                  {(isDispatchView ? (
+                    (bomStore || []).filter(b => b && b.status && b.status !== 'Draft').slice(0, 5).map(b => {
+                      const totalQty = (b.items || []).reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0);
+                      const packedQty = (b.dispatchPacking || []).filter(p => p.packed).length;
+                      const totalItems = (b.dispatchPacking || b.items || []).length;
+                      let statusText = 'Pending Packing';
+                      if (b.status === 'Closed' || b.status === 'Fully Dispatched & Delivered') statusText = 'Dispatched';
+                      else if (packedQty > 0 && packedQty === totalItems) statusText = 'Packed';
+                      else if (packedQty > 0) statusText = 'Partially Packed';
+                      else if (b.status.includes('Production')) statusText = 'In Production';
+                      else if (b.status.includes('Confirmed')) statusText = 'Sales Confirmed';
+
+                      return {
+                        workOrderNo: b.bomCode || b.code || b.id,
+                        productName: b.customerName || b.companyName || 'Corporate Client',
+                        plannedQty: `${totalQty.toLocaleString('en-IN')} Nos`,
+                        delayDays: b.salesConfirmed ? 'On Schedule' : '1 Day',
+                        status: statusText
+                      };
+                    })
+                  ) : displayOrders).map((ord, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === (isDispatchView ? Math.min((bomStore || []).length, 5) - 1 : displayOrders.length - 1) ? 'none' : '1px solid #F1F5F9' }}>
                       <td style={{ padding: '7px 10px', color: '#64748B', fontWeight: '600' }}>{ord.workOrderNo}</td>
                       <td style={{ padding: '7px 10px', fontWeight: '700', color: '#0F172A' }}>{ord.productName}</td>
                       <td style={{ padding: '7px 10px', color: '#64748B' }}>{ord.plannedQty}</td>
-                      <td style={{ padding: '7px 10px', fontWeight: '800', color: ord.status === 'Overdue' ? '#DC2626' : '#D97706' }}>{ord.delayDays || '1 Day'}</td>
+                      <td style={{ padding: '7px 10px', fontWeight: '800', color: ord.delayDays === 'On Schedule' ? '#16A34A' : (ord.status === 'Overdue' ? '#DC2626' : '#D97706') }}>{ord.delayDays || 'On Schedule'}</td>
                       <td style={{ padding: '7px 10px' }}>
                         <StatusBadge status={ord.status} size="sm" />
                       </td>

@@ -2477,7 +2477,7 @@ app.get('/api/zoho/next-po-number', async (req, res) => {
 
 // Centralized Next BOM Code generator guaranteeing unique sequential codes across all users
 app.get('/api/boms/next-code', async (req, res) => {
-  let maxNum = 621; // Default seed based on existing records
+  let maxNum = 624; // Default seed based on existing records
   try {
     const filePath = getStoreFilePath('bom_store.json');
     let allRecords = [];
@@ -2489,9 +2489,31 @@ app.get('/api/boms/next-code', async (req, res) => {
     if (supabaseMemoryStore.bom_store && Array.isArray(supabaseMemoryStore.bom_store)) {
       allRecords = [...allRecords, ...supabaseMemoryStore.bom_store];
     }
+
+    // Also fetch from Supabase BOM_SEQUENCE and BOM_STORE
+    try {
+      const [seqRes, storeRes] = await Promise.all([
+        supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').maybeSingle(),
+        supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').maybeSingle()
+      ]);
+      if (seqRes.data && seqRes.data.reason) {
+        try {
+          const parsed = JSON.parse(seqRes.data.reason);
+          const seqVal = parseInt(parsed?.lastNumber || parsed?.counter || 0);
+          if (seqVal > maxNum) maxNum = seqVal;
+        } catch (_) {}
+      }
+      if (storeRes.data && storeRes.data.reason) {
+        try {
+          const cloudBoms = JSON.parse(storeRes.data.reason);
+          if (Array.isArray(cloudBoms)) allRecords = [...allRecords, ...cloudBoms];
+        } catch (_) {}
+      }
+    } catch (_) {}
+
     allRecords.forEach(b => {
       const str = String(b.bomCode || b.code || b.id || '');
-      const match = str.match(/^BOM-(\d+)/i);
+      const match = str.match(/BOM-(\d+)/i);
       if (match) {
         const val = parseInt(match[1], 10);
         if (val > maxNum) maxNum = val;

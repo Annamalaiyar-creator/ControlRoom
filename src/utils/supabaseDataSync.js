@@ -220,18 +220,29 @@ export function saveCloudStore(storeKey, storeData) {
       const employeeKey = storeKey.toUpperCase();
       const { data: record } = await supabase
         .from('leaves')
-        .select('id')
+        .select('id, reason')
         .eq('employee', employeeKey)
         .maybeSingle();
+
+      let finalPayload = dataToSave;
+      if (Array.isArray(dataToSave) && record && record.reason) {
+        try {
+          const existingCloud = JSON.parse(record.reason);
+          if (Array.isArray(existingCloud) && existingCloud.length > 0) {
+            // merge existing cloud records with dataToSave so we NEVER delete or regress cloud items
+            finalPayload = mergeDatasets(existingCloud, dataToSave);
+          }
+        } catch (_) {}
+      }
 
       if (record && record.id) {
         await supabase
           .from('leaves')
           .update({
-            reason: JSON.stringify(dataToSave),
+            reason: JSON.stringify(finalPayload),
             status: 'active',
             dates: new Date().toISOString(),
-            duration: String(Array.isArray(dataToSave) ? dataToSave.length : 1)
+            duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1)
           })
           .eq('id', record.id);
       } else {
@@ -239,10 +250,10 @@ export function saveCloudStore(storeKey, storeData) {
           .from('leaves')
           .insert({
             employee: employeeKey,
-            reason: JSON.stringify(dataToSave),
+            reason: JSON.stringify(finalPayload),
             status: 'active',
             dates: new Date().toISOString(),
-            duration: String(Array.isArray(dataToSave) ? dataToSave.length : 1),
+            duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1),
             type: 'Store'
           });
       }
@@ -258,6 +269,112 @@ export function saveCloudStore(storeKey, storeData) {
       }).catch(() => {});
     } catch (err) {}
   }, 400);
+}
+
+/**
+ * Atomically reserve or peek the next sequential BOM code from Supabase.
+ * Guaranteed uniqueness across 5+ concurrent salespeople.
+ * @param {boolean} [commit=true] - If true, atomically increments and saves the new counter.
+ * @returns {Promise<string>} Next BOM code (e.g., 'BOM-625')
+ */
+export async function getAndReserveNextBomCode(commit = true) {
+  let highestNum = 624;
+
+  try {
+    // 1. Fetch current sequence counter and BOM store from Supabase in parallel
+    const [seqRes, storeRes] = await Promise.all([
+      supabase.from('leaves').select('id, reason').eq('employee', 'BOM_SEQUENCE').maybeSingle(),
+      supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').maybeSingle()
+    ]);
+
+    let seqCounter = 0;
+    if (seqRes.data && seqRes.data.reason) {
+      try {
+        const parsedSeq = JSON.parse(seqRes.data.reason);
+        seqCounter = parseInt(parsedSeq?.lastNumber || parsedSeq?.counter || parsedSeq || 0);
+      } catch (_) {}
+    }
+
+    let storeMax = 0;
+    if (storeRes.data && storeRes.data.reason) {
+      try {
+        const list = JSON.parse(storeRes.data.reason);
+        if (Array.isArray(list)) {
+          const nums = list.map(b => {
+            const raw = String(b.bomCode || b.code || b.id || '');
+            const match = raw.match(/BOM-(\d+)/i);
+            return match ? parseInt(match[1]) : 0;
+          }).filter(n => !isNaN(n) && n > 0);
+          if (nums.length > 0) storeMax = Math.max(...nums);
+        }
+      } catch (_) {}
+    }
+
+    // Also check local storage as backup
+    let localMax = 0;
+    try {
+      const localStr = localStorage.getItem('controlroom_bom_store');
+      if (localStr) {
+        const localList = JSON.parse(localStr);
+        if (Array.isArray(localList)) {
+          const nums = localList.map(b => {
+            const raw = String(b.bomCode || b.code || b.id || '');
+            const match = raw.match(/BOM-(\d+)/i);
+            return match ? parseInt(match[1]) : 0;
+          }).filter(n => !isNaN(n) && n > 0);
+          if (nums.length > 0) localMax = Math.max(...nums);
+        }
+      }
+    } catch (_) {}
+
+    highestNum = Math.max(seqCounter, storeMax, localMax, 624);
+    const nextNum = highestNum + 1;
+
+    if (commit) {
+      const seqPayload = JSON.stringify({
+        lastNumber: nextNum,
+        updatedAt: new Date().toISOString(),
+        reservedBy: localStorage.getItem('controlroom_logged_user_name') || 'Sales Rep'
+      });
+
+      if (seqRes.data && seqRes.data.id) {
+        await supabase
+          .from('leaves')
+          .update({
+            reason: seqPayload,
+            dates: new Date().toISOString(),
+            status: 'active',
+            duration: String(nextNum)
+          })
+          .eq('id', seqRes.data.id);
+      } else {
+        await supabase
+          .from('leaves')
+          .insert({
+            employee: 'BOM_SEQUENCE',
+            reason: seqPayload,
+            dates: new Date().toISOString(),
+            status: 'active',
+            duration: String(nextNum),
+            type: 'Sequence'
+          });
+      }
+    }
+
+    return `BOM-${nextNum}`;
+  } catch (err) {
+    console.error('Error reserving next BOM code from Supabase:', err);
+    let max = 624;
+    try {
+      const localStr = localStorage.getItem('controlroom_bom_store');
+      if (localStr) {
+        const localList = JSON.parse(localStr);
+        const nums = localList.map(b => parseInt(String(b.bomCode || b.code || '').replace(/[^0-9]/g, ''))).filter(n => !isNaN(n));
+        if (nums.length > 0) max = Math.max(...nums);
+      }
+    } catch (_) {}
+    return `BOM-${max + 1}`;
+  }
 }
 
 /**

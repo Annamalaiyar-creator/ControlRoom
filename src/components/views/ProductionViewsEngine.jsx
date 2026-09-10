@@ -214,7 +214,9 @@ export default function ProductionViewsEngine(props) {
     ];
   });
 
-  // Save bomStore to localStorage on every change and sync cloud store
+  const hasInitialSyncedRef = useRef(false);
+
+  // Save bomStore to localStorage on every change and sync cloud store only after initial load
   useEffect(() => {
     if (bomStore && Array.isArray(bomStore) && bomStore.length > 0) {
       const sanitized = bomStore.map(stripDataUrlsFromRecord);
@@ -223,7 +225,9 @@ export default function ProductionViewsEngine(props) {
       } catch (e) {
         console.error("Error setting controlroom_bom_store", e);
       }
-      saveCloudStore('bom_store', sanitized);
+      if (hasInitialSyncedRef.current) {
+        saveCloudStore('bom_store', sanitized);
+      }
     }
   }, [bomStore]);
 
@@ -290,6 +294,8 @@ export default function ProductionViewsEngine(props) {
         }
       } catch (err) {
         console.error('Error syncing BOMs in ProductionViewsEngine:', err);
+      } finally {
+        hasInitialSyncedRef.current = true;
       }
     };
 
@@ -4392,15 +4398,15 @@ export default function ProductionViewsEngine(props) {
               actionText: '',
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
-                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production')) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed'].includes(b.status)).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft').length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft' && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Awaiting Vehicle Loading & Dispatch', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#FFEDD5', fg: '#C2410C' },
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED'].includes(b.status)).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status'],
-              rows: (bomStore || []).filter(b => b.status && !['Draft', 'Pending Sales Confirmation', 'Pending Confirmation', 'Pending'].includes(b.status) && (b.salesConfirmed || b.status.includes('Dispatch') || b.status.includes('Production') || b.status.includes('Packed') || b.status.includes('Invoice') || b.status.includes('Closed'))).map(b => {
+              rows: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft').map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
@@ -4437,6 +4443,12 @@ export default function ProductionViewsEngine(props) {
                   stFg = '#B45309';
                   stBorder = '1px solid #FDE68A';
                   tabGroup = 'PartiallyPacked';
+                } else if (b.status === 'Pending Sales Confirmation' || b.status === 'Pending Confirmation') {
+                  statusLabel = 'PENDING SALES CONFIRMATION';
+                  stBg = '#FEF3C7';
+                  stFg = '#B45309';
+                  stBorder = '1px solid #FDE68A';
+                  tabGroup = 'PendingPacking';
                 }
 
                 const salesPersonName = (b.salesPerson || localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim();
