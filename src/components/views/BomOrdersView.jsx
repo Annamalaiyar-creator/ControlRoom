@@ -37,7 +37,16 @@ export default function BomOrdersView(props) {
   const [isExportingFormat, setIsExportingFormat] = useState(null); // 'pdf' | 'jpg' | 'csv' | null
 
   // BOM Store from localStorage & Supabase
-  const [bomStore, setBomStore] = useState([]);
+  const [bomStore, setBomStore] = useState(() => {
+    try {
+      const cached = localStorage.getItem('controlroom_bom_store');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [];
+  });
 
   // Customer List from Supabase & Zoho
   const [customerList, setCustomerList] = useState([]);
@@ -86,7 +95,7 @@ export default function BomOrdersView(props) {
 
         if (data && Array.isArray(data)) {
           if (data.length === 0) {
-            setBomStore([]);
+            setBomStore(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
           } else {
             setBomStore(prev => {
               const map = new Map();
@@ -119,7 +128,11 @@ export default function BomOrdersView(props) {
                 const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
                 return dateB - dateA;
               });
-              return sorted.map(stripDataUrlsFromRecord);
+              const cleaned = sorted.map(stripDataUrlsFromRecord);
+              try {
+                localStorage.setItem('controlroom_bom_store', JSON.stringify(cleaned));
+              } catch (_) {}
+              return cleaned;
             });
           }
         }
@@ -2964,12 +2977,12 @@ export default function BomOrdersView(props) {
                             body: postPayload
                           });
                           if (sRes.ok) {
-                            sResOk = true;
                             const sData = await sRes.json();
-                            if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                            if (sData && (sData.bomCode || sData.bom?.bomCode) && sData.success) {
+                              sResOk = true;
                               finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                              break;
                             }
-                            break;
                           }
                         } catch (err) {
                           console.warn(`Sync attempt to ${url} failed, trying next:`, err);
@@ -3009,14 +3022,17 @@ export default function BomOrdersView(props) {
                       const updatedList = [sanitizedNewBom, ...filtered];
                       setBomStore(updatedList);
 
-                      // Direct cloud persistence guarantee: if server API didn't respond, save directly to Supabase so it's never lost on refresh
-                      if (!sResOk) {
-                        try {
-                          await saveCloudStoreImmediate('bom_store', updatedList);
-                        } catch (sErr) {
-                          console.error('Error in fallback saveCloudStoreImmediate:', sErr);
-                        }
+                      // Direct cloud persistence guarantee: ALWAYS save directly to Supabase cloud store so it is never lost on refresh or live server
+                      try {
+                        await saveCloudStoreImmediate('bom_store', updatedList);
+                      } catch (sErr) {
+                        console.error('Error in direct saveCloudStoreImmediate:', sErr);
                       }
+
+                      // Safe browser localStorage backup per Rule 5
+                      try {
+                        localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                      } catch (_) {}
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
                       setCurrentPage(1);
@@ -3287,10 +3303,15 @@ export default function BomOrdersView(props) {
                     grandTotal: cleanNum(confirmingBomModal.grandTotal, orderGrandTotal)
                   };
 
-                  setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
+                  const updatedList = (bomStore || []).map(b => b.bomCode === confirmingBomModal.bomCode ? {
                     ...b,
                     ...updatedBomData
-                  } : b));
+                  } : b);
+                  setBomStore(updatedList);
+                  saveCloudStore('bom_store', updatedList);
+                  try {
+                    localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                  } catch (_) {}
 
                   // Push to server immediately so Dispatch sees it in real time
                   try {
@@ -4696,7 +4717,12 @@ export default function BomOrdersView(props) {
             <button
               onClick={() => {
                 if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected BOM item(s)?`)) {
-                  setBomStore(prev => prev.filter(b => !selectedRows.includes(b.bomCode || b.code)));
+                  const updatedList = (bomStore || []).filter(b => !selectedRows.includes(b.bomCode || b.code));
+                  setBomStore(updatedList);
+                  saveCloudStoreImmediate('bom_store', updatedList);
+                  try {
+                    localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                  } catch (_) {}
                   setSelectedRows([]);
                 }
               }}
@@ -5336,7 +5362,7 @@ export default function BomOrdersView(props) {
                       return;
                     }
                     const pDocObj = typeof paymentProofFile === 'object' ? paymentProofFile : { name: paymentProofFile, dataUrl: null };
-                    setBomStore(prev => prev.map(b => b.bomCode === uploadPaymentModal.bomCode ? {
+                    const updatedList = (bomStore || []).map(b => b.bomCode === uploadPaymentModal.bomCode ? {
                       ...b,
                       status: 'Payment Uploaded & Verified',
                       paymentProofDoc: pDocObj,
@@ -5350,7 +5376,22 @@ export default function BomOrdersView(props) {
                         dispatch50Uploaded: paymentStageType === '50% Dispatch' || b.payments?.dispatch50Uploaded,
                         net30Uploaded: paymentStageType === 'Net 30 Days'
                       }
-                    } : b));
+                    } : b);
+                    setBomStore(updatedList);
+                    saveCloudStore('bom_store', updatedList);
+                    try {
+                      localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                    } catch (_) {}
+
+                    const targetBom = updatedList.find(b => b.bomCode === uploadPaymentModal.bomCode);
+                    if (targetBom) {
+                      fetch('/api/boms', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bom: stripDataUrlsFromRecord(targetBom), isUpdate: true })
+                      }).catch(() => {});
+                    }
+
                     setUploadPaymentModal(null);
                     alert('✅ Payment proof uploaded successfully!');
                   }}

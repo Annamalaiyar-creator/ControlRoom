@@ -1,12 +1,6 @@
 import { supabase } from '../supabaseClient';
 
-// Ensure all local browser caches for BOM and Invoice stores are purged so data lives 100% in Supabase
-if (typeof window !== 'undefined' && window.localStorage) {
-  try {
-    localStorage.removeItem('controlroom_bom_store');
-    localStorage.removeItem('controlroom_invoice_store');
-  } catch (_) {}
-}
+// Preserve local browser caches for zero-data-loss protection per project guidelines
 
 /**
  * Helper function to safely merge local and remote array datasets without losing local records

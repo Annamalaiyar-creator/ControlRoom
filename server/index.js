@@ -2793,26 +2793,24 @@ app.post('/api/boms', async (req, res) => {
         }
 
         console.log(`[BOM Store] BOM ${finalCode} saved immediately to disk (isNew: ${shouldAssignNewCode}). Total: ${mergedList.length}`);
+
+        // Await cloud sync to Supabase before sending response so state is never lost
+        try {
+          await pushStoreToSupabase('bom_store', mergedList);
+        } catch (e) {
+          console.error('Error pushing bom_store to Supabase:', e);
+        }
+        try {
+          await supabase.from('leaves').update({
+            reason: JSON.stringify({ lastNumber: serverBomSequenceCounter, updatedAt: new Date().toISOString() }),
+            duration: String(serverBomSequenceCounter),
+            dates: new Date().toISOString()
+          }).eq('employee', 'BOM_SEQUENCE');
+        } catch (_) {}
         
-        // RESPOND TO CLIENT IMMEDIATELY so UI and browser are never blocked
+        // RESPOND TO CLIENT WITH CONFIRMED BOM
         res.json({ success: true, bom, bomCode: finalCode, total: mergedList.length });
         resolveOuter();
-
-        // Non-blocking background sync to Supabase
-        Promise.resolve().then(async () => {
-          try {
-            await pushStoreToSupabase('bom_store', mergedList);
-          } catch (e) {
-            console.error('Background error pushing bom_store to Supabase:', e);
-          }
-          try {
-            await supabase.from('leaves').update({
-              reason: JSON.stringify({ lastNumber: serverBomSequenceCounter, updatedAt: new Date().toISOString() }),
-              duration: String(serverBomSequenceCounter),
-              dates: new Date().toISOString()
-            }).eq('employee', 'BOM_SEQUENCE');
-          } catch (_) {}
-        }).catch(err => console.error('Background sync error in /api/boms:', err));
       } catch (err) {
         console.error('Error saving BOM:', err);
         res.status(500).json({ success: false, message: err.message });
@@ -5150,10 +5148,8 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-if (process.env.VERCEL !== '1') {
-  app.listen(PORT, () => {
-    console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`Zoho Integration Proxy Server running on port ${PORT}`);
+});
 
 export default app;

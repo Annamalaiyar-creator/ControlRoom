@@ -6662,5 +6662,18 @@
     "availableStock": 5000,
     "currentStock": 5000,
     "reserved": 0
+  },
+  {
+    "code": "FG-0234",
+    "name": "GI Anchor Bolt M10*100",
+    "cat": "GAL",
+    "unit": "NOS",
+    "stock": 0,
+    "reserved": 16,
+    "blockedForBom": 16,
+    "minLevel": 10,
+    "status": "Out of Stock",
+    "store": "Main Store",
+    "lastUpdated": "Blocked for BOM BOM-656"
   }
 ]

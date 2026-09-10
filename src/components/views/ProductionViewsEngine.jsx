@@ -640,6 +640,7 @@ export default function ProductionViewsEngine(props) {
     return () => {
       window.removeEventListener('controlroom_convert_pi_bom', handleCustomConvert);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convertingPiData]);
 
   // Vehicle Loading & Final Dispatch State
@@ -5082,7 +5083,8 @@ export default function ProductionViewsEngine(props) {
                 window.removeEventListener('controlroom_grn_completed', syncEngineInventory);
                 window.removeEventListener('storage', syncEngineInventory);
               };
-            }, [itemsList]);
+              // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [itemsList, initialMaterials]);
             const [selectedCode, setSelectedCode] = useState('RM-001');
             const [sideTab, setSideTab] = useState('Stock Balance'); // 'Stock Balance' | 'Transaction History' | 'Details' | 'Store wise Stock'
             const [searchQuery, setSearchQuery] = useState('');
@@ -10225,6 +10227,14 @@ export default function ProductionViewsEngine(props) {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedPackedBom), isUpdate: true })
                 }).catch(() => {});
+                setBomStore(prev => {
+                  const updated = (prev || []).map(b => (b.bomCode === updatedPackedBom.bomCode || b.code === updatedPackedBom.bomCode) ? { ...b, ...updatedPackedBom } : b);
+                  saveCloudStore('bom_store', updated);
+                  try {
+                    localStorage.setItem('controlroom_bom_store', JSON.stringify(updated.map(stripDataUrlsFromRecord)));
+                  } catch (_) {}
+                  return updated;
+                });
               } catch (_) {}
 
               const targetBomCode = dispatchPackingModal.bomCode;
@@ -14533,15 +14543,15 @@ export default function ProductionViewsEngine(props) {
                                     body: postPayload
                                   });
                                   if (sRes.ok) {
-                                    sResOk = true;
                                     const sData = await sRes.json();
-                                    if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                                    if (sData && (sData.bomCode || sData.bom?.bomCode) && sData.success) {
+                                      sResOk = true;
                                       finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
                                       sanitizedNewBom.bomCode = finalAssignedCode;
                                       sanitizedNewBom.code = finalAssignedCode;
                                       sanitizedNewBom.id = finalAssignedCode;
+                                      break;
                                     }
-                                    break;
                                   }
                                 } catch (err) {
                                   console.warn(`Sync attempt to ${url} failed, trying next:`, err);
@@ -14553,14 +14563,15 @@ export default function ProductionViewsEngine(props) {
                                 const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
                                 const updatedList = [sanitizedNewBom, ...filtered];
 
-                                // Fallback cloud save guarantee: if server didn't respond, save directly to Supabase so it's never lost on refresh
-                                if (!sResOk) {
-                                  try {
-                                    saveCloudStoreImmediate('bom_store', updatedList);
-                                  } catch (sErr) {
-                                    console.error('Error in fallback saveCloudStoreImmediate:', sErr);
-                                  }
+                                // Direct cloud persistence guarantee: ALWAYS save directly to Supabase cloud store so it is never lost on refresh or live server
+                                try {
+                                  saveCloudStoreImmediate('bom_store', updatedList);
+                                } catch (sErr) {
+                                  console.error('Error in direct saveCloudStoreImmediate:', sErr);
                                 }
+                                try {
+                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                                } catch (_) {}
 
                                 setShowBOMForm(false);
                                 setBomConfirmModal(null);

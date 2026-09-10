@@ -156,16 +156,10 @@ function App() {
     return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
   });
 
-  // Ensure all local data stores are purged from localStorage so Supabase cloud is 100% authoritative
+  // Ensure legacy stores are cleaned, but preserve authoritative stores
   useEffect(() => {
     try {
-      localStorage.removeItem('controlroom_bom_store');
-      localStorage.removeItem('controlroom_invoice_store');
-      localStorage.removeItem('controlroom_po_store');
-      localStorage.removeItem('controlroom_customer_store');
       localStorage.removeItem('controlroom_customer_list');
-      localStorage.removeItem('controlroom_vendor_store');
-      localStorage.removeItem('controlroom_item_store');
     } catch (_) {}
   }, []);
 

@@ -40,6 +40,149 @@ function saveStore(filename, data) {
   }
 }
 
+// ☁️ Supabase Cloud Synchronization for Zero-Data-Loss on Live Server
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zjkabqcgymxysqgfbbge.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpqa2FicWNneW14eXNxZ2ZiYmdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyOTQzNzYsImV4cCI6MjEwMDg3MDM3Nn0.z821_dGCjnS_LZnj6l5mERGtu8wZvkMRDiGURXxFXmY';
+
+let supabase = null;
+try {
+  const { createClient } = require('@supabase/supabase-js');
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch (e) {
+  console.warn('[Plesk Gateway] @supabase/supabase-js not found, falling back to direct HTTPS REST API:', e.message);
+}
+
+// Fallback direct HTTPS fetch to Supabase REST API if @supabase/supabase-js is not installed on the server
+async function supabaseDirectQuery(method, endpoint, body = null) {
+  return new Promise((resolve) => {
+    try {
+      const u = new URL(`${SUPABASE_URL}/rest/v1/${endpoint}`);
+      const payload = body ? JSON.stringify(body) : null;
+      const opts = {
+        hostname: u.hostname,
+        port: 443,
+        path: u.pathname + u.search,
+        method: method,
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      };
+      if (payload) {
+        opts.headers['Content-Length'] = Buffer.byteLength(payload);
+      }
+      const req = https.request(opts, (res) => {
+        let resData = '';
+        res.on('data', chunk => { resData += chunk; });
+        res.on('end', () => {
+          try {
+            resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: JSON.parse(resData) });
+          } catch (_) {
+            resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: null });
+          }
+        });
+      });
+      req.on('error', () => resolve({ ok: false, data: null }));
+      req.setTimeout(5000, () => { req.destroy(); resolve({ ok: false, data: null }); });
+      if (payload) req.write(payload);
+      req.end();
+    } catch (_) {
+      resolve({ ok: false, data: null });
+    }
+  });
+}
+
+async function fetchSupabaseStore(key) {
+  const empKey = key.toUpperCase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('leaves').select('id, reason').eq('employee', empKey).order('id', { ascending: false }).limit(1);
+      if (!error && data && data.length > 0 && data[0].reason) {
+        return JSON.parse(data[0].reason);
+      }
+    } catch (_) {}
+  } else {
+    try {
+      const res = await supabaseDirectQuery('GET', `leaves?employee=eq.${encodeURIComponent(empKey)}&select=id,reason&order=id.desc&limit=1`);
+      if (res.ok && res.data && res.data.length > 0 && res.data[0].reason) {
+        return JSON.parse(res.data[0].reason);
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
+async function pushSupabaseStore(key, storeData) {
+  const empKey = key.toUpperCase();
+  const reasonStr = JSON.stringify(storeData);
+  const durationStr = String(Array.isArray(storeData) ? storeData.length : 1);
+  if (supabase) {
+    try {
+      const { data } = await supabase.from('leaves').select('id').eq('employee', empKey).order('id', { ascending: false }).limit(1);
+      const existing = (data && data.length > 0) ? data[0] : null;
+      if (existing && existing.id) {
+        await supabase.from('leaves').update({
+          reason: reasonStr,
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: durationStr
+        }).eq('id', existing.id);
+      } else {
+        await supabase.from('leaves').insert({
+          employee: empKey,
+          reason: reasonStr,
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: durationStr,
+          type: 'Store'
+        });
+      }
+    } catch (err) {
+      console.warn(`[Plesk Gateway Supabase Push Warn for ${key}]:`, err.message);
+    }
+  } else {
+    try {
+      const checkRes = await supabaseDirectQuery('GET', `leaves?employee=eq.${encodeURIComponent(empKey)}&select=id&order=id.desc&limit=1`);
+      const existing = (checkRes.ok && checkRes.data && checkRes.data.length > 0) ? checkRes.data[0] : null;
+      if (existing && existing.id) {
+        await supabaseDirectQuery('PATCH', `leaves?id=eq.${existing.id}`, {
+          reason: reasonStr,
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: durationStr
+        });
+      } else {
+        await supabaseDirectQuery('POST', 'leaves', {
+          employee: empKey,
+          reason: reasonStr,
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: durationStr,
+          type: 'Store'
+        });
+      }
+    } catch (err) {
+      console.warn(`[Plesk Gateway Supabase Push Warn for ${key}]:`, err.message);
+    }
+  }
+}
+
+function stripServerDataUrls(target) {
+  if (!target || typeof target !== 'object') return;
+  if (target.dataUrl) delete target.dataUrl;
+  if (target.fileData) delete target.fileData;
+  if (target.proofDocData) delete target.proofDocData;
+  Object.keys(target).forEach(k => {
+    if (typeof target[k] === 'string' && (target[k].startsWith('data:') || (target[k].length > 1000 && /^[A-Za-z0-9+/=]+$/.test(target[k].slice(0, 100))))) {
+      delete target[k];
+    } else if (target[k] && typeof target[k] === 'object') {
+      stripServerDataUrls(target[k]);
+    }
+  });
+}
+
 function getZohoAccessToken() {
   const now = Date.now();
   if (cachedAccessToken && tokenExpiresAt > now + 300000) {
@@ -830,7 +973,229 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // 10. Static Frontend Files Serving
+      // 10. Sequential BOM Code Reservation Endpoints
+      if (pathname === '/api/boms/next-code' || pathname.endsWith('/boms/next-code')) {
+        let diskList = loadStore('bom_store.json', []);
+        let cloudList = await fetchSupabaseStore('bom_store') || [];
+        let maxNum = 650;
+        const scan = (item) => {
+          const c = item?.bomCode || item?.code || item?.id || '';
+          const m = String(c).match(/^BOM-(\d+)/i);
+          if (m) {
+            const val = parseInt(m[1], 10);
+            if (Number.isFinite(val) && val > maxNum) maxNum = val;
+          }
+        };
+        (Array.isArray(diskList) ? diskList : []).forEach(scan);
+        (Array.isArray(cloudList) ? cloudList : []).forEach(scan);
+        const nextCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, nextCode }));
+      }
+
+      if (pathname === '/api/boms/reserve-code' || pathname.endsWith('/boms/reserve-code')) {
+        let diskList = loadStore('bom_store.json', []);
+        let cloudList = await fetchSupabaseStore('bom_store') || [];
+        let maxNum = 650;
+        const scan = (item) => {
+          const c = item?.bomCode || item?.code || item?.id || '';
+          const m = String(c).match(/^BOM-(\d+)/i);
+          if (m) {
+            const val = parseInt(m[1], 10);
+            if (Number.isFinite(val) && val > maxNum) maxNum = val;
+          }
+        };
+        (Array.isArray(diskList) ? diskList : []).forEach(scan);
+        (Array.isArray(cloudList) ? cloudList : []).forEach(scan);
+        const nextCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
+        await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: maxNum + 1, reservedAt: new Date().toISOString() });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, nextCode }));
+      }
+
+      // 11. Centralized BOM Orders Management (GET & POST with Disk + Supabase Persistence)
+      if (pathname === '/api/boms' || pathname.endsWith('/api/boms')) {
+        if (req.method === 'GET') {
+          let diskList = loadStore('bom_store.json', []);
+          let cloudList = await fetchSupabaseStore('bom_store') || [];
+          if (!Array.isArray(diskList)) diskList = [];
+          if (!Array.isArray(cloudList)) cloudList = [];
+
+          const map = new Map();
+          cloudList.forEach(item => {
+            const c = item?.bomCode || item?.code || item?.id;
+            if (c) map.set(c, item);
+          });
+          diskList.forEach(item => {
+            const c = item?.bomCode || item?.code || item?.id;
+            if (c) {
+              if (map.has(c)) {
+                map.set(c, { ...map.get(c), ...item });
+              } else {
+                map.set(c, item);
+              }
+            }
+          });
+
+          const finalBoms = Array.from(map.values());
+          const parseBomSeq = (code) => {
+            const m = String(code || '').match(/BOM-(\d+)/i);
+            return m ? parseInt(m[1], 10) : 0;
+          };
+          finalBoms.sort((a, b) => {
+            const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+            const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+            if (seqA !== seqB) return seqB - seqA;
+            const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+            const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+            return dateB - dateA;
+          });
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, data: finalBoms, total: finalBoms.length }));
+        }
+
+        if (req.method === 'POST') {
+          let { bom, isNew, isUpdate } = body || {};
+          if (!bom) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Valid bom record required' }));
+          }
+
+          stripServerDataUrls(bom);
+
+          let diskList = loadStore('bom_store.json', []);
+          let cloudList = await fetchSupabaseStore('bom_store') || [];
+          if (!Array.isArray(diskList)) diskList = [];
+          if (!Array.isArray(cloudList)) cloudList = [];
+
+          const map = new Map();
+          cloudList.forEach(item => {
+            const c = item?.bomCode || item?.code || item?.id;
+            if (c) map.set(c, item);
+          });
+          diskList.forEach(item => {
+            const c = item?.bomCode || item?.code || item?.id;
+            if (c) {
+              if (map.has(c)) {
+                map.set(c, { ...map.get(c), ...item });
+              } else {
+                map.set(c, item);
+              }
+            }
+          });
+
+          let maxNum = 650;
+          for (const key of map.keys()) {
+            const match = String(key).match(/^BOM-(\d+)/i);
+            if (match) {
+              const val = parseInt(match[1], 10);
+              if (Number.isFinite(val) && val > maxNum) maxNum = val;
+            }
+          }
+
+          const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
+          const alreadyExists = incomingCode && map.has(incomingCode);
+          const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
+
+          let finalCode = incomingCode;
+          if (isValidIncomingCode && (!alreadyExists || isUpdate || bom.isUpdate)) {
+            finalCode = incomingCode;
+            const numMatch = incomingCode.match(/^BOM-(\d+)/i);
+            if (numMatch) {
+              const cNum = parseInt(numMatch[1], 10);
+              if (Number.isFinite(cNum) && cNum > maxNum) maxNum = cNum;
+            }
+          } else {
+            maxNum += 1;
+            finalCode = `BOM-${String(maxNum).padStart(3, '0')}`;
+          }
+
+          bom.bomCode = finalCode;
+          bom.code = finalCode;
+          bom.id = finalCode;
+
+          if (map.has(finalCode)) {
+            map.set(finalCode, { ...map.get(finalCode), ...bom });
+          } else {
+            map.set(finalCode, bom);
+          }
+
+          const mergedList = Array.from(map.values());
+          saveStore('bom_store.json', mergedList);
+
+          // Await Supabase cloud synchronization before responding
+          try {
+            await pushSupabaseStore('bom_store', mergedList);
+            await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: maxNum, updatedAt: new Date().toISOString() });
+          } catch (cloudErr) {
+            console.warn('[Plesk Gateway] Failed to push BOM to Supabase:', cloudErr.message);
+          }
+
+          console.log(`[Plesk Gateway] BOM ${finalCode} saved. Total: ${mergedList.length}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, bom, bomCode: finalCode, total: mergedList.length }));
+        }
+      }
+
+      // 12. Generic Data Store Endpoints (/api/store/:key)
+      if (pathname.startsWith('/api/store/')) {
+        const storeKey = pathname.replace('/api/store/', '').trim();
+        const filename = `${storeKey}.json`;
+
+        if (req.method === 'GET') {
+          let localData = loadStore(filename, []);
+          let cloudData = await fetchSupabaseStore(storeKey);
+          let resultData = localData;
+
+          if (Array.isArray(cloudData)) {
+            if (Array.isArray(localData) && localData.length > 0) {
+              const getId = (item) => item?.bomCode || item?.code || item?.id || item?.poNo || item?.invNo || item?.grnNo || item?.vendorCode || item?.email || item?.name;
+              const map = new Map();
+              cloudData.forEach(item => { const id = getId(item); if (id) map.set(id, item); });
+              localData.forEach(item => { const id = getId(item); if (id) map.set(id, { ...(map.get(id) || {}), ...item }); });
+              resultData = Array.from(map.values());
+            } else {
+              resultData = cloudData;
+            }
+          } else if (cloudData && typeof cloudData === 'object') {
+            resultData = cloudData;
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, data: resultData || [] }));
+        }
+
+        if (req.method === 'POST') {
+          let finalDataToSave = body;
+          if (Array.isArray(body)) {
+            let existingList = loadStore(filename, []);
+            let cloudList = await fetchSupabaseStore(storeKey);
+            if (Array.isArray(cloudList)) existingList = [...existingList, ...cloudList];
+
+            const getId = (item) => item?.bomCode || item?.code || item?.id || item?.poNo || item?.invNo || item?.grnNo || item?.vendorCode || item?.email || item?.name;
+            const map = new Map();
+            existingList.forEach(item => { const id = getId(item); if (id) map.set(id, item); });
+            body.forEach(item => {
+              const id = getId(item);
+              if (id) {
+                map.set(id, { ...(map.get(id) || {}), ...item });
+              }
+            });
+            finalDataToSave = Array.from(map.values());
+          }
+
+          saveStore(filename, finalDataToSave);
+          try {
+            await pushSupabaseStore(storeKey, finalDataToSave);
+          } catch (_) {}
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, count: Array.isArray(finalDataToSave) ? finalDataToSave.length : 1 }));
+        }
+      }
+
+      // 13. Static Frontend Files Serving
       let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
       
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
