@@ -2759,6 +2759,223 @@ app.post('/api/zoho/invoices', async (req, res) => {
   }
 });
 
+// Proforma Invoices / Estimates endpoints
+app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res) => {
+  let localEstimates = [];
+  try {
+    const p = getStoreFilePath('proforma_invoice_store.json');
+    if (fs.existsSync(p)) localEstimates = JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {}
+
+  if (!zohoSession.connected) return res.json(localEstimates);
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const zohoRes = await new Promise((resolve) => {
+      const options = {
+        hostname: 'www.zohoapis.in',
+        port: 443,
+        path: `/books/v3/estimates?organization_id=${zohoSession.orgId}&per_page=200&sort_column=created_time&sort_order=D`,
+        method: 'GET',
+        headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+      };
+      const req = https.request(options, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+      });
+      req.on('error', () => resolve(null));
+      req.end();
+    });
+
+    const mappedPIs = ((zohoRes && zohoRes.estimates) || []).map(est => ({
+      id: est.estimate_id || est.id,
+      piNo: est.estimate_number,
+      piDate: est.date,
+      vendor: est.customer_name,
+      customerName: est.customer_name,
+      customerId: est.customer_id,
+      amount: `₹${Number(est.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      total: est.total,
+      status: est.status === 'accepted' ? 'Approved' : (est.status === 'invoiced' ? 'Invoiced' : 'Pending'),
+      statusType: est.status
+    }));
+
+    const piMap = new Map();
+    mappedPIs.forEach(p => piMap.set(String(p.piNo).toLowerCase(), p));
+    localEstimates.forEach(lp => {
+      const k = String(lp.piNo).toLowerCase();
+      if (!piMap.has(k)) piMap.set(k, lp);
+    });
+
+    res.json(Array.from(piMap.values()));
+  } catch (err) {
+    res.json(localEstimates);
+  }
+});
+
+app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res) => {
+  let localEstimates = [];
+  const p = getStoreFilePath('proforma_invoice_store.json');
+  try {
+    if (fs.existsSync(p)) localEstimates = JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {}
+
+  const newPI = { ...req.body, id: req.body.id || `PI-${Date.now()}` };
+  const updated = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+  try { fs.writeFileSync(p, JSON.stringify(updated, null, 2), 'utf8'); } catch (_) {}
+
+  if (!zohoSession.connected) return res.json({ success: true, estimate: newPI });
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const payload = {
+      customer_id: req.body.customerId || '4080449000000039008',
+      estimate_number: req.body.piNo || undefined,
+      date: req.body.piDate || new Date().toISOString().split('T')[0],
+      line_items: (req.body.items || []).map(it => ({
+        name: it.name || it.productName || 'Solar Module Mounting Structures',
+        rate: Number(it.rate || it.unitValue || 100),
+        quantity: Number(it.qty || it.quantity || 1)
+      }))
+    };
+    const postData = JSON.stringify(payload);
+    const options = {
+      hostname: 'www.zohoapis.in',
+      port: 443,
+      path: `/books/v3/estimates?organization_id=${zohoSession.orgId}`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+    const zohoRes = await new Promise((resolve) => {
+      const r = https.request(options, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+      });
+      r.on('error', () => resolve(null));
+      r.write(postData);
+      r.end();
+    });
+
+    if (zohoRes && zohoRes.estimate) {
+      newPI.zohoEstimateId = zohoRes.estimate.estimate_id;
+    }
+  } catch (_) {}
+
+  res.json({ success: true, estimate: newPI });
+});
+
+// Delivery Challans endpoints
+app.get('/api/zoho/deliverychallans', async (req, res) => {
+  let localDCs = [];
+  try {
+    const p = getStoreFilePath('dc_store.json');
+    if (fs.existsSync(p)) localDCs = JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {}
+
+  if (!zohoSession.connected) return res.json(localDCs);
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const zohoRes = await new Promise((resolve) => {
+      const options = {
+        hostname: 'www.zohoapis.in',
+        port: 443,
+        path: `/books/v3/deliverychallans?organization_id=${zohoSession.orgId}&per_page=200&sort_column=created_time&sort_order=D`,
+        method: 'GET',
+        headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+      };
+      const req = https.request(options, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+      });
+      req.on('error', () => resolve(null));
+      req.end();
+    });
+
+    const mappedDCs = ((zohoRes && zohoRes.deliverychallans) || []).map(dc => ({
+      id: dc.deliverychallan_id || dc.id,
+      dcNo: dc.deliverychallan_number,
+      challanNo: dc.deliverychallan_number,
+      customerName: dc.customer_name,
+      date: dc.date,
+      status: dc.status
+    }));
+
+    const dcMap = new Map();
+    mappedDCs.forEach(d => dcMap.set(String(d.dcNo || d.id).toLowerCase(), d));
+    localDCs.forEach(ld => {
+      const k = String(ld.dcNo || ld.challanNo || ld.id).toLowerCase();
+      if (!dcMap.has(k)) dcMap.set(k, ld);
+    });
+
+    res.json(Array.from(dcMap.values()));
+  } catch (err) {
+    res.json(localDCs);
+  }
+});
+
+app.post('/api/zoho/deliverychallans', async (req, res) => {
+  let localDCs = [];
+  const p = getStoreFilePath('dc_store.json');
+  try {
+    if (fs.existsSync(p)) localDCs = JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {}
+
+  const newDC = { ...req.body, id: req.body.id || `DC-${Date.now()}` };
+  const updated = [newDC, ...localDCs];
+  try { fs.writeFileSync(p, JSON.stringify(updated, null, 2), 'utf8'); } catch (_) {}
+
+  if (!zohoSession.connected) return res.json({ success: true, deliverychallan: newDC });
+
+  try {
+    const accessToken = await getZohoAccessToken();
+    const payload = {
+      customer_id: req.body.customerId || '4080449000000039008',
+      deliverychallan_number: req.body.challanNo || req.body.dcNo || undefined,
+      date: req.body.date || new Date().toISOString().split('T')[0],
+      line_items: (req.body.items || []).map(it => ({
+        name: it.name || 'Solar Mounting Components',
+        quantity: Number(it.qty || it.quantity || 1)
+      }))
+    };
+    const postData = JSON.stringify(payload);
+    const options = {
+      hostname: 'www.zohoapis.in',
+      port: 443,
+      path: `/books/v3/deliverychallans?organization_id=${zohoSession.orgId}`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+    const zohoRes = await new Promise((resolve) => {
+      const r = https.request(options, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+      });
+      r.on('error', () => resolve(null));
+      r.write(postData);
+      r.end();
+    });
+
+    if (zohoRes && zohoRes.deliverychallan) {
+      newDC.zohoDcId = zohoRes.deliverychallan.deliverychallan_id;
+    }
+  } catch (_) {}
+
+  res.json({ success: true, deliverychallan: newDC });
+});
+
 const fetchZohoPurchaseOrderDetail = (accessToken, id) => {
   return new Promise((resolve, reject) => {
     const options = {

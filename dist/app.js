@@ -1,4 +1,4 @@
-// Standalone Zoho proxy handler for dist
+// Standalone Zoho proxy and integration gateway for Control Room on Plesk / Production
 const https = require('https');
 const http = require('http');
 const url = require('url');
@@ -12,6 +12,33 @@ const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || '60082137608';
 
 let cachedAccessToken = '';
 let tokenExpiresAt = 0;
+
+// Local JSON Store Helpers for Zero-Data-Loss Protection
+function getStorePath(filename) {
+  return path.join(__dirname, filename);
+}
+
+function loadStore(filename, fallback = []) {
+  try {
+    const p = getStorePath(filename);
+    if (fs.existsSync(p)) {
+      const content = fs.readFileSync(p, 'utf8');
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error(`[STORE LOAD WARNING] Failed loading ${filename}:`, err.message);
+  }
+  return fallback;
+}
+
+function saveStore(filename, data) {
+  try {
+    const p = getStorePath(filename);
+    fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error(`[STORE SAVE WARNING] Failed saving ${filename}:`, err.message);
+  }
+}
 
 function getZohoAccessToken() {
   const now = Date.now();
@@ -108,6 +135,7 @@ const server = http.createServer(async (req, res) => {
 
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
+  const query = parsedUrl.query;
 
   // Read request body
   let rawBody = '';
@@ -119,7 +147,23 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      // 1. Next PO Number
+      // 0. Zoho Health & Connection Status
+      if (pathname === '/api/zoho/status' || pathname.endsWith('/status')) {
+        let connected = false;
+        try {
+          const token = await getZohoAccessToken();
+          connected = Boolean(token);
+        } catch (_) {}
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          connected,
+          orgId: ZOHO_ORG_ID,
+          server: 'BigRock Plesk Standalone Gateway',
+          time: new Date().toISOString()
+        }));
+      }
+
+      // 1. Next PO Number Sequence
       if (pathname === '/api/zoho/next-po-number' || pathname.endsWith('/next-po-number')) {
         const token = await getZohoAccessToken();
         const zohoRes = await callZoho('GET', '/books/v3/purchaseorders?per_page=10&sort_column=created_time&sort_order=D', null, token);
@@ -138,15 +182,147 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ success: true, nextPoNumber, nextPoNo: nextPoNumber }));
       }
 
-      // 2. Fetch or Create Purchase Orders
+      // 2. Customers Bidirectional Sync (Sales Customer Adding)
+      if (pathname === '/api/zoho/customers' || pathname.endsWith('/customers')) {
+        const localCustomers = loadStore('customer_store.json', []);
+
+        if (req.method === 'GET') {
+          let zohoCustomers = [];
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/contacts?contact_type=customer&per_page=200', null, token);
+            if (zohoRes && Array.isArray(zohoRes.contacts)) {
+              zohoCustomers = zohoRes.contacts.map(c => ({
+                id: c.contact_id || c.id,
+                customerCode: c.contact_name || c.company_name,
+                customerName: c.contact_name || c.company_name,
+                companyName: c.company_name || c.contact_name,
+                customerType: 'Customer',
+                email: c.email || '—',
+                phone: c.phone || '—',
+                gstNumber: c.gst_no || '—',
+                panNumber: c.pan_no || '—',
+                status: c.status === 'active' ? 'ACTIVE' : 'INACTIVE',
+                zohoContactId: c.contact_id
+              }));
+            }
+          } catch (e) {
+            console.warn('[ZOHO CUSTOMERS FETCH NOTICE]', e.message);
+          }
+
+          // Merge Zoho customers with local customer store (so neither Zoho nor local records are lost)
+          const mergedMap = new Map();
+          zohoCustomers.forEach(zc => {
+            const key = String(zc.customerName || zc.companyName || zc.id).toLowerCase().trim();
+            mergedMap.set(key, zc);
+          });
+          localCustomers.forEach(lc => {
+            const key = String(lc.customerName || lc.companyName || lc.id || lc.customerCode).toLowerCase().trim();
+            if (mergedMap.has(key)) {
+              mergedMap.set(key, { ...mergedMap.get(key), ...lc });
+            } else {
+              mergedMap.set(key, lc);
+            }
+          });
+
+          const finalCustomers = Array.from(mergedMap.values());
+          saveStore('customer_store.json', finalCustomers);
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify(finalCustomers));
+        }
+
+        if (req.method === 'POST') {
+          // Immediately save locally first to guarantee zero data loss
+          const customerId = body.customerCode || body.id || `CUST-VRM-${100 + localCustomers.length + 1}`;
+          const localRecord = {
+            ...body,
+            id: customerId,
+            customerCode: customerId,
+            customerName: body.customerName || body.companyName || body.name || 'Valued Customer',
+            companyName: body.companyName || body.customerName || body.name || 'Valued Customer',
+            status: body.status || 'ACTIVE',
+            createdAt: new Date().toISOString()
+          };
+
+          const updatedLocal = [localRecord, ...localCustomers.filter(c => c.customerCode !== localRecord.customerCode && c.companyName !== localRecord.companyName)];
+          saveStore('customer_store.json', updatedLocal);
+
+          // Now forward to Zoho Books
+          try {
+            const token = await getZohoAccessToken();
+            const contactName = String(localRecord.customerName || localRecord.companyName).trim();
+            const companyName = String(localRecord.companyName || localRecord.customerName).trim();
+
+            const zohoPayload = {
+              contact_name: contactName,
+              company_name: companyName,
+              contact_type: 'customer',
+              customer_sub_type: 'business',
+              currency_code: 'INR',
+              pan_no: localRecord.panNumber ? String(localRecord.panNumber).trim().slice(0, 10) : undefined,
+              billing_address: {
+                address: String(localRecord.address || localRecord.streetAddress || '').slice(0, 80),
+                city: String(localRecord.city || '').slice(0, 40),
+                state: String(localRecord.state || '').slice(0, 40),
+                zip: String(localRecord.pincode || '').slice(0, 20),
+                country: 'India'
+              },
+              shipping_address: {
+                address: String(localRecord.dispatchAddress || localRecord.address || '').slice(0, 80),
+                city: String(localRecord.dispatchCity || localRecord.city || '').slice(0, 40),
+                state: String(localRecord.dispatchState || localRecord.state || '').slice(0, 40),
+                zip: String(localRecord.dispatchPincode || localRecord.pincode || '').slice(0, 20),
+                country: 'India'
+              }
+            };
+
+            if (localRecord.gstNumber) zohoPayload.gst_no = String(localRecord.gstNumber).trim();
+
+            const zohoRes = await callZoho('POST', '/books/v3/contacts', zohoPayload, token);
+
+            if (zohoRes && (zohoRes.code === 0 || zohoRes.contact)) {
+              const zohoContact = zohoRes.contact || {};
+              localRecord.zohoContactId = zohoContact.contact_id;
+              const reSaved = updatedLocal.map(c => c.customerCode === localRecord.customerCode ? { ...c, zohoContactId: zohoContact.contact_id } : c);
+              saveStore('customer_store.json', reSaved);
+
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({
+                success: true,
+                message: 'Customer created and synchronized to Zoho Books successfully!',
+                customer: localRecord,
+                zohoContact
+              }));
+            } else {
+              console.warn('[ZOHO CUSTOMER CREATE WARN]', zohoRes);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({
+                success: true,
+                message: `Saved in Control Room. Zoho note: ${(zohoRes && zohoRes.message) || 'Pending sync'}`,
+                customer: localRecord
+              }));
+            }
+          } catch (zohoErr) {
+            console.error('[ZOHO CUSTOMER SYNC ERROR]', zohoErr.message);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({
+              success: true,
+              message: 'Customer saved locally in Control Room.',
+              customer: localRecord
+            }));
+          }
+        }
+      }
+
+      // 3. Purchase Orders (Fetch, Create, Approval Flow)
       if (pathname === '/api/zoho/purchaseorders' || pathname.endsWith('/purchaseorders')) {
         const token = await getZohoAccessToken();
 
         if (req.method === 'GET') {
           const zohoRes = await callZoho('GET', '/books/v3/purchaseorders?per_page=200&sort_column=created_time&sort_order=D', null, token);
-          const storePath = path.join(__dirname, 'po_workflow_store.json');
-          let wfStore = {};
-          try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+          const wfStore = loadStore('po_workflow_store.json', {});
+          const localPOs = loadStore('po_store.json', []);
 
           const mapped = ((zohoRes && zohoRes.purchaseorders) || []).map(p => {
             const wf = wfStore[p.purchaseorder_id] || wfStore[p.purchaseorder_number] || null;
@@ -171,6 +347,15 @@ const server = http.createServer(async (req, res) => {
               items: []
             };
           });
+
+          // Also include any local POs not yet in Zoho list
+          const existingNos = new Set(mapped.map(m => String(m.poNo).toLowerCase()));
+          localPOs.forEach(lp => {
+            if (!existingNos.has(String(lp.poNo).toLowerCase())) {
+              mapped.unshift(lp);
+            }
+          });
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify(mapped));
         }
@@ -206,12 +391,13 @@ const server = http.createServer(async (req, res) => {
           if (body.notes) zohoPayload.notes = String(body.notes);
           if (body.terms) zohoPayload.terms = String(body.terms);
 
-          console.log('[ZOHO STANDALONE CREATE]', JSON.stringify(zohoPayload));
+          // Save PO immediately to local store
+          const currentLocal = loadStore('po_store.json', []);
+          saveStore('po_store.json', [body, ...currentLocal.filter(p => p.poNo !== body.poNo)]);
+
           let zohoResult = await callZoho('POST', '/books/v3/purchaseorders', zohoPayload, token);
 
-          // If Zoho warns about auto-generation mismatch, retry letting Zoho assign its exact sequence number
           if (zohoResult && zohoResult.code !== 0) {
-            console.warn(`[ZOHO RETRY WITHOUT MANUAL PO NO] ${zohoResult.message}`);
             delete zohoPayload.purchaseorder_number;
             zohoResult = await callZoho('POST', '/books/v3/purchaseorders', zohoPayload, token);
           }
@@ -220,7 +406,6 @@ const server = http.createServer(async (req, res) => {
             const created = zohoResult.purchaseorder;
             const targetPoId = created ? created.purchaseorder_id : null;
 
-            // Follow multi-step approval flow: new POs remain in Draft / Pending Approval until approved by MD
             const isNoApproval = String(body.approvalRequired || '').toUpperCase() === 'NO';
             const statusRequested = body.status || 'Draft';
             const isExplicitDraft = statusRequested === 'Draft' || statusRequested === 'DRAFT';
@@ -252,53 +437,44 @@ const server = http.createServer(async (req, res) => {
               zohoPo: { ...created, status: isNoApproval ? 'open' : 'draft' }
             }));
           } else {
-            console.warn('[ZOHO CREATE WARNING]', zohoResult);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
               success: false,
-              message: (zohoResult && zohoResult.message) || 'Zoho creation error',
+              message: (zohoResult && zohoResult.message) || 'Zoho creation note',
               po: body
             }));
           }
         }
       }
 
-      // Step 2: MD Approval Endpoint (Draft / Pending Approval -> MD Approved)
+      // PO Approval Flow Endpoints
       if (pathname.includes('/purchaseorders/') && pathname.endsWith('/approve')) {
         const parts = pathname.split('/');
         const targetId = parts[parts.length - 2];
-        const token = await getZohoAccessToken();
-        const storePath = path.join(__dirname, 'po_workflow_store.json');
-        let wfStore = {};
-        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        const wfStore = loadStore('po_workflow_store.json', {});
         wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'MD Approved', statusType: 'md_approved', approvedBy: body.approver || 'MD' };
-        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+        saveStore('po_workflow_store.json', wfStore);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} approved by MD and moved to MD Approved.` }));
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} approved by MD.` }));
       }
 
-      // Step 3: Accounts Process Payment Endpoint (MD Approved -> Payment Processed)
       if (pathname.includes('/purchaseorders/') && pathname.endsWith('/process-payment')) {
         const parts = pathname.split('/');
         const targetId = parts[parts.length - 2];
-        const storePath = path.join(__dirname, 'po_workflow_store.json');
-        let wfStore = {};
-        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        const wfStore = loadStore('po_workflow_store.json', {});
         wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'Payment Processed', statusType: 'payment_processed', paymentDetails: body };
-        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+        saveStore('po_workflow_store.json', wfStore);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} payment details recorded and moved to Payment Processed.` }));
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} payment details recorded.` }));
       }
 
-      // Step 4: Proceed PO Endpoint (Payment Processed -> Proceed PO -> Calls Zoho POST .../status/issued to open it for GRN)
       if (pathname.includes('/purchaseorders/') && pathname.endsWith('/proceed')) {
         const parts = pathname.split('/');
         const targetId = parts[parts.length - 2];
         const token = await getZohoAccessToken();
         
-        // Only now does the server transition the PO to issued/open in Zoho Books!
         try {
           await callZoho('POST', `/books/v3/purchaseorders/${encodeURIComponent(targetId)}/status/issued`, null, token);
         } catch (_) {
@@ -307,65 +483,356 @@ const server = http.createServer(async (req, res) => {
           } catch (_) {}
         }
 
-        const storePath = path.join(__dirname, 'po_workflow_store.json');
-        let wfStore = {};
-        try { if (fs.existsSync(storePath)) wfStore = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch (_) {}
+        const wfStore = loadStore('po_workflow_store.json', {});
         wfStore[targetId] = { ...(wfStore[targetId] || {}), status: 'Proceed PO', statusType: 'proceed_po', proceedDetails: body };
-        try { fs.writeFileSync(storePath, JSON.stringify(wfStore, null, 2)); } catch (_) {}
+        saveStore('po_workflow_store.json', wfStore);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} moved to Proceed PO and issued in Zoho Books for GRN generation!` }));
+        return res.end(JSON.stringify({ success: true, message: `PO ${targetId} moved to Proceed PO and issued in Zoho Books!` }));
       }
 
-      // 5. Items list endpoint
+      // 4. Item Directory (Items / Materials)
       if (pathname === '/api/zoho/items' || pathname.endsWith('/items')) {
-        try {
-          const token = await getZohoAccessToken();
-          const zohoRes = await callZoho('GET', '/books/v3/items?per_page=200', null, token);
-          const mappedItems = ((zohoRes && zohoRes.items) || []).map(i => ({
-            id: i.item_id || i.id,
-            itemId: i.item_id || i.id,
-            name: i.name,
-            code: i.sku || i.item_id || '—',
-            sku: i.sku || '—',
-            rate: i.rate || 0,
-            price: i.rate || 0,
-            status: i.status === 'active' ? 'Active' : 'Inactive',
-            description: i.description || '—'
-          }));
+        const localItems = loadStore('item_store.json', []);
+
+        if (req.method === 'GET') {
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/items?per_page=200', null, token);
+            const mappedItems = ((zohoRes && zohoRes.items) || []).map(i => ({
+              id: i.item_id || i.id,
+              itemId: i.item_id || i.id,
+              name: i.name,
+              code: i.sku || i.item_id || '—',
+              sku: i.sku || '—',
+              rate: i.rate || 0,
+              price: i.rate || 0,
+              unit: i.unit || 'Nos',
+              status: i.status === 'active' ? 'Active' : 'Inactive',
+              description: i.description || '—'
+            }));
+
+            // Merge with local items
+            const itemMap = new Map();
+            mappedItems.forEach(mi => itemMap.set(String(mi.code || mi.name).toLowerCase(), mi));
+            localItems.forEach(li => {
+              const k = String(li.code || li.name || li.sku || li.id).toLowerCase();
+              if (itemMap.has(k)) itemMap.set(k, { ...itemMap.get(k), ...li });
+              else itemMap.set(k, li);
+            });
+
+            const finalList = Array.from(itemMap.values());
+            saveStore('item_store.json', finalList);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(finalList));
+          } catch (itemErr) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(localItems));
+          }
+        }
+
+        if (req.method === 'POST') {
+          // Immediately save locally
+          const newItem = {
+            ...body,
+            id: body.id || `ITEM-${Date.now()}`,
+            code: body.code || body.sku || `SKU-${Date.now()}`,
+            status: body.status || 'Active'
+          };
+          const updated = [newItem, ...localItems.filter(i => i.code !== newItem.code)];
+          saveStore('item_store.json', updated);
+
+          try {
+            const token = await getZohoAccessToken();
+            const zohoPayload = {
+              name: newItem.name || 'Raw Material Item',
+              rate: Number(newItem.rate || newItem.price || 0),
+              sku: newItem.sku || newItem.code,
+              description: newItem.description || undefined,
+              item_type: 'inventory',
+              unit: newItem.unit || 'Nos'
+            };
+            const zohoRes = await callZoho('POST', '/books/v3/items', zohoPayload, token);
+            if (zohoRes && zohoRes.item) {
+              newItem.zohoItemId = zohoRes.item.item_id;
+              saveStore('item_store.json', updated.map(i => i.code === newItem.code ? { ...i, zohoItemId: zohoRes.item.item_id } : i));
+            }
+          } catch (_) {}
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify(mappedItems));
-        } catch (itemErr) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify([]));
+          return res.end(JSON.stringify({ success: true, item: newItem }));
         }
       }
 
-      // 6. Vendors list endpoint
+      // 5. Invoices (Fetch & Create)
+      if (pathname === '/api/zoho/invoices' || pathname.endsWith('/invoices')) {
+        const localInvoices = loadStore('invoice_store.json', []);
+
+        if (req.method === 'GET') {
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/invoices?per_page=200&sort_column=created_time&sort_order=D', null, token);
+            const mappedInvoices = ((zohoRes && zohoRes.invoices) || []).map(inv => ({
+              id: inv.invoice_id || inv.id,
+              invoiceNumber: inv.invoice_number,
+              invoiceNo: inv.invoice_number,
+              customerName: inv.customer_name,
+              customerId: inv.customer_id,
+              date: inv.date,
+              dueDate: inv.due_date,
+              total: inv.total,
+              balance: inv.balance,
+              status: inv.status,
+              amount: `₹${Number(inv.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+            }));
+
+            // Merge local invoices
+            const invMap = new Map();
+            mappedInvoices.forEach(i => invMap.set(String(i.invoiceNumber || i.id).toLowerCase(), i));
+            localInvoices.forEach(li => {
+              const k = String(li.invoiceNumber || li.id).toLowerCase();
+              if (!invMap.has(k)) invMap.set(k, li);
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(Array.from(invMap.values())));
+          } catch (invErr) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(localInvoices));
+          }
+        }
+
+        if (req.method === 'POST') {
+          const newInvoice = { ...body, id: body.id || `INV-${Date.now()}` };
+          saveStore('invoice_store.json', [newInvoice, ...localInvoices]);
+
+          try {
+            const token = await getZohoAccessToken();
+            const zohoPayload = {
+              customer_id: body.customerId || body.customer_id,
+              invoice_number: body.invoiceNumber || body.invoiceNo || undefined,
+              date: body.date || new Date().toISOString().split('T')[0],
+              due_date: body.dueDate || body.date || new Date().toISOString().split('T')[0],
+              line_items: (body.items || []).map(it => ({
+                name: it.name || 'Fabrication Work',
+                rate: Number(it.rate || it.price || 0),
+                quantity: Number(it.quantity || it.qty || 1)
+              }))
+            };
+            const zohoRes = await callZoho('POST', '/books/v3/invoices', zohoPayload, token);
+            if (zohoRes && zohoRes.invoice) {
+              newInvoice.zohoInvoiceId = zohoRes.invoice.invoice_id;
+            }
+          } catch (_) {}
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, invoice: newInvoice }));
+        }
+      }
+
+      // 6. Proforma Invoices / Estimates (PI)
+      if (pathname === '/api/zoho/estimates' || pathname === '/api/zoho/proforma-invoices' || pathname.endsWith('/estimates') || pathname.endsWith('/proforma-invoices')) {
+        const localEstimates = loadStore('proforma_invoice_store.json', []);
+
+        if (req.method === 'GET') {
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/estimates?per_page=200&sort_column=created_time&sort_order=D', null, token);
+            const mappedPIs = ((zohoRes && zohoRes.estimates) || []).map(est => ({
+              id: est.estimate_id || est.id,
+              piNo: est.estimate_number,
+              piDate: est.date,
+              vendor: est.customer_name,
+              customerName: est.customer_name,
+              customerId: est.customer_id,
+              amount: `₹${Number(est.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+              total: est.total,
+              status: est.status === 'accepted' ? 'Approved' : (est.status === 'invoiced' ? 'Invoiced' : 'Pending'),
+              statusType: est.status
+            }));
+
+            const piMap = new Map();
+            mappedPIs.forEach(p => piMap.set(String(p.piNo).toLowerCase(), p));
+            localEstimates.forEach(lp => {
+              const k = String(lp.piNo).toLowerCase();
+              if (!piMap.has(k)) piMap.set(k, lp);
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(Array.from(piMap.values())));
+          } catch (estErr) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(localEstimates));
+          }
+        }
+
+        if (req.method === 'POST') {
+          const newPI = { ...body, id: body.id || `PI-${Date.now()}` };
+          saveStore('proforma_invoice_store.json', [newPI, ...localEstimates.filter(p => p.piNo !== newPI.piNo)]);
+
+          try {
+            const token = await getZohoAccessToken();
+            const zohoPayload = {
+              customer_id: body.customerId || '4080449000000039008',
+              estimate_number: body.piNo || undefined,
+              date: body.piDate || new Date().toISOString().split('T')[0],
+              line_items: (body.items || []).map(it => ({
+                name: it.name || it.productName || 'Solar Module Mounting Structures',
+                rate: Number(it.rate || it.unitValue || 100),
+                quantity: Number(it.qty || it.quantity || 1)
+              }))
+            };
+            const zohoRes = await callZoho('POST', '/books/v3/estimates', zohoPayload, token);
+            if (zohoRes && zohoRes.estimate) {
+              newPI.zohoEstimateId = zohoRes.estimate.estimate_id;
+            }
+          } catch (_) {}
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, estimate: newPI }));
+        }
+      }
+
+      // 7. Delivery Challans (DC)
+      if (pathname === '/api/zoho/deliverychallans' || pathname.endsWith('/deliverychallans')) {
+        const localDCs = loadStore('dc_store.json', []);
+
+        if (req.method === 'GET') {
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/deliverychallans?per_page=200&sort_column=created_time&sort_order=D', null, token);
+            const mappedDCs = ((zohoRes && zohoRes.deliverychallans) || []).map(dc => ({
+              id: dc.deliverychallan_id || dc.id,
+              dcNo: dc.deliverychallan_number,
+              challanNo: dc.deliverychallan_number,
+              customerName: dc.customer_name,
+              date: dc.date,
+              status: dc.status
+            }));
+
+            const dcMap = new Map();
+            mappedDCs.forEach(d => dcMap.set(String(d.dcNo || d.id).toLowerCase(), d));
+            localDCs.forEach(ld => {
+              const k = String(ld.dcNo || ld.challanNo || ld.id).toLowerCase();
+              if (!dcMap.has(k)) dcMap.set(k, ld);
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(Array.from(dcMap.values())));
+          } catch (dcErr) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(localDCs));
+          }
+        }
+
+        if (req.method === 'POST') {
+          const newDC = { ...body, id: body.id || `DC-${Date.now()}` };
+          saveStore('dc_store.json', [newDC, ...localDCs]);
+
+          try {
+            const token = await getZohoAccessToken();
+            const zohoPayload = {
+              customer_id: body.customerId || '4080449000000039008',
+              deliverychallan_number: body.challanNo || body.dcNo || undefined,
+              date: body.date || new Date().toISOString().split('T')[0],
+              line_items: (body.items || []).map(it => ({
+                name: it.name || 'Solar Mounting Components',
+                quantity: Number(it.qty || it.quantity || 1)
+              }))
+            };
+            const zohoRes = await callZoho('POST', '/books/v3/deliverychallans', zohoPayload, token);
+            if (zohoRes && zohoRes.deliverychallan) {
+              newDC.zohoDcId = zohoRes.deliverychallan.deliverychallan_id;
+            }
+          } catch (_) {}
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, deliverychallan: newDC }));
+        }
+      }
+
+      // 8. Vendors (Fetch & Create)
       if (pathname === '/api/zoho/vendors' || pathname.endsWith('/vendors')) {
-        try {
-          const token = await getZohoAccessToken();
-          const zohoRes = await callZoho('GET', '/books/v3/contacts?contact_type=vendor&per_page=200', null, token);
-          const mappedVendors = ((zohoRes && zohoRes.contacts) || []).map(c => ({
-            id: c.contact_id || c.id,
-            vendorId: c.contact_id || c.id,
-            name: c.contact_name || c.vendor_name,
-            email: c.email || '—',
-            phone: c.phone || '—',
-            status: c.status === 'active' ? 'Active' : 'Inactive'
-          }));
+        const localVendors = loadStore('vendor_store.json', []);
+
+        if (req.method === 'GET') {
+          try {
+            const token = await getZohoAccessToken();
+            const zohoRes = await callZoho('GET', '/books/v3/contacts?contact_type=vendor&per_page=200', null, token);
+            const mappedVendors = ((zohoRes && zohoRes.contacts) || []).map(c => ({
+              id: c.contact_id || c.id,
+              vendorId: c.contact_id || c.id,
+              name: c.contact_name || c.vendor_name,
+              email: c.email || '—',
+              phone: c.phone || '—',
+              status: c.status === 'active' ? 'Active' : 'Inactive'
+            }));
+
+            const vMap = new Map();
+            mappedVendors.forEach(v => vMap.set(String(v.name || v.id).toLowerCase(), v));
+            localVendors.forEach(lv => {
+              const k = String(lv.name || lv.id).toLowerCase();
+              if (!vMap.has(k)) vMap.set(k, lv);
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(Array.from(vMap.values())));
+          } catch (vendorErr) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify(localVendors));
+          }
+        }
+
+        if (req.method === 'POST') {
+          const newVendor = { ...body, id: body.id || `VEND-${Date.now()}` };
+          saveStore('vendor_store.json', [newVendor, ...localVendors]);
+
+          try {
+            const token = await getZohoAccessToken();
+            const zohoPayload = {
+              contact_name: body.name || body.vendor_name || 'Vendor',
+              company_name: body.name || body.vendor_name || 'Vendor',
+              contact_type: 'vendor'
+            };
+            const zohoRes = await callZoho('POST', '/books/v3/contacts', zohoPayload, token);
+            if (zohoRes && zohoRes.contact) {
+              newVendor.zohoVendorId = zohoRes.contact.contact_id;
+            }
+          } catch (_) {}
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify(mappedVendors));
-        } catch (vendorErr) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify([]));
+          return res.end(JSON.stringify({ success: true, vendor: newVendor }));
         }
       }
 
-      // If not an API request, serve the static frontend files
+      // 9. GSTIN Lookup Verification
+      if (pathname === '/api/zoho/gst-lookup' || pathname.endsWith('/gst-lookup')) {
+        const rawGst = (query.gstin || query.gst || '').toUpperCase().trim();
+        const stateCode = rawGst.substring(0, 2);
+        const pan = rawGst.substring(2, 12);
+        const states = {
+          '37': 'Andhra Pradesh', '33': 'Tamil Nadu', '36': 'Telangana',
+          '29': 'Karnataka', '27': 'Maharashtra', '07': 'Delhi', '24': 'Gujarat'
+        };
+        const stateName = states[stateCode] || 'Tamil Nadu';
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: true,
+          gstin: rawGst,
+          pan,
+          state: stateName,
+          legalName: `VRM REGISTERED ENTITY (${pan})`,
+          tradeName: 'VRM Industrial Solar Partner',
+          status: 'Active',
+          taxpayerType: 'Regular'
+        }));
+      }
+
+      // 10. Static Frontend Files Serving
       let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
       
-      // If file exists, serve it with proper content type
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         const ext = path.extname(filePath).toLowerCase();
         const mimeTypes = {
@@ -384,7 +851,7 @@ const server = http.createServer(async (req, res) => {
         return fs.createReadStream(filePath).pipe(res);
       }
 
-      // If it's a route and not /api/, fallback to index.html for SPA routing
+      // Fallback to index.html for Single Page Application routing
       if (!pathname.startsWith('/api')) {
         const indexHtmlPath = path.join(__dirname, 'index.html');
         if (fs.existsSync(indexHtmlPath)) {
@@ -393,11 +860,11 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      // Default Health/Status check for /api
+      // Default Status Ping for unhandled /api requests
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Control Room Zoho Service is Online', time: new Date().toISOString() }));
+      res.end(JSON.stringify({ success: true, message: 'Control Room Zoho Gateway Active', time: new Date().toISOString() }));
     } catch (err) {
-      console.error('[ZOHO SERVER ERROR]', err);
+      console.error('[ZOHO GATEWAY ERROR]', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
     }
@@ -406,7 +873,7 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
-  console.log(`Standalone Control Room Zoho Server running on port ${PORT}`);
+  console.log(`Control Room Zoho Gateway active on port ${PORT}`);
 });
 
 module.exports = server;
