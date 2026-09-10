@@ -1436,18 +1436,13 @@ export default function BomOrdersView(props) {
               )}
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155' }}>Order Number</label>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A5F3FC' }}>
-                  ⚡ Auto-assigned on save
-                </span>
-              </div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Number</label>
               <input
                 type="text"
-                value="Auto-assigned upon creation (BOM-XXX)"
+                value="Auto-Assigned"
                 readOnly
                 disabled
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CFFAFE', padding: '0 14px', fontSize: '12.5px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CFFAFE', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
             <div>
