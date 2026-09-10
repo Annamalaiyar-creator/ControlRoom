@@ -456,20 +456,64 @@ const saveLocalVendors = (vendors) => {
 };
 
 const loadLocalCustomers = () => {
-  if (supabaseMemoryStore.customer_store && supabaseMemoryStore.customer_store.length > 0) {
-    return supabaseMemoryStore.customer_store;
+  let combined = [];
+  const seenIds = new Set();
+
+  // 1. First check in-memory Supabase cache
+  if (supabaseMemoryStore.customer_store && Array.isArray(supabaseMemoryStore.customer_store) && supabaseMemoryStore.customer_store.length > 0) {
+    supabaseMemoryStore.customer_store.forEach(c => {
+      const id = c.customerCode || c.id || c.zohoContactId || c.code;
+      if (id && !seenIds.has(String(id).toLowerCase())) {
+        seenIds.add(String(id).toLowerCase());
+        combined.push(c);
+      }
+    });
   }
+
+  // 2. Load from customer_store.json
   try {
     const filePath = getStoreFilePath('customer_store.json');
     if (fs.existsSync(filePath)) {
       const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      pushStoreToSupabase('customer_store', data);
-      return data;
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          const id = c.customerCode || c.id || c.zohoContactId || c.code;
+          if (id && !seenIds.has(String(id).toLowerCase())) {
+            seenIds.add(String(id).toLowerCase());
+            combined.push(c);
+          }
+        });
+      }
     }
   } catch (err) {
-    console.error('Error loading local customers:', err);
+    console.error('Error loading customer_store.json:', err);
   }
-  return [];
+
+  // 3. Load from crm_customers.json so CRM created/converted customers are NEVER lost
+  try {
+    const crmPath = getStoreFilePath('crm_customers.json');
+    if (fs.existsSync(crmPath)) {
+      const data = JSON.parse(fs.readFileSync(crmPath, 'utf8'));
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          const id = c.customerCode || c.id || c.zohoContactId || c.code;
+          if (id && !seenIds.has(String(id).toLowerCase())) {
+            seenIds.add(String(id).toLowerCase());
+            combined.push(c);
+          } else if (id) {
+            const idx = combined.findIndex(x => String(x.customerCode || x.id || x.zohoContactId || x.code).toLowerCase() === String(id).toLowerCase());
+            if (idx >= 0) {
+              combined[idx] = { ...c, ...combined[idx] };
+            }
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error loading crm_customers.json:', err);
+  }
+
+  return combined;
 };
 
 const saveLocalCustomers = (customers) => {
@@ -482,7 +526,27 @@ const saveLocalCustomers = (customers) => {
   }
   try {
     const crmPath = getStoreFilePath('crm_customers.json');
-    fs.writeFileSync(crmPath, JSON.stringify(customers, null, 2), 'utf8');
+    let existingCrm = [];
+    if (fs.existsSync(crmPath)) {
+      try { existingCrm = JSON.parse(fs.readFileSync(crmPath, 'utf8')); } catch (e) {}
+    }
+    const map = new Map();
+    if (Array.isArray(existingCrm)) {
+      existingCrm.forEach(c => {
+        const k = (c.customerCode || c.id || c.zohoContactId || c.code || '').toLowerCase().trim();
+        if (k) map.set(k, c);
+      });
+    }
+    if (Array.isArray(customers)) {
+      customers.forEach(c => {
+        const k = (c.customerCode || c.id || c.zohoContactId || c.code || '').toLowerCase().trim();
+        if (k) {
+          map.set(k, { ...(map.get(k) || {}), ...c });
+        }
+      });
+    }
+    const mergedCrm = Array.from(map.values());
+    fs.writeFileSync(crmPath, JSON.stringify(mergedCrm, null, 2), 'utf8');
   } catch (err) {
     console.error('Error syncing crm_customers.json:', err);
   }
@@ -915,10 +979,13 @@ app.post('/api/zoho/customers', async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  // 1. Immediately persist to disk storage & Supabase
+  // 1. Immediately persist to disk storage & Supabase (Never delete customers sharing same companyName)
   const updatedCustomers = [
     localCustomerRecord,
-    ...localCustomers.filter(c => (c.customerCode || c.id) !== localCustomerRecord.customerCode && c.companyName !== localCustomerRecord.companyName)
+    ...localCustomers.filter(c => 
+      (c.customerCode || c.id) !== localCustomerRecord.customerCode &&
+      (!localCustomerRecord.zohoContactId || !c.zohoContactId || c.zohoContactId !== localCustomerRecord.zohoContactId)
+    )
   ];
   saveLocalCustomers(updatedCustomers);
 
@@ -973,11 +1040,54 @@ app.post('/api/zoho/customers', async (req, res) => {
       notes: `Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
     };
 
-    const result = await createZohoCustomer(accessToken, zohoPayload);
+    let result = await createZohoCustomer(accessToken, zohoPayload);
+
+    // Auto-resolve Zoho code 3062 / duplicate contact name error
+    if (result && (result.code === 3062 || (result.message && result.message.toLowerCase().includes('already exists')))) {
+      console.log(`[Zoho Contact Notice] Contact "${contactNameVal}" already exists in Zoho Books. Linking or resolving unique name...`);
+      try {
+        const existingData = await fetchZohoCustomers(accessToken);
+        if (existingData && Array.isArray(existingData.contacts)) {
+          const exactMatch = existingData.contacts.find(c =>
+            (c.contact_name && c.contact_name.toLowerCase() === contactNameVal.toLowerCase()) ||
+            (c.company_name && c.company_name.toLowerCase() === companyNameVal.toLowerCase())
+          );
+          if (exactMatch && exactMatch.contact_id) {
+            localCustomerRecord.zohoContactId = exactMatch.contact_id;
+            const finalized = updatedCustomers.map(c => 
+              (c.customerCode === localCustomerRecord.customerCode || c.id === localCustomerRecord.id) 
+                ? { ...c, zohoContactId: exactMatch.contact_id } 
+                : c
+            );
+            saveLocalCustomers(finalized);
+            return res.json({
+              success: true,
+              message: 'Customer linked with existing Zoho Books contact successfully!',
+              customer: localCustomerRecord,
+              zohoContact: exactMatch
+            });
+          }
+        }
+      } catch (eMatch) {
+        console.warn('Error matching existing Zoho contact:', eMatch.message);
+      }
+
+      // If not linked to existing, disambiguate contact name with contact person or code and retry
+      const contactPersonName = localCustomerRecord.primaryContact && localCustomerRecord.primaryContact.name;
+      const suffix = contactPersonName || localCustomerRecord.customerCode || Date.now();
+      const disambiguatedName = `${companyNameVal} (${suffix})`;
+      console.log(`[Zoho Retry] Retrying customer creation with unique contact_name: "${disambiguatedName}"`);
+      result = await createZohoCustomer(accessToken, { ...zohoPayload, contact_name: disambiguatedName });
+    }
+
     if (result && (result.code === 0 || result.contact)) {
       if (result.contact && result.contact.contact_id) {
         localCustomerRecord.zohoContactId = result.contact.contact_id;
-        const finalized = updatedCustomers.map(c => c.customerCode === localCustomerRecord.customerCode ? { ...c, zohoContactId: result.contact.contact_id } : c);
+        const finalized = updatedCustomers.map(c => 
+          (c.customerCode === localCustomerRecord.customerCode || c.id === localCustomerRecord.id) 
+            ? { ...c, zohoContactId: result.contact.contact_id } 
+            : c
+        );
         saveLocalCustomers(finalized);
       }
       return res.json({
@@ -1017,13 +1127,14 @@ app.get('/api/zoho/customers', async (req, res) => {
     const data = await fetchZohoCustomers(accessToken);
 
     if (data && data.contacts && Array.isArray(data.contacts)) {
-      // Map Zoho Books customer contacts
+      // Map raw Zoho Books contacts
       const zohoCustomers = data.contacts.map((c, idx) => {
         const bAddr = c.billing_address || {};
         return {
           id: c.contact_id || `CUST-ZOHO-${idx + 1}`,
           customerCode: c.contact_id ? `CUST-${String(c.contact_id).slice(-4)}` : `CUST-VRM-${100 + idx + 1}`,
           companyName: c.company_name || c.contact_name,
+          customerName: c.contact_name || c.company_name,
           customerType: 'EPC Contractor',
           industry: 'Solar Energy / Utility Scale',
           gstNumber: c.gst_no || c.gstin || '',
@@ -1049,30 +1160,77 @@ app.get('/api/zoho/customers', async (req, res) => {
         };
       });
 
-      // Merge Zoho customers with local customers without wiping Control Room custom metadata
-      const mergedMap = new Map();
+      // 1. Index local customers by zohoContactId, customerCode, and company + primary contact
+      const byZohoId = new Map();
+      const byCode = new Map();
+      const byNameAndContact = new Map();
+
       localCustomers.forEach(cust => {
-        const key = (cust.companyName || cust.customerCode || cust.id || '').toLowerCase().trim();
-        if (key) mergedMap.set(key, cust);
+        if (cust.zohoContactId) byZohoId.set(String(cust.zohoContactId).trim(), cust);
+        const codeKey = (cust.customerCode || cust.id || '').toLowerCase().trim();
+        if (codeKey) byCode.set(codeKey, cust);
+
+        const pName = (cust.primaryContact && cust.primaryContact.name) || cust.c3 || '';
+        const nameKey = `${(cust.companyName || '').toLowerCase().trim()}:::${pName.toLowerCase().trim()}`;
+        if (nameKey !== ':::') byNameAndContact.set(nameKey, cust);
       });
+
+      // 2. Map all Zoho contacts and merge with local customer details without losing distinct contacts
+      const processedZohoIds = new Set();
+      const processedCodes = new Set();
+      const mergedList = [];
 
       zohoCustomers.forEach(zCust => {
-        const key = (zCust.companyName || zCust.customerCode || '').toLowerCase().trim();
-        if (mergedMap.has(key)) {
-          const existing = mergedMap.get(key);
-          mergedMap.set(key, {
-            ...zCust,
-            ...existing,
-            zohoContactId: zCust.zohoContactId,
-            gstNumber: existing.gstNumber || zCust.gstNumber,
-            panNumber: existing.panNumber || zCust.panNumber
-          });
-        } else {
-          mergedMap.set(key, zCust);
+        const zId = String(zCust.zohoContactId || zCust.id).trim();
+        processedZohoIds.add(zId);
+
+        let localMatch = byZohoId.get(zId);
+        if (!localMatch) {
+          const pName = (zCust.primaryContact && zCust.primaryContact.name) || '';
+          const zNameKey = `${(zCust.companyName || '').toLowerCase().trim()}:::${pName.toLowerCase().trim()}`;
+          localMatch = byNameAndContact.get(zNameKey);
         }
+        if (!localMatch && zCust.customerCode) {
+          localMatch = byCode.get(zCust.customerCode.toLowerCase().trim());
+        }
+
+        const effectiveCode = (localMatch && (localMatch.customerCode || localMatch.id)) || zCust.customerCode;
+        processedCodes.add(String(effectiveCode).toLowerCase().trim());
+
+        const mergedCust = {
+          ...zCust,
+          ...(localMatch || {}),
+          id: effectiveCode,
+          customerCode: effectiveCode,
+          companyName: (localMatch && localMatch.companyName) || zCust.companyName,
+          customerName: zCust.customerName || (localMatch && localMatch.customerName),
+          zohoContactId: zCust.zohoContactId || zId,
+          primaryContact: {
+            ...zCust.primaryContact,
+            ...((localMatch && localMatch.primaryContact) || {})
+          },
+          customerType: (localMatch && localMatch.customerType) || zCust.customerType,
+          creditLimit: (localMatch && localMatch.creditLimit) || zCust.creditLimit,
+          creditDays: (localMatch && localMatch.creditDays) || zCust.creditDays,
+          assignedSalesperson: (localMatch && localMatch.assignedSalesperson) || zCust.assignedSalesperson || 'Mohith JV'
+        };
+
+        mergedList.push(mergedCust);
       });
 
-      const mergedList = Array.from(mergedMap.values());
+      // 3. Preserve local customers that haven't been synchronized to Zoho yet
+      localCustomers.forEach(cust => {
+        const custZohoId = cust.zohoContactId ? String(cust.zohoContactId).trim() : null;
+        if (custZohoId && processedZohoIds.has(custZohoId)) {
+          return;
+        }
+        const cCode = String(cust.customerCode || cust.id || '').toLowerCase().trim();
+        if (cCode && processedCodes.has(cCode)) {
+          return;
+        }
+        mergedList.push(cust);
+      });
+
       saveLocalCustomers(mergedList);
       return res.json(mergedList);
     }

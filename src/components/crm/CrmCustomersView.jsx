@@ -178,6 +178,23 @@ export default function CrmCustomersView({
   const handleSyncWithZoho = async (isManual = false) => {
     setIsSyncingZoho(true);
     try {
+      // 1. Push any local CRM customer records lacking zohoContactId to Zoho Books
+      if (Array.isArray(customers) && customers.length > 0) {
+        const unsynced = customers.filter(c => !c.zohoContactId && (c.customerCode || c.companyName));
+        for (const cust of unsynced) {
+          try {
+            await fetch('/api/zoho/customers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(cust)
+            });
+          } catch (e) {
+            console.warn('Background sync push notice for customer:', cust.customerCode, e.message);
+          }
+        }
+      }
+
+      // 2. Retrieve all live synchronized customers from Zoho Books
       const res = await fetch('/api/zoho/customers');
       if (res.ok) {
         const data = await res.json();

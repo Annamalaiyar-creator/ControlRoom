@@ -66,10 +66,67 @@ export default function SalesCrmEngine({
     saveCrmStore('leads', updated);
   };
 
-  const handleSaveCustomer = (customer) => {
-    const updated = [customer, ...customers.filter(c => c.id !== customer.id)];
+  const handleSaveCustomer = async (customer) => {
+    const custKey = customer.customerCode || customer.id;
+    const updated = [customer, ...customers.filter(c => (c.customerCode || c.id) !== custKey)];
     setCustomers(updated);
     saveCrmStore('customers', updated);
+
+    // Also sync to BOM customer store so BOM creation picks it up immediately
+    try {
+      const existingBOMCust = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
+      const filtered = existingBOMCust.filter(c => {
+        const cCode = (c.customerCode || c.code || c.id || '').toLowerCase().trim();
+        const targetCode = (customer.customerCode || customer.id || customer.code || '').toLowerCase().trim();
+        return cCode !== targetCode;
+      });
+      const bomRecord = {
+        code: customer.companyName || customer.customerName || customer.customerCode,
+        c2: customer.companyName || customer.customerName || customer.customerCode,
+        gstNo: customer.gstNumber || '',
+        c3: (customer.primaryContact && customer.primaryContact.name) || '',
+        c4: (customer.primaryContact && customer.primaryContact.phone) || '',
+        c5: (customer.primaryContact && customer.primaryContact.email) || '',
+        status: 'ACTIVE',
+        customerCode: customer.customerCode || customer.id,
+        ...customer
+      };
+      const updatedBOMCust = [bomRecord, ...filtered];
+      localStorage.setItem('controlroom_customer_store', JSON.stringify(updatedBOMCust));
+      localStorage.setItem('controlroom_customer_list', JSON.stringify(updatedBOMCust));
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+      window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: bomRecord }));
+    } catch (e) {
+      console.warn('Error syncing customer to BOM store:', e);
+    }
+
+    // Automatically synchronize to Zoho Books
+    try {
+      const res = await fetch('/api/zoho/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer)
+      });
+      if (res.ok) {
+        const resJson = await res.json();
+        if (resJson && resJson.customer && resJson.customer.zohoContactId) {
+          const withZoho = {
+            ...customer,
+            ...resJson.customer,
+            zohoContactId: resJson.customer.zohoContactId
+          };
+          setCustomers(prev => prev.map(c => 
+            (c.customerCode || c.id) === custKey ? withZoho : c
+          ));
+          const refreshed = updated.map(c => 
+            (c.customerCode || c.id) === custKey ? withZoho : c
+          );
+          saveCrmStore('customers', refreshed);
+        }
+      }
+    } catch (err) {
+      console.warn('Zoho customer background sync:', err);
+    }
   };
 
   const handleSaveOpportunity = (opp) => {
