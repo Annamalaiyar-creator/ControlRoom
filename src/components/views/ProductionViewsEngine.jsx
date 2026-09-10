@@ -8921,7 +8921,43 @@ export default function ProductionViewsEngine(props) {
             );
             const isAlreadyForwarded = !isEditMode;
             const allItemsConfirmed = confirmingBomModal.items && confirmingBomModal.items.length > 0 && confirmingBomModal.items.every(i => i.confirmed);
-            const grandTotalCalc = (confirmingBomModal.items || []).reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
+
+            const modalPresetGroups = (Array.isArray(confirmingBomModal.presetGroups) && confirmingBomModal.presetGroups.length > 0)
+              ? confirmingBomModal.presetGroups.map(g => ({ ...g }))
+              : (confirmingBomModal.presetName || (parseFloat(confirmingBomModal.presetKitPrice) > 0))
+                ? [{
+                    presetName: confirmingBomModal.presetName || 'Pre-Engineered Structure Kit Package',
+                    setCount: parseInt(confirmingBomModal.presetSetCount) || 1,
+                    kitPrice: parseFloat(confirmingBomModal.presetKitPrice) || 0
+                  }]
+                : [];
+
+            let presetKitsTotal = modalPresetGroups.reduce((acc, g) => acc + ((parseFloat(g.kitPrice) || 0) * (parseInt(g.setCount) || 1)), 0) || (parseFloat(confirmingBomModal.presetKitPrice) || 0);
+            const customItemsTotal = (confirmingBomModal.items || []).reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
+
+            // Fallback: If presetKitsTotal is 0, but the BOM has items with rate 0 and grandTotal > customItemsTotal, compute preset package price
+            if (presetKitsTotal === 0 && (confirmingBomModal.items || []).some(it => it.isPresetItem || parseFloat(it.rate || 0) === 0)) {
+              const gTotal = parseFloat(confirmingBomModal.grandTotal) || 0;
+              const sTotal = parseFloat(confirmingBomModal.subTotal) || (gTotal > 0 ? (gTotal / 1.18) : 0);
+              if (sTotal > customItemsTotal) {
+                presetKitsTotal = Math.max(0, Math.round((sTotal - customItemsTotal) * 100) / 100);
+                if (modalPresetGroups.length === 0) {
+                  modalPresetGroups.push({
+                    presetName: confirmingBomModal.presetName || 'Pre-Engineered Structure Kit Package',
+                    setCount: parseInt(confirmingBomModal.presetSetCount) || 1,
+                    kitPrice: presetKitsTotal
+                  });
+                } else if (modalPresetGroups.length === 1 && (parseFloat(modalPresetGroups[0].kitPrice) || 0) === 0) {
+                  modalPresetGroups[0].kitPrice = presetKitsTotal / (parseInt(modalPresetGroups[0].setCount) || 1);
+                }
+              }
+            }
+
+            const calculatedSubtotal = presetKitsTotal + customItemsTotal;
+            const orderSubTotal = parseFloat(confirmingBomModal.subTotal) || calculatedSubtotal;
+            const orderGrandTotal = parseFloat(confirmingBomModal.grandTotal) || (calculatedSubtotal > 0 ? Math.round(calculatedSubtotal * 1.18 * 100) / 100 : 0);
+            const orderGstAmount = parseFloat(confirmingBomModal.gstAmount) || (orderGrandTotal > orderSubTotal ? Math.round((orderGrandTotal - orderSubTotal) * 100) / 100 : Math.round(orderSubTotal * 0.18 * 100) / 100);
+            const grandTotalCalc = orderGrandTotal;
 
             const bObj = confirmingBomModal.billingAddressObj || {
               address: confirmingBomModal.billingAddress || '',
@@ -9010,9 +9046,9 @@ export default function ProductionViewsEngine(props) {
                             items: finalizedItems,
                             dispatchPacking: packingItems,
                             status: 'Sent to Production',
-                            subTotal: confirmingBomModal.subTotal || grandTotalCalc,
-                            gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
-                            grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
+                            subTotal: confirmingBomModal.subTotal || orderSubTotal,
+                            gstAmount: confirmingBomModal.gstAmount || orderGstAmount,
+                            grandTotal: confirmingBomModal.grandTotal || orderGrandTotal
                           } : b));
 
                           // Trigger Real-time Workflow Notification with synthesized sound & deep-link to Dispatch Orders
@@ -9697,10 +9733,70 @@ export default function ProductionViewsEngine(props) {
                         </tr>
                       </thead>
                       <tbody>
+                        {/* PRESET KIT PACKAGE ROWS */}
+                        {modalPresetGroups.map((grp, gIdx) => {
+                          const gSets = parseInt(grp.setCount) || 1;
+                          const gPrice = parseFloat(grp.kitPrice) || 0;
+                          const gTotal = gSets * gPrice;
+                          return (
+                            <tr
+                              key={`preset-kit-row-${gIdx}`}
+                              style={{
+                                backgroundColor: '#F0FDFA',
+                                borderBottom: '2px solid #A5F3FC',
+                                borderLeft: '4px solid #0E7490'
+                              }}
+                            >
+                              {!isAlreadyForwarded && (
+                                <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490' }}>📦</span>
+                                </td>
+                              )}
+                              <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490', whiteSpace: 'nowrap' }}>
+                                KIT {gIdx + 1}
+                              </td>
+                              <td style={{ padding: '12px 10px', fontWeight: '800', color: '#0F172A' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span style={{ backgroundColor: '#0E7490', color: 'white', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    PRESET KIT
+                                  </span>
+                                  <span style={{ fontSize: '13px', color: '#0E7490', fontWeight: '800' }}>
+                                    {grp.presetName || 'Pre-Engineered MMS Kit Package'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 10px', color: '#0E7490', fontSize: '12px', fontWeight: '600' }}>
+                                Pre-Engineered MMS Structure ({gSets} Set{gSets > 1 ? 's' : ''} bundled with hardware below)
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>
+                                SET
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#0E7490' }}>
+                                {gSets}
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>
+                                ₹ {gPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '900', color: '#0E7490', fontSize: '14px' }}>
+                                ₹ {gTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                              {!isAlreadyForwarded && (
+                                <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                  <span style={{ fontSize: '10px', color: '#0E7490', fontWeight: '800', backgroundColor: '#CCFBF1', padding: '3px 8px', borderRadius: '4px' }}>
+                                    KIT
+                                  </span>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+
+                        {/* PHYSICAL HARDWARE / CUSTOM COMPONENT ROWS */}
                         {(confirmingBomModal.items || []).map((item, idx) => {
                           const itemQty = parseFloat(item.qty) || 0;
                           const itemRate = parseFloat(item.rate) || 0;
                           const itemTotal = itemQty * itemRate;
+                          const isPartBundle = Boolean(item.isPresetItem || (modalPresetGroups.length > 0 && itemRate === 0));
 
                           if (isAlreadyForwarded) {
                             return (
@@ -9710,8 +9806,28 @@ export default function ProductionViewsEngine(props) {
                                 <td style={{ padding: '12px 10px', color: '#64748B' }}>{item.category || item.specs || '—'}</td>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>{item.uom || item.unit || 'NOS'}</td>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>{itemQty}</td>
-                                <td style={{ padding: '12px 10px', textAlign: 'right', color: '#334155' }}>₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                                  {isPartBundle ? (
+                                    <span style={{ backgroundColor: '#ECFEFF', color: '#0E7490', fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                      Bundled in Kit
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#334155' }}>
+                                      ₹ {itemRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800' }}>
+                                  {isPartBundle ? (
+                                    <span style={{ color: '#0E7490', fontSize: '11px', fontWeight: '800' }}>
+                                      Included
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#0F172A' }}>
+                                      ₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  )}
+                                </td>
                               </tr>
                             );
                           }
@@ -9788,6 +9904,7 @@ export default function ProductionViewsEngine(props) {
                                   type="number"
                                   min="0"
                                   value={item.rate}
+                                  placeholder={isPartBundle ? '0 (Bundled)' : '0'}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
@@ -9797,7 +9914,15 @@ export default function ProductionViewsEngine(props) {
                                 />
                               </td>
                               <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
-                                ₹ {itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                {itemTotal > 0 ? (
+                                  `₹ ${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                ) : isPartBundle ? (
+                                  <span style={{ color: '#0E7490', fontSize: '11px', fontWeight: '800', backgroundColor: '#ECFEFF', padding: '3px 6px', borderRadius: '4px' }}>
+                                    Included
+                                  </span>
+                                ) : (
+                                  '₹ 0.00'
+                                )}
                               </td>
                               <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                                 <button
@@ -9818,20 +9943,36 @@ export default function ProductionViewsEngine(props) {
                   </div>
 
                   {/* Summary math block */}
-                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {isAlreadyForwarded ? (
-                      <>
-                        <span style={{ fontSize: '13px', color: '#64748B' }}>
-                          Showing {confirmingBomModal.items?.length || 0} itemized BOM components
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '13px', color: '#64748B', display: 'block' }}>
+                        Showing {confirmingBomModal.items?.length || 0} itemized BOM components{modalPresetGroups.length > 0 ? ` + ${modalPresetGroups.length} Preset Kit Package` : ''}
+                      </span>
+                      {modalPresetGroups.length > 0 && (
+                        <span style={{ fontSize: '12px', color: '#0E7490', fontWeight: '600', marginTop: '4px', display: 'block' }}>
+                          ℹ️ Hardware components with ₹0.00 rate are physical items included inside the Preset Kit package above.
                         </span>
-                        <div style={{ fontSize: '14px', color: '#334155' }}>
-                          Total Order Value: <strong style={{ color: '#0F172A', fontSize: '16px', fontWeight: '900' }}>₹ {(parseFloat(confirmingBomModal.grandTotal) || grandTotalCalc).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#64748B', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {presetKitsTotal > 0 && (
+                            <span>Preset Kit(s): <strong style={{ color: '#0E7490', fontWeight: '800' }}>₹ {presetKitsTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
+                          )}
+                          {customItemsTotal > 0 && (
+                            <span>Additional Items: <strong style={{ color: '#0F172A', fontWeight: '800' }}>₹ {customItemsTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
+                          )}
+                          <span>Taxable Subtotal: <strong style={{ color: '#0F172A', fontWeight: '800' }}>₹ {orderSubTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
+                          <span>GST: <strong style={{ color: '#64748B', fontWeight: '700' }}>₹ {orderGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
                         </div>
-                      </>
-                    ) : (
-                      <>
+                        <div style={{ fontSize: '14px', color: '#334155' }}>
+                          Total Order Value: <strong style={{ color: '#0E7490', fontSize: '17px', fontWeight: '900' }}>₹ {orderGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                        </div>
+                      </div>
 
-
+                      {!isAlreadyForwarded && (
                         <button
                           onClick={() => {
                             const isDeliveryMatching = Boolean(confirmingBomModal.sameAsBilling) || (
@@ -9840,8 +9981,6 @@ export default function ProductionViewsEngine(props) {
                               ((dObj.state || '').trim() === (bObj.state || '').trim()) &&
                               ((dObj.pincode || '').trim() === (bObj.pincode || '').trim())
                             );
-
-
 
                             const currentItems = confirmingBomModal.items || [];
                             const allCheckedItems = currentItems.map(it => ({ ...it, confirmed: true }));
@@ -9861,7 +10000,9 @@ export default function ProductionViewsEngine(props) {
                               deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                               items: allCheckedItems,
                               status: 'Pending Confirmation',
-                              grandTotal: grandTotalCalc
+                              subTotal: orderSubTotal,
+                              gstAmount: orderGstAmount,
+                              grandTotal: orderGrandTotal
                             } : b));
                             alert('All product specifications confirmed! You can now click Send BOM.');
                           }}
@@ -9869,8 +10010,8 @@ export default function ProductionViewsEngine(props) {
                         >
                           <CheckSquare style={{ width: '14px', height: '14px' }} /> Confirm All Products
                         </button>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
