@@ -2698,15 +2698,24 @@ app.post('/api/boms', async (req, res) => {
 
         // Also get Supabase data to merge completely
         let cloudList = [];
+        let seqMaxFromDb = 0;
         try {
-          const { data: record } = await supabase
-            .from('leaves')
-            .select('reason')
-            .eq('employee', 'BOM_STORE')
-            .maybeSingle();
+          const [storeRes, seqRes] = await Promise.all([
+            supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').order('id', { ascending: false }).limit(1),
+            supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').order('id', { ascending: false }).limit(1)
+          ]);
+          const record = storeRes.data?.[0];
           if (record && record.reason) {
             const parsed = JSON.parse(record.reason);
             if (Array.isArray(parsed)) cloudList = parsed;
+          }
+          const seqRec = seqRes.data?.[0];
+          if (seqRec && seqRec.reason) {
+            try {
+              const pSeq = JSON.parse(seqRec.reason);
+              const sNum = parseInt(pSeq?.lastNumber || pSeq?.counter || 0, 10);
+              if (Number.isFinite(sNum) && sNum > 0) seqMaxFromDb = sNum;
+            } catch (_) {}
           }
         } catch (e) {}
 
@@ -2727,8 +2736,8 @@ app.post('/api/boms', async (req, res) => {
           }
         });
 
-        // Compute true max sequence number across ALL existing BOMs
-        let maxNum = 0;
+        // Compute true max sequence number across ALL existing BOMs and sequence tables
+        let maxNum = seqMaxFromDb;
         for (const key of map.keys()) {
           const match = String(key).match(/^BOM-(\d+)/i);
           if (match) {
@@ -2742,12 +2751,12 @@ app.post('/api/boms', async (req, res) => {
         }
 
         const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
-        // Determine if this is a brand new creation or an update to an existing confirmed BOM
+        const isPlaceholderCode = !incomingCode || incomingCode.toLowerCase().includes('auto') || incomingCode.toLowerCase().includes('pending');
         const alreadyExists = incomingCode && map.has(incomingCode);
         const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
         
-        // Only assign a new code if incoming code is missing, invalid, or already exists for a different new BOM
-        const shouldAssignNewCode = !isValidIncomingCode || (alreadyExists && isNew && !bom.isUpdate);
+        // Always assign a new sequential code upon new creation (or if placeholder / collision)
+        const shouldAssignNewCode = isNew || isPlaceholderCode || !isValidIncomingCode || (alreadyExists && !bom.isUpdate);
 
         if (shouldAssignNewCode) {
           maxNum += 1;

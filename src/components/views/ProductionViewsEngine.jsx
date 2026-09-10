@@ -586,8 +586,7 @@ export default function ProductionViewsEngine(props) {
 
     if (pendingPi) {
       setShowBOMForm(true);
-      const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
-      setNewBomCode(`BOM-${nextNum}`);
+      setNewBomCode('');
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
       if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
       if (Array.isArray(pendingPi.items) && pendingPi.items.length > 0) {
@@ -607,8 +606,7 @@ export default function ProductionViewsEngine(props) {
     const handleCustomConvert = (e) => {
       if (e && e.detail) {
         setShowBOMForm(true);
-        const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
-        setNewBomCode(`BOM-${nextNum}`);
+        setNewBomCode('');
         if (e.detail.customerName) setNewBomProductName(e.detail.customerName);
         if (e.detail.remarks) setNewBomRemarks(e.detail.remarks);
         if (Array.isArray(e.detail.items) && e.detail.items.length > 0) {
@@ -13043,12 +13041,18 @@ export default function ProductionViewsEngine(props) {
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Number</label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155' }}>Order Number</label>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A5F3FC' }}>
+                          ⚡ Auto-assigned on save
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        value={newBomCode}
+                        value="Auto-assigned upon creation (BOM-XXX)"
                         readOnly
-                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#94A3B8', backgroundColor: '#F8FAFC', boxSizing: 'border-box', outline: 'none' }}
+                        disabled
+                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CFFAFE', padding: '0 14px', fontSize: '12.5px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
                       />
                     </div>
                   </div>
@@ -14400,12 +14404,8 @@ export default function ProductionViewsEngine(props) {
                                 ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                                 : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                              const existingNumsRec = (bomStore || []).map(b => {
-                                const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
-                                return match ? parseInt(match[1], 10) : 0;
-                              }).filter(n => Number.isFinite(n) && n > 0);
-                              const maxNumRec = existingNumsRec.length > 0 ? Math.max(0, ...existingNumsRec) : 0;
-                              const finalCode = (newBomCode && /^BOM-\d+$/i.test(newBomCode)) ? newBomCode : `BOM-${String(maxNumRec + 1).padStart(3, '0')}`;
+                              // BOM code is strictly assigned atomically upon submission
+                              const finalCode = 'BOM-PENDING';
 
                               const effectiveSalesPersonName = (() => {
                                 const stored = localStorage.getItem('controlroom_logged_user_name');
@@ -14727,9 +14727,7 @@ export default function ProductionViewsEngine(props) {
                         setNewBomDeliveryCity('');
                         setNewBomDeliveryState('');
                         setNewBomDeliveryPincode('');
-                        const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-                        const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 600;
-                        setNewBomCode(`BOM-${maxNum + 1}`);
+                        setNewBomCode('');
                         setShowBOMForm(true);
                       } else if (activeTab === 'Work Orders' || pageConfig.actionText.includes('Create Work Order')) {
                         setShowWorkOrderForm(true);
