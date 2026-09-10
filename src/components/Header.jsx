@@ -44,8 +44,16 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
         setLiveNotifications(saved ? JSON.parse(saved) : []);
       } catch (e) {}
     };
+    const handleOutsideClick = () => {
+      setShowRoleMenu(false);
+      setShowNotificationMenu(false);
+    };
     window.addEventListener('vrm_notifications_updated', handleUpdate);
-    return () => window.removeEventListener('vrm_notifications_updated', handleUpdate);
+    window.addEventListener('click', handleOutsideClick);
+    return () => {
+      window.removeEventListener('vrm_notifications_updated', handleUpdate);
+      window.removeEventListener('click', handleOutsideClick);
+    };
   }, []);
 
   // Filter notifications based on active user login role (or show system-wide alerts)
@@ -62,7 +70,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
   if (!userName) {
     if (userRole === 'Production Head') userName = 'Senthil Kumar';
     else if (userRole === 'Technical Administrator' || userRole === 'CEO') userName = 'Annamalaiyar';
-    else if (userRole === 'Dispatch Head') userName = 'Karthik Raja';
+    else if (userRole === 'Dispatch Head') userName = 'Kalpana';
     else if (userRole === 'Floor Supervisor') userName = 'Murugan';
     else if (userRole === 'Floor Employee') userName = 'Ramesh';
     else if (userRole === 'Accounts Head') userName = 'Venkatesh';
@@ -78,6 +86,11 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
   }
   const safeName = (userName && userName !== 'undefined' && userName !== 'null') ? userName : 'Annamalaiyar';
   const avatarLetter = (safeName.charAt(0) || 'A').toUpperCase();
+
+  const storedEmail = localStorage.getItem('controlroom_logged_user');
+  const userEmail = (storedEmail && storedEmail.includes('@'))
+    ? storedEmail
+    : `${safeName.toLowerCase().replace(/[^a-z0-9]/g, '')}@vrmstructures.in`;
 
   const deleteItem = (id, e) => {
     if (e) e.stopPropagation();
@@ -256,10 +269,14 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
         </button>
 
         {/* Neumorphism Notification Icon Button with Disappearing Badge Animation */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
           <button 
             title="Notifications"
-            onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowNotificationMenu(prev => !prev);
+              setShowRoleMenu(false);
+            }}
             style={{
               width: '38px',
               height: '38px',
@@ -433,7 +450,11 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
         {/* Profile Details Dropdown Trigger */}
         <div 
-          onClick={() => setShowRoleMenu(!showRoleMenu)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowRoleMenu(prev => !prev);
+            setShowNotificationMenu(false);
+          }}
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative' }}
         >
           {/* Circular Profile Photo Initials Avatar */}
@@ -486,9 +507,10 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ padding: '8px 10px', borderBottom: '1px solid #F1F5F9' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>{userName}</div>
-                <div style={{ fontSize: '11px', color: '#64748B' }}>{isProdAdmin ? 'senthil@armsai.com' : 'arun@armsai.com'}</div>
+              <div style={{ padding: '10px 12px', borderBottom: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', lineHeight: '1.2' }}>{safeName}</div>
+                <div style={{ fontSize: '11px', color: '#0E7490', fontWeight: '700', marginTop: '3px' }}>{userRole}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{userEmail}</div>
               </div>
 
               <div style={{ borderTop: '1px solid #F1F5F9', marginTop: '4px', paddingTop: '4px' }}>
