@@ -10,6 +10,7 @@ import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPreset
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
+import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -231,27 +232,22 @@ export default function CrmQuotationsView({
     ];
   });
 
-  // Items List for Product Dropdown & Stock status (aligned with BOM catalog)
-  const [itemsList, setItemsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_items_list') || localStorage.getItem('controlroom_raw_materials_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [
-      { code: 'MR-40-300', name: 'Mini Rail 40mm x 300mm', category: 'Aluminum Rail', uom: 'NOS', price: '250', rate: '250', stock: 120 },
-      { code: 'MR-40-200', name: 'Mini Rail 40mm x 200mm', category: 'Aluminum Rail', uom: 'NOS', price: '180', rate: '180', stock: 85 },
-      { code: 'MR-100', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', uom: 'NOS', price: '250', rate: '250', stock: 200 },
-      { code: 'MC-30', name: 'Mid Clamp 30mm', category: '6063T6 Clamp', uom: 'NOS', price: '45', rate: '45', stock: 500 },
-      { code: 'MC-35', name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', uom: 'NOS', price: '45', rate: '45', stock: 420 },
-      { code: 'EC-30', name: 'End Clamp 30 mm', category: '6063T6 Clamp', uom: 'NOS', price: '40', rate: '40', stock: 350 },
-      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40', stock: 310 },
-      { code: 'C-LIP-200', name: 'C-Lip Connector 200mm', category: 'Connector', uom: 'NOS', price: '110', rate: '110', stock: 150 },
-      { code: 'EPDM-50', name: 'EPDM Rubber Gasket (50m roll)', category: 'Rubber', uom: 'MTR', price: '320', rate: '320', stock: 45 }
-    ];
-  });
+  // Full 285+ Standardized Products Catalog with Live Central Inventory Stock
+  const [itemsList, setItemsList] = useState(() => getFullProductsCatalogWithStock());
+
+  useEffect(() => {
+    const refreshCatalog = () => {
+      setItemsList(getFullProductsCatalogWithStock());
+    };
+    window.addEventListener('central_inventory_updated', refreshCatalog);
+    window.addEventListener('controlroom_storage_update', refreshCatalog);
+    window.addEventListener('storage', refreshCatalog);
+    return () => {
+      window.removeEventListener('central_inventory_updated', refreshCatalog);
+      window.removeEventListener('controlroom_storage_update', refreshCatalog);
+      window.removeEventListener('storage', refreshCatalog);
+    };
+  }, []);
 
   // Resolve currently logged in account user's name dynamically (matching Header & auth state)
   const getActiveUserName = () => {
@@ -1563,9 +1559,9 @@ export default function CrmQuotationsView({
                                 />
                                 <datalist id={`quote-product-list-${i}`}>
                                   {(itemsList || []).map((prod, pidx) => {
-                                    const st = Number(prod.stock !== undefined ? prod.stock : 100);
+                                    const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
                                     const isOutOfStock = st <= 0;
-                                    const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                                    const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
                                     return (
                                       <option key={pidx} value={prod.name}>
                                         {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}

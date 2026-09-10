@@ -14,6 +14,7 @@ import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../../ut
 import { getSafeZohoItems, getSafeZohoVendors } from '../../services/zohoSafeSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
+import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 import { prodModuleEngine } from '../../utils/productionModuleEngine';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
@@ -1490,7 +1491,7 @@ export default function ProductionViewsEngine(props) {
   const [editingRfp, setEditingRfp] = useState(null);
 
   // Items Action States
-  const [itemsList, setItemsList] = useState([]);
+  const [itemsList, setItemsList] = useState(() => getFullProductsCatalogWithStock());
   const [activeItemActionMenu, setActiveItemActionMenu] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
@@ -1521,49 +1522,45 @@ export default function ProductionViewsEngine(props) {
   const [selectedItemWarehouse, setSelectedItemWarehouse] = useState('All Warehouses');
   const [selectedItemCategory, setSelectedItemCategory] = useState('All Categories');
   const [selectedItemStatus, setSelectedItemStatus] = useState('All Status');
-  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsLoading, setItemsLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchZohoItems = async () => {
       try {
-        setItemsLoading(true);
         const zohoItems = await getSafeZohoItems();
         if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
-          setItemsList(prev => {
-            const itemMap = new Map();
-            (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
-            zohoItems.forEach(it => {
-              const key = it.code || it.sku || it.itemId || it.id || it.name;
-              if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
-            });
-            return Array.from(itemMap.values());
-          });
+          setItemsList(getFullProductsCatalogWithStock(zohoItems));
         } else {
           const response = await fetch('/api/zoho/items').catch(() => null);
           if (response && response.ok) {
             const zItems = await response.json().catch(() => []);
             if (isMounted && Array.isArray(zItems) && zItems.length > 0) {
-              setItemsList(prev => {
-                const itemMap = new Map();
-                (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
-                zItems.forEach(it => {
-                  const key = it.code || it.sku || it.itemId || it.id || it.name;
-                  if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
-                });
-                return Array.from(itemMap.values());
-              });
+              setItemsList(getFullProductsCatalogWithStock(zItems));
             }
           }
         }
       } catch (err) {
         console.error("Error fetching Zoho Items:", err);
-      } finally {
-        if (isMounted) setItemsLoading(false);
       }
     };
     fetchZohoItems();
-    return () => { isMounted = false; };
+
+    const handleInvUpdate = () => {
+      if (isMounted) {
+        setItemsList(prev => getFullProductsCatalogWithStock(prev));
+      }
+    };
+    window.addEventListener('central_inventory_updated', handleInvUpdate);
+    window.addEventListener('controlroom_storage_update', handleInvUpdate);
+    window.addEventListener('storage', handleInvUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('central_inventory_updated', handleInvUpdate);
+      window.removeEventListener('controlroom_storage_update', handleInvUpdate);
+      window.removeEventListener('storage', handleInvUpdate);
+    };
   }, []);
 
   const handleCreateProductInZoho = async () => {
@@ -13613,7 +13610,7 @@ export default function ProductionViewsEngine(props) {
                                 <datalist id={`product-list-${i}`}>
                                   {(itemsList || []).map((prod, pidx) => (
                                     <option key={pidx} value={prod.name}>
-                                      {prod.code ? `[${prod.code}] ${prod.name}` : prod.name}
+                                      {prod.code ? `[${prod.code}] ` : ''}{prod.name} — {(prod.stock !== undefined && prod.stock !== null) ? `(Stock: ${prod.stock} ${prod.uom || prod.unit || 'NOS'})` : ''}
                                     </option>
                                   ))}
                                 </datalist>

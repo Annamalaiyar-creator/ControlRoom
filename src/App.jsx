@@ -245,7 +245,14 @@ function App() {
         }
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
-          setItemsList(Array.isArray(itemsData) ? itemsData : []);
+          const validItems = Array.isArray(itemsData) ? itemsData : [];
+          setItemsList(validItems);
+          try {
+            if (validItems.length > 0) {
+              localStorage.setItem('controlroom_items_list', JSON.stringify(validItems));
+              window.dispatchEvent(new Event('central_inventory_updated'));
+            }
+          } catch (e) {}
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);

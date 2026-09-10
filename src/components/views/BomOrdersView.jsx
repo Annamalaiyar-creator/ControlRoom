@@ -11,6 +11,7 @@ import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
+import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
 import { notifyBomSentToDispatch } from '../../services/notificationService';
@@ -137,58 +138,22 @@ export default function BomOrdersView(props) {
   // Active Presets state (loaded from master JSON + localStorage/cloud)
   const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
 
-  // Items List for Product Dropdown & Suggestions
-  const [itemsList, setItemsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_items_list') || localStorage.getItem('controlroom_raw_materials_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) { }
+  // Full 285+ Standardized Products Catalog with Live Central Inventory Stock
+  const [itemsList, setItemsList] = useState(() => getFullProductsCatalogWithStock());
 
-    // Standardized products catalog synchronized from VRM - Product - Standardized Names.xlsx
-    const defaultCatalog = Array.isArray(VRM_PRODUCTS) && VRM_PRODUCTS.length > 0 ? VRM_PRODUCTS.map(p => ({
-      code: p.code || '',
-      name: p.name || '',
-      category: p.material || 'General',
-      uom: p.uom || 'NOS',
-      price: String(p.price || p.rate || '0'),
-      rate: String(p.price || p.rate || '0')
-    })) : [
-      { code: 'MR-40-300', name: 'Mini Rail 40mm x 300mm', category: 'Aluminum Rail', uom: 'NOS', price: '250', rate: '250' },
-      { code: 'MR-40-200', name: 'Mini Rail 40mm x 200mm', category: 'Aluminum Rail', uom: 'NOS', price: '180', rate: '180' },
-      { code: 'MR-100', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', uom: 'NOS', price: '250', rate: '250' },
-      { code: 'MC-30', name: 'Mid Clamp 30mm', category: '6063T6 Clamp', uom: 'NOS', price: '45', rate: '45' },
-      { code: 'MC-35', name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', uom: 'NOS', price: '45', rate: '45' },
-      { code: 'EC-30', name: 'End Clamp 30 mm', category: '6063T6 Clamp', uom: 'NOS', price: '40', rate: '40' },
-      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40' }
-    ];
-
-    // Extract any unique items from activePresetsMap or VRM_HDG_PRESETS
-    const currentPresets = activePresetsMap || VRM_HDG_PRESETS;
-    if (typeof currentPresets === 'object' && currentPresets !== null) {
-      const presetMap = new Map();
-      defaultCatalog.forEach(c => presetMap.set(c.name.toLowerCase(), c));
-      Object.values(currentPresets).forEach(p => {
-        (p.items || []).forEach(it => {
-          if (it.name && !presetMap.has(it.name.toLowerCase())) {
-            presetMap.set(it.name.toLowerCase(), {
-              code: it.code || (it.category ? `RM-${it.category.replace(/[^a-zA-Z0-9]/g, '')}` : 'RM-GEN'),
-              name: it.name,
-              category: it.category || 'Solar Accessories',
-              uom: it.uom || 'NOS',
-              price: String(it.rate || '0'),
-              rate: String(it.rate || '0')
-            });
-          }
-        });
-      });
-      return Array.from(presetMap.values());
-    }
-
-    return defaultCatalog;
-  });
+  useEffect(() => {
+    const refreshCatalog = () => {
+      setItemsList(getFullProductsCatalogWithStock());
+    };
+    window.addEventListener('central_inventory_updated', refreshCatalog);
+    window.addEventListener('controlroom_storage_update', refreshCatalog);
+    window.addEventListener('storage', refreshCatalog);
+    return () => {
+      window.removeEventListener('central_inventory_updated', refreshCatalog);
+      window.removeEventListener('controlroom_storage_update', refreshCatalog);
+      window.removeEventListener('storage', refreshCatalog);
+    };
+  }, []);
 
   // Sync bomStore to localStorage & Supabase
   useEffect(() => {
@@ -1995,9 +1960,9 @@ export default function BomOrdersView(props) {
                               />
                               <datalist id={`product-list-${i}`}>
                                 {(itemsList || []).map((prod, pidx) => {
-                                  const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
+                                  const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
                                   const isOutOfStock = st <= 0;
-                                  const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                                  const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
                                   return (
                                     <option key={pidx} value={prod.name}>
                                       {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
@@ -3708,9 +3673,9 @@ export default function BomOrdersView(props) {
                           />
                           <datalist id={`confirm-product-list-${idx}`}>
                             {(itemsList || []).map((prod, pidx) => {
-                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
+                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
                               const isOutOfStock = st <= 0;
-                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || prod.unit || 'NOS'})`;
                               return (
                                 <option key={pidx} value={prod.name}>
                                   {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
