@@ -11,6 +11,7 @@ import SearchablePresetSelector from '../SearchablePresetSelector';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
+import { saveCloudStore, fetchCloudStore } from '../../utils/supabaseDataSync';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -367,6 +368,39 @@ export default function CrmQuotationsView({
     });
   }, [quotations]);
 
+  const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+  const currentEmpName = (localStorage.getItem('controlroom_logged_user_name') || '').trim();
+  const currentLoggedEmail = (localStorage.getItem('controlroom_logged_user') || '').trim().toLowerCase();
+  const isRestrictedSalesUser = userRole === 'Sales Executive';
+
+  const visibleQuotes = useMemo(() => {
+    if (!isRestrictedSalesUser) return normalizedQuotes;
+
+    const curCode = currentEmpId.toUpperCase();
+    const curName = currentEmpName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const curEmail = currentLoggedEmail;
+
+    return normalizedQuotes.filter(q => {
+      if (!q) return false;
+      const spCode = (q.salesPersonCode || q.createdById || '').trim().toUpperCase();
+      if (curCode && spCode && spCode === curCode) return true;
+
+      const spName = (q.salesPerson || q.salesperson || q.salesRep || q.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (curName && spName) {
+        if (spName === curName) return true;
+        const cleanSp = spName.replace(/\s+/g, '');
+        const cleanCur = curName.replace(/\s+/g, '');
+        if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
+      }
+
+      if (curEmail && (q.salesPersonEmail || q.email || '').toLowerCase() === curEmail) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [normalizedQuotes, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
+
   // Page config
   const pageConfig = useMemo(() => {
     return {
@@ -375,19 +409,19 @@ export default function CrmQuotationsView({
       actionText: 'New Quotation',
       searchPlaceholder: 'Search Quotations (Quote #, Customer Name, Structure Scope)...',
       tabs: [
-        { id: 'All', label: 'All Quotations', count: normalizedQuotes.length, bg: '#e2e8f0', fg: '#475569' },
-        { id: 'Draft', label: 'Draft', count: normalizedQuotes.filter(q => q.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-        { id: 'Sent', label: 'Sent', count: normalizedQuotes.filter(q => q.status === 'Sent').length, bg: '#dcfce7', fg: '#166534' },
-        { id: 'Revised', label: 'Revised', count: normalizedQuotes.filter(q => q.status === 'Revised').length, bg: '#fef3c7', fg: '#b45309' },
-        { id: 'Converted to PI', label: 'Converted to PI', count: normalizedQuotes.filter(q => q.status === 'Converted to PI' || q.status === 'PI Generated').length, bg: '#f0fdfa', fg: '#0e7490' },
-        { id: 'Accepted', label: 'Accepted', count: normalizedQuotes.filter(q => q.status === 'Accepted').length, bg: '#ecfdf5', fg: '#059669' }
+        { id: 'All', label: 'All Quotations', count: visibleQuotes.length, bg: '#e2e8f0', fg: '#475569' },
+        { id: 'Draft', label: 'Draft', count: visibleQuotes.filter(q => q.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+        { id: 'Sent', label: 'Sent', count: visibleQuotes.filter(q => q.status === 'Sent').length, bg: '#dcfce7', fg: '#166534' },
+        { id: 'Revised', label: 'Revised', count: visibleQuotes.filter(q => q.status === 'Revised').length, bg: '#fef3c7', fg: '#b45309' },
+        { id: 'Converted to PI', label: 'Converted to PI', count: visibleQuotes.filter(q => q.status === 'Converted to PI' || q.status === 'PI Generated').length, bg: '#f0fdfa', fg: '#0e7490' },
+        { id: 'Accepted', label: 'Accepted', count: visibleQuotes.filter(q => q.status === 'Accepted').length, bg: '#ecfdf5', fg: '#059669' }
       ]
     };
-  }, [normalizedQuotes]);
+  }, [visibleQuotes]);
 
   // Filtering
   const filteredRows = useMemo(() => {
-    return normalizedQuotes.filter(r => {
+    return visibleQuotes.filter(r => {
       const qText = searchQueryText.toLowerCase().trim();
       const matchesSearch = !qText ||
         (r.code && r.code.toLowerCase().includes(qText)) ||
@@ -403,7 +437,7 @@ export default function CrmQuotationsView({
 
       return matchesSearch && matchesDate && matchesTab;
     });
-  }, [normalizedQuotes, searchQueryText, filterDateVal, activeSubTab]);
+  }, [visibleQuotes, searchQueryText, filterDateVal, activeSubTab]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
@@ -828,10 +862,14 @@ export default function CrmQuotationsView({
     const firstItem = (quote.items && quote.items[0]) || {};
     const totalQty = (quote.items || []).reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1;
 
+    const repName = quote.salesPerson || quote.salesperson || quote.salesRep || getActiveUserName();
+    const repCode = quote.salesPersonCode || quote.createdById || localStorage.getItem('controlroom_logged_emp_id') || '';
+
     const newPI = {
       piNo: piNumber,
       sourceQuoteNo: quote.code || quote.quoteNumber,
       vendor: quote.customer || quote.customerName || quote.companyName || 'Customer Client',
+      customerName: quote.customer || quote.customerName || quote.companyName || 'Customer Client',
       gstNo: quote.gstNumber || quote.gstNo || '33AAAAA0000A1Z5',
       productName: quote.structure || quote.structureType || firstItem.name || 'Solar Mounting Rails & Components',
       unitValue: cleanAmount > 0 && totalQty > 0 ? Math.round(cleanAmount / totalQty) : cleanAmount,
@@ -843,6 +881,11 @@ export default function CrmQuotationsView({
       status: 'Pending Approval',
       statusType: 'pending',
       type: 'Sales PI',
+      salesPerson: repName,
+      salesperson: repName,
+      salesPersonCode: repCode,
+      createdBy: repName,
+      createdById: repCode,
       items: (quote.items || []).map(it => ({
         name: it.name || it.description,
         category: it.category || 'MMS Scope',
@@ -854,9 +897,13 @@ export default function CrmQuotationsView({
       notes: `Generated automatically from Quotation ${quote.code || quote.quoteNumber}. Unlimited revisions kept in quotation history.`
     };
 
-    // 3. Save to sales PI store
+    // 3. Save to sales PI store in Supabase and local cache
     const updatedPIs = [newPI, ...existingPIs.filter(p => p.piNo !== piNumber)];
     localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(updatedPIs));
+    try {
+      saveCloudStore('sales_pi_store', updatedPIs);
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+    } catch (e) {}
 
     // 4. Mark quotation status as 'Converted to PI'
     const updatedQuote = {

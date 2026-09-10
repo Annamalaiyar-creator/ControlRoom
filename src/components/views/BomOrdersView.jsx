@@ -680,23 +680,24 @@ export default function BomOrdersView(props) {
 
   // Handle Proforma Invoice (PI) to Sales BOM auto-conversion
   useEffect(() => {
-    let pendingPi = convertingPiData;
-    if (!pendingPi) {
-      try {
-        const saved = localStorage.getItem('controlroom_pending_pi_to_bom');
-        if (saved) {
-          pendingPi = JSON.parse(saved);
-          localStorage.removeItem('controlroom_pending_pi_to_bom');
-        }
-      } catch (e) { }
-    }
-
-    if (pendingPi) {
+    const processConversion = async (pendingPi) => {
+      if (!pendingPi) return;
       setShowBOMForm(true);
-      const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
-      setNewBomCode(`BOM-${nextNum}`);
+      try {
+        const code = await getAndReserveNextBomCode(false);
+        if (code) setNewBomCode(code);
+      } catch (err) {
+        console.error('Error reserving atomic BOM code on conversion:', err);
+      }
+      if (pendingPi.salesPerson) {
+        setNewBomSalesPerson(pendingPi.salesPerson);
+      } else {
+        setNewBomSalesPerson(getEffectiveSalesPerson());
+      }
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
       if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
+      if (pendingPi.billingAddress) setNewBomDeliveryStreet(pendingPi.billingAddress);
+      if (pendingPi.paymentTerms) setNewBomPaymentType(pendingPi.paymentTerms);
       if (Array.isArray(pendingPi.items) && pendingPi.items.length > 0) {
         setBomMaterialsList(pendingPi.items.map(it => ({
           name: it.name || 'Structural Steel Beams',
@@ -709,26 +710,26 @@ export default function BomOrdersView(props) {
         })));
       }
       if (typeof onClearConvertingPiData === 'function') onClearConvertingPiData();
+    };
+
+    let pendingPi = convertingPiData;
+    if (!pendingPi) {
+      try {
+        const saved = localStorage.getItem('controlroom_pending_pi_to_bom');
+        if (saved) {
+          pendingPi = JSON.parse(saved);
+          localStorage.removeItem('controlroom_pending_pi_to_bom');
+        }
+      } catch (e) { }
+    }
+
+    if (pendingPi) {
+      processConversion(pendingPi);
     }
 
     const handleCustomConvert = (e) => {
       if (e && e.detail) {
-        setShowBOMForm(true);
-        const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
-        setNewBomCode(`BOM-${nextNum}`);
-        if (e.detail.customerName) setNewBomProductName(e.detail.customerName);
-        if (e.detail.remarks) setNewBomRemarks(e.detail.remarks);
-        if (Array.isArray(e.detail.items) && e.detail.items.length > 0) {
-          setBomMaterialsList(e.detail.items.map(it => ({
-            name: it.name || 'Structural Steel Beams',
-            category: it.category || 'PI Converted Goods',
-            uom: it.uom || 'NOS',
-            qty: String(it.qty || '1'),
-            wastage: '0%',
-            rate: String(it.rate || '1000'),
-            gstRate: it.gstRate || '18%'
-          })));
-        }
+        processConversion(e.detail);
       }
     };
 

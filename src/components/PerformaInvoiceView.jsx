@@ -5,6 +5,7 @@ import SearchablePresetSelector from './SearchablePresetSelector';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
+import { saveCloudStore, fetchCloudStore } from '../utils/supabaseDataSync';
 
 const defaultSalesPIs = [
   {
@@ -117,34 +118,65 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     return isSalesRole ? defaultSalesPIs : defaultProcurementPIs;
   });
 
+  const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+  const currentEmpName = (localStorage.getItem('controlroom_logged_user_name') || '').trim();
+  const currentLoggedEmail = (localStorage.getItem('controlroom_logged_user') || '').trim().toLowerCase();
+  const isRestrictedSalesUser = userRole === 'Sales Executive';
+
+  const getEffectiveSalesPerson = () => {
+    if (currentEmpName && currentEmpName !== 'undefined' && currentEmpName !== 'null') return currentEmpName;
+    const storedUser = localStorage.getItem('controlroom_logged_user');
+    if (storedUser && storedUser.trim() && storedUser !== 'undefined' && storedUser !== 'null') return storedUser.trim();
+    if (userRole === 'Sales Head') return 'Vijay';
+    if (userRole === 'Accounts Head') return 'Venkatesh';
+    if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+    return userRole || 'Sales Executive';
+  };
+
+  const visiblePIList = useMemo(() => {
+    const raw = Array.isArray(piList) ? piList.filter(Boolean) : [];
+    if (!isRestrictedSalesUser) return raw;
+
+    const curCode = currentEmpId.toUpperCase();
+    const curName = currentEmpName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const curEmail = currentLoggedEmail;
+
+    return raw.filter(pi => {
+      if (!pi) return false;
+      const spCode = (pi.salesPersonCode || pi.createdById || '').trim().toUpperCase();
+      if (curCode && spCode && spCode === curCode) return true;
+
+      const spName = (pi.salesPerson || pi.salesperson || pi.salesRep || pi.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (curName && spName) {
+        if (spName === curName) return true;
+        const cleanSp = spName.replace(/\s+/g, '');
+        const cleanCur = curName.replace(/\s+/g, '');
+        if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
+      }
+
+      if (curEmail && (pi.salesPersonEmail || pi.email || '').toLowerCase() === curEmail) return true;
+      return false;
+    });
+  }, [piList, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
+
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPiList(parsed);
-          return;
-        }
+    const cloudKey = isSalesRole ? 'sales_pi_store' : 'procurement_pi_store';
+    fetchCloudStore(cloudKey).then(cloudData => {
+      if (Array.isArray(cloudData) && cloudData.length > 0) {
+        setPiList(cloudData);
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(cloudData));
+        } catch (_) {}
       }
-      if (!isSalesRole) {
-        const salesSaved = localStorage.getItem('controlroom_sales_pi_store');
-        if (salesSaved) {
-          const salesParsed = JSON.parse(salesSaved);
-          if (Array.isArray(salesParsed) && salesParsed.length > 0) {
-            setPiList([...salesParsed, ...defaultProcurementPIs]);
-            return;
-          }
-        }
-      }
-    } catch (e) {}
-    setPiList(isSalesRole ? defaultSalesPIs : defaultProcurementPIs);
+    }).catch(() => {});
   }, [storageKey, isSalesRole]);
 
   const updatePiList = (newList) => {
     setPiList(newList);
     try {
       localStorage.setItem(storageKey, JSON.stringify(newList));
+      saveCloudStore(isSalesRole ? 'sales_pi_store' : 'procurement_pi_store', newList);
+      window.dispatchEvent(new Event('controlroom_storage_update'));
     } catch (e) {}
   };
 
@@ -172,6 +204,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       paymentTerms: pi.paymentTerms || '',
       creditDays: pi.creditDays || '',
       presetGroups: pi.presetGroups || {},
+      salesPerson: pi.salesPerson || pi.salesperson || pi.salesRep || getEffectiveSalesPerson(),
+      salesPersonCode: pi.salesPersonCode || currentEmpId,
+      createdBy: pi.createdBy || getEffectiveSalesPerson(),
+      createdById: pi.createdById || currentEmpId,
       items: (pi.items && pi.items.length > 0) ? pi.items : [
         {
           name: pi.productName || 'Structural Steel Beams',
@@ -648,6 +684,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: isDraft ? 'Draft' : (editIdx !== null ? piList[editIdx].status : 'Pending Approval'),
       statusType: isDraft ? 'draft' : (editIdx !== null ? piList[editIdx].statusType : 'pending'),
+      salesPerson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+      salesperson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+      salesPersonCode: editIdx !== null ? (piList[editIdx].salesPersonCode || currentEmpId) : currentEmpId,
+      createdBy: editIdx !== null ? (piList[editIdx].createdBy || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+      createdById: editIdx !== null ? (piList[editIdx].createdById || currentEmpId) : currentEmpId,
       approvalRequired,
       approver,
       approvalPriority
@@ -834,8 +875,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
       {/* ==================== VIEW 1: LIST DASHBOARD SCREEN ==================== */}
       {viewMode === 'list' && (() => {
-        const uniqueStatuses = ['All', ...new Set(piList.map(pi => pi.status))];
-        const filteredPIList = (piList || []).filter(pi => {
+        const uniqueStatuses = ['All', ...new Set(visiblePIList.map(pi => pi.status))];
+        const filteredPIList = (visiblePIList || []).filter(pi => {
           if (!pi) return false;
           const searchLower = (searchQuery || '').toLowerCase();
           const matchesSearch = (pi.piNo || '').toLowerCase().includes(searchLower) ||
@@ -970,12 +1011,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                 {[
-                  { id: 'All', label: 'All Invoices (Total Sent)', count: piList.length },
-                  { id: 'Converted to BOM', label: 'Converted to BOM', count: piList.filter(pi => pi.status === 'Converted to BOM').length },
-                  { id: 'Pending Approval', label: 'Pending Approval', count: piList.filter(pi => pi.status === 'Pending Approval').length },
-                  { id: 'Approved', label: 'Approved', count: piList.filter(pi => pi.status === 'Approved').length },
-                  { id: 'Cancelled', label: 'Cancelled', count: piList.filter(pi => pi.status === 'Cancelled').length },
-                  { id: 'Draft', label: 'Draft', count: piList.filter(pi => pi.status === 'Draft').length }
+                  { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM').length },
+                  { id: 'Pending Approval', label: 'Pending Approval', count: visiblePIList.filter(pi => pi.status === 'Pending Approval').length },
+                  { id: 'Approved', label: 'Approved', count: visiblePIList.filter(pi => pi.status === 'Approved').length },
+                  { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
+                  { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
                   <button
                     key={tab.id}
