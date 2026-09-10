@@ -1029,17 +1029,21 @@ app.post('/api/zoho/customers', async (req, res) => {
     const contactNameVal = `${baseCompanyName} [${custIdentifier}]`;
     const companyNameVal = baseCompanyName;
 
+    const rawGst = String(localCustomerRecord.gstNumber || '').trim();
+    const isValidGst = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(rawGst);
+
     const zohoPayload = {
       contact_name: contactNameVal,
       company_name: companyNameVal,
       contact_type: 'customer',
       customer_sub_type: 'business',
       currency_code: 'INR',
+      gst_no: isValidGst ? rawGst : undefined,
       pan_no: localCustomerRecord.panNumber ? String(localCustomerRecord.panNumber).trim().slice(0, 10) : undefined,
       billing_address: billingAddress,
       shipping_address: shippingAddress,
       contact_persons: contactPersons.length > 0 ? contactPersons : undefined,
-      notes: `Customer Code: ${custIdentifier} | Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}${localCustomerRecord.gstNumber ? ` | GSTIN: ${localCustomerRecord.gstNumber}` : ''}`
+      notes: `Customer Code: ${custIdentifier}${rawGst ? ` | GSTIN: ${rawGst}` : ''} | Created via Control Room B2B Solar CRM. Type: ${localCustomerRecord.customerType || 'EPC Contractor'}`
     };
 
     let result = await createZohoCustomer(accessToken, zohoPayload);
@@ -1132,11 +1136,34 @@ app.get('/api/zoho/customers', async (req, res) => {
       // Map raw Zoho Books contacts
       const zohoCustomers = data.contacts.map((c, idx) => {
         const bAddr = c.billing_address || {};
+        const codeMatch = (c.contact_name || '').match(/\[(CUST-[^\]]+)\]/i);
+        const extractedCode = codeMatch ? codeMatch[1].trim() : null;
+        const cleanCompanyName = extractedCode
+          ? (c.company_name || c.contact_name.replace(/\[CUST-[^\]]+\]/i, '').trim())
+          : (c.company_name || c.contact_name);
+
+        const assignedCode = extractedCode || (c.contact_id ? `CUST-${String(c.contact_id).slice(-4)}` : `CUST-VRM-${100 + idx + 1}`);
+
+        // Parse contact person name cleanly
+        let contactPersonName = c.primary_contact_name;
+        if (!contactPersonName || contactPersonName === '—' || contactPersonName === c.contact_name) {
+          if (c.first_name) {
+            contactPersonName = `${c.first_name} ${c.last_name || ''}`.trim();
+          } else if (Array.isArray(c.contact_persons) && c.contact_persons[0] && c.contact_persons[0].first_name) {
+            contactPersonName = `${c.contact_persons[0].first_name} ${c.contact_persons[0].last_name || ''}`.trim();
+          } else {
+            contactPersonName = '—';
+          }
+        }
+
+        const phoneVal = c.phone || c.mobile || (c.contact_persons && c.contact_persons[0]?.phone) || (c.contact_persons && c.contact_persons[0]?.mobile) || '';
+        const emailVal = c.email || (c.contact_persons && c.contact_persons[0]?.email) || '';
+
         return {
-          id: c.contact_id || `CUST-ZOHO-${idx + 1}`,
-          customerCode: c.contact_id ? `CUST-${String(c.contact_id).slice(-4)}` : `CUST-VRM-${100 + idx + 1}`,
-          companyName: c.company_name || c.contact_name,
-          customerName: c.contact_name || c.company_name,
+          id: assignedCode,
+          customerCode: assignedCode,
+          companyName: cleanCompanyName,
+          customerName: cleanCompanyName,
           customerType: 'EPC Contractor',
           industry: 'Solar Energy / Utility Scale',
           gstNumber: c.gst_no || c.gstin || '',
@@ -1152,11 +1179,11 @@ app.get('/api/zoho/customers', async (req, res) => {
           source: 'Zoho Books',
           zohoContactId: c.contact_id,
           primaryContact: {
-            name: c.primary_contact_name || c.contact_name || '—',
+            name: contactPersonName,
             designation: 'Procurement Head',
-            phone: c.phone || c.mobile || '',
-            whatsapp: c.mobile || c.phone || '',
-            email: c.email || ''
+            phone: phoneVal,
+            whatsapp: phoneVal,
+            email: emailVal
           },
           createdAt: c.created_time || new Date().toISOString()
         };
