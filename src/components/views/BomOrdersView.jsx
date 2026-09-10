@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fetchCloudStore, saveCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
@@ -215,8 +215,12 @@ export default function BomOrdersView(props) {
     if (!isRestrictedSalesUser) return rawList;
 
     const curCode = currentEmpId.toUpperCase();
-    const curName = currentEmpName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const effectiveCurName = (currentEmpName || defaultSalesPersonName || '').trim();
+    const curName = effectiveCurName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
     const curEmail = currentLoggedEmail;
+
+    // If no identity can be determined, show all to prevent total lockout
+    if (!curCode && !curName && !curEmail) return rawList;
 
     return rawList.filter(b => {
       if (!b) return false;
@@ -237,7 +241,7 @@ export default function BomOrdersView(props) {
 
       return false;
     });
-  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
+  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, defaultSalesPersonName, currentLoggedEmail]);
 
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
@@ -2717,29 +2721,43 @@ export default function BomOrdersView(props) {
                       sanitizedNewBom.code = finalAssignedCode;
                       sanitizedNewBom.id = finalAssignedCode;
 
-                      // Synchronize with server disk cache asynchronously
+                      // 2. Synchronize with server backend & Supabase Cloud Store IMMEDIATELY
                       try {
-                        fetch('/api/boms', {
+                        const sRes = await fetch('/api/boms', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
-                        }).catch(() => {});
-                      } catch (err) {}
+                        });
+                        if (sRes.ok) {
+                          const sData = await sRes.json();
+                          if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                            finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                            sanitizedNewBom.bomCode = finalAssignedCode;
+                            sanitizedNewBom.code = finalAssignedCode;
+                            sanitizedNewBom.id = finalAssignedCode;
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Error syncing /api/boms:', err);
+                      }
 
-                      // 2. Update local state and persist
-                      setBomStore(prev => {
-                        const current = Array.isArray(prev) ? prev : [];
-                        const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
-                        const updatedList = [sanitizedNewBom, ...filtered];
-                        saveCloudStore('bom_store', updatedList);
-                        setShowBOMForm(false);
-                        setBomConfirmModal(null);
-                        setCurrentPage(1);
-                        try {
-                          window.dispatchEvent(new Event('controlroom_storage_update'));
-                        } catch (e) { }
-                        return updatedList;
-                      });
+                      const current = Array.isArray(bomStore) ? bomStore : [];
+                      const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
+                      const updatedList = [sanitizedNewBom, ...filtered];
+
+                      try {
+                        await saveCloudStoreImmediate('bom_store', updatedList);
+                      } catch (err) {
+                        console.error('Error saving to Supabase:', err);
+                      }
+
+                      setBomStore(updatedList);
+                      setShowBOMForm(false);
+                      setBomConfirmModal(null);
+                      setCurrentPage(1);
+                      try {
+                        window.dispatchEvent(new Event('controlroom_storage_update'));
+                      } catch (e) { }
 
                       // 3. If sent to dispatch, trigger live notifications and synthesized sound
                       if (!isDraft) {

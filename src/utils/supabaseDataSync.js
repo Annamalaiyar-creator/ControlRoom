@@ -132,6 +132,111 @@ const pendingSaveData = {};
  * @param {string} storeKey - Unique identifier
  * @param {Array|Object} storeData - Data to save
  */
+export async function saveCloudStoreImmediate(storeKey, storeData) {
+  if (storeData === undefined || storeData === null) return;
+
+  // Direct persistence for employees to Supabase users table
+  if (storeKey === 'employees_store' && Array.isArray(storeData)) {
+    try {
+      for (const emp of storeData) {
+        if (!emp || !emp.email) continue;
+        const cleanEmail = (emp.email || '').trim().toLowerCase();
+        const cleanCode = emp.employee_code || emp.code || 'FE-VRM001';
+        const cleanRole = emp.role || 'Floor Employee';
+        const cleanStatus = emp.status || 'Pending Approval';
+        const deptMeta = `${cleanCode}:::${cleanRole}:::${cleanStatus}`;
+
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id, email')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+
+        if (existing && existing.id) {
+          await supabase
+            .from('users')
+            .update({
+              name: emp.employee_name || emp.name,
+              password: emp.password || '123456',
+              role: cleanRole,
+              department: deptMeta
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('users')
+            .insert({
+              name: emp.employee_name || emp.name,
+              email: cleanEmail,
+              password: emp.password || '123456',
+              role: cleanRole,
+              department: deptMeta,
+              annual_leave: 20,
+              sick_leave: 5
+            });
+        }
+      }
+    } catch (err) {
+      console.error('Error syncing employees to users table:', err);
+    }
+  }
+
+  try {
+    const employeeKey = storeKey.toUpperCase();
+    const { data: records } = await supabase
+      .from('leaves')
+      .select('id, reason')
+      .eq('employee', employeeKey)
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const record = (records && records.length > 0) ? records[0] : null;
+
+    let finalPayload = storeData;
+    if (Array.isArray(storeData) && storeData.length > 0 && record && record.reason) {
+      try {
+        const existingCloud = JSON.parse(record.reason);
+        if (Array.isArray(existingCloud) && existingCloud.length > 0) {
+          finalPayload = mergeDatasets(existingCloud, storeData);
+        }
+      } catch (_) {}
+    }
+
+    if (record && record.id) {
+      await supabase
+        .from('leaves')
+        .update({
+          reason: JSON.stringify(finalPayload),
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1)
+        })
+        .eq('id', record.id);
+    } else {
+      await supabase
+        .from('leaves')
+        .insert({
+          employee: employeeKey,
+          reason: JSON.stringify(finalPayload),
+          status: 'active',
+          dates: new Date().toISOString(),
+          duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1),
+          type: 'Store'
+        });
+    }
+  } catch (err) {
+    console.warn(`[Supabase Immediate Sync Warn for ${storeKey}]:`, err?.message || err);
+  }
+
+  try {
+    await fetch(`/api/store/${storeKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(storeData)
+    }).catch(() => {});
+  } catch (err) {}
+}
+
 export function saveCloudStore(storeKey, storeData) {
   pendingSaveData[storeKey] = storeData;
 
@@ -140,116 +245,12 @@ export function saveCloudStore(storeKey, storeData) {
     clearTimeout(saveDebounceTimers[storeKey]);
   }
 
-  // Debounced save to Supabase cloud database & server API (300ms delay)
+  // Debounced save to Supabase cloud database & server API
   saveDebounceTimers[storeKey] = setTimeout(async () => {
     const dataToSave = pendingSaveData[storeKey];
     if (dataToSave === undefined || dataToSave === null) return;
-
-    // Direct persistence for employees to Supabase users table
-    if (storeKey === 'employees_store' && Array.isArray(dataToSave)) {
-      try {
-        for (const emp of dataToSave) {
-          if (!emp || !emp.email) continue;
-          const cleanEmail = (emp.email || '').trim().toLowerCase();
-          const cleanCode = emp.employee_code || emp.code || 'FE-VRM001';
-          const cleanRole = emp.role || 'Floor Employee';
-          const cleanStatus = emp.status || 'Pending Approval';
-          // Store code, role, status in department field: CODE:::ROLE:::STATUS
-          const deptMeta = `${cleanCode}:::${cleanRole}:::${cleanStatus}`;
-
-          const { data: existing } = await supabase
-            .from('users')
-            .select('id, email')
-            .eq('email', cleanEmail)
-            .maybeSingle();
-
-          if (existing && existing.id) {
-            await supabase
-              .from('users')
-              .update({
-                name: emp.employee_name || emp.name,
-                password: emp.password || '123456',
-                role: cleanRole,
-                department: deptMeta
-              })
-              .eq('id', existing.id);
-          } else {
-            await supabase
-              .from('users')
-              .insert({
-                name: emp.employee_name || emp.name,
-                email: cleanEmail,
-                password: emp.password || '123456',
-                role: cleanRole,
-                department: deptMeta,
-                annual_leave: 20,
-                sick_leave: 5
-              });
-          }
-        }
-      } catch (err) {
-        console.error('Error syncing employees to users table:', err);
-      }
-    }
-
-    try {
-      const employeeKey = storeKey.toUpperCase();
-      const { data: records } = await supabase
-        .from('leaves')
-        .select('id, reason')
-        .eq('employee', employeeKey)
-        .order('id', { ascending: false })
-        .limit(1);
-
-      const record = (records && records.length > 0) ? records[0] : null;
-
-      let finalPayload = dataToSave;
-      if (storeKey !== 'bom_store' && storeKey !== 'invoice_store') {
-        if (Array.isArray(dataToSave) && dataToSave.length > 0 && record && record.reason) {
-          try {
-            const existingCloud = JSON.parse(record.reason);
-            if (Array.isArray(existingCloud) && existingCloud.length > 0) {
-              // merge existing cloud records with dataToSave
-              finalPayload = mergeDatasets(existingCloud, dataToSave);
-            }
-          } catch (_) {}
-        }
-      }
-
-      if (record && record.id) {
-        await supabase
-          .from('leaves')
-          .update({
-            reason: JSON.stringify(finalPayload),
-            status: 'active',
-            dates: new Date().toISOString(),
-            duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1)
-          })
-          .eq('id', record.id);
-      } else {
-        await supabase
-          .from('leaves')
-          .insert({
-            employee: employeeKey,
-            reason: JSON.stringify(finalPayload),
-            status: 'active',
-            dates: new Date().toISOString(),
-            duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1),
-            type: 'Store'
-          });
-      }
-    } catch (err) {
-      console.warn(`[Supabase Store Sync Warn for ${storeKey}]:`, err?.message || err);
-    }
-
-    try {
-      fetch(`/api/store/${storeKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave)
-      }).catch(() => {});
-    } catch (err) {}
-  }, 400);
+    await saveCloudStoreImmediate(storeKey, dataToSave);
+  }, 300);
 }
 
 /**
