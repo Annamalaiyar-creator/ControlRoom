@@ -874,7 +874,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-24)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
 
       {/* ==================== VIEW 1: LIST DASHBOARD SCREEN ==================== */}
       {viewMode === 'list' && (() => {
@@ -1499,146 +1499,118 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const hasAnyPreset = (piItems || []).some(it => it.isPresetItem);
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1240px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
 
-            {/* Top Gradient Banner matching BOM/Quotations */}
+            {/* Top Page Title Bar with Action Buttons matching BOM */}
             <div
               style={{
                 background: 'linear-gradient(135deg, #075985 0%, #0E7490 50%, #0891B2 100%)',
-                borderRadius: '14px',
-                padding: '20px 24px',
-                color: 'white',
+                borderRadius: '18px',
+                padding: '24px 28px',
+                color: '#FFFFFF',
+                boxShadow: '0 10px 25px -5px rgba(14, 116, 144, 0.4)',
                 display: 'flex',
-                alignItems: 'center',
                 justifyContent: 'space-between',
+                alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '16px',
-                boxShadow: '0 10px 15px -3px rgba(14, 116, 144, 0.25), 0 4px 6px -2px rgba(14, 116, 144, 0.1)'
+                gap: '16px'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div
                   style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '10px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    backdropFilter: 'blur(8px)',
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                    backdropFilter: 'blur(6px)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(255, 255, 255, 0.25)'
+                    justifyContent: 'center'
                   }}
                 >
-                  <FileCheck size={22} color="#FFFFFF" />
+                  <FileCheck style={{ width: '24px', height: '24px', color: '#FFFFFF' }} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'white', letterSpacing: '-0.01em' }}>
+                  <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
                     {viewMode === 'edit' ? `Edit Proforma Invoice: ${piNumber}` : 'Create Proforma Invoice (PI)'}
-                  </h2>
-                  <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '500' }}>
-                    Pre-order commercial billing, structured preset kits, freight specifications & payment terms
+                  </h1>
+                  <p style={{ fontSize: '13px', color: '#CFFAFE', margin: '4px 0 0 0' }}>
+                    Configure customer commercial billing, structured preset kits, freight specifications & payment terms
                   </p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setPiConfirmModal('cancel')}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    color: 'white',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
                 >
-                  ✕ Discard
+                  Cancel
                 </button>
                 <button
                   type="button"
                   onClick={triggerSaveConfirm}
-                  style={{
-                    padding: '8px 20px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    color: 'white',
-                    border: 'none',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
-                  }}
+                  style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  Save & Release PI →
+                  <CheckCircle style={{ width: '16px', height: '16px' }} />
+                  {viewMode === 'edit' ? 'Update & Release PI →' : 'Save & Release PI →'}
                 </button>
               </div>
             </div>
 
             {/* SECTION 1: PI DETAILS & DATES */}
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', border: '1px solid #A5F3FC' }}>
+            <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
                   1
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
-                    PI DETAILS & DATES
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>Reference tracking, commercial dates, and sales engineer mapping</span>
-                </div>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  PI DETAILS & DATES
+                </h3>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     PI Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="date"
                     value={piDate}
                     onChange={(e) => setPiDate(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Payment Due / Valid Until Date
                   </label>
                   <input
                     type="date"
                     value={validUntilDate}
                     onChange={(e) => setValidUntilDate(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     PI Number
                   </label>
                   <input
                     type="text"
                     value={piNumber}
-                    placeholder="e.g. PI-2026-001 (Auto-assigned on save if blank)"
+                    placeholder="e.g. PI-2026-001 (Auto-assigned)"
                     onChange={(e) => setPiNumber(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Sales Engineer / Creator
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -1647,7 +1619,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       readOnly
                       disabled
                       value={salesPerson || getActiveUserName()}
-                      style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', fontWeight: '600', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed' }}
+                      style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '600', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed' }}
                     />
                     <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
                       Account Owner (Locked)
@@ -1658,23 +1630,20 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
 
             {/* SECTION 2: CUSTOMER INFORMATION & ADDRESSES (NO DELIVERY PROOF AS INSTRUCTED) */}
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', border: '1px solid #A5F3FC' }}>
+            <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
                   2
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
-                    CUSTOMER INFORMATION & ADDRESSES
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>Customer directory lookup with automatic address population</span>
-                </div>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  CUSTOMER INFORMATION & ADDRESSES
+                </h3>
               </div>
 
               {/* Row 1: Customer Contact details */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Customer / Company Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
@@ -1683,7 +1652,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="Search or enter customer..."
                     value={vendorName}
                     onChange={(e) => handleSelectCustomer(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '600', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '600', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                   <datalist id="pi-customers-datalist">
                     {(customerList || []).map((c, idx) => (
@@ -1695,7 +1664,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Contact Person
                   </label>
                   <input
@@ -1703,12 +1672,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="e.g. Rajesh Kannan"
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Phone Number
                   </label>
                   <input
@@ -1716,12 +1685,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Email Address
                   </label>
                   <input
@@ -1729,12 +1698,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="accounts@solarclient.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                     Customer GSTIN
                   </label>
                   <input
@@ -1742,22 +1711,27 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="e.g. 33AABCV1234F1Z5"
                     value={gstNo}
                     onChange={(e) => setGstNo(e.target.value.toUpperCase())}
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               {/* Row 2: Dual Addresses Layout */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
                 {/* Billing Address Card */}
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px', backgroundColor: '#F8FAFC' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Building2 size={15} color="#0E7490" />
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Official Billing Address</span>
+                <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                      <Building2 size={14} color="#0E7490" />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Official Billing Address</h4>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>Primary address for invoices & commercial records</span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Street / Premises Address</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Street / Premises Address</label>
                       <input
                         type="text"
                         placeholder="Plot No, Industrial Estate, Landmark..."
@@ -1766,12 +1740,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           setBillingStreet(e.target.value);
                           if (sameAsBilling) setDeliveryStreet(e.target.value);
                         }}
-                        style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                        style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
                         <input
                           type="text"
                           placeholder="City"
@@ -1780,11 +1754,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             setBillingCity(e.target.value);
                             if (sameAsBilling) setDeliveryCity(e.target.value);
                           }}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
                         <input
                           type="text"
                           placeholder="State"
@@ -1793,11 +1767,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             setBillingState(e.target.value);
                             if (sameAsBilling) setDeliveryState(e.target.value);
                           }}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
                         <input
                           type="text"
                           placeholder="600001"
@@ -1806,7 +1780,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             setBillingPincode(e.target.value);
                             if (sameAsBilling) setDeliveryPincode(e.target.value);
                           }}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                         />
                       </div>
                     </div>
@@ -1814,13 +1788,18 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 </div>
 
                 {/* Delivery Address Card */}
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px', backgroundColor: '#F8FAFC' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Truck size={15} color="#0E7490" />
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Consignee / Delivery Site Address</span>
+                      <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
+                        <Truck size={14} color="#0E7490" />
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Consignee / Delivery Site Address</h4>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>Site dispatch location</span>
+                      </div>
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '3px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '6px', border: '1px solid #A5F3FC' }}>
                       <input
                         type="checkbox"
                         checked={sameAsBilling}
@@ -1842,48 +1821,48 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Site / Dispatch Location Address</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Site / Dispatch Location Address</label>
                       <input
                         type="text"
                         disabled={sameAsBilling}
                         placeholder="Solar Project Site, Survey No, Village..."
                         value={sameAsBilling ? billingStreet : deliveryStreet}
                         onChange={(e) => setDeliveryStreet(e.target.value)}
-                        style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                        style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City / District</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City / District</label>
                         <input
                           type="text"
                           disabled={sameAsBilling}
                           placeholder="City"
                           value={sameAsBilling ? billingCity : deliveryCity}
                           onChange={(e) => setDeliveryCity(e.target.value)}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
                         <input
                           type="text"
                           disabled={sameAsBilling}
                           placeholder="State"
                           value={sameAsBilling ? billingState : deliveryState}
                           onChange={(e) => setDeliveryState(e.target.value)}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
                         <input
                           type="text"
                           disabled={sameAsBilling}
                           placeholder="600001"
                           value={sameAsBilling ? billingPincode : deliveryPincode}
                           onChange={(e) => setDeliveryPincode(e.target.value)}
-                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
                         />
                       </div>
                     </div>
@@ -2417,7 +2396,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', alignItems: 'start' }}>
 
             {/* Left Column: Official Bank Details Card */}
-            <div style={{ backgroundColor: '#F0FDFA', borderRadius: '12px', border: '1px solid #99F6E4', padding: '20px' }}>
+            <div style={{ backgroundColor: '#F0FDFA', borderRadius: '16px', border: '1px solid #99F6E4', padding: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Landmark size={18} color="#0E7490" />
@@ -2440,7 +2419,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             <div
               style={{
                 backgroundColor: '#FFFFFF',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 border: '1px solid #CBD5E1',
                 borderTop: '4px solid #0E7490',
                 padding: '24px',
