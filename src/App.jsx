@@ -21,6 +21,7 @@ import SalesExecutiveDashboardView from './components/views/SalesExecutiveDashbo
 import LoginScreen from './components/LoginScreen';
 import DeveloperPortalView from './components/DeveloperPortalView';
 import NotificationToast from './components/NotificationToast';
+import WorkflowNotificationBanner from './components/WorkflowNotificationBanner';
 import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt, RefreshCw } from 'lucide-react';
 import { useEffect, Component } from 'react';
 import { heartbeatActiveSession, registerActiveSession, revokeSession } from './services/sessionService';
@@ -277,6 +278,10 @@ function App() {
             onClose={() => setToastAlert(null)} 
           />
         )}
+        <WorkflowNotificationBanner 
+          userRole={userRole} 
+          onNavigate={handleTabChange} 
+        />
       </>
     );
   }
@@ -408,6 +413,12 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Real-Time Interactive Workflow Notification Banner with Audio Chime & Deep Link */}
+      <WorkflowNotificationBanner 
+        userRole={userRole} 
+        onNavigate={handleTabChange} 
+      />
     </div>
   );
 }

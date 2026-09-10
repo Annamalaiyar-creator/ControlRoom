@@ -2,14 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Check, Trash2, Eye, FileText, Search, AlertCircle, AlertTriangle, X,
   CheckCircle, Clock, Calendar, Edit3, RotateCcw, UploadCloud, ChevronDown, ChevronUp,
-  Truck, ShoppingCart, Upload, Printer, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare,
-  Camera, Video
+  Truck, ShoppingCart, Upload, Printer, Download, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare,
+  Camera, Video, LayoutGrid, List, Layout, Sparkles, PackageCheck, Image, FileSpreadsheet, Loader
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
-import { saveMediaToCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
+import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
+import { notifyBomSentToDispatch } from '../../services/notificationService';
 
 export default function BomOrdersView(props) {
   const {
@@ -27,7 +31,9 @@ export default function BomOrdersView(props) {
   const [selectedRows, setSelectedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [showFloatingMoreMenu, setShowFloatingMoreMenu] = useState(false);
+  const [printingBomRecord, setPrintingBomRecord] = useState(null);
+  const [exportFormatRecord, setExportFormatRecord] = useState(null);
+  const [isExportingFormat, setIsExportingFormat] = useState(null); // 'pdf' | 'jpg' | 'csv' | null
 
   // BOM Store from localStorage & Supabase
   const [bomStore, setBomStore] = useState(() => {
@@ -310,6 +316,7 @@ export default function BomOrdersView(props) {
   const [newBomTransportMode, setNewBomTransportMode] = useState('Transport');
   const [newBomTransporterName, setNewBomTransporterName] = useState('');
   const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
+  const [newBomTransportScope, setNewBomTransportScope] = useState('VRM Structures');
   const [newBomLrNo, setNewBomLrNo] = useState('');
   const getEffectiveSalesPerson = () => {
     const storedName = localStorage.getItem('controlroom_logged_user_name');
@@ -334,7 +341,9 @@ export default function BomOrdersView(props) {
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [presetKitPrice, setPresetKitPrice] = useState('');
+  const [presetGroups, setPresetGroups] = useState({}); // { [groupId]: { groupId, presetId, presetName, setCount, kitPrice } }
   const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
+  const [bomItemsLayoutMode, setBomItemsLayoutMode] = useState('modern_table'); // 'modern_table' | 'cards_grid' | 'split_workspace'
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
   const [bomMaterialsList, setBomMaterialsList] = useState([]);
@@ -349,6 +358,189 @@ export default function BomOrdersView(props) {
     window.addEventListener('vrm_presets_updated', handlePresetUpdate);
     return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
   }, []);
+
+  // CSV Export for BOM Order Specifications & Line Items
+  const handleExportBomCsv = (record) => {
+    if (!record) return;
+    const bomCode = record.bomCode || record.code || 'BOM_Order';
+    const customer = record.customerName || record.companyName || 'Customer';
+    const date = record.createdAt || record.date || new Date().toISOString().split('T')[0];
+    const status = record.status || 'Active';
+    const salesPerson = (record.salesPerson || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim();
+    const paymentType = record.paymentType || '100% Paid';
+
+    const bObj = record.billingAddressObj || {};
+    const dObj = record.deliveryAddressObj || {};
+    const bStr = record.billingAddress || (bObj.address ? `${bObj.address}, ${bObj.city || ''} ${bObj.state || ''} - ${bObj.pincode || ''}` : '');
+    const dStr = record.deliveryAddress || (dObj.address ? `${dObj.address}, ${dObj.city || ''} ${dObj.state || ''} - ${dObj.pincode || ''}` : bStr);
+
+    const transportMode = record.transportMode || 'Transport';
+    const transportScope = record.transportScope || 'VRM Structures';
+    const transporterName = record.transporterName || '—';
+    const vehicleNo = record.vehicleNo || '—';
+    const lrNo = record.lrNo || '—';
+
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const rows = [];
+    rows.push(['VRM STRUCTURES - BILL OF MATERIALS (BOM) ORDER SPECIFICATION']);
+    rows.push([]);
+    rows.push(['ORDER METADATA']);
+    rows.push(['BOM Reference Code', bomCode, 'Order Date', date]);
+    rows.push(['Customer / Company', customer, 'Order Status', status]);
+    rows.push(['Sales Person', salesPerson, 'Payment Terms', paymentType]);
+    rows.push([]);
+    rows.push(['LOGISTICS & ADDRESS DETAILS']);
+    rows.push(['Billing Address', bStr]);
+    rows.push(['Delivery Address', dStr]);
+    rows.push(['Transport Mode', transportMode, 'Transport Scope', transportScope]);
+    rows.push(['Transporter Name', transporterName, 'Vehicle Number', vehicleNo, 'LR / Docket No', lrNo]);
+    rows.push([]);
+    rows.push(['LINE ITEMS BREAKDOWN']);
+    rows.push(['#', 'Item Description', 'Category', 'Quantity', 'UOM', 'Unit Rate (INR)', 'Taxable Amount (INR)', 'GST Rate', 'GST Amount (INR)', 'Total (INR)']);
+
+    const items = record.items || [];
+    let calcSubtotal = 0;
+    let calcTotalGst = 0;
+    let calcGrandTotal = 0;
+
+    items.forEach((it, idx) => {
+      const name = it.name || it.itemName || it.title || it.description || `Item ${idx + 1}`;
+      const cat = it.category || 'General';
+      const qty = Number(it.quantity || it.qty || 0);
+      const uom = it.uom || it.unit || 'NOS';
+      const rate = Number(it.rate || it.unitPrice || it.price || 0);
+      const taxable = Number(it.taxableAmount || (qty * rate) || 0);
+      const gstRate = it.gstRate ? `${it.gstRate}%` : (it.gst ? `${it.gst}%` : '18%');
+      const gstPct = Number(String(gstRate).replace('%', '')) || 18;
+      const gstAmount = Number(it.gstAmount || (taxable * gstPct / 100) || 0);
+      const total = Number(it.total || it.totalAmount || (taxable + gstAmount) || 0);
+
+      calcSubtotal += taxable;
+      calcTotalGst += gstAmount;
+      calcGrandTotal += total;
+
+      rows.push([
+        idx + 1,
+        name,
+        cat,
+        qty,
+        uom,
+        rate.toFixed(2),
+        taxable.toFixed(2),
+        gstRate,
+        gstAmount.toFixed(2),
+        total.toFixed(2)
+      ]);
+    });
+
+    const finalGrandTotal = Number(record.grandTotal || calcGrandTotal);
+    const finalTax = Number(record.totalTax || record.gstTotal || calcTotalGst);
+    const finalSubtotal = Number(record.subTotal || record.subtotal || calcSubtotal);
+
+    rows.push([]);
+    rows.push(['', '', '', '', '', '', 'Subtotal', '', '', finalSubtotal.toFixed(2)]);
+    rows.push(['', '', '', '', '', '', 'Total GST', '', '', finalTax.toFixed(2)]);
+    rows.push(['', '', '', '', '', '', 'Grand Total (INR)', '', '', finalGrandTotal.toFixed(2)]);
+
+    const csvContent = '\uFEFF' + rows.map(r => r.map(escapeCsv).join(',')).join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${bomCode}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export BOM sheet as high-resolution PDF document using jsPDF + html2canvas
+  const handleExportAsPdf = async (record) => {
+    if (!record) return;
+    setIsExportingFormat('pdf');
+    try {
+      const el = document.getElementById('bom-export-hidden-target');
+      if (!el) {
+        alert('Could not locate printable sheet element.');
+        setIsExportingFormat(null);
+        return;
+      }
+      await new Promise((res) => setTimeout(res, 350));
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      let heightLeft = pdfHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, '', 'FAST');
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, '', 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const bomCode = record.bomCode || record.code || 'BOM_Order';
+      pdf.save(`${bomCode}_document.pdf`);
+      setExportFormatRecord(null);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Failed to generate PDF: ' + err.message);
+    } finally {
+      setIsExportingFormat(null);
+    }
+  };
+
+  // Export BOM sheet as high-resolution JPG image using html2canvas
+  const handleExportAsJpg = async (record) => {
+    if (!record) return;
+    setIsExportingFormat('jpg');
+    try {
+      const el = document.getElementById('bom-export-hidden-target');
+      if (!el) {
+        alert('Could not locate printable sheet element.');
+        setIsExportingFormat(null);
+        return;
+      }
+      await new Promise((res) => setTimeout(res, 350));
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const bomCode = record.bomCode || record.code || 'BOM_Order';
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `${bomCode}_sheet.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setExportFormatRecord(null);
+    } catch (err) {
+      console.error('JPG export failed:', err);
+      alert('Failed to generate JPG: ' + err.message);
+    } finally {
+      setIsExportingFormat(null);
+    }
+  };
 
   // Permission Check for Cancel BOM (Strictly Dispatch, Production, and Billing Logins)
   const canCancelBom = [
@@ -797,12 +989,30 @@ export default function BomOrdersView(props) {
 
   // Calculate totals for Create BOM form
   const calculateBOMTotals = () => {
-    // If a preset is selected and has a package price, add preset kit subtotal
-    const kitUnitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
-    const kitMultiplier = parseInt(presetSetCount) || 1;
-    const kitSubtotal = kitUnitPrice * kitMultiplier;
+    // 1. Calculate preset kits subtotal across all preset groups that currently have items in bomMaterialsList
+    const activeGroupIds = Array.from(new Set(
+      (bomMaterialsList || [])
+        .filter(it => it.isPresetItem)
+        .map(it => it.presetGroupId || 'legacy_default')
+    ));
 
+    let kitSubtotal = 0;
+    activeGroupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        kitSubtotal += (unitPrice * multiplier);
+      } else if (grpId === 'legacy_default') {
+        const unitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
+        const multiplier = parseInt(presetSetCount) || 1;
+        kitSubtotal += (unitPrice * multiplier);
+      }
+    });
+
+    // 2. Individual items subtotal (exclude preset items because their cost is in kitSubtotal)
     const itemsSub = (bomMaterialsList || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       return acc + (q * r);
@@ -811,15 +1021,38 @@ export default function BomOrdersView(props) {
     const sub = itemsSub + kitSubtotal;
     const disc = 0;
 
-    // GST calculation: sum of item GSTs plus preset kit GST (standard 18%)
+    // 3. GST: Custom item GSTs + Preset kits GST (dynamically from each preset's selected gstRate)
     const itemsGst = (bomMaterialsList || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       const rowTot = q * r;
       const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
       return acc + (rowTot * (pct / 100));
     }, 0);
-    const kitGst = kitSubtotal * 0.18;
+
+    let kitGst = 0;
+    activeGroupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      let gRateStr = grp?.gstRate;
+      if (!gRateStr) {
+        const firstItem = (bomMaterialsList || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
+        gRateStr = firstItem?.gstRate || '18%';
+      }
+      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+      let groupTotal = 0;
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        groupTotal = unitPrice * multiplier;
+      } else if (grpId === 'legacy_default') {
+        const unitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
+        const multiplier = parseInt(presetSetCount) || 1;
+        groupTotal = unitPrice * multiplier;
+      }
+      kitGst += groupTotal * (gPct / 100);
+    });
+
     const gst = itemsGst + kitGst;
 
     const grand = sub - disc + gst;
@@ -838,6 +1071,160 @@ export default function BomOrdersView(props) {
 
   const totals = calculateBOMTotals();
 
+  // Helper to render Document Preview Modal consistently across all views & forms
+  const renderDocPreviewModal = () => {
+    if (!previewDocModal) return null;
+    const rawDoc = previewDocModal.doc;
+    const docTitle = previewDocModal.title || 'Document Preview';
+    const docName = typeof rawDoc === 'string' ? rawDoc : (rawDoc?.name || 'Uploaded File');
+
+    let resolvedData = null;
+    if (typeof rawDoc === 'string') {
+      if (rawDoc.startsWith('data:') || rawDoc.startsWith('http://') || rawDoc.startsWith('https://') || rawDoc.startsWith('blob:')) {
+        resolvedData = rawDoc;
+      } else {
+        resolvedData = getMediaFromCache(rawDoc);
+      }
+    } else if (rawDoc && typeof rawDoc === 'object') {
+      resolvedData = rawDoc.dataUrl || rawDoc.url || rawDoc.fileData || rawDoc.proofDocData || (rawDoc.name ? getMediaFromCache(rawDoc.name) : null);
+      if (!resolvedData && rawDoc instanceof Blob) {
+        try {
+          resolvedData = URL.createObjectURL(rawDoc);
+        } catch (e) { }
+      }
+    }
+
+    const isImg = Boolean(
+      resolvedData && (
+        resolvedData.startsWith('data:image/') ||
+        rawDoc?.type?.startsWith('image/') ||
+        /\.(jpg|jpeg|png|webp|gif|bmp|svg)($|\?)/i.test(docName) ||
+        /\.(jpg|jpeg|png|webp|gif|bmp|svg)($|\?)/i.test(resolvedData)
+      )
+    );
+
+    const isVid = Boolean(
+      resolvedData && (
+        resolvedData.startsWith('data:video/') ||
+        rawDoc?.type?.startsWith('video/') ||
+        /\.(mp4|webm|mov|mkv|avi)($|\?)/i.test(docName) ||
+        /\.(mp4|webm|mov|mkv|avi)($|\?)/i.test(resolvedData)
+      )
+    );
+
+    return (
+      <div
+        onClick={() => setPreviewDocModal(null)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15,23,42,0.75)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '850px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: '1px solid #E2E8F0'
+          }}
+        >
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{docTitle}</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', wordBreak: 'break-all' }}>{docName}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {resolvedData && (
+                <a
+                  href={resolvedData}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={docName || 'document'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#0E7490',
+                    backgroundColor: '#ECFEFF',
+                    border: '1px solid #A5F3FC',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={13} /> Open / Download
+                </a>
+              )}
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '8px' }}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '340px', backgroundColor: '#0F172A' }}>
+            {!resolvedData ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
+                <FileText size={48} style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+                <p style={{ fontSize: '14px', fontWeight: '700', margin: 0, color: '#F1F5F9' }}>No visual preview available</p>
+                <p style={{ fontSize: '12px', marginTop: '6px' }}>Attached file: {docName}</p>
+              </div>
+            ) : isImg ? (
+              <img
+                src={resolvedData}
+                alt={docName}
+                style={{ maxWidth: '100%', maxHeight: '68vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)' }}
+              />
+            ) : isVid ? (
+              <video
+                controls
+                autoPlay
+                src={resolvedData}
+                style={{ maxWidth: '100%', maxHeight: '68vh', borderRadius: '8px', boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)' }}
+              />
+            ) : (
+              <iframe
+                src={resolvedData}
+                title={docName}
+                style={{ width: '100%', height: '580px', border: 'none', borderRadius: '8px', backgroundColor: '#FFFFFF' }}
+              />
+            )}
+          </div>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+            <span style={{ fontSize: '12px', color: '#64748B' }}>
+              {rawDoc?.size ? `Size: ${rawDoc.size}` : ''}
+            </span>
+            <button
+              onClick={() => setPreviewDocModal(null)}
+              style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ==========================================
   // RENDER 1: FULL CREATE BOM FORM
   // ==========================================
@@ -846,19 +1233,89 @@ export default function BomOrdersView(props) {
       setBomMaterialsList(prev => [...(prev || []), { name: '', category: '', uom: 'NOS', qty: '1', wastage: '0%', rate: '', gstRate: '18%' }]);
     };
 
+    const handleAddPresetToOrder = (presetId, targetPreset, setsCount) => {
+      if (!targetPreset || !targetPreset.items || targetPreset.items.length === 0) return;
+      const groupId = 'preset_grp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      const multiplier = Math.max(1, parseInt(setsCount) || 1);
+
+      let defaultPrice = '';
+      if (targetPreset.price || targetPreset.rate) {
+        defaultPrice = String(targetPreset.price || targetPreset.rate);
+      } else {
+        const origSum = targetPreset.items.reduce((acc, it) => acc + (parseFloat(it.qty || 1) * parseFloat(it.rate || 0)), 0);
+        defaultPrice = origSum > 0 ? String(origSum) : '';
+      }
+
+      const presetName = targetPreset.label || presetId;
+      const initialGstRate = targetPreset.gstRate || targetPreset.gst || '18%';
+
+      setPresetGroups(prev => ({
+        ...prev,
+        [groupId]: {
+          groupId,
+          presetId,
+          presetName,
+          setCount: multiplier,
+          kitPrice: defaultPrice,
+          gstRate: initialGstRate
+        }
+      }));
+
+      const newItems = targetPreset.items.map(it => {
+        const baseQ = parseFloat(it.qty) || 1;
+        return {
+          ...it,
+          presetGroupId: groupId,
+          presetName,
+          baseQty: baseQ,
+          qty: String(Math.round(baseQ * multiplier)),
+          rate: '0',
+          gstRate: it.gstRate || initialGstRate,
+          isPresetItem: true
+        };
+      });
+
+      setBomMaterialsList(prev => [...(prev || []), ...newItems]);
+      setSelectedPreset('');
+      setPresetSetCount(1);
+    };
+
+    const handleRemovePresetGroup = (groupId) => {
+      setBomMaterialsList(prev => (prev || []).filter(item => (item.presetGroupId || 'legacy_default') !== groupId));
+      setPresetGroups(prev => {
+        const updated = { ...prev };
+        delete updated[groupId];
+        return updated;
+      });
+    };
+
     const handleRemoveMaterialRow = (idx) => {
-      setBomMaterialsList(prev => (prev || []).filter((_, i) => i !== idx));
+      const itemToRemove = bomMaterialsList[idx];
+      setBomMaterialsList(prev => {
+        const updated = (prev || []).filter((_, i) => i !== idx);
+        if (itemToRemove && itemToRemove.presetGroupId) {
+          const remainingInGroup = updated.filter(it => it.presetGroupId === itemToRemove.presetGroupId);
+          if (remainingInGroup.length === 0) {
+            setPresetGroups(pgPrev => {
+              const c = { ...pgPrev };
+              delete c[itemToRemove.presetGroupId];
+              return c;
+            });
+          }
+        }
+        return updated;
+      });
     };
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
         {/* Top Page Title Bar with Action Buttons */}
         <div style={{
-          background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+          background: 'linear-gradient(135deg, #075985 0%, #0E7490 50%, #0891B2 100%)',
           borderRadius: '18px',
           padding: '24px 28px',
           color: '#FFFFFF',
-          boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.4)',
+          boxShadow: '0 10px 25px -5px rgba(14, 116, 144, 0.4)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -871,7 +1328,7 @@ export default function BomOrdersView(props) {
               <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
                 Create Sales Bill of Materials (BOM)
               </h1>
-              <p style={{ fontSize: '13px', color: '#C7D2FE', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: '#CFFAFE', margin: '4px 0 0 0' }}>
                 Configure customer order, specify delivery destination, upload document proofs, & compile BOM preset items
               </p>
             </div>
@@ -886,7 +1343,7 @@ export default function BomOrdersView(props) {
             </button>
             <button
               onClick={() => setBomConfirmModal('draft')}
-              style={{ border: 'none', background: '#FFFFFF', color: '#4F46E5', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+              style={{ border: 'none', background: '#FFFFFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
             >
               <FileText style={{ width: '15px', height: '15px' }} />
               Save as Draft
@@ -905,6 +1362,7 @@ export default function BomOrdersView(props) {
               }}
               style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
               Create Order →
             </button>
           </div>
@@ -913,10 +1371,10 @@ export default function BomOrdersView(props) {
         {/* SECTION 1: ORDER INFORMATION */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
               1
             </div>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               ORDER INFORMATION
             </h3>
           </div>
@@ -984,10 +1442,10 @@ export default function BomOrdersView(props) {
         {/* SECTION 2: CUSTOMER INFORMATION & ADDRESSES */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
               2
             </div>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               CUSTOMER INFORMATION
             </h3>
           </div>
@@ -1140,7 +1598,7 @@ export default function BomOrdersView(props) {
                   <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                        <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
                           <Truck style={{ width: '14px', height: '14px' }} />
                         </div>
                         <div>
@@ -1149,7 +1607,7 @@ export default function BomOrdersView(props) {
                         </div>
                       </div>
 
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', backgroundColor: '#EEF2FF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #C7D2FE' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #A5F3FC' }}>
                         <input
                           type="checkbox"
                           checked={sameAsBilling}
@@ -1169,7 +1627,7 @@ export default function BomOrdersView(props) {
                               setNewBomDeliveryPincode('');
                             }
                           }}
-                          style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                          style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                         />
                         Same as Billing
                       </label>
@@ -1330,191 +1788,93 @@ export default function BomOrdersView(props) {
         </div>
 
         {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS */}
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                3
-              </div>
-              <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                ORDER ITEMS & BILL OF MATERIALS
-              </h3>
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+          {/* Section 3 Header — Clean Single Row */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
+            {/* Left: Badge + Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: 'auto' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>3</div>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ORDER ITEMS & BILL OF MATERIALS</span>
             </div>
 
-            {/* PRESET SELECTOR & MULTIPLIER */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '4px 10px', borderRadius: '8px' }}>
-                <Layers style={{ width: '14px', height: '14px', color: '#4F46E5' }} />
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#4338CA' }}>Preset Kit:</span>
-              </div>
-              <SearchablePresetSelector
-                value={selectedPreset}
-                activePresetsMap={activePresetsMap}
-                accentColor="#4F46E5"
-                width="340px"
-                placeholder="Type or pick Preset Kit..."
-                onChange={(val, targetPreset) => {
-                  setSelectedPreset(val);
+            {/* Preset Pill */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+              <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+            </div>
+
+            {/* Searchable Preset Selector */}
+            <SearchablePresetSelector
+              value={selectedPreset}
+              activePresetsMap={activePresetsMap}
+              accentColor="#0E7490"
+              width="380px"
+              placeholder="Pick a Preset to add..."
+              style={{ height: '40px' }}
+              onChange={(val, targetPreset) => {
+                if (val && targetPreset && targetPreset.items) {
+                  handleAddPresetToOrder(val, targetPreset, 1);
+                } else if (!val) {
+                  setSelectedPreset('');
+                }
+              }}
+            />
+
+            {/* Clear Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedBomItemIndexes.length > 0) {
+                  setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
                   setSelectedBomItemIndexes([]);
+                } else {
+                  if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
+                }
+              }}
+              title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
+              style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+            >
+              <X style={{ width: '18px', height: '18px' }} />
+            </button>
+          </div>
 
-                  if (targetPreset && targetPreset.items) {
-                    const multiplier = parseInt(presetSetCount) || 1;
-                    const newItems = targetPreset.items.map(it => {
-                      const baseQ = parseFloat(it.qty) || 1;
-                      return {
-                        ...it,
-                        baseQty: baseQ,
-                        qty: String(Math.round(baseQ * multiplier)),
-                        rate: '0',
-                        isPresetItem: true
-                      };
-                    });
-
-                    // Set materials list
-                    setBomMaterialsList(newItems);
-
-                    // If the preset has a defined kit price or sum of item prices, populate kit price
-                    if (targetPreset.price || targetPreset.rate) {
-                      setPresetKitPrice(String(targetPreset.price || targetPreset.rate));
-                    } else {
-                      // Calculate original sum of items as recommended kit price
-                      const origSum = targetPreset.items.reduce((acc, it) => acc + (parseFloat(it.qty || 1) * parseFloat(it.rate || 0)), 0);
-                      setPresetKitPrice(origSum > 0 ? String(origSum) : '');
-                    }
-                  } else {
-                    setPresetKitPrice('');
-                  }
-                }}
-              />
-
-              {/* Append Additional Preset Button */}
-              {selectedPreset && bomMaterialsList.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
-                    if (targetPreset && targetPreset.items) {
-                      const multiplier = parseInt(presetSetCount) || 1;
-                      const additionalItems = targetPreset.items.map(it => {
-                        const baseQ = parseFloat(it.qty) || 1;
-                        return {
-                          ...it,
-                          baseQty: baseQ,
-                          qty: String(Math.round(baseQ * multiplier)),
-                          rate: '0',
-                          isPresetItem: true
-                        };
-                      });
-                      setBomMaterialsList(prev => [...prev, ...additionalItems]);
-                      // Add preset kit price if set
-                      const addPrice = parseFloat(presetKitPrice) || (targetPreset.price || targetPreset.rate || 0);
-                      if (addPrice) {
-                        setPresetKitPrice(prev => String((parseFloat(prev) || 0) + addPrice));
-                      }
-                    }
-                  }}
-                  title="Add another set of this preset kit without replacing existing items"
+          {/* Active Preset Badges / Pills */}
+          {Object.values(presetGroups).length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '12px 24px 0 24px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B' }}>Active Presets in Order:</span>
+              {Object.values(presetGroups).map(grp => (
+                <span
+                  key={grp.groupId}
                   style={{
-                    backgroundColor: '#EEF2FF',
-                    border: '1px solid #818CF8',
-                    color: '#4338CA',
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    height: '36px',
-                    padding: '0 10px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap'
+                    gap: '6px',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    border: '1px solid #A5F3FC',
+                    borderRadius: '16px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700'
                   }}
                 >
-                  <Plus size={13} /> + Add Another Preset
-                </button>
-              )}
-
-              {/* Set Count Multiplier */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>No. of Sets:</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="999"
-                  value={presetSetCount}
-                  onChange={(e) => {
-                    const rawVal = e.target.value;
-                    const newCount = rawVal === '' ? '' : Math.max(1, parseInt(rawVal) || 1);
-                    setPresetSetCount(newCount);
-                    const multiplier = parseInt(rawVal) || 1;
-                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
-                    if (targetPreset && targetPreset.items) {
-                      const baseItems = targetPreset.items;
-                      setBomMaterialsList(baseItems.map(it => {
-                        const baseQ = parseFloat(it.qty) || 1;
-                        return {
-                          ...it,
-                          baseQty: baseQ,
-                          qty: String(Math.round(baseQ * multiplier)),
-                          rate: '0',
-                          isPresetItem: true
-                        };
-                      }));
-                    }
-                  }}
-                  style={{ width: '54px', height: '26px', borderRadius: '6px', border: '1px solid #94A3B8', padding: '0 6px', fontSize: '13px', fontWeight: '800', color: '#4F46E5', textAlign: 'center', outline: 'none', backgroundColor: 'white' }}
-                />
-              </div>
-
-              {/* Dedicated Preset Kit Full Package Price Input */}
-              {selectedPreset && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '0 10px', borderRadius: '8px', height: '36px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#4338CA', whiteSpace: 'nowrap' }}>Preset Kit Full Price (₹):</span>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 25000"
-                    value={presetKitPrice}
-                    onChange={(e) => setPresetKitPrice(e.target.value)}
-                    style={{ width: '100px', height: '26px', borderRadius: '6px', border: '1px solid #818CF8', padding: '0 8px', fontSize: '13px', fontWeight: '800', color: '#1E1B4B', textAlign: 'right', outline: 'none', backgroundColor: 'white' }}
-                  />
-                  {presetSetCount > 1 && presetKitPrice && (
-                    <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>
-                      (Total: ₹{((parseFloat(presetKitPrice) || 0) * (parseInt(presetSetCount) || 1)).toLocaleString('en-IN')})
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  if (selectedBomItemIndexes.length > 0) {
-                    setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
-                    setSelectedBomItemIndexes([]);
-                  } else {
-                    if (bomMaterialsList.length > 0) {
-                      setShowClearConfirmModal(true);
-                    }
-                  }
-                }}
-                title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
-                style={{
-                  border: selectedBomItemIndexes.length > 0 ? '1px solid #EF4444' : '1px solid #FCA5A5',
-                  backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FEF2F2',
-                  color: selectedBomItemIndexes.length > 0 ? 'white' : '#EF4444',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <X style={{ width: '18px', height: '18px' }} />
-              </button>
+                  <Layers size={13} style={{ color: '#0E7490' }} />
+                  {grp.presetName} ({grp.setCount} Set{grp.setCount > 1 ? 's' : ''})
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePresetGroup(grp.groupId)}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 0 2px', display: 'flex', alignItems: 'center', color: '#0891B2' }}
+                    title={`Remove ${grp.presetName}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </span>
+              ))}
             </div>
-          </div>
+          )}
+
+          {/* Section 3 Content */}
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Clear confirm modal */}
           {showClearConfirmModal && (
@@ -1531,14 +1891,14 @@ export default function BomOrdersView(props) {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <button onClick={() => setShowClearConfirmModal(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={() => { setBomMaterialsList([]); setSelectedPreset(''); setSelectedBomItemIndexes([]); setShowClearConfirmModal(false); }} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Clear All Items</button>
+                  <button onClick={() => { setBomMaterialsList([]); setSelectedPreset(''); setPresetGroups({}); setPresetKitPrice(''); setPresetSetCount(1); setSelectedBomItemIndexes([]); setShowClearConfirmModal(false); }} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Clear All Items</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Materials Table */}
-          <div style={{ overflowX: 'auto' }}>
+          {/* Clean Modern Items Table */}
+          <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
                 <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
@@ -1553,194 +1913,409 @@ export default function BomOrdersView(props) {
                           setSelectedBomItemIndexes([]);
                         }
                       }}
-                      style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                      style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                     />
                   </th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '25%' }}>Product / Item <span style={{ color: '#EF4444' }}>*</span></th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '18%' }}>Description</th>
+                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '30%' }}>Product / Item <span style={{ color: '#EF4444' }}>*</span></th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%' }}>Price (₹)</th>
+                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
+                  {bomMaterialsList.some(it => it.isPresetItem) && <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', color: '#0E7490', backgroundColor: '#ECFEFF' }}>Preset Amt (₹)</th>}
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Taxable (₹)</th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Total (₹)</th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {bomMaterialsList.map((item, i) => {
-                  const q = parseFloat(item.qty) || 0;
-                  const r = parseFloat(item.rate) || 0;
-                  const taxable = q * r;
-                  const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-                  const gstAmt = taxable * (gstPct / 100);
-                  const rowTot = taxable + gstAmt;
-                  const isChecked = selectedBomItemIndexes.includes(i);
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#EEF2FF' : 'transparent' }}>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedBomItemIndexes(prev => [...prev, i]);
-                            else setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
-                          }}
-                          style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 10px' }}>
-                        <div style={{ position: 'relative' }}>
+                {bomMaterialsList.length === 0 ? (
+                  <tr>
+                    <td colSpan={bomMaterialsList.some(it => it.isPresetItem) ? 10 : 9} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>
+                      No items added yet. Pick a preset above or click <strong>+ Add Product / Item</strong> below.
+                    </td>
+                  </tr>
+                ) : (
+                  (() => {
+                    const hasAnyPreset = bomMaterialsList.some(it => it.isPresetItem);
+                    return bomMaterialsList.map((item, i) => {
+                    const q = parseFloat(item.qty) || 0;
+                    const r = parseFloat(item.rate) || 0;
+                    const taxable = q * r;
+                    const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+                    const gstAmt = taxable * (gstPct / 100);
+                    const rowTot = taxable + gstAmt;
+                    const isChecked = selectedBomItemIndexes.includes(i);
+
+                    const isPresetItem = Boolean(item.isPresetItem);
+                    const groupId = item.presetGroupId || (isPresetItem ? 'legacy_default' : null);
+                    const groupItems = isPresetItem ? bomMaterialsList.filter(it => (it.presetGroupId || 'legacy_default') === groupId) : [];
+                    const isFirstInGroup = isPresetItem && bomMaterialsList.findIndex(it => (it.presetGroupId || 'legacy_default') === groupId) === i;
+                    const groupCount = groupItems.length;
+                    const currentGroup = (groupId && presetGroups[groupId]) || {
+                      groupId: groupId || 'legacy_default',
+                      presetName: item.presetName || selectedPreset || 'Preset Kit',
+                      setCount: presetSetCount || 1,
+                      kitPrice: presetKitPrice || ''
+                    };
+
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#ECFEFF' : (i % 2 === 1 ? '#FAFBFC' : 'white') }}>
+                        <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedBomItemIndexes(prev => [...prev, i]);
+                              else setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
+                            }}
+                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px 10px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {/* Line 1: Product / Item Name */}
+                            <div style={{ position: 'relative' }}>
+                              <input
+                                type="text"
+                                list={`product-list-${i}`}
+                                placeholder="Type or select product / item..."
+                                value={item.name || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
+                                  setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
+                                    ...mat,
+                                    name: matched ? matched.name : val,
+                                    rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                    uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                    category: matched ? (matched.category || matched.description || mat.category) : mat.category
+                                  } : mat));
+                                }}
+                                style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                              />
+                              <datalist id={`product-list-${i}`}>
+                                {(itemsList || []).map((prod, pidx) => {
+                                  const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
+                                  const isOutOfStock = st <= 0;
+                                  const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                                  return (
+                                    <option key={pidx} value={prod.name}>
+                                      {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                    </option>
+                                  );
+                                })}
+                              </datalist>
+                            </div>
+                            {/* Line 2: Description */}
+                            <input
+                              type="text"
+                              placeholder="Description..."
+                              value={item.category || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                            />
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 10px' }}>
                           <input
                             type="text"
-                            list={`product-list-${i}`}
-                            placeholder="Type or select product / item..."
-                            value={item.name || ''}
+                            list={`uom-list-${i}`}
+                            placeholder="UOM"
+                            value={item.uom || 'NOS'}
                             onChange={(e) => {
                               const val = e.target.value;
-                              const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
-                                ...mat,
-                                name: matched ? matched.name : val,
-                                rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                category: matched ? (matched.category || matched.description || mat.category) : mat.category
-                              } : mat));
+                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
                             }}
-                            style={{
-                              width: '100%',
-                              height: '38px',
-                              borderRadius: '8px',
-                              border: '1px solid #CBD5E1',
-                              padding: '0 10px',
-                              fontSize: '13px',
-                              backgroundColor: 'white',
-                              color: '#0F172A',
-                              outline: 'none',
-                              boxSizing: 'border-box',
-                              fontWeight: '600'
-                            }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
                           />
-                          <datalist id={`product-list-${i}`}>
-                            {(itemsList || []).map((prod, pidx) => {
-                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 100));
-                              const isOutOfStock = st <= 0;
-                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
-                              return (
-                                <option key={pidx} value={prod.name}>
-                                  {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                </option>
-                              );
-                            })}
+                          <datalist id={`uom-list-${i}`}>
+                            <option value="NOS" />
+                            <option value="SET" />
+                            <option value="KG" />
+                            <option value="MTR" />
+                            <option value="PCS" />
+                            <option value="BOX" />
+                            <option value="PKT" />
+                            <option value="PAIR" />
                           </datalist>
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="text"
-                          placeholder="Description"
-                          value={item.category || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
-                          }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="text"
-                          list={`uom-list-${i}`}
-                          placeholder="UOM"
-                          value={item.uom || 'NOS'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
-                          }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
-                        />
-                        <datalist id={`uom-list-${i}`}>
-                          <option value="NOS" />
-                          <option value="SET" />
-                          <option value="KG" />
-                          <option value="MTR" />
-                          <option value="PCS" />
-                          <option value="BOX" />
-                          <option value="PKT" />
-                          <option value="PAIR" />
-                        </datalist>
-                      </td>
-                      <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="number"
-                          value={item.qty}
-                          placeholder="0"
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
-                          }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 10px' }}>
-                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px', backgroundColor: '#EEF2FF', border: '1px dashed #A5B4FC', borderRadius: '8px', padding: '0 8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338CA' }}>Included in Kit</span>
-                          </div>
-                        ) : (
+                        </td>
+                        <td style={{ padding: '12px 10px' }}>
                           <input
                             type="number"
-                            value={item.rate}
-                            placeholder="0.00"
+                            value={item.qty}
+                            placeholder="0"
                             onChange={(e) => {
                               const val = e.target.value;
-                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                             }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
                           />
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                        <select
-                          value={item.gstRate || '18%'}
-                          disabled={Boolean(selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0))}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                          }}
-                          style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: (selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0)) ? '#F8FAFC' : '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
-                        >
-                          <option value="18%">18% GST</option>
-                          <option value="12%">12% GST</option>
-                          <option value="5%">5% GST</option>
-                          <option value="0%">0% Exempt</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
-                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
-                        ) : (
-                          `₹${taxable.toFixed(2)}`
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
-                        {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
-                        ) : (
-                          `₹${rowTot.toFixed(2)}`
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleRemoveMaterialRow(i)}
-                          style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <Trash2 style={{ width: '15px', height: '15px' }} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td style={{ padding: '12px 10px' }}>
+                          {isPresetItem ? (
+                            <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                          ) : (
+                            <input
+                              type="number"
+                              value={item.rate}
+                              placeholder="0.00"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <select
+                            value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (isPresetItem && groupId) {
+                                setBomMaterialsList(prev => prev.map((mat, idx) =>
+                                  ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                    ? { ...mat, gstRate: val }
+                                    : mat
+                                ));
+                                setPresetGroups(prev => ({
+                                  ...prev,
+                                  [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                }));
+                              } else {
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                              }
+                            }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                          >
+                            <option value="18%">18% GST</option>
+                            <option value="12%">12% GST</option>
+                            <option value="5%">5% GST</option>
+                            <option value="0%">0% Exempt</option>
+                          </select>
+                        </td>
+                        {hasAnyPreset && (() => {
+                          if (isPresetItem) {
+                            if (isFirstInGroup) {
+                              return (
+                                <td
+                                  rowSpan={groupCount}
+                                  style={{
+                                    padding: '12px 10px',
+                                    verticalAlign: 'middle',
+                                    backgroundColor: '#EEF2FF',
+                                    borderLeft: '2px solid #C7D2FE',
+                                    borderRight: '2px solid #C7D2FE'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                    <span
+                                      style={{
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        color: '#4338CA',
+                                        textAlign: 'center',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        maxWidth: '120px',
+                                        display: 'block'
+                                      }}
+                                      title={currentGroup.presetName}
+                                    >
+                                      {currentGroup.presetName}
+                                    </span>
+
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                      <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
+                                      <input
+                                        type="number"
+                                        value={currentGroup.kitPrice}
+                                        placeholder="0.00"
+                                        onFocus={(e) => e.target.select()}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          if (groupId) {
+                                            setPresetGroups(prev => ({
+                                              ...prev,
+                                              [groupId]: { ...(prev[groupId] || currentGroup), kitPrice: val }
+                                            }));
+                                          }
+                                          setPresetKitPrice(val);
+                                        }}
+                                        style={{
+                                          width: '100%', height: '42px', borderRadius: '8px',
+                                          border: '2px solid #818CF8', padding: '0 10px 0 26px',
+                                          fontSize: '15px', fontWeight: '800', color: '#312E81',
+                                          textAlign: 'right', outline: 'none', boxSizing: 'border-box',
+                                          backgroundColor: 'white'
+                                        }}
+                                      />
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                        {groupCount} items ×
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="999"
+                                        value={currentGroup.setCount !== undefined && currentGroup.setCount !== null ? currentGroup.setCount : ''}
+                                        onFocus={(e) => e.target.select()}
+                                        onChange={(e) => {
+                                          const rawVal = e.target.value;
+                                          if (rawVal === '') {
+                                            if (groupId) {
+                                              setPresetGroups(prev => ({
+                                                ...prev,
+                                                [groupId]: { ...(prev[groupId] || currentGroup), setCount: '' }
+                                              }));
+                                            }
+                                            return;
+                                          }
+                                          const parsed = parseInt(rawVal);
+                                          const valToSave = isNaN(parsed) ? '' : Math.max(0, parsed);
+                                          if (groupId) {
+                                            setPresetGroups(prev => ({
+                                              ...prev,
+                                              [groupId]: { ...(prev[groupId] || currentGroup), setCount: valToSave }
+                                            }));
+                                          }
+                                          const multiplier = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                                          setBomMaterialsList(prev => prev.map(mat => {
+                                            if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                              return { ...mat, qty: String(Math.round(mat.baseQty * multiplier)) };
+                                            }
+                                            return mat;
+                                          }));
+                                        }}
+                                        onBlur={() => {
+                                          const current = currentGroup.setCount;
+                                          const finalCount = (current === '' || isNaN(parseInt(current)) || parseInt(current) < 0) ? 1 : Math.max(0, parseInt(current));
+                                          if (groupId) {
+                                            setPresetGroups(prev => ({
+                                              ...prev,
+                                              [groupId]: { ...(prev[groupId] || currentGroup), setCount: finalCount }
+                                            }));
+                                          }
+                                          setBomMaterialsList(prev => prev.map(mat => {
+                                            if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                              return { ...mat, qty: String(Math.round(mat.baseQty * finalCount)) };
+                                            }
+                                            return mat;
+                                          }));
+                                        }}
+                                        style={{
+                                          width: '42px', height: '26px', borderRadius: '6px',
+                                          border: '1.5px solid #818CF8', fontSize: '13px',
+                                          fontWeight: '800', color: '#312E81', textAlign: 'center',
+                                          padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box'
+                                        }}
+                                        title="Sets multiplier for this preset"
+                                      />
+                                      <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                        set{(parseInt(currentGroup.setCount) || 1) !== 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                      <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
+                                      <select
+                                        value={currentGroup.gstRate || item.gstRate || '18%'}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          if (groupId) {
+                                            setPresetGroups(prev => ({
+                                              ...prev,
+                                              [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                            }));
+                                          }
+                                          setBomMaterialsList(prev => prev.map((mat, idx) =>
+                                            ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                              ? { ...mat, gstRate: val }
+                                              : mat
+                                          ));
+                                        }}
+                                        style={{
+                                          height: '24px', borderRadius: '6px',
+                                          border: '1.5px solid #818CF8', padding: '0 4px',
+                                          fontSize: '11px', fontWeight: '800',
+                                          color: '#312E81', backgroundColor: '#FFFFFF',
+                                          outline: 'none', cursor: 'pointer'
+                                        }}
+                                        title="Change GST Rate for this preset"
+                                      >
+                                        <option value="18%">18%</option>
+                                        <option value="12%">12%</option>
+                                        <option value="5%">5%</option>
+                                        <option value="0%">0%</option>
+                                      </select>
+                                    </div>
+
+                                    {groupId && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemovePresetGroup(groupId)}
+                                        style={{
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                          color: '#EF4444',
+                                          fontSize: '10px',
+                                          fontWeight: '700',
+                                          cursor: 'pointer',
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          marginTop: '2px'
+                                        }}
+                                        title={`Remove entire ${currentGroup.presetName} preset`}
+                                      >
+                                        Remove Kit
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            } else {
+                              return null;
+                            }
+                          } else {
+                            return <td style={{ padding: '12px 10px', textAlign: 'center' }}><span style={{ fontSize: '11px', color: '#CBD5E1' }}>—</span></td>;
+                          }
+                        })()}
+                        <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
+                          {isPresetItem ? (
+                            <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                          ) : (
+                            `₹${taxable.toFixed(2)}`
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
+                          {isPresetItem ? (
+                            <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                          ) : (
+                            `₹${rowTot.toFixed(2)}`
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMaterialRow(i)}
+                            style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete Item"
+                          >
+                            <Trash2 style={{ width: '15px', height: '15px' }} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  });
+                  })()
+                )}
+
               </tbody>
             </table>
           </div>
@@ -1748,21 +2323,22 @@ export default function BomOrdersView(props) {
           <div>
             <button
               onClick={handleAddMaterialRow}
-              style={{ border: '1px solid #E0E7FF', background: '#EEF2FF', color: '#4F46E5', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Plus style={{ width: '15px', height: '15px' }} />
               Add Product / Item
             </button>
+          </div>
           </div>
         </div>
 
         {/* SECTION 4: TRANSPORT & LOGISTICS */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
               4
             </div>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               TRANSPORT & LOGISTICS DETAILS
             </h3>
           </div>
@@ -1772,24 +2348,15 @@ export default function BomOrdersView(props) {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                 Mode of Transport <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <input
-                type="text"
-                list="transport-mode-suggestions"
+              <select
                 value={newBomTransportMode}
                 onChange={(e) => setNewBomTransportMode(e.target.value)}
-                placeholder="Type/Select (Transport, Lorry, Courier...)"
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
-              />
-              <datalist id="transport-mode-suggestions">
-                <option value="Transport" />
-                <option value="Lorry" />
-                <option value="Courier" />
-                <option value="Tempo / Mini Truck" />
-                <option value="Air Cargo" />
-                <option value="Train / Rail Cargo" />
-                <option value="Customer Pickup / Self" />
-                <option value="Dedicated Container" />
-              </datalist>
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="Transport">Transport</option>
+                <option value="Own Vehicle">Own Vehicle</option>
+                <option value="Porter">Porter</option>
+              </select>
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Transport Name</label>
@@ -1801,16 +2368,37 @@ export default function BomOrdersView(props) {
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Vehicle Number</label>
+              <input
+                type="text"
+                value={newBomVehicleNo}
+                onChange={(e) => setNewBomVehicleNo(e.target.value)}
+                placeholder="e.g. TN 01 AB 1234 / KA 04 C 5678"
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Scope</label>
+              <select
+                value={newBomTransportScope}
+                onChange={(e) => setNewBomTransportScope(e.target.value)}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="VRM Structures">VRM Structures</option>
+                <option value="Customer Scope">Customer Scope</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* SECTION 5: PAYMENT TERMS & FINANCIAL SUMMARY */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
               5
             </div>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#4F46E5', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               PAYMENT TERMS & ORDER SUMMARY
             </h3>
           </div>
@@ -1841,7 +2429,7 @@ export default function BomOrdersView(props) {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155' }}>Credit Timeline (Days)</label>
-                    <span style={{ fontSize: '11px', color: '#4F46E5', fontWeight: '700' }}>Default: 7 Days</span>
+                    <span style={{ fontSize: '11px', color: '#0E7490', fontWeight: '700' }}>Default: 7 Days</span>
                   </div>
                   <input
                     type="number"
@@ -1849,7 +2437,7 @@ export default function BomOrdersView(props) {
                     max="365"
                     value={newBomCreditDays}
                     onChange={(e) => setNewBomCreditDays(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #C7D2FE', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: '#F5F3FF', boxSizing: 'border-box', outline: 'none', fontWeight: '700' }}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #A5F3FC', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: '#F0FDFA', boxSizing: 'border-box', outline: 'none', fontWeight: '700' }}
                   />
                 </div>
               )}
@@ -1968,7 +2556,7 @@ export default function BomOrdersView(props) {
                       </span>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ECFEFF', border: '1px solid #A5F3FC', color: '#0E7490', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                           <Upload style={{ width: '13px', height: '13px' }} />
                           Browse Files
                           <input
@@ -2000,9 +2588,9 @@ export default function BomOrdersView(props) {
           {/* Subtotals & GST Tax Calculation Breakdown */}
           <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
             {selectedPreset && totals.kitSubtotal > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#4338CA', backgroundColor: '#EEF2FF', padding: '6px 10px', borderRadius: '6px' }}>
-                <span style={{ fontWeight: '700' }}>Preset Kit ({presetSetCount} Set{presetSetCount > 1 ? 's' : ''})</span>
-                <strong style={{ color: '#3730A3' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
+                <span style={{ fontWeight: '700' }}>Preset ({presetSetCount} Set{presetSetCount > 1 ? 's' : ''})</span>
+                <strong style={{ color: '#0E7490' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B' }}>
@@ -2017,19 +2605,19 @@ export default function BomOrdersView(props) {
               <span>SGST (9%)</span>
               <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#4338CA', fontWeight: '700', backgroundColor: '#EEF2FF', padding: '6px 10px', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
               <span>Total Applicable GST (18%)</span>
               <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0F172A', fontSize: '17px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '4px' }}>
               <span>Grand Total (Incl. GST)</span>
-              <span style={{ color: '#4F46E5' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span style={{ color: '#0E7490' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
             <button onClick={() => setBomConfirmModal('cancel')} style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={() => setBomConfirmModal('draft')} style={{ border: '1px solid #C7D2FE', background: '#EEF2FF', color: '#4F46E5', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText style={{ width: '15px', height: '15px' }} /> Save as Draft</button>
+            <button onClick={() => setBomConfirmModal('draft')} style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText style={{ width: '15px', height: '15px' }} /> Save as Draft</button>
             <button
               onClick={() => {
                 if (!newBomProductName || !newBomProductName.trim()) {
@@ -2044,24 +2632,24 @@ export default function BomOrdersView(props) {
               }}
               style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              Create Order →
+              <Check style={{ width: '16px', height: '16px' }} /> Create BOM Order
             </button>
           </div>
         </div>
 
-        {/* Modal: Confirm save / cancel / create */}
+        {/* CONFIRMATION / SUBMISSION MODAL */}
         {bomConfirmModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '90%', maxWidth: '440px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: bomConfirmModal === 'cancel' ? '#FEE2E2' : bomConfirmModal === 'draft' ? '#EEF2FF' : '#DCFCE7', color: bomConfirmModal === 'cancel' ? '#DC2626' : bomConfirmModal === 'draft' ? '#4F46E5' : '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' }}>
-                  {bomConfirmModal === 'cancel' ? <AlertCircle size={22} /> : bomConfirmModal === 'draft' ? <FileText size={22} /> : <CheckCircle size={22} />}
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: bomConfirmModal === 'cancel' ? '#FEE2E2' : '#ECFEFF', color: bomConfirmModal === 'cancel' ? '#DC2626' : '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {bomConfirmModal === 'cancel' ? <AlertTriangle style={{ width: '20px', height: '20px' }} /> : <Layers style={{ width: '20px', height: '20px' }} />}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
-                    {bomConfirmModal === 'cancel' && 'Discard BOM Order?'}
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                    {bomConfirmModal === 'cancel' && 'Discard BOM Form?'}
                     {bomConfirmModal === 'draft' && 'Save BOM as Draft?'}
-                    {bomConfirmModal === 'create' && 'Confirm BOM Order Creation?'}
+                    {bomConfirmModal === 'create' && 'Confirm & Create BOM?'}
                   </h3>
                   <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
                     {bomConfirmModal === 'cancel' && 'Are you sure you want to cancel? Any unsaved changes entered in this BOM form will be lost.'}
@@ -2081,6 +2669,11 @@ export default function BomOrdersView(props) {
                       setSelectedPreset('');
                       setPresetKitPrice('');
                       setPresetSetCount(1);
+                      setPresetGroups({});
+                      setNewBomTransportMode('Transport');
+                      setNewBomTransporterName('');
+                      setNewBomVehicleNo('');
+                      setNewBomTransportScope('VRM Structures');
                     } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
                       const isDraft = bomConfirmModal === 'draft';
                       const target = (newBomProductName || '').toLowerCase().trim();
@@ -2136,6 +2729,7 @@ export default function BomOrdersView(props) {
                         deliveryAddressObj: deliveryObj,
                         deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
                         transportMode: newBomTransportMode || 'Transport',
+                        transportScope: newBomTransportScope || 'VRM Structures',
                         transporterName: newBomTransporterName || '',
                         vehicleNo: newBomVehicleNo || '',
                         lrNo: newBomLrNo || '',
@@ -2179,9 +2773,10 @@ export default function BomOrdersView(props) {
                         invoiceDeducted: false,
                         stockBlocked: !isDraft,
                         stockBlockedAt: !isDraft ? new Date().toISOString() : null,
-                        presetName: selectedPreset || null,
-                        presetKitPrice: (selectedPreset && presetKitPrice !== '') ? parseFloat(presetKitPrice) : null,
-                        presetSetCount: selectedPreset ? (parseInt(presetSetCount) || 1) : null,
+                        presetName: Object.values(presetGroups).map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') || selectedPreset || null,
+                        presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? parseFloat(presetKitPrice) : null),
+                        presetSetCount: Object.values(presetGroups).reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) || (selectedPreset ? (parseInt(presetSetCount) || 1) : null),
+                        presetGroups: Object.values(presetGroups),
                         subTotal: totals.sub || 0,
                         gstAmount: totals.gst || 0,
                         cgstAmount: totals.cgst || 0,
@@ -2226,8 +2821,10 @@ export default function BomOrdersView(props) {
                       setNewBomPaymentProofDoc(null);
                       setNewBomDeliveryProofDoc(null);
                       setNewBomRemarks('');
+                      setNewBomTransportMode('Transport');
                       setNewBomTransporterName('');
                       setNewBomVehicleNo('');
+                      setNewBomTransportScope('VRM Structures');
                       setNewBomLrNo('');
                       setNewBomCreditDays(7);
                       setNewBomPaymentType('100% Paid');
@@ -2236,6 +2833,7 @@ export default function BomOrdersView(props) {
                       setSelectedPreset('');
                       setPresetKitPrice('');
                       setPresetSetCount(1);
+                      setPresetGroups({});
                       setNewBomCode('');
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
@@ -2244,7 +2842,7 @@ export default function BomOrdersView(props) {
                   }}
                   style={{
                     border: 'none',
-                    backgroundColor: bomConfirmModal === 'cancel' ? '#DC2626' : bomConfirmModal === 'draft' ? '#4F46E5' : '#166534',
+                    backgroundColor: bomConfirmModal === 'cancel' ? '#DC2626' : bomConfirmModal === 'draft' ? '#0E7490' : '#166534',
                     color: 'white',
                     padding: '9px 20px',
                     borderRadius: '10px',
@@ -2262,6 +2860,9 @@ export default function BomOrdersView(props) {
             </div>
           </div>
         )}
+
+        {/* DOCUMENT PREVIEW MODAL */}
+        {renderDocPreviewModal()}
       </div>
     );
   }
@@ -2319,7 +2920,28 @@ export default function BomOrdersView(props) {
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              onClick={() => setExportFormatRecord(confirmingBomModal)}
+              title="Export BOM (PDF, JPG, or CSV)"
+              style={{
+                border: '1px solid #0E7490',
+                backgroundColor: '#ECFEFF',
+                color: '#0E7490',
+                height: '40px',
+                padding: '0 18px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
+            >
+              <Download size={15} style={{ color: '#0E7490' }} /> Export
+            </button>
             <button
               onClick={() => setConfirmingBomModal(null)}
               style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
@@ -2410,6 +3032,14 @@ export default function BomOrdersView(props) {
                     gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
                     grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
                   } : b));
+
+                  // Trigger Real-time Workflow Notification with synthesized sound & deep-link to Dispatch Orders
+                  notifyBomSentToDispatch({
+                    bomCode: confirmingBomModal.bomCode,
+                    customerName: confirmingBomModal.companyName || confirmingBomModal.customerName,
+                    salesPerson: confirmingBomModal.salesPerson
+                  });
+
                   setConfirmingBomModal(null);
                   alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified by Sales and forwarded to Dispatch!`);
                 }}
@@ -2439,7 +3069,7 @@ export default function BomOrdersView(props) {
         {/* ORDER DETAILS & ADDRESSES */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {isAlreadyForwarded ? 'BILL OF MATERIALS SUMMARY' : 'ORDER DETAILS & ADDRESSES'}
             </span>
             <span style={{
@@ -2454,7 +3084,7 @@ export default function BomOrdersView(props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '6px' }}>
-                CUSTOMER NAME (🔒 Locked)
+                CUSTOMER NAME
               </label>
               <input
                 type="text"
@@ -2503,7 +3133,7 @@ export default function BomOrdersView(props) {
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', display: 'block', marginBottom: '6px' }}>
-                SALES PERSON / CREATOR (🔒 Locked)
+                SALES PERSON / CREATOR
               </label>
               <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
                 👤 {(confirmingBomModal.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
@@ -2549,7 +3179,7 @@ export default function BomOrdersView(props) {
 
                   <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
-                      <Truck style={{ width: '13px', height: '13px', color: '#4F46E5' }} /> Delivery Address
+                      <Truck style={{ width: '13px', height: '13px', color: '#0E7490' }} /> Delivery Address
                     </div>
                     <div style={{ fontSize: '12px', color: '#334155', lineHeight: '1.4' }}>
                       <div><strong>Address:</strong> {dStreet}</div>
@@ -2632,7 +3262,7 @@ export default function BomOrdersView(props) {
                 <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
+                      <div style={{ width: '26px', height: '26px', borderRadius: '7px', backgroundColor: '#ECFEFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0E7490' }}>
                         <Truck style={{ width: '14px', height: '14px' }} />
                       </div>
                       <div>
@@ -2640,7 +3270,7 @@ export default function BomOrdersView(props) {
                         <span style={{ fontSize: '11px', color: '#64748B' }}>Destination for physical dispatch</span>
                       </div>
                     </div>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#4F46E5', cursor: 'pointer', backgroundColor: '#EEF2FF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #C7D2FE' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #A5F3FC' }}>
                       <input
                         type="checkbox"
                         checked={Boolean(confirmingBomModal.sameAsBilling)}
@@ -2652,7 +3282,7 @@ export default function BomOrdersView(props) {
                             deliveryAddressObj: checked ? { ...bObj } : dObj
                           });
                         }}
-                        style={{ accentColor: '#4F46E5', cursor: 'pointer' }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                       />
                       Same as Billing
                     </label>
@@ -2972,7 +3602,7 @@ export default function BomOrdersView(props) {
                   const updatedItems = [...currentItems, { name: '', category: '', qty: 1, rate: 0, confirmed: false }];
                   setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                 }}
-                style={{ border: '1px solid #E0E7FF', backgroundColor: '#EEF2FF', color: '#4F46E5', height: '36px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ border: '1px solid #A5F3FC', backgroundColor: '#ECFEFF', color: '#0E7490', height: '36px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <Plus style={{ width: '14px', height: '14px' }} /> Add New Product
               </button>
@@ -3213,6 +3843,9 @@ export default function BomOrdersView(props) {
             )}
           </div>
         </div>
+
+        {/* DOCUMENT PREVIEW MODAL */}
+        {renderDocPreviewModal()}
       </div>
     );
   }
@@ -3421,13 +4054,12 @@ export default function BomOrdersView(props) {
                   />
                 </th>
                 {pageConfig.headers.filter(h => h !== 'Action' && h !== 'Actions').map((h, i) => {
-                  const isCenter = h === 'Status';
                   const isRight = h.includes('Total') || h.includes('Value') || h.includes('Rate');
                   let colWidth = 'auto';
                   let minColWidth = '140px';
                   if (i === 0) { colWidth = '150px'; minColWidth = '150px'; }
                   else if (i === 1) { minColWidth = '220px'; }
-                  else if (isCenter) { colWidth = '140px'; minColWidth = '140px'; }
+                  else if (h === 'Status') { colWidth = '160px'; minColWidth = '160px'; }
                   else if (isRight) { colWidth = '150px'; minColWidth = '150px'; }
                   else if (h.includes('Date')) { colWidth = '130px'; minColWidth = '130px'; }
                   else if (h.includes('Payment')) { colWidth = '150px'; minColWidth = '150px'; }
@@ -3438,7 +4070,7 @@ export default function BomOrdersView(props) {
                       minWidth: minColWidth,
                       padding: '12px 14px',
                       fontWeight: 'bold',
-                      textAlign: isCenter ? 'center' : isRight ? 'right' : 'left',
+                      textAlign: isRight ? 'right' : 'left',
                       boxSizing: 'border-box',
                       whiteSpace: 'nowrap'
                     }}>
@@ -3499,7 +4131,7 @@ export default function BomOrdersView(props) {
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>{row.c5}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <td style={{ padding: '12px 14px', textAlign: 'left' }}>
                       <span style={{ backgroundColor: row.stBg, color: row.stFg, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', border: row.stBorder }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
                         {row.status}
@@ -3625,16 +4257,22 @@ export default function BomOrdersView(props) {
           transform: 'translateX(-50%)',
           backgroundColor: '#FFFFFF',
           border: '1px solid #E2E8F0',
-          borderRadius: '16px',
-          boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          borderRadius: '50px',
+          boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
           padding: '8px 16px',
           display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
           alignItems: 'center',
-          gap: '10px',
+          whiteSpace: 'nowrap',
+          gap: '8px',
           zIndex: 10000,
+          width: 'max-content',
+          maxWidth: 'calc(100vw - 32px)',
+          overflowX: 'auto',
           fontFamily: "'Plus Jakarta Sans', sans-serif"
         }}>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
           </span>
 
@@ -3661,6 +4299,8 @@ export default function BomOrdersView(props) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
               }}
             >
@@ -3688,6 +4328,8 @@ export default function BomOrdersView(props) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
               }}
             >
@@ -3726,6 +4368,8 @@ export default function BomOrdersView(props) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
                 }}
               >
@@ -3756,6 +4400,8 @@ export default function BomOrdersView(props) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}
           >
@@ -3785,6 +4431,8 @@ export default function BomOrdersView(props) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}
           >
@@ -3817,6 +4465,8 @@ export default function BomOrdersView(props) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   boxShadow: '0 1px 2px rgba(220, 38, 38, 0.1)'
                 }}
               >
@@ -3827,7 +4477,16 @@ export default function BomOrdersView(props) {
 
           <button
             onClick={() => {
-              window.print();
+              const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+              const targetRow = codeVal
+                ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => (b.bomCode || b.code) === codeVal))
+                : ((bomStore || [])[0] || (filteredRows || [])[0]);
+
+              if (targetRow) {
+                setPrintingBomRecord(targetRow);
+              } else {
+                alert('Please select a BOM record to print.');
+              }
             }}
             style={{
               backgroundColor: '#FFFFFF',
@@ -3841,10 +4500,12 @@ export default function BomOrdersView(props) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}
           >
-            <Printer size={14} style={{ color: '#059669' }} /> Export & Print
+            <Printer size={14} style={{ color: '#059669' }} /> Print
           </button>
 
           <button
@@ -3853,7 +4514,7 @@ export default function BomOrdersView(props) {
               setShowFloatingMoreMenu(false);
             }}
             title="Deselect all"
-            style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}
+            style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', flexShrink: 0 }}
           >
             <X size={16} />
           </button>
@@ -3873,6 +4534,26 @@ export default function BomOrdersView(props) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
               <span style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>BOM Order Preview</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setExportFormatRecord(quickPreviewRecord)}
+                  title="Export BOM (PDF, JPG, or CSV)"
+                  style={{
+                    border: '1px solid #0E7490',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    padding: '6px 14px',
+                    borderRadius: '10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <Download size={14} style={{ color: '#0E7490' }} /> Export
+                </button>
                 <button
                   onClick={() => {
                     const rec = quickPreviewRecord;
@@ -4003,13 +4684,17 @@ export default function BomOrdersView(props) {
             })()}
 
             {/* Transport & Logistics Section if present */}
-            {(quickPreviewRecord.transportMode || quickPreviewRecord.transporterName || quickPreviewRecord.vehicleNo || quickPreviewRecord.lrNo) && (
+            {(quickPreviewRecord.transportMode || quickPreviewRecord.transporterName || quickPreviewRecord.vehicleNo || quickPreviewRecord.lrNo || quickPreviewRecord.transportScope) && (
               <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Logistics & Dispatch Information</span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', fontSize: '11.5px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', fontSize: '11.5px' }}>
                   <div>
                     <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Mode</span>
                     <strong>{quickPreviewRecord.transportMode || 'Transport'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Scope</span>
+                    <strong style={{ color: quickPreviewRecord.transportScope === 'Customer Scope' ? '#0284C7' : '#0F172A' }}>{quickPreviewRecord.transportScope || 'VRM Structures'}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#64748B', display: 'block', fontSize: '10px' }}>Transporter</span>
@@ -4326,70 +5011,363 @@ export default function BomOrdersView(props) {
       )}
 
       {/* DOCUMENT PREVIEW MODAL */}
-      {previewDocModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.7)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '16px', maxWidth: '750px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{previewDocModal.title || 'Document Preview'}</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B' }}>{previewDocModal.doc?.name || 'Uploaded File'}</p>
+      {renderDocPreviewModal()}
+
+      {/* EXPORT FORMAT SELECTOR MODAL (PDF / JPG / CSV) */}
+      {exportFormatRecord && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={() => !isExportingFormat && setExportFormatRecord(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '560px',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              overflow: 'hidden',
+              border: '1px solid #E2E8F0'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #F1F5F9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(to right, #F8FAFC, #FFFFFF)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    backgroundColor: '#ECFEFF',
+                    border: '1px solid #CFFAFE',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Download size={20} style={{ color: '#0E7490' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
+                    Select Export Format
+                  </h3>
+                  <p style={{ margin: '3px 0 0 0', fontSize: '12.5px', color: '#64748B' }}>
+                    {exportFormatRecord.bomCode || exportFormatRecord.code || 'BOM Order'} • Choose your required format
+                  </p>
+                </div>
               </div>
               <button
-                onClick={() => setPreviewDocModal(null)}
-                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '6px' }}
+                disabled={Boolean(isExportingFormat)}
+                onClick={() => setExportFormatRecord(null)}
+                style={{
+                  border: 'none',
+                  backgroundColor: '#F1F5F9',
+                  borderRadius: '8px',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                  color: '#64748B'
+                }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', backgroundColor: '#F1F5F9' }}>
-              {(() => {
-                const resolvedData = previewDocModal.doc?.dataUrl || getMediaFromCache(previewDocModal.doc?.name);
-                if (!resolvedData) {
-                  return (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748B' }}>
-                      <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>No visual preview available</p>
-                      <p style={{ fontSize: '12px', marginTop: '4px' }}>File attached: {previewDocModal.doc?.name || 'Document'}</p>
-                    </div>
-                  );
-                }
-                if (resolvedData.startsWith('data:image/')) {
-                  return (
-                    <img
-                      src={resolvedData}
-                      alt={previewDocModal.doc?.name || 'Preview'}
-                      style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                    />
-                  );
-                }
-                if (resolvedData.startsWith('data:video/')) {
-                  return (
-                    <video
-                      controls
-                      autoPlay
-                      src={resolvedData}
-                      style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                    />
-                  );
-                }
-                return (
-                  <iframe
-                    src={resolvedData}
-                    title={previewDocModal.doc?.name || 'Preview'}
-                    style={{ width: '100%', height: '550px', border: 'none', borderRadius: '8px', backgroundColor: '#fff' }}
-                  />
-                );
-              })()}
-            </div>
-            <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#FFF' }}>
-              <button
-                onClick={() => setPreviewDocModal(null)}
-                style={{ padding: '8px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFF', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+
+            {/* Format Options */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* PDF Option */}
+              <div
+                onClick={() => !isExportingFormat && handleExportAsPdf(exportFormatRecord)}
+                style={{
+                  border: '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '16px 18px',
+                  cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'all 0.18s ease',
+                  opacity: isExportingFormat && isExportingFormat !== 'pdf' ? 0.45 : 1
+                }}
               >
-                Close
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '12px',
+                      backgroundColor: '#FFF1F2',
+                      border: '1px solid #FFE4E6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <FileText size={24} style={{ color: '#E11D48' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>PDF Document</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', backgroundColor: '#FFE4E6', color: '#BE123C' }}>.pdf</span>
+                    </div>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: '1.4' }}>
+                      Official printable A4 document with complete specifications, items, and authorized signature.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={Boolean(isExportingFormat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#0E7490',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {isExportingFormat === 'pdf' ? (
+                    <>
+                      <Loader size={13} className="animate-spin" /> Generating...
+                    </>
+                  ) : (
+                    'Export PDF'
+                  )}
+                </button>
+              </div>
+
+              {/* JPG Option */}
+              <div
+                onClick={() => !isExportingFormat && handleExportAsJpg(exportFormatRecord)}
+                style={{
+                  border: '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '16px 18px',
+                  cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'all 0.18s ease',
+                  opacity: isExportingFormat && isExportingFormat !== 'jpg' ? 0.45 : 1
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '12px',
+                      backgroundColor: '#EEF2FF',
+                      border: '1px solid #E0E7FF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Image size={24} style={{ color: '#4F46E5' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>JPG Image</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', backgroundColor: '#E0E7FF', color: '#4338CA' }}>.jpg</span>
+                    </div>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: '1.4' }}>
+                      High-resolution graphic image formatted for instant mobile viewing, WhatsApp, and chat.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={Boolean(isExportingFormat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#0E7490',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {isExportingFormat === 'jpg' ? (
+                    <>
+                      <Loader size={13} className="animate-spin" /> Generating...
+                    </>
+                  ) : (
+                    'Export JPG'
+                  )}
+                </button>
+              </div>
+
+              {/* CSV Option */}
+              <div
+                onClick={() => {
+                  if (!isExportingFormat) {
+                    handleExportBomCsv(exportFormatRecord);
+                    setExportFormatRecord(null);
+                  }
+                }}
+                style={{
+                  border: '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '16px 18px',
+                  cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'all 0.18s ease',
+                  opacity: isExportingFormat ? 0.45 : 1
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '12px',
+                      backgroundColor: '#ECFDF5',
+                      border: '1px solid #D1FAE5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <FileSpreadsheet size={24} style={{ color: '#059669' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>CSV Spreadsheet</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', backgroundColor: '#D1FAE5', color: '#047857' }}>.csv</span>
+                    </div>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: '1.4' }}>
+                      Structured tabular spreadsheet with item breakdown, GST, pricing, and customer metadata.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={Boolean(isExportingFormat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#0E7490',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: isExportingFormat ? 'not-allowed' : 'pointer',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid #F1F5F9',
+                backgroundColor: '#F8FAFC',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center'
+              }}
+            >
+              <button
+                type="button"
+                disabled={Boolean(isExportingFormat)}
+                onClick={() => setExportFormatRecord(null)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: isExportingFormat ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hidden offscreen sheet for high-res PDF / JPG rasterization */}
+      {exportFormatRecord && (
+        <div
+          id="bom-export-hidden-target"
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: 0,
+            width: '880px',
+            backgroundColor: '#FFFFFF',
+            pointerEvents: 'none',
+            zIndex: -9999
+          }}
+        >
+          <VRMBomPrintSheet bomData={exportFormatRecord} id="export-sheet-hidden-canvas" />
+        </div>
+      )}
+
+      {/* PRINTABLE BOM ORDER SHEET TEMPLATE */}
+      {printingBomRecord && (
+        <VRMBomPrintTemplate
+          bomData={printingBomRecord}
+          onClose={() => setPrintingBomRecord(null)}
+        />
       )}
     </div>
   );

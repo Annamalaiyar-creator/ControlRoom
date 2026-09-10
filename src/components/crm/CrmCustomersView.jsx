@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Search, Plus, Phone, MessageSquare, Mail, Building2, MapPin,
-  CreditCard, FileText, CheckCircle2, ChevronRight, X, AlertTriangle,
+  CreditCard, FileText, CheckCircle2, ChevronRight, ChevronDown, X, AlertTriangle,
   Layers, Truck, DollarSign, Calendar, Eye, Edit3, ShieldAlert, RotateCcw,
-  Trash2, Printer, Save, ArrowLeft, Check, RefreshCw, Briefcase, UserCheck
+  Trash2, Save, ArrowLeft, Check, RefreshCw, Briefcase, UserCheck,
+  Clock, Tag, MoreHorizontal, Sparkles, ExternalLink, Send, AlertCircle
 } from 'lucide-react';
+import NotificationToast from '../NotificationToast';
+import { addLiveNotification } from '../Header';
+import Customer360PageView from './Customer360PageView';
 
 export default function CrmCustomersView({
   customers = [],
@@ -14,8 +18,8 @@ export default function CrmCustomersView({
   onOpenWhatsAppChat,
   onNavigateTab
 }) {
-  // Page mode: 'table' or 'create' (like Create BOM dedicated page)
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'create'
+  // Page mode: 'table' | 'create' | 'details' (Dedicated full-page views)
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'create' | 'details'
   const [isSyncingZoho, setIsSyncingZoho] = useState(false);
   const [zohoSyncMessage, setZohoSyncMessage] = useState(null);
 
@@ -27,9 +31,114 @@ export default function CrmCustomersView({
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [profileTab, setProfileTab] = useState('Overview');
+  const [profileTab, setProfileTab] = useState('Timeline');
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [dupError, setDupError] = useState(null);
+
+  // Dynamically resolve current Control Room account holder's name (e.g. Mohith JV, Sanjay, etc.)
+  const activeAccountUser = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('controlroom_logged_user_name');
+      if (stored && stored !== 'undefined' && stored !== 'null' && stored.trim()) {
+        return stored.trim();
+      }
+      return 'Sales Representative';
+    } catch (e) {
+      return 'Sales Representative';
+    }
+  }, []);
+
+  // Customer 360 View Accordions & Interactive States
+  const [isOverviewOpen, setIsOverviewOpen] = useState(true);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(true);
+  const [isDealsOpen, setIsDealsOpen] = useState(true);
+  const [isContactInfoExpanded, setIsContactInfoExpanded] = useState(true);
+
+  const [newTaskInput, setNewTaskInput] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [newNoteInput, setNewNoteInput] = useState('');
+
+  // Customer Tasks store in localStorage
+  const [customerTasks, setCustomerTasks] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('controlroom_crm_tasks') || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // Customer Notes store in localStorage
+  const [customerNotes, setCustomerNotes] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('controlroom_crm_notes') || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const handleAddCustomerTask = (custId) => {
+    if (!newTaskInput.trim()) return;
+    const taskObj = {
+      id: 'task_' + Date.now(),
+      text: newTaskInput.trim(),
+      dueDate: newTaskDueDate || new Date().toISOString().split('T')[0],
+      completed: false,
+      createdAt: new Date().toISOString()
+    };
+    const updated = {
+      ...customerTasks,
+      [custId]: [taskObj, ...(customerTasks[custId] || [])]
+    };
+    setCustomerTasks(updated);
+    try {
+      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
+    } catch (e) {}
+    setNewTaskInput('');
+    setNewTaskDueDate('');
+  };
+
+  const handleToggleCustomerTask = (custId, taskId) => {
+    const list = customerTasks[custId] || [];
+    const updated = {
+      ...customerTasks,
+      [custId]: list.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
+    };
+    setCustomerTasks(updated);
+    try {
+      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleDeleteCustomerTask = (custId, taskId) => {
+    const list = customerTasks[custId] || [];
+    const updated = {
+      ...customerTasks,
+      [custId]: list.filter(t => t.id !== taskId)
+    };
+    setCustomerTasks(updated);
+    try {
+      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleAddCustomerNote = (custId) => {
+    if (!newNoteInput.trim()) return;
+    const noteObj = {
+      id: 'note_' + Date.now(),
+      text: newNoteInput.trim(),
+      author: activeAccountUser,
+      date: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    };
+    const updated = {
+      ...customerNotes,
+      [custId]: [noteObj, ...(customerNotes[custId] || [])]
+    };
+    setCustomerNotes(updated);
+    try {
+      localStorage.setItem('controlroom_crm_notes', JSON.stringify(updated));
+    } catch (e) {}
+    setNewNoteInput('');
+  };
 
   // Form State for Dedicated Create/Edit Page
   const initialFormState = {
@@ -79,15 +188,34 @@ export default function CrmCustomersView({
             }
           });
           if (isManual) {
-            setZohoSyncMessage({ type: 'success', text: `Synchronized ${data.length} customer account(s) with Zoho Books!` });
+            setZohoSyncMessage({
+              type: 'success',
+              title: 'Zoho Books Synchronized',
+              message: `Synchronized ${data.length} customer account(s) with Zoho Books!`
+            });
+            addLiveNotification({
+              id: 'zoho_cust_sync_' + Date.now(),
+              title: 'Zoho Books Synchronized',
+              message: `Synchronized ${data.length} customer account(s) with Zoho Books!`,
+              time: 'Just now',
+              type: 'success',
+              role: 'All',
+              targetTab: 'Customers'
+            });
           }
         }
       }
     } catch (err) {
       console.warn('Zoho customer sync notice:', err.message);
+      if (isManual) {
+        setZohoSyncMessage({
+          type: 'error',
+          title: 'Zoho Books Sync Notice',
+          message: err.message || 'Unable to synchronize customer accounts with Zoho Books.'
+        });
+      }
     } finally {
       setIsSyncingZoho(false);
-      setTimeout(() => setZohoSyncMessage(null), 5000);
     }
   };
 
@@ -186,7 +314,11 @@ export default function CrmCustomersView({
   // Open Create Customer Page
   const handleOpenCreatePage = () => {
     setEditingCustomer(null);
-    setFormCust(initialFormState);
+    setSelectedCustomer(null);
+    setFormCust({
+      ...initialFormState,
+      assignedSalesperson: activeAccountUser
+    });
     setDupError(null);
     setViewMode('create');
   };
@@ -197,6 +329,7 @@ export default function CrmCustomersView({
     setFormCust({
       customerName: cust.customerName || cust.companyName || '',
       companyName: cust.companyName || '',
+      assignedSalesperson: cust.assignedSalesperson || cust.salesPerson || activeAccountUser,
       customerType: cust.customerType || 'EPC Contractor',
       gstNumber: cust.gstNumber || '',
       panNumber: cust.panNumber || '',
@@ -282,7 +415,8 @@ export default function CrmCustomersView({
       pincode: (formCust.dispatchPincode || '').trim()
     };
 
-    const loggedRep = localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV';
+    // Respect existing customer rep on edit, or assign to active account user on new create
+    const repName = formCust.assignedSalesperson || (editingCustomer ? (editingCustomer.assignedSalesperson || editingCustomer.salesPerson) : activeAccountUser) || activeAccountUser;
 
     const record = {
       id: customerCode,
@@ -301,7 +435,9 @@ export default function CrmCustomersView({
       deliveryAddressObj: deliveryObj,
       gstNo: formCust.gstNumber || '',
       status: 'ACTIVE',
-      assignedSalesperson: loggedRep,
+      assignedSalesperson: repName,
+      c8: repName,
+      salesPerson: repName,
       updatedAt: new Date().toISOString()
     };
     if (!editingCustomer) {
@@ -366,25 +502,22 @@ export default function CrmCustomersView({
       });
     }
 
-    setViewMode('table');
+    setViewMode('details');
     setEditingCustomer(null);
     setDupError(null);
     setSelectedCustomer(record);
   };
 
-  // 11 Customer Profile Tabs
+  // Center Workspace Tabs (matching reference video dealclosure-crm.web.app)
   const profileTabs = [
-    'Overview',
-    'Contacts',
-    'Solar Requirements',
-    'Opportunities',
+    'Timeline',
+    'Tasks',
+    'Notes',
     'Quotations',
+    'WhatsApp Chat',
     'BOM Orders',
-    'Invoices',
-    'Payment Terms & Ledger',
-    'Documents & KYC',
-    'WhatsApp Chats',
-    'Activity Audit'
+    'Opportunities',
+    'Details'
   ];
 
   // =========================================================================
@@ -427,10 +560,10 @@ export default function CrmCustomersView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => { setViewMode('table'); setEditingCustomer(null); setDupError(null); }}
+              onClick={() => { setViewMode(selectedCustomer ? 'details' : 'table'); setEditingCustomer(null); setDupError(null); }}
               style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <ArrowLeft size={15} /> Back to Directory
+              <ArrowLeft size={15} /> {selectedCustomer ? 'Back to Details' : 'Back to Directory'}
             </button>
             <button
               type="button"
@@ -906,7 +1039,7 @@ export default function CrmCustomersView({
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', paddingBottom: '20px' }}>
           <button
             type="button"
-            onClick={() => { setViewMode('table'); setEditingCustomer(null); setDupError(null); }}
+            onClick={() => { setViewMode(selectedCustomer ? 'details' : 'table'); setEditingCustomer(null); setDupError(null); }}
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
           >
             Cancel
@@ -925,29 +1058,38 @@ export default function CrmCustomersView({
   }
 
   // =========================================================================
-  // RENDER 2: DEFAULT CUSTOMER DIRECTORY TABLE
+  // RENDER 2: DEDICATED SEPARATE PAGE - CUSTOMER 360° INTELLIGENCE VIEW
+  // =========================================================================
+  if (viewMode === 'details' && selectedCustomer) {
+    return (
+      <Customer360PageView
+        customer={selectedCustomer}
+        onBack={() => {
+          setViewMode('table');
+          setSelectedCustomer(null);
+        }}
+        onEditCustomer={(cust) => handleOpenEditPage(cust)}
+        onOpenWhatsAppChat={onOpenWhatsAppChat}
+        onNavigateTab={onNavigateTab}
+        opportunities={opportunities}
+        quotations={quotations}
+        activeAccountUser={activeAccountUser}
+      />
+    );
+  }
+
+  // =========================================================================
+  // RENDER 3: DEFAULT CUSTOMER DIRECTORY TABLE
   // =========================================================================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
       
-      {/* Zoho synchronization notification banner */}
+      {/* ─── CUSTOM TOAST NOTIFICATION (MATCHING SYSTEM-WIDE NOTIFICATIONS) ─── */}
       {zohoSyncMessage && (
-        <div style={{
-          padding: '12px 18px',
-          borderRadius: '10px',
-          fontSize: '13px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          backgroundColor: zohoSyncMessage.type === 'success' ? '#ECFDF5' : '#EFF6FF',
-          border: `1px solid ${zohoSyncMessage.type === 'success' ? '#A7F3D0' : '#BFDBFE'}`,
-          color: zohoSyncMessage.type === 'success' ? '#065F46' : '#1E40AF',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-        }}>
-          <CheckCircle2 size={18} />
-          <span>{zohoSyncMessage.text}</span>
-        </div>
+        <NotificationToast
+          alert={zohoSyncMessage}
+          onClose={() => setZohoSyncMessage(null)}
+        />
       )}
 
       {/* 1. TOP HEADER WITH CREATE CUSTOMER BUTTON (MATCHING BOM PAGE TITLE & ACTION STYLE) */}
@@ -1004,7 +1146,7 @@ export default function CrmCustomersView({
               transition: 'all 0.2s ease'
             }}
           >
-            <span>+ Add Customer</span>
+            <span>Add Customer</span>
             <div style={{
               width: '28px',
               height: '28px',
@@ -1155,14 +1297,13 @@ export default function CrmCustomersView({
                 <th style={{ width: '180px', minWidth: '180px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Type & Industry</th>
                 <th style={{ minWidth: '180px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Primary Contact</th>
                 <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>GST Number</th>
-                <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Payment Terms</th>
                 <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Assigned Rep</th>
               </tr>
             </thead>
             <tbody>
               {currentRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>
+                  <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>
                     No customer accounts found matching your filters.
                   </td>
                 </tr>
@@ -1201,14 +1342,27 @@ export default function CrmCustomersView({
 
                       {/* Customer Code (Clickable blue like BOM Code) */}
                       <td
-                        onClick={() => setSelectedCustomer(cust)}
+                        onClick={() => {
+                          setSelectedCustomer(cust);
+                          setViewMode('details');
+                          setProfileTab('Timeline');
+                        }}
                         style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
+                        title="Click to view full 360° details"
                       >
                         {cust.customerCode || cust.id}
                       </td>
 
                       {/* Company Name & Location */}
-                      <td style={{ padding: '12px 14px' }}>
+                      <td
+                        onClick={() => {
+                          setSelectedCustomer(cust);
+                          setViewMode('details');
+                          setProfileTab('Timeline');
+                        }}
+                        style={{ padding: '12px 14px', cursor: 'pointer' }}
+                        title="Click to view full 360° details"
+                      >
                         <div style={{ fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>{cust.companyName}</span>
                           {cust.source === 'Zoho Books' && (
@@ -1237,18 +1391,10 @@ export default function CrmCustomersView({
                         {cust.gstNumber || 'Not Registered'}
                       </td>
 
-                      {/* Payment Terms Badge */}
-                      <td style={{ padding: '12px 14px' }}>
-                        <span style={{ backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#B45309' }}></span>
-                          {cust.paymentTerms || '100% Advance'}
-                        </span>
-                      </td>
-
                       {/* Assigned Rep Badge */}
                       <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
                         <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          👤 {(cust.assignedSalesperson || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim()}
+                          👤 {(cust.assignedSalesperson || cust.salesPerson || activeAccountUser).replace(/\s*\([^)]*\)/g, '').trim()}
                         </span>
                       </td>
                     </tr>
@@ -1418,7 +1564,11 @@ export default function CrmCustomersView({
               if (selectedRows.length === 1) {
                 const codeVal = selectedRows[0];
                 const targetCust = customers.find(c => c.customerCode === codeVal || c.id === codeVal);
-                if (targetCust) setSelectedCustomer(targetCust);
+                if (targetCust) {
+                  setSelectedCustomer(targetCust);
+                  setViewMode('details');
+                  setProfileTab('Timeline');
+                }
               } else {
                 alert('Please select a single customer to view 360° details.');
               }
@@ -1442,28 +1592,6 @@ export default function CrmCustomersView({
           </button>
 
           <button
-            onClick={() => {
-              window.print();
-            }}
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              color: '#1E293B',
-              borderRadius: '10px',
-              padding: '6px 14px',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}
-          >
-            <Printer size={14} style={{ color: '#059669' }} /> Export & Print
-          </button>
-
-          <button
             onClick={() => setSelectedRows([])}
             title="Deselect all"
             style={{ backgroundColor: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}
@@ -1473,243 +1601,6 @@ export default function CrmCustomersView({
         </div>
       )}
 
-      {/* 7. CUSTOMER 360° PROFILE MODAL */}
-      {selectedCustomer && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '1050px',
-            height: '85vh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
-          }}>
-            {/* Modal Header */}
-            <div style={{
-              padding: '18px 24px',
-              backgroundColor: '#0F172A',
-              color: '#FFFFFF',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '18px' }}>
-                  {selectedCustomer.companyName.charAt(0)}
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>
-                      {selectedCustomer.companyName}
-                    </h3>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#334155', color: '#94A3B8' }}>
-                      {selectedCustomer.customerCode}
-                    </span>
-                    {selectedCustomer.source === 'Zoho Books' && (
-                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#7E22CE', color: '#FFFFFF', fontWeight: '800' }}>
-                        ZOHO CONNECTED
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>
-                    {selectedCustomer.customerType} • {selectedCustomer.city}, {selectedCustomer.state} • Rep: {selectedCustomer.assignedSalesperson}
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => onOpenWhatsAppChat ? onOpenWhatsAppChat(selectedCustomer) : onNavigateTab('WhatsApp Inbox')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#16A34A',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <MessageSquare size={14} /> WhatsApp Chat
-                </button>
-                <button
-                  onClick={() => {
-                    const cust = selectedCustomer;
-                    setSelectedCustomer(null);
-                    handleOpenEditPage(cust);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#0E7490',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Edit3 size={14} /> Edit Customer
-                </button>
-                <button
-                  onClick={() => setSelectedCustomer(null)}
-                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Profile Navigation Tabs (11 Tabs) */}
-            <div style={{
-              display: 'flex',
-              overflowX: 'auto',
-              borderBottom: '1px solid #E2E8F0',
-              backgroundColor: '#F8FAFC',
-              padding: '0 12px'
-            }}>
-              {profileTabs.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setProfileTab(tab)}
-                  style={{
-                    padding: '12px 16px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    borderBottom: profileTab === tab ? '3px solid #0E7490' : '3px solid transparent',
-                    color: profileTab === tab ? '#0E7490' : '#64748B',
-                    fontWeight: profileTab === tab ? '800' : '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content Body */}
-            <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
-              {profileTab === 'Overview' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Company Information</h4>
-                    <div style={{ fontSize: '13px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div><strong>Full Name:</strong> {selectedCustomer.companyName}</div>
-                      <div><strong>Customer Code:</strong> {selectedCustomer.customerCode}</div>
-                      <div><strong>Type:</strong> {selectedCustomer.customerType}</div>
-                      <div><strong>Industry:</strong> {selectedCustomer.industry}</div>
-                      <div><strong>Address:</strong> {selectedCustomer.address || '—'}</div>
-                      <div><strong>Location:</strong> {selectedCustomer.city || '—'}, {selectedCustomer.state || ''} - {selectedCustomer.pincode || ''}</div>
-                      {selectedCustomer.zohoContactId && (
-                        <div><strong>Zoho Contact ID:</strong> {selectedCustomer.zohoContactId}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Commercial & Financial Terms</h4>
-                    <div style={{ fontSize: '13px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div><strong>GSTIN:</strong> {selectedCustomer.gstNumber || 'Not Registered'}</div>
-                      <div><strong>PAN:</strong> {selectedCustomer.panNumber || '—'}</div>
-                      <div><strong>Payment Terms:</strong> {selectedCustomer.paymentTerms}</div>
-                      <div><strong>Credit Days:</strong> {selectedCustomer.creditDays} Days</div>
-                      <div><strong>Credit Limit:</strong> ₹ {Number(selectedCustomer.creditLimit || 0).toLocaleString()}</div>
-                      <div><strong>Assigned Salesperson:</strong> {selectedCustomer.assignedSalesperson}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {profileTab === 'Contacts' && (
-                <div style={{ padding: '16px', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Primary Authorized Contact</h4>
-                  <div style={{ fontSize: '13px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div><strong>Name:</strong> {selectedCustomer.primaryContact?.name}</div>
-                    <div><strong>Designation:</strong> {selectedCustomer.primaryContact?.designation}</div>
-                    <div><strong>Phone:</strong> {selectedCustomer.primaryContact?.phone}</div>
-                    <div><strong>WhatsApp:</strong> {selectedCustomer.primaryContact?.whatsapp || selectedCustomer.primaryContact?.phone}</div>
-                    <div><strong>Email:</strong> {selectedCustomer.primaryContact?.email}</div>
-                  </div>
-                </div>
-              )}
-
-              {profileTab === 'Opportunities' && (
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Linked Opportunities</h4>
-                  {opportunities.filter(o => o.customerId === selectedCustomer.id || o.companyName === selectedCustomer.companyName).length === 0 ? (
-                    <p style={{ color: '#64748B', fontSize: '13px' }}>No active opportunities recorded for this customer.</p>
-                  ) : (
-                    opportunities.filter(o => o.customerId === selectedCustomer.id || o.companyName === selectedCustomer.companyName).map(opp => (
-                      <div key={opp.id} style={{ padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: '700', color: '#0F172A' }}>{opp.title}</div>
-                          <div style={{ fontSize: '12px', color: '#64748B' }}>Stage: {opp.stage} • Value: ₹ {Number(opp.dealValue).toLocaleString()}</div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedCustomer(null);
-                            onNavigateTab('Opportunities');
-                          }}
-                          style={{ padding: '6px 12px', backgroundColor: '#0E7490', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                        >
-                          View Pipeline
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {profileTab === 'BOM Orders' && (
-                <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: 0 }}>Connected Sales BOM Orders</h4>
-                  <p style={{ fontSize: '13px', color: '#64748B' }}>
-                    View engineered structure Bills of Materials created for {selectedCustomer.companyName}.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedCustomer(null);
-                      onNavigateTab('Sales BOM');
-                    }}
-                    style={{ padding: '8px 16px', backgroundColor: '#0E7490', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                  >
-                    Open BOM Orders Center
-                  </button>
-                </div>
-              )}
-
-              {profileTab !== 'Overview' && profileTab !== 'Contacts' && profileTab !== 'Opportunities' && profileTab !== 'BOM Orders' && (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#64748B' }}>
-                  <p style={{ fontWeight: '700', fontSize: '14px', color: '#334155' }}>{profileTab} Records</p>
-                  <p style={{ fontSize: '13px' }}>Historical records, communications, and files for {selectedCustomer.companyName} are synchronized with VRM ERP database.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

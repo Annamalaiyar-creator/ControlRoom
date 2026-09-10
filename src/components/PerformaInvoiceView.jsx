@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import SearchablePresetSelector from './SearchablePresetSelector';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
+import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 
 const defaultSalesPIs = [
   {
@@ -154,9 +155,22 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
     const conversionData = {
       sourcePiNo: pi.piNo,
-      customerName: pi.vendor || '',
+      customerName: pi.vendor || pi.customerName || '',
+      contactPerson: pi.contactPerson || '',
+      phone: pi.phone || '',
+      email: pi.email || '',
       gstNo: pi.gstNo || '',
       productName: pi.productName || 'Solar Mounting Rails & Accessories',
+      billingAddress: pi.billingAddress || null,
+      deliveryAddress: pi.deliveryAddress || null,
+      sameAsBilling: pi.sameAsBilling !== undefined ? pi.sameAsBilling : true,
+      transportMode: pi.transportMode || 'Transport',
+      transporterName: pi.transporterName || '',
+      vehicleNo: pi.vehicleNo || '',
+      transportScope: pi.transportScope || 'VRM Structures',
+      paymentTerms: pi.paymentTerms || '',
+      creditDays: pi.creditDays || '',
+      presetGroups: pi.presetGroups || {},
       items: (pi.items && pi.items.length > 0) ? pi.items : [
         {
           name: pi.productName || 'Structural Steel Beams',
@@ -222,12 +236,31 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setCurrentPage(1);
   };
 
+  // Resolve currently logged in user dynamically (matching Header & BOM creation)
+  const getActiveUserName = () => {
+    const stored = localStorage.getItem('controlroom_logged_user_name');
+    if (stored && stored !== 'undefined' && stored !== 'null' && stored.trim() !== '') return stored.trim();
+    try {
+      const u = JSON.parse(localStorage.getItem('controlroom_logged_user') || '{}');
+      if (u.name) return u.name;
+      if (u.fullName) return u.fullName;
+      if (u.username) return u.username;
+    } catch (e) {}
+    if (userRole === 'Sales Head') return 'Vijay';
+    if (userRole === 'CEO' || userRole === 'Technical Administrator') return 'Annamalaiyar';
+    return 'Mohit JV';
+  };
+
   // Preset Kits & Live Store
   const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [presetKitPrice, setPresetKitPrice] = useState('');
+  const [presetGroups, setPresetGroups] = useState({});
   const [selectedItemIndexes, setSelectedItemIndexes] = useState([]);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [piConfirmModal, setPiConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
+  const [previewDocModal, setPreviewDocModal] = useState(null);
 
   useEffect(() => {
     const handlePresetUpdate = (e) => {
@@ -240,31 +273,55 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   // Customer directory lookup from localStorage for instant auto-complete
   const customerList = useMemo(() => {
     try {
-      const stored = localStorage.getItem('controlroom_crm_customers');
+      const stored = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_crm_customers') || localStorage.getItem('controlroom_customer_list');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
     return [
-      { companyName: 'Vikram Solar Pvt Ltd', gst: '33AABCV1234F1Z5', contact: 'Rajesh Kannan', phone: '+91 98765 43210', email: 'rajesh@vikramsolar.com', city: 'Chennai', state: 'Tamil Nadu', pincode: '600001' },
-      { companyName: 'Tata Power Solar Systems Ltd', gst: '27AAACT2345D1ZA', contact: 'Karthik Raja', phone: '+91 98450 12345', email: 'karthik@tatapower.com', city: 'Bengaluru', state: 'Karnataka', pincode: '560001' },
-      { companyName: 'Waaree Energies Ltd', gst: '24AAACW5678B1Z2', contact: 'Dharmesh Patel', phone: '+91 97234 56789', email: 'dharmesh@waaree.com', city: 'Surat', state: 'Gujarat', pincode: '395001' }
+      { code: 'Vikram Solar Pvt Ltd', companyName: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gst: '33AABCV1234F1Z5', gstNo: '33AABCV1234F1Z5', contact: 'Rajesh Kannan', contactPerson: 'Rajesh Kannan', phone: '+91 98765 43210', email: 'rajesh@vikramsolar.com', billingAddress: 'Plot 42, SIDCO Industrial Estate, Ambattur', city: 'Chennai', state: 'Tamil Nadu', pincode: '600001' },
+      { code: 'Tata Power Solar Systems Ltd', companyName: 'Tata Power Solar Systems Ltd', c2: 'Tata Power Solar Systems Ltd', gst: '27AAACT2345D1ZA', gstNo: '27AAACT2345D1ZA', contact: 'Karthik Raja', contactPerson: 'Karthik Raja', phone: '+91 98450 12345', email: 'karthik@tatapower.com', billingAddress: '12 Electronic City Phase 1', city: 'Bengaluru', state: 'Karnataka', pincode: '560001' },
+      { code: 'Waaree Energies Ltd', companyName: 'Waaree Energies Ltd', c2: 'Waaree Energies Ltd', gst: '24AAACW5678B1Z2', gstNo: '24AAACW5678B1Z2', contact: 'Dharmesh Patel', contactPerson: 'Dharmesh Patel', phone: '+91 97234 56789', email: 'dharmesh@waaree.com', billingAddress: '88 Ring Road, Surat', city: 'Surat', state: 'Gujarat', pincode: '395001' }
     ];
   }, []);
 
+  // Items catalog for product lookup and stock hints
+  const [itemsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_items_list') || localStorage.getItem('controlroom_raw_materials_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      { code: 'MR-40-300', name: 'Mini Rail 40mm x 300mm', category: 'Aluminum Rail', uom: 'NOS', price: '250', rate: '250', stock: 120 },
+      { code: 'MR-40-200', name: 'Mini Rail 40mm x 200mm', category: 'Aluminum Rail', uom: 'NOS', price: '180', rate: '180', stock: 85 },
+      { code: 'MR-100', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', uom: 'NOS', price: '250', rate: '250', stock: 200 },
+      { code: 'MC-30', name: 'Mid Clamp 30mm', category: '6063T6 Clamp', uom: 'NOS', price: '45', rate: '45', stock: 500 },
+      { code: 'MC-35', name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', uom: 'NOS', price: '45', rate: '45', stock: 420 },
+      { code: 'EC-30', name: 'End Clamp 30 mm', category: '6063T6 Clamp', uom: 'NOS', price: '40', rate: '40', stock: 350 },
+      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40', stock: 310 },
+      { code: 'C-LIP-200', name: 'C-Lip Connector 200mm', category: 'Connector', uom: 'NOS', price: '110', rate: '110', stock: 150 },
+      { code: 'EPDM-50', name: 'EPDM Rubber Gasket (50m roll)', category: 'Rubber', uom: 'MTR', price: '320', rate: '320', stock: 45 }
+    ];
+  });
+
   // Form Fields State
   const [pdfFile, setPdfFile] = useState(null);
+  const [signedPiDoc, setSignedPiDoc] = useState(null);
   const [piNumber, setPiNumber] = useState('');
   const [piDate, setPiDate] = useState(new Date().toISOString().split('T')[0]);
   const [validUntilDate, setValidUntilDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+  const [salesPerson, setSalesPerson] = useState(getActiveUserName());
   const [vendorName, setVendorName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [gstNo, setGstNo] = useState('');
 
-  // Addresses State
+  // Addresses State (Dual Addresses - no delivery proof required for PI)
   const [billingStreet, setBillingStreet] = useState('');
   const [billingCity, setBillingCity] = useState('');
   const [billingState, setBillingState] = useState('');
@@ -280,29 +337,38 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
   ]);
 
-  // Legacy compatibility fields
-  const [productName, setProductName] = useState('');
-  const [productsList, setProductsList] = useState(['']);
-  const [value, setValue] = useState('');
-  const [quantity, setQuantity] = useState('');
+  // Transport & Logistics
+  const [transportMode, setTransportMode] = useState('Transport');
+  const [transporterName, setTransporterName] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
+  const [transportScope, setTransportScope] = useState('VRM Structures');
+
+  // Commercial & Approval Fields
+  const [paymentTerms, setPaymentTerms] = useState('50% Advance + 50% Before Dispatch');
+  const [creditDays, setCreditDays] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [approvalRequired, setApprovalRequired] = useState('Yes');
   const [approver, setApprover] = useState('Velmurugan Rathinam (CEO)');
   const [approvalPriority, setApprovalPriority] = useState('High');
-  const [paymentTerms, setPaymentTerms] = useState('50% Advance + 50% Before Dispatch');
 
   // Customer auto-suggest handler
   const handleSelectCustomer = (cName) => {
     setVendorName(cName);
-    const found = customerList.find(c => (c.companyName || '').toLowerCase() === cName.toLowerCase());
+    const found = customerList.find(c =>
+      (c.companyName || c.name || c.c2 || c.code || '').toLowerCase() === cName.toLowerCase()
+    );
     if (found) {
-      if (found.gst) setGstNo(found.gst);
-      if (found.contact) setContactPerson(found.contact);
+      if (found.gst || found.gstNumber || found.gstNo) setGstNo(found.gst || found.gstNumber || found.gstNo);
+      if (found.contact || found.contactPerson) setContactPerson(found.contact || found.contactPerson);
       if (found.phone) setPhone(found.phone);
       if (found.email) setEmail(found.email);
+      const street = found.billingAddress || found.street || found.address || '';
+      if (street) setBillingStreet(street);
       if (found.city) setBillingCity(found.city);
       if (found.state) setBillingState(found.state);
       if (found.pincode) setBillingPincode(found.pincode);
       if (sameAsBilling) {
+        if (street) setDeliveryStreet(street);
         if (found.city) setDeliveryCity(found.city);
         if (found.state) setDeliveryState(found.state);
         if (found.pincode) setDeliveryPincode(found.pincode);
@@ -310,44 +376,217 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     }
   };
 
-  // Upload Progress States
+  // Upload progress states
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const uploadTimerRef = useRef(null);
 
-  const startMockUpload = (file) => {
-    if (uploadTimerRef.current) clearInterval(uploadTimerRef.current);
-
-    setPdfFile(file);
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    let progress = 0;
-    uploadTimerRef.current = setInterval(() => {
-      progress += 10;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(uploadTimerRef.current);
-        setIsUploading(false);
-      }
-      setUploadProgress(progress);
-    }, 200);
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      startMockUpload(e.target.files[0]);
+  // Signed PI / Payment Advice upload handler using compressAndSaveFile
+  const handleSignedDocUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploading(true);
+      const compressed = await compressAndSaveFile(file);
+      setSignedPiDoc({
+        name: compressed.name || file.name,
+        size: compressed.size || file.size,
+        type: compressed.type || file.type,
+        dataUrl: compressed.dataUrl,
+        uploadedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      });
+      setPdfFile({ name: file.name, size: file.size });
+      setUploadProgress(100);
+    } catch (err) {
+      console.warn('Doc compression failed, falling back:', err);
+      setSignedPiDoc({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        uploadedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      });
+      setPdfFile({ name: file.name, size: file.size });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleRemoveFile = () => {
     if (uploadTimerRef.current) clearInterval(uploadTimerRef.current);
     setPdfFile(null);
+    setSignedPiDoc(null);
     setUploadProgress(0);
     setIsUploading(false);
   };
 
-  // Triggers Save Confirmation instead of direct submit
+  // Financial calculations supporting multi-preset groups and line items
+  const calculatePiTotals = () => {
+    let kitSubtotal = 0;
+    const groupIds = Object.keys(presetGroups || {});
+    groupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        kitSubtotal += (unitPrice * multiplier);
+      }
+    });
+
+    const itemsSub = (piItems || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
+      const q = parseFloat(item.qty) || 0;
+      const r = parseFloat(item.rate) || 0;
+      return acc + (q * r);
+    }, 0);
+
+    const sub = itemsSub + kitSubtotal;
+
+    // 3. GST: Custom item GSTs + Preset kits GST (dynamically from preset's selected gstRate)
+    const itemsGst = (piItems || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
+      const q = parseFloat(item.qty) || 0;
+      const r = parseFloat(item.rate) || 0;
+      const rowTot = q * r;
+      const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+      return acc + (rowTot * (pct / 100));
+    }, 0);
+
+    let kitGst = 0;
+    groupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      let gRateStr = grp?.gstRate;
+      if (!gRateStr) {
+        const firstItem = (piItems || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
+        gRateStr = firstItem?.gstRate || '18%';
+      }
+      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        kitGst += (unitPrice * multiplier) * (gPct / 100);
+      }
+    });
+
+    const gst = itemsGst + kitGst;
+
+    const grand = sub + gst;
+    const cgst = gst / 2;
+    const sgst = gst / 2;
+    return {
+      sub: isNaN(sub) ? 0 : sub,
+      kitSubtotal: isNaN(kitSubtotal) ? 0 : kitSubtotal,
+      gst: isNaN(gst) ? 0 : gst,
+      grand: isNaN(grand) ? 0 : grand,
+      cgst: isNaN(cgst) ? 0 : cgst,
+      sgst: isNaN(sgst) ? 0 : sgst
+    };
+  };
+
+  const handleAddMaterialRow = () => {
+    setPiItems(prev => [...(prev || []), { name: '', category: '', uom: 'NOS', qty: '1', rate: '', gstRate: '18%' }]);
+  };
+
+  const handleAddPresetToOrder = (presetId, targetPreset, setsCount) => {
+    if (!targetPreset || !targetPreset.items || targetPreset.items.length === 0) return;
+    const groupId = 'preset_grp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const multiplier = Math.max(1, parseInt(setsCount) || 1);
+
+    let defaultPrice = '';
+    if (targetPreset.price || targetPreset.rate) {
+      defaultPrice = String(targetPreset.price || targetPreset.rate);
+    } else {
+      const origSum = targetPreset.items.reduce((acc, it) => acc + (parseFloat(it.qty || 1) * parseFloat(it.rate || 0)), 0);
+      defaultPrice = origSum > 0 ? String(origSum) : '';
+    }
+
+    const presetName = targetPreset.label || presetId;
+    const initialGstRate = targetPreset.gstRate || targetPreset.gst || '18%';
+
+    setPresetGroups(prev => ({
+      ...prev,
+      [groupId]: {
+        groupId,
+        presetId,
+        presetName,
+        setCount: multiplier,
+        kitPrice: defaultPrice,
+        gstRate: initialGstRate
+      }
+    }));
+
+    const newItems = targetPreset.items.map(it => {
+      const baseQ = parseFloat(it.qty) || 1;
+      return {
+        ...it,
+        presetGroupId: groupId,
+        presetName,
+        baseQty: baseQ,
+        qty: String(Math.round(baseQ * multiplier)),
+        rate: '0',
+        gstRate: it.gstRate || initialGstRate,
+        isPresetItem: true
+      };
+    });
+
+    setPiItems(prev => [...(prev || []), ...newItems]);
+    setSelectedPreset('');
+    setPresetSetCount(1);
+  };
+
+  const handleRemovePresetGroup = (groupId) => {
+    setPiItems(prev => (prev || []).filter(item => (item.presetGroupId || 'legacy_default') !== groupId));
+    setPresetGroups(prev => {
+      const updated = { ...prev };
+      delete updated[groupId];
+      return updated;
+    });
+  };
+
+  const handleRemoveMaterialRow = (idx) => {
+    setPiItems(prev => (prev || []).filter((_, i) => i !== idx));
+  };
+
+  const resetForm = () => {
+    setPdfFile(null);
+    setSignedPiDoc(null);
+    setUploadProgress(0);
+    setIsUploading(false);
+    setPiNumber('');
+    setVendorName('');
+    setContactPerson('');
+    setPhone('');
+    setEmail('');
+    setGstNo('');
+    setSalesPerson(getActiveUserName());
+    setBillingStreet('');
+    setBillingCity('');
+    setBillingState('');
+    setBillingPincode('');
+    setDeliveryStreet('');
+    setDeliveryCity('');
+    setDeliveryState('');
+    setDeliveryPincode('');
+    setSameAsBilling(true);
+    setTransportMode('Transport');
+    setTransporterName('');
+    setVehicleNo('');
+    setTransportScope('VRM Structures');
+    setPaymentTerms('50% Advance + 50% Before Dispatch');
+    setCreditDays('');
+    setRemarks('');
+    setPiItems([
+      { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
+    ]);
+    setSelectedPreset('');
+    setPresetSetCount(1);
+    setPresetKitPrice('');
+    setPresetGroups({});
+    setShowSaveConfirm(false);
+    setShowClearConfirmModal(false);
+    setPiConfirmModal(null);
+  };
+
+  // Triggers Save Confirmation modal
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
     if (!piNumber || !vendorName) {
@@ -358,32 +597,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       alert('Please add at least one line item or select a preset kit.');
       return;
     }
-    setShowSaveConfirm(true);
+    setPiConfirmModal('create');
   };
 
   // Submits the new or edited PI
-  const executeCreatePI = () => {
-    // Calculate total from items
-    const subtotal = piItems.reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
-    const taxTotal = piItems.reduce((acc, it) => {
-      const lineTaxable = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
-      const gstPct = parseFloat(String(it.gstRate || '18%').replace('%', '')) || 18;
-      return acc + (lineTaxable * (gstPct / 100));
-    }, 0);
-    const grandTotal = subtotal + taxTotal;
-    const formattedAmount = '₹' + Math.round(grandTotal).toLocaleString('en-IN');
-
+  const executeCreatePI = (isDraft = false) => {
+    const totals = calculatePiTotals();
     const joinedProducts = piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
 
     const newPI = {
       piNo: piNumber.toUpperCase(),
       vendor: vendorName,
+      customerName: vendorName,
       contactPerson,
       phone,
       email,
       gstNo: (gstNo || '').toUpperCase(),
       productName: joinedProducts,
       items: piItems,
+      presetGroups,
+      salesPerson,
       billingAddress: {
         street: billingStreet,
         city: billingCity,
@@ -396,21 +629,32 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         state: sameAsBilling ? billingState : deliveryState,
         pincode: sameAsBilling ? billingPincode : deliveryPincode
       },
-      unitValue: Math.round(subtotal),
+      sameAsBilling,
+      transportMode,
+      transporterName,
+      vehicleNo,
+      transportScope,
+      paymentTerms,
+      creditDays,
+      remarks,
+      unitValue: Math.round(totals.sub),
       quantity: piItems.reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1,
-      subtotal,
-      taxTotal,
-      grandTotal,
-      amount: formattedAmount,
-      pdfName: pdfFile ? pdfFile.name : 'pi_document.pdf',
+      subtotal: totals.sub,
+      kitSubtotal: totals.kitSubtotal,
+      taxTotal: totals.gst,
+      cgst: totals.cgst,
+      sgst: totals.sgst,
+      grandTotal: totals.grand,
+      amount: '₹' + Math.round(totals.grand).toLocaleString('en-IN'),
+      pdfName: pdfFile ? pdfFile.name : (signedPiDoc ? signedPiDoc.name : 'pi_document.pdf'),
+      signedPiDoc: signedPiDoc || null,
       piDate: piDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: editIdx !== null ? piList[editIdx].status : 'Pending Approval',
-      statusType: editIdx !== null ? piList[editIdx].statusType : 'pending',
-      approvalRequired: approvalRequired,
-      approver: approver,
-      approvalPriority: approvalPriority,
-      paymentTerms
+      status: isDraft ? 'Draft' : (editIdx !== null ? piList[editIdx].status : 'Pending Approval'),
+      statusType: isDraft ? 'draft' : (editIdx !== null ? piList[editIdx].statusType : 'pending'),
+      approvalRequired,
+      approver,
+      approvalPriority
     };
 
     if (editIdx !== null) {
@@ -422,44 +666,27 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       updatePiList([newPI, ...piList]);
     }
 
-    // Reset Form
-    setPdfFile(null);
-    setUploadProgress(0);
-    setIsUploading(false);
-    setPiNumber('');
-    setVendorName('');
-    setContactPerson('');
-    setPhone('');
-    setEmail('');
-    setGstNo('');
-    setBillingStreet('');
-    setBillingCity('');
-    setBillingState('');
-    setBillingPincode('');
-    setDeliveryStreet('');
-    setDeliveryCity('');
-    setDeliveryState('');
-    setDeliveryPincode('');
-    setPiItems([
-      { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
-    ]);
-    setSelectedPreset('');
-    setPresetSetCount(1);
-    setPresetKitPrice('');
-    setShowSaveConfirm(false);
+    resetForm();
     setViewMode('list');
   };
 
-  // Pre-populates the modal fields to edit a Performa Invoice
+  // Pre-populates the fields to edit a Performa Invoice
   const handleStartEdit = (pi, idx) => {
     setEditIdx(idx);
     setPiNumber(pi.piNo || '');
-    setVendorName(pi.vendor || '');
+    setVendorName(pi.vendor || pi.customerName || '');
     setContactPerson(pi.contactPerson || '');
     setPhone(pi.phone || '');
     setEmail(pi.email || '');
     setGstNo(pi.gstNo || '');
+    setSalesPerson(pi.salesPerson || getActiveUserName());
     setPaymentTerms(pi.paymentTerms || '50% Advance + 50% Before Dispatch');
+    setCreditDays(pi.creditDays || '');
+    setRemarks(pi.remarks || '');
+    setTransportMode(pi.transportMode || 'Transport');
+    setTransporterName(pi.transporterName || '');
+    setVehicleNo(pi.vehicleNo || '');
+    setTransportScope(pi.transportScope || 'VRM Structures');
     if (pi.billingAddress) {
       setBillingStreet(pi.billingAddress.street || '');
       setBillingCity(pi.billingAddress.city || '');
@@ -471,6 +698,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       setDeliveryCity(pi.deliveryAddress.city || '');
       setDeliveryState(pi.deliveryAddress.state || '');
       setDeliveryPincode(pi.deliveryAddress.pincode || '');
+      setSameAsBilling(pi.sameAsBilling !== undefined ? pi.sameAsBilling : false);
+    }
+    if (pi.presetGroups) {
+      setPresetGroups(pi.presetGroups);
+    } else {
+      setPresetGroups({});
     }
     if (Array.isArray(pi.items) && pi.items.length > 0) {
       setPiItems(pi.items);
@@ -485,6 +718,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
           gstRate: '18%'
         }
       ]);
+    }
+    if (pi.signedPiDoc) {
+      setSignedPiDoc(pi.signedPiDoc);
+    } else if (pi.pdfName) {
+      setSignedPiDoc({ name: pi.pdfName, size: 24000, uploadedAt: pi.piDate });
+    } else {
+      setSignedPiDoc(null);
     }
     setApprovalRequired(pi.approvalRequired || 'Yes');
     setApprover(pi.approver || 'Velmurugan Rathinam (CEO)');
@@ -631,35 +871,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
               <button
                 onClick={() => {
+                  resetForm();
                   setEditIdx(null);
                   setPiNumber(`PI-${new Date().getFullYear()}-${String(piList.length + 101).padStart(3, '0')}`);
                   setPiDate(new Date().toISOString().split('T')[0]);
                   setValidUntilDate(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
-                  setVendorName('');
-                  setContactPerson('');
-                  setPhone('');
-                  setEmail('');
-                  setGstNo('');
-                  setBillingStreet('');
-                  setBillingCity('');
-                  setBillingState('');
-                  setBillingPincode('');
-                  setDeliveryStreet('');
-                  setDeliveryCity('');
-                  setDeliveryState('');
-                  setDeliveryPincode('');
-                  setPiItems([
-                    { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
-                  ]);
-                  setSelectedPreset('');
-                  setPresetSetCount(1);
-                  setPresetKitPrice('');
-                  setApprovalRequired('Yes');
-                  setApprover('Velmurugan Rathinam (CEO)');
-                  setApprovalPriority('High');
-                  setPaymentTerms('50% Advance + 50% Before Dispatch');
-                  setPdfFile(null);
-                  setUploadProgress(0);
                   setViewMode('create');
                 }}
                 style={{
@@ -1242,180 +1458,207 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
       {/* ==================== VIEW 2: DEDICATED FULL-PAGE CREATOR/EDITOR VIEW ==================== */}
       {(viewMode === 'create' || viewMode === 'edit') && (() => {
-        const subtotalCalc = piItems.reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
-        const taxTotalCalc = piItems.reduce((acc, it) => {
-          const taxable = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
-          const gstPct = parseFloat(String(it.gstRate || '18%').replace('%', '')) || 18;
-          return acc + (taxable * (gstPct / 100));
-        }, 0);
-        const grandTotalCalc = subtotalCalc + taxTotalCalc;
+        const totals = calculatePiTotals();
+        const hasAnyPreset = (piItems || []).some(it => it.isPresetItem);
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1240px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
-            {/* Title Bar (Top Row) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCancelConfirm(true)}
+            {/* Top Gradient Banner matching BOM/Quotations */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #075985 0%, #0E7490 50%, #0891B2 100%)',
+                borderRadius: '14px',
+                padding: '20px 24px',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px',
+                boxShadow: '0 10px 15px -3px rgba(14, 116, 144, 0.25), 0 4px 6px -2px rgba(14, 116, 144, 0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(8px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#64748B'
+                    border: '1px solid rgba(255, 255, 255, 0.25)'
                   }}
-                  title="Back to Invoices"
                 >
-                  <ArrowLeft size={16} />
-                </button>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                  <FileCheck size={22} color="#FFFFFF" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'white', letterSpacing: '-0.01em' }}>
                     {viewMode === 'edit' ? `Edit Proforma Invoice: ${piNumber}` : 'Create Proforma Invoice (PI)'}
                   </h2>
-                  <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                    Issue commercial proforma invoice, select preset kit structures, and configure billing details
-                  </span>
+                  <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '500' }}>
+                    Pre-order commercial billing, structured preset kits, freight specifications & payment terms
+                  </p>
                 </div>
               </div>
 
-              {/* Top Action Buttons */}
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowCancelConfirm(true)}
+                  onClick={() => setPiConfirmModal('cancel')}
                   style={{
-                    backgroundColor: 'white',
-                    border: '1px solid #CBD5E1',
+                    padding: '8px 16px',
                     borderRadius: '8px',
-                    padding: '8px 18px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={triggerSaveConfirm}
-                  style={{
-                    backgroundColor: '#0E7490',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 22px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                     fontSize: '13px',
                     fontWeight: '700',
-                    color: 'white',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px'
                   }}
                 >
-                  <Check size={16} /> Save PI
+                  ✕ Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={triggerSaveConfirm}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  Save & Release PI →
                 </button>
               </div>
             </div>
 
-            {/* SECTION 1: PI DETAILS & CUSTOMER INFO */}
-            <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+            {/* SECTION 1: PI DETAILS & DATES */}
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', border: '1px solid #A5F3FC' }}>
                   1
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    PI DETAILS & CUSTOMER INFORMATION
+                  <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
+                    PI DETAILS & DATES
                   </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Invoice identification, issuance date, validity, and customer profile
-                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>Reference tracking, commercial dates, and sales engineer mapping</span>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    PI Number <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={piNumber}
-                    onChange={(e) => setPiNumber(e.target.value.toUpperCase())}
-                    placeholder="PI-2025-001"
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: '700', boxSizing: 'border-box', outline: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                     PI Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="date"
                     value={piDate}
                     onChange={(e) => setPiDate(e.target.value)}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Payment Due / Valid Until
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    Payment Due / Valid Until Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="date"
                     value={validUntilDate}
                     onChange={(e) => setValidUntilDate(e.target.value)}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Customer / Buyer Name <span style={{ color: '#EF4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    PI Number <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={piNumber}
+                    placeholder="e.g. PI-2026-001"
+                    onChange={(e) => setPiNumber(e.target.value)}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    Sales Engineer / Creator
                   </label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      list="pi-customer-suggestions"
-                      placeholder="Select or type Customer..."
-                      value={vendorName}
-                      onChange={(e) => handleSelectCustomer(e.target.value)}
-                      style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '600', boxSizing: 'border-box', outline: 'none' }}
+                      readOnly
+                      disabled
+                      value={salesPerson || getActiveUserName()}
+                      style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', fontWeight: '600', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed' }}
                     />
-                    <datalist id="pi-customer-suggestions">
-                      {customerList.map((c, idx) => (
-                        <option key={idx} value={c.companyName} />
-                      ))}
-                    </datalist>
+                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                      Account Owner (Locked)
+                    </span>
                   </div>
                 </div>
+              </div>
+            </div>
 
+            {/* SECTION 2: CUSTOMER INFORMATION & ADDRESSES (NO DELIVERY PROOF AS INSTRUCTED) */}
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', border: '1px solid #A5F3FC' }}>
+                  2
+                </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Customer GSTIN
+                  <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
+                    CUSTOMER INFORMATION & ADDRESSES
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>Customer directory lookup with automatic address population</span>
+                </div>
+              </div>
+
+              {/* Row 1: Customer Contact details */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    Customer / Company Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="33AAAAA0000A1Z5"
-                    value={gstNo}
-                    onChange={(e) => setGstNo(e.target.value.toUpperCase())}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', textTransform: 'uppercase', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none' }}
+                    list="pi-customers-datalist"
+                    placeholder="Search or enter customer..."
+                    value={vendorName}
+                    onChange={(e) => handleSelectCustomer(e.target.value)}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '600', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
+                  <datalist id="pi-customers-datalist">
+                    {(customerList || []).map((c, idx) => (
+                      <option key={idx} value={c.companyName || c.name || c.c2 || c.code}>
+                        {c.gst || c.gstNumber ? `GST: ${c.gst || c.gstNumber}` : ''}
+                      </option>
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                     Contact Person
                   </label>
                   <input
@@ -1423,12 +1666,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="e.g. Rajesh Kannan"
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                     Phone Number
                   </label>
                   <input
@@ -1436,289 +1679,347 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                     Email Address
                   </label>
                   <input
                     type="email"
-                    placeholder="client@solar.com"
+                    placeholder="accounts@solarclient.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* SECTION 2: BILLING & DELIVERY ADDRESSES */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-              <div style={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Building2 style={{ width: '16px', height: '16px', color: '#0E7490' }} />
-                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Street Address / Plot / Industrial Area"
-                  value={billingStreet}
-                  onChange={(e) => setBillingStreet(e.target.value)}
-                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  <input type="text" placeholder="City" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
-                  <input type="text" placeholder="State" value={billingState} onChange={(e) => setBillingState(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
-                  <input type="text" placeholder="Pincode" value={billingPincode} onChange={(e) => setBillingPincode(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Truck style={{ width: '16px', height: '16px', color: '#0E7490' }} />
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Site Delivery Address</h4>
-                  </div>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={sameAsBilling}
-                      onChange={(e) => {
-                        setSameAsBilling(e.target.checked);
-                        if (e.target.checked) {
-                          setDeliveryStreet(billingStreet);
-                          setDeliveryCity(billingCity);
-                          setDeliveryState(billingState);
-                          setDeliveryPincode(billingPincode);
-                        }
-                      }}
-                      style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                    />
-                    Same as Billing
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
+                    Customer GSTIN
                   </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 33AABCV1234F1Z5"
+                    value={gstNo}
+                    onChange={(e) => setGstNo(e.target.value.toUpperCase())}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder="Delivery Site Address / Plant Location"
-                  value={sameAsBilling ? billingStreet : deliveryStreet}
-                  disabled={sameAsBilling}
-                  onChange={(e) => setDeliveryStreet(e.target.value)}
-                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', backgroundColor: sameAsBilling ? '#F8FAFC' : 'white', boxSizing: 'border-box', outline: 'none' }}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  <input type="text" placeholder="City" value={sameAsBilling ? billingCity : deliveryCity} disabled={sameAsBilling} onChange={(e) => setDeliveryCity(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: sameAsBilling ? '#F8FAFC' : 'white', boxSizing: 'border-box', outline: 'none' }} />
-                  <input type="text" placeholder="State" value={sameAsBilling ? billingState : deliveryState} disabled={sameAsBilling} onChange={(e) => setDeliveryState(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: sameAsBilling ? '#F8FAFC' : 'white', boxSizing: 'border-box', outline: 'none' }} />
-                  <input type="text" placeholder="Pincode" value={sameAsBilling ? billingPincode : deliveryPincode} disabled={sameAsBilling} onChange={(e) => setDeliveryPincode(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', backgroundColor: sameAsBilling ? '#F8FAFC' : 'white', boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+
+              {/* Row 2: Dual Addresses Layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                {/* Billing Address Card */}
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px', backgroundColor: '#F8FAFC' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <Building2 size={15} color="#0E7490" />
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Official Billing Address</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Street / Premises Address</label>
+                      <input
+                        type="text"
+                        placeholder="Plot No, Industrial Estate, Landmark..."
+                        value={billingStreet}
+                        onChange={(e) => {
+                          setBillingStreet(e.target.value);
+                          if (sameAsBilling) setDeliveryStreet(e.target.value);
+                        }}
+                        style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                        <input
+                          type="text"
+                          placeholder="City"
+                          value={billingCity}
+                          onChange={(e) => {
+                            setBillingCity(e.target.value);
+                            if (sameAsBilling) setDeliveryCity(e.target.value);
+                          }}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                        <input
+                          type="text"
+                          placeholder="State"
+                          value={billingState}
+                          onChange={(e) => {
+                            setBillingState(e.target.value);
+                            if (sameAsBilling) setDeliveryState(e.target.value);
+                          }}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
+                        <input
+                          type="text"
+                          placeholder="600001"
+                          value={billingPincode}
+                          onChange={(e) => {
+                            setBillingPincode(e.target.value);
+                            if (sameAsBilling) setDeliveryPincode(e.target.value);
+                          }}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Address Card */}
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px', backgroundColor: '#F8FAFC' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Truck size={15} color="#0E7490" />
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Consignee / Delivery Site Address</span>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#0E7490', cursor: 'pointer', backgroundColor: '#ECFEFF', padding: '3px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                      <input
+                        type="checkbox"
+                        checked={sameAsBilling}
+                        onChange={(e) => {
+                          const isSame = e.target.checked;
+                          setSameAsBilling(isSame);
+                          if (isSame) {
+                            setDeliveryStreet(billingStreet);
+                            setDeliveryCity(billingCity);
+                            setDeliveryState(billingState);
+                            setDeliveryPincode(billingPincode);
+                          }
+                        }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                      />
+                      Same as Billing Address
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Site / Dispatch Location Address</label>
+                      <input
+                        type="text"
+                        disabled={sameAsBilling}
+                        placeholder="Solar Project Site, Survey No, Village..."
+                        value={sameAsBilling ? billingStreet : deliveryStreet}
+                        onChange={(e) => setDeliveryStreet(e.target.value)}
+                        style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City / District</label>
+                        <input
+                          type="text"
+                          disabled={sameAsBilling}
+                          placeholder="City"
+                          value={sameAsBilling ? billingCity : deliveryCity}
+                          onChange={(e) => setDeliveryCity(e.target.value)}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                        <input
+                          type="text"
+                          disabled={sameAsBilling}
+                          placeholder="State"
+                          value={sameAsBilling ? billingState : deliveryState}
+                          onChange={(e) => setDeliveryState(e.target.value)}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
+                        <input
+                          type="text"
+                          disabled={sameAsBilling}
+                          placeholder="600001"
+                          value={sameAsBilling ? billingPincode : deliveryPincode}
+                          onChange={(e) => setDeliveryPincode(e.target.value)}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', color: '#0F172A', outline: 'none', boxSizing: 'border-box', backgroundColor: sameAsBilling ? '#F1F5F9' : 'white', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* SECTION 3: ORDER ITEMS & PRESET KIT COMPILER */}
-            <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                    3
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      PROFORMA INVOICE SCOPE & PRESET KITS
-                    </h3>
-                    <span style={{ fontSize: '11px', color: '#64748B' }}>
-                      Pick engineering preset kits, customize line quantities, rates, and tax tiers
-                    </span>
-                  </div>
+            {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS */}
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+              {/* Section 3 Header — Clean Single Row */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
+                {/* Left: Badge + Title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: 'auto' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>3</div>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ORDER ITEMS & BILL OF MATERIALS</span>
                 </div>
 
-                {/* Preset Selector with Multiple Sets and Append button */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <SearchablePresetSelector
-                    value={selectedPreset}
-                    activePresetsMap={activePresetsMap}
-                    accentColor="#0E7490"
-                    width="320px"
-                    placeholder="Type or pick Preset Kit..."
-                    onChange={(val, targetPreset) => {
-                      setSelectedPreset(val);
-                      setSelectedItemIndexes([]);
-                      if (targetPreset && targetPreset.items) {
-                        const multiplier = parseInt(presetSetCount) || 1;
-                        setPiItems(targetPreset.items.map(it => {
-                          const baseQ = parseFloat(it.qty) || 1;
-                          return {
-                            name: it.name,
-                            category: it.category || 'MMS Kit Scope',
-                            uom: it.uom || 'NOS',
-                            qty: String(Math.round(baseQ * multiplier)),
-                            rate: String(it.rate || 0),
-                            gstRate: it.gstRate || '18%'
-                          };
-                        }));
-                      }
-                    }}
-                  />
+                {/* Preset Pill */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+                  <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+                </div>
 
-                  {/* Append Additional Preset Button */}
-                  {selectedPreset && piItems.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
-                        if (targetPreset && targetPreset.items) {
-                          const multiplier = parseInt(presetSetCount) || 1;
-                          const additional = targetPreset.items.map(it => {
-                            const baseQ = parseFloat(it.qty) || 1;
-                            return {
-                              name: it.name,
-                              category: it.category || 'MMS Kit Scope',
-                              uom: it.uom || 'NOS',
-                              qty: String(Math.round(baseQ * multiplier)),
-                              rate: String(it.rate || 0),
-                              gstRate: it.gstRate || '18%'
-                            };
-                          });
-                          setPiItems(prev => [...prev, ...additional]);
-                        }
-                      }}
-                      title="Add another set of this preset kit without replacing existing items"
+                {/* Searchable Preset Selector */}
+                <SearchablePresetSelector
+                  value={selectedPreset}
+                  activePresetsMap={activePresetsMap}
+                  accentColor="#0E7490"
+                  width="380px"
+                  placeholder="Pick a Preset to add..."
+                  style={{ height: '40px' }}
+                  onChange={(val, targetPreset) => {
+                    if (val && targetPreset && targetPreset.items) {
+                      handleAddPresetToOrder(val, targetPreset, 1);
+                    } else if (!val) {
+                      setSelectedPreset('');
+                    }
+                  }}
+                />
+
+                {/* Clear Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedItemIndexes.length > 0) {
+                      setPiItems(prev => prev.filter((_, idx) => !selectedItemIndexes.includes(idx)));
+                      setSelectedItemIndexes([]);
+                    } else {
+                      if (piItems.length > 0) setShowClearConfirmModal(true);
+                    }
+                  }}
+                  title={selectedItemIndexes.length > 0 ? `Remove ${selectedItemIndexes.length} selected item(s)` : 'Clear all order items'}
+                  style={{ border: 'none', backgroundColor: selectedItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                >
+                  <X style={{ width: '18px', height: '18px' }} />
+                </button>
+              </div>
+
+              {/* Active Preset Badges / Pills */}
+              {Object.values(presetGroups).length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '12px 24px 0 24px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B' }}>Active Presets in Order:</span>
+                  {Object.values(presetGroups).map(grp => (
+                    <span
+                      key={grp.groupId}
                       style={{
-                        backgroundColor: '#F0FDFA',
-                        border: '1px solid #5EEAD4',
-                        color: '#0E7490',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        height: '36px',
-                        padding: '0 10px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        whiteSpace: 'nowrap'
+                        gap: '6px',
+                        backgroundColor: '#ECFEFF',
+                        color: '#0E7490',
+                        border: '1px solid #A5F3FC',
+                        borderRadius: '16px',
+                        padding: '4px 10px',
+                        fontSize: '12px',
+                        fontWeight: '700'
                       }}
                     >
-                      <Plus size={13} /> + Add Another Preset
-                    </button>
-                  )}
-
-                  {/* Multiplier input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '36px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>Sets:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="999"
-                      value={presetSetCount}
-                      onChange={(e) => {
-                        const rawVal = e.target.value;
-                        const newCount = rawVal === '' ? '' : Math.max(1, parseInt(rawVal) || 1);
-                        setPresetSetCount(newCount);
-                        const multiplier = parseInt(rawVal) || 1;
-                        if (selectedPreset && activePresetsMap && activePresetsMap[selectedPreset]) {
-                          const baseItems = activePresetsMap[selectedPreset].items;
-                          if (baseItems) {
-                            setPiItems(baseItems.map(it => {
-                              const baseQ = parseFloat(it.qty) || 1;
-                              return {
-                                name: it.name,
-                                category: it.category || 'MMS Kit Scope',
-                                uom: it.uom || 'NOS',
-                                qty: String(Math.round(baseQ * multiplier)),
-                                rate: String(it.rate || 0),
-                                gstRate: it.gstRate || '18%'
-                              };
-                            }));
-                          }
-                        }
-                      }}
-                      style={{ width: '48px', height: '26px', borderRadius: '6px', border: '1px solid #94A3B8', padding: '0 4px', fontSize: '13px', fontWeight: '800', color: '#0E7490', textAlign: 'center', outline: 'none', backgroundColor: 'white' }}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedItemIndexes.length > 0) {
-                        setPiItems(prev => prev.filter((_, idx) => !selectedItemIndexes.includes(idx)));
-                        setSelectedItemIndexes([]);
-                      } else {
-                        setPiItems([]);
-                        setSelectedPreset('');
-                      }
-                    }}
-                    title={selectedItemIndexes.length > 0 ? `Remove ${selectedItemIndexes.length} selected item(s)` : 'Clear all items'}
-                    style={{
-                      border: selectedItemIndexes.length > 0 ? '1px solid #EF4444' : '1px solid #FCA5A5',
-                      backgroundColor: selectedItemIndexes.length > 0 ? '#EF4444' : '#FEF2F2',
-                      color: selectedItemIndexes.length > 0 ? 'white' : '#EF4444',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
+                      <Layers size={13} style={{ color: '#0E7490' }} />
+                      {grp.presetName} ({grp.setCount} Set{grp.setCount > 1 ? 's' : ''})
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePresetGroup(grp.groupId)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 0 2px', display: 'flex', alignItems: 'center', color: '#0891B2' }}
+                        title={`Remove ${grp.presetName}`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
                 </div>
-              </div>
+              )}
 
-              {/* Items Table */}
-              <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+              {/* Section 3 Content */}
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* Items Table */}
+              <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                      <th style={{ padding: '12px 10px', width: '30px', textAlign: 'center' }}>
+                      <th style={{ padding: '12px 14px', width: '30px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
                           checked={piItems.length > 0 && selectedItemIndexes.length === piItems.length}
                           onChange={(e) => {
-                            if (e.target.checked) setSelectedItemIndexes(piItems.map((_, idx) => idx));
-                            else setSelectedItemIndexes([]);
+                            if (e.target.checked) {
+                              setSelectedItemIndexes(piItems.map((_, idx) => idx));
+                            } else {
+                              setSelectedItemIndexes([]);
+                            }
                           }}
                           style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                         />
                       </th>
-                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '38%' }}>Product / Item Description <span style={{ color: '#EF4444' }}>*</span></th>
+                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '30%' }}>Product / Item <span style={{ color: '#EF4444' }}>*</span></th>
                       <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
-                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '9%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
-                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '12%', textAlign: 'right' }}>Unit Rate (₹)</th>
-                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'center' }}>GST Rate</th>
+                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
+                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
+                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
+                      {hasAnyPreset && <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', color: '#0E7490', backgroundColor: '#ECFEFF' }}>Preset Amt (₹)</th>}
                       <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Taxable (₹)</th>
                       <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Total (₹)</th>
-                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}></th>
+                      <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {piItems.length === 0 ? (
                       <tr>
-                        <td colSpan={9} style={{ padding: '36px 16px', textAlign: 'center', color: '#64748B', backgroundColor: '#FAFBFC' }}>
+                        <td colSpan={hasAnyPreset ? 10 : 9} style={{ padding: '48px 16px', textAlign: 'center', color: '#94A3B8' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                              <Boxes size={20} />
-                            </div>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>No items in this Proforma Invoice</div>
-                            <div style={{ fontSize: '12px', color: '#64748B' }}>Click "+ Add Product Item" below or pick an engineering Preset Kit above.</div>
+                            <Boxes size={28} style={{ color: '#CBD5E1' }} />
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B' }}>No products or materials in Proforma Invoice</span>
+                            <span style={{ fontSize: '11px', color: '#94A3B8' }}>Select an engineering Preset above or click "+ Add Product / Item" to author PI line items</span>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       piItems.map((item, i) => {
+                        const isChecked = selectedItemIndexes.includes(i);
+                        const isPresetItem = Boolean(item.isPresetItem);
+                        const groupId = item.presetGroupId;
+                        const currentGroup = groupId ? (presetGroups[groupId] || { kitPrice: '', setCount: 1, presetName: item.presetName }) : null;
+
+                        let isFirstInGroup = false;
+                        let groupCount = 0;
+                        if (isPresetItem && groupId) {
+                          const itemsInGroup = piItems.filter(it => it.presetGroupId === groupId);
+                          groupCount = itemsInGroup.length;
+                          isFirstInGroup = piItems.findIndex(it => it.presetGroupId === groupId) === i;
+                        }
+
                         const q = parseFloat(item.qty) || 0;
                         const r = parseFloat(item.rate) || 0;
-                        const taxable = q * r;
+                        const taxable = isPresetItem ? 0 : q * r;
                         const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-                        const rowTot = taxable + (taxable * (gstPct / 100));
-                        const isChecked = selectedItemIndexes.includes(i);
+                        const itemTotal = taxable + (taxable * (gstPct / 100));
 
                         return (
-                          <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#ECFEFF' : 'transparent' }}>
-                            <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <tr
+                            key={i}
+                            style={{
+                              borderBottom: '1px solid #F1F5F9',
+                              backgroundColor: isChecked ? '#ECFEFF' : (isPresetItem ? '#F8FAFC' : 'transparent'),
+                              transition: 'background-color 0.15s ease'
+                            }}
+                          >
+                            <td style={{
+                              padding: '12px 14px',
+                              textAlign: 'center',
+                              borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                            }}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -1729,65 +2030,123 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                 style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                               />
                             </td>
-                            <td style={{ padding: '8px 10px' }}>
+                            <td style={{ padding: '12px 10px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ position: 'relative' }}>
+                                  <input
+                                    type="text"
+                                    list={`pi-product-list-${i}`}
+                                    placeholder="Type or select product / item..."
+                                    value={item.name || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
+                                      setPiItems(prev => prev.map((mat, idx) => idx === i ? {
+                                        ...mat,
+                                        name: matched ? matched.name : val,
+                                        rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                        uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                        category: matched ? (matched.category || matched.description || mat.category) : mat.category
+                                      } : mat));
+                                    }}
+                                    style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                                  />
+                                  <datalist id={`pi-product-list-${i}`}>
+                                    {(itemsList || []).map((prod, pidx) => {
+                                      const st = Number(prod.stock !== undefined ? prod.stock : 100);
+                                      const isOutOfStock = st <= 0;
+                                      const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                                      return (
+                                        <option key={pidx} value={prod.name}>
+                                          {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                        </option>
+                                      );
+                                    })}
+                                  </datalist>
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Description / Technical specs..."
+                                  value={item.category || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                                />
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px 10px' }}>
                               <input
                                 type="text"
-                                value={item.name}
-                                placeholder="e.g. Solar Mounting Structures & Fasteners"
+                                list={`pi-uom-list-${i}`}
+                                placeholder="UOM"
+                                value={item.uom || 'NOS'}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  setPiItems(prev => prev.map((it, idx) => idx === i ? { ...it, name: val } : it));
+                                  setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
                                 }}
-                                style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', fontWeight: '600', boxSizing: 'border-box', outline: 'none' }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
                               />
+                              <datalist id={`pi-uom-list-${i}`}>
+                                <option value="NOS" />
+                                <option value="SET" />
+                                <option value="KG" />
+                                <option value="MTR" />
+                                <option value="PCS" />
+                                <option value="BOX" />
+                                <option value="PKT" />
+                                <option value="PAIR" />
+                              </datalist>
                             </td>
-                            <td style={{ padding: '8px 10px' }}>
-                              <select
-                                value={item.uom || 'SET'}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setPiItems(prev => prev.map((it, idx) => idx === i ? { ...it, uom: val } : it));
-                                }}
-                                style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 6px', fontSize: '12px', outline: 'none', backgroundColor: '#FFFFFF', fontWeight: '600' }}
-                              >
-                                <option value="SET">SET</option>
-                                <option value="NOS">NOS</option>
-                                <option value="MTR">MTR</option>
-                                <option value="KG">KG</option>
-                                <option value="PCS">PCS</option>
-                                <option value="PKT">PKT</option>
-                              </select>
-                            </td>
-                            <td style={{ padding: '8px 10px' }}>
+                            <td style={{ padding: '12px 10px' }}>
                               <input
                                 type="number"
                                 value={item.qty}
+                                placeholder="0"
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  setPiItems(prev => prev.map((it, idx) => idx === i ? { ...it, qty: val } : it));
+                                  setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                                 }}
-                                style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box', outline: 'none' }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
                               />
                             </td>
-                            <td style={{ padding: '8px 10px' }}>
-                              <input
-                                type="number"
-                                value={item.rate}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setPiItems(prev => prev.map((it, idx) => idx === i ? { ...it, rate: val } : it));
-                                }}
-                                style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', boxSizing: 'border-box', outline: 'none' }}
-                              />
+                            <td style={{ padding: '12px 10px' }}>
+                              {isPresetItem ? (
+                                <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={item.rate}
+                                  placeholder="0.00"
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                                />
+                              )}
                             </td>
-                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                               <select
-                                value={item.gstRate || '18%'}
+                                value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  setPiItems(prev => prev.map((it, idx) => idx === i ? { ...it, gstRate: val } : it));
+                                  if (isPresetItem && groupId) {
+                                    setPiItems(prev => prev.map((mat, idx) =>
+                                      ((mat.presetGroupId || 'legacy_default') === groupId)
+                                        ? { ...mat, gstRate: val }
+                                        : mat
+                                    ));
+                                    setPresetGroups(prev => ({
+                                      ...prev,
+                                      [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                    }));
+                                  } else {
+                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                                  }
                                 }}
-                                style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CCFBF1', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
                               >
                                 <option value="18%">18% GST</option>
                                 <option value="12%">12% GST</option>
@@ -1795,16 +2154,206 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                 <option value="0%">0% Exempt</option>
                               </select>
                             </td>
-                            <td style={{ padding: '8px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>₹{taxable.toFixed(2)}</td>
-                            <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>₹{rowTot.toFixed(2)}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                onClick={() => setPiItems(prev => prev.filter((_, idx) => idx !== i))}
-                                style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                            {hasAnyPreset && (() => {
+                              if (isPresetItem) {
+                                if (isFirstInGroup) {
+                                  return (
+                                    <td
+                                      rowSpan={groupCount}
+                                      style={{
+                                        padding: '12px 10px',
+                                        verticalAlign: 'middle',
+                                        backgroundColor: '#EEF2FF',
+                                        borderLeft: '2px solid #C7D2FE',
+                                        borderRight: '2px solid #C7D2FE'
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                        <span
+                                          style={{
+                                            fontSize: '11px',
+                                            fontWeight: '800',
+                                            color: '#4338CA',
+                                            textAlign: 'center',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            maxWidth: '120px',
+                                            display: 'block'
+                                          }}
+                                          title={currentGroup?.presetName}
+                                        >
+                                          {currentGroup?.presetName}
+                                        </span>
+
+                                        <div style={{ position: 'relative', width: '100%' }}>
+                                          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
+                                          <input
+                                            type="number"
+                                            value={currentGroup?.kitPrice || ''}
+                                            placeholder="0.00"
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), kitPrice: val }
+                                                }));
+                                              }
+                                            }}
+                                            style={{
+                                              width: '100%', height: '42px', borderRadius: '8px',
+                                              border: '2px solid #818CF8', padding: '0 10px 0 26px',
+                                              fontSize: '15px', fontWeight: '800', color: '#312E81',
+                                              textAlign: 'right', outline: 'none', boxSizing: 'border-box',
+                                              backgroundColor: 'white'
+                                            }}
+                                          />
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                            {groupCount} items ×
+                                          </span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max="999"
+                                            value={currentGroup?.setCount !== undefined && currentGroup?.setCount !== null ? currentGroup.setCount : ''}
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => {
+                                              const rawVal = e.target.value;
+                                              if (rawVal === '') {
+                                                if (groupId) {
+                                                  setPresetGroups(prev => ({
+                                                    ...prev,
+                                                    [groupId]: { ...(prev[groupId] || currentGroup), setCount: '' }
+                                                  }));
+                                                }
+                                                return;
+                                              }
+                                              const parsed = parseInt(rawVal);
+                                              const valToSave = isNaN(parsed) ? '' : Math.max(0, parsed);
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), setCount: valToSave }
+                                                }));
+                                              }
+                                              const multiplier = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                                              setPiItems(prev => prev.map(mat => {
+                                                if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                                  return { ...mat, qty: String(Math.round(mat.baseQty * multiplier)) };
+                                                }
+                                                return mat;
+                                              }));
+                                            }}
+                                            style={{
+                                              width: '42px', height: '26px', borderRadius: '6px',
+                                              border: '1.5px solid #818CF8', fontSize: '13px',
+                                              fontWeight: '800', color: '#312E81', textAlign: 'center',
+                                              padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box'
+                                            }}
+                                            title="Sets multiplier for this preset"
+                                          />
+                                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                            set{(parseInt(currentGroup?.setCount) || 1) !== 1 ? 's' : ''}
+                                          </span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                           <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
+                                           <select
+                                             value={currentGroup?.gstRate || item.gstRate || '18%'}
+                                             onChange={(e) => {
+                                               const val = e.target.value;
+                                               if (groupId) {
+                                                 setPresetGroups(prev => ({
+                                                   ...prev,
+                                                   [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                                 }));
+                                               }
+                                               setPiItems(prev => prev.map((mat, idx) =>
+                                                 ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                                   ? { ...mat, gstRate: val }
+                                                   : mat
+                                               ));
+                                             }}
+                                             style={{
+                                               height: '24px', borderRadius: '6px',
+                                               border: '1.5px solid #818CF8', padding: '0 4px',
+                                               fontSize: '11px', fontWeight: '800',
+                                               color: '#312E81', backgroundColor: '#FFFFFF',
+                                               outline: 'none', cursor: 'pointer'
+                                             }}
+                                             title="Change GST Rate for this preset"
+                                           >
+                                             <option value="18%">18%</option>
+                                             <option value="12%">12%</option>
+                                             <option value="5%">5%</option>
+                                             <option value="0%">0%</option>
+                                           </select>
+                                         </div>
+                                        {groupId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePresetGroup(groupId)}
+                                            style={{
+                                              border: 'none',
+                                              backgroundColor: 'transparent',
+                                              color: '#EF4444',
+                                              fontSize: '10px',
+                                              fontWeight: '700',
+                                              cursor: 'pointer',
+                                              padding: '2px 6px',
+                                              borderRadius: '4px',
+                                              marginTop: '2px'
+                                            }}
+                                            title={`Remove entire ${currentGroup?.presetName} preset`}
+                                          >
+                                            Remove Kit
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  );
+                                }
+                                return null;
+                              } else {
+                                return (
+                                  <td style={{ padding: '12px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '11px' }}>
+                                    —
+                                  </td>
+                                );
+                              }
+                            })()}
+                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>
+                              {isPresetItem ? (
+                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>(In Kit Price)</span>
+                              ) : (
+                                `₹${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
+                              {isPresetItem ? (
+                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>—</span>
+                              ) : (
+                                `₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                              {isPresetItem ? (
+                                <span style={{ fontSize: '10px', color: '#94A3B8', fontStyle: 'italic' }}>Preset</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMaterialRow(i)}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', padding: '4px' }}
+                                  title="Remove item"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -1817,160 +2366,141 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               <div>
                 <button
                   type="button"
-                  onClick={() => setPiItems(prev => [...prev, { name: '', category: 'Custom Item', uom: 'NOS', qty: '1', rate: '0', gstRate: '18%' }])}
-                  style={{ border: '1px solid #CCFBF1', background: '#F0FDFA', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={handleAddMaterialRow}
+                  style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <Plus size={15} /> Add Product Item
+                  <Plus style={{ width: '15px', height: '15px' }} />
+                  Add Product / Item
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* SECTION 4: DOCUMENT UPLOAD, APPROVAL SETTINGS, PAYMENT TERMS & TOTALS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(360px, 1fr)', gap: '20px', alignItems: 'stretch' }}>
-              
-              {/* Left Column: PDF Upload & Approval Settings & Terms */}
-              <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                    4
-                  </div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    DOCUMENT UPLOAD & APPROVAL SETTINGS
+          {/* SECTION 4: BANK DETAILS & FINANCIAL BREAKDOWN */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', alignItems: 'start' }}>
+
+            {/* Left Column: Official Bank Details Card */}
+            <div style={{ backgroundColor: '#F0FDFA', borderRadius: '12px', border: '1px solid #99F6E4', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Landmark size={18} color="#0E7490" />
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>VRM Official Commercial Bank Details</span>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: '#0E7490', backgroundColor: '#CCFBF1', padding: '3px 8px', borderRadius: '4px', border: '1px solid #5EEAD4' }}>
+                  Verified Account
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', color: '#334155' }}>
+                <div><strong>Bank:</strong> HDFC Bank Ltd</div>
+                <div><strong>Account Name:</strong> VRM STRUCTURES INDIA PVT LTD</div>
+                <div><strong>Account No:</strong> 50200088912456</div>
+                <div><strong>IFSC Code:</strong> HDFC0001234</div>
+                <div style={{ gridColumn: 'span 2' }}><strong>Branch:</strong> Ambattur Industrial Estate, Chennai - 600058</div>
+              </div>
+            </div>
+
+            {/* Right Column: Real-Time Commercial Financial Summary Card */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #CBD5E1',
+                borderTop: '4px solid #0E7490',
+                padding: '24px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
+                    FINANCIAL BREAKDOWN
                   </h3>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '3px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
+                    INR (₹) Commercial
+                  </span>
                 </div>
 
-                {/* PDF File Upload (Optional / Drag and Drop) */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Attach Formal Signed PI PDF (Optional)
-                  </label>
-                  {pdfFile ? (
-                    <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FileText style={{ color: '#0E7490', width: '22px', height: '22px' }} />
-                        <div>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{pdfFile.name}</div>
-                          <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: '700' }}>✓ Attached Document ({uploadProgress}%)</div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleRemoveFile}
-                        style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => document.getElementById('modern-pi-pdf-input').click()}
-                      style={{ border: '1.5px dashed #CBD5E1', borderRadius: '10px', padding: '18px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#FAFBFC' }}
-                    >
-                      <UploadCloud style={{ width: '24px', height: '24px', color: '#0E7490', margin: '0 auto 6px' }} />
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>Click to upload PI PDF (or drag and drop)</div>
-                      <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>Max file size 10MB</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {totals.kitSubtotal > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#4F46E5' }}>
+                      <span style={{ fontWeight: '600' }}>Preset Kits Subtotal:</span>
+                      <span style={{ fontWeight: '700' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
-                  <input
-                    id="modern-pi-pdf-input"
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                </div>
 
-                {/* Payment Terms Input */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    Payment Terms & Dispatch Conditions
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
-                    placeholder="e.g. 50% Advance + 50% Before Dispatch"
-                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
-                  />
-                </div>
-
-                {/* Approver & Priority */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Approval Required</label>
-                    <select
-                      value={approvalRequired}
-                      onChange={(e) => setApprovalRequired(e.target.value)}
-                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', backgroundColor: 'white', outline: 'none' }}
-                    >
-                      <option value="Yes">Yes (Requires CEO Approval)</option>
-                      <option value="No">No (Auto-Release PI)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Approver</label>
-                    <input
-                      type="text"
-                      value={approver}
-                      disabled
-                      style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', backgroundColor: '#F8FAFC', color: '#64748B', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Order Totals Summary Card */}
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Landmark style={{ width: '18px', height: '18px', color: '#0E7490' }} />
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Commercials</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                    <span>Line Items Subtotal:</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{(totals.sub - totals.kitSubtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                      <span>Taxable Subtotal:</span>
-                      <span style={{ fontWeight: '700', color: '#0F172A' }}>₹{subtotalCalc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0F172A', fontWeight: '700', borderTop: '1px dashed #E2E8F0', paddingTop: '8px' }}>
+                    <span>Total Taxable Subtotal:</span>
+                    <span>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                    <span>CGST (9%):</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                    <span>SGST (9%):</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
+                    <span>Total GST Amount (18%):</span>
+                    <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderTop: '2px solid #0E7490',
+                      paddingTop: '14px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', display: 'block' }}>Grand Total (INR)</span>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>Inclusive of all statutory taxes</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                      <span>Estimated GST (CGST+SGST / IGST):</span>
-                      <span style={{ fontWeight: '700', color: '#0E7490' }}>+ ₹{taxTotalCalc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <div style={{ height: '1px', backgroundColor: '#CBD5E1', margin: '6px 0' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>Grand Total (INR):</span>
-                      <span style={{ fontSize: '20px', fontWeight: '900', color: '#0E7490' }}>₹{grandTotalCalc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
+                    <span style={{ fontSize: '20px', fontWeight: '900', color: '#0E7490' }}>
+                      ₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
 
-                {/* Bottom Action inside Summary */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                   <button
                     type="button"
                     onClick={triggerSaveConfirm}
                     style={{
                       width: '100%',
                       height: '44px',
-                      borderRadius: '10px',
+                      borderRadius: '8px',
                       backgroundColor: '#0E7490',
                       color: 'white',
                       border: 'none',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: '800',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 6px -1px rgba(14, 116, 144, 0.3)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(14, 116, 144, 0.3)'
                     }}
                   >
                     <Check size={18} /> Confirm & Save PI
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowCancelConfirm(true)}
+                    onClick={() => setPiConfirmModal('cancel')}
                     style={{
                       width: '100%',
                       height: '36px',
@@ -1987,6 +2517,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   </button>
                 </div>
               </div>
+
             </div>
 
           </div>
@@ -2348,8 +2879,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         </div>
       )}
 
-      {/* ==================== SAVE CONFIRMATION POPUP ==================== */}
-      {showSaveConfirm && (
+      {/* ==================== PI CONFIRMATION MODALS (CANCEL, DRAFT, CREATE) ==================== */}
+      {piConfirmModal && (
         <div
           style={{
             position: 'fixed',
@@ -2357,7 +2888,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backgroundColor: 'rgba(15, 23, 42, 0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex',
             justifyContent: 'center',
@@ -2365,118 +2896,107 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             zIndex: 1000
           }}
         >
-          {/* Main Card Frame with White Padding */}
           <div
             style={{
               backgroundColor: 'white',
-              borderRadius: '24px',
-              border: '1px solid #e2e8f0',
-              width: '420px',
-              padding: '16px',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              width: '440px',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px'
+              gap: '16px'
             }}
           >
-            {/* Embedded Blue Header Pill Band: CONFIRM */}
-            <div
-              style={{
-                backgroundColor: '#2563eb',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: '800',
-                height: '34px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                letterSpacing: '0.15em'
-              }}
-            >
-              CONFIRM
-            </div>
-
-            {/* Inner box with dashed border - clean white background */}
-            <div
-              style={{
-                padding: '16px',
-                border: '1.5px dashed #cbd5e1',
-                borderRadius: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                backgroundColor: 'white'
-              }}
-            >
-              {/* Title & Date Row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#1e293b', margin: 0, letterSpacing: '-0.02em' }}>
-                  Save Performa Invoice?
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  backgroundColor: piConfirmModal === 'cancel' ? '#FEF2F2' : (piConfirmModal === 'draft' ? '#FFFBEB' : '#ECFEFF'),
+                  color: piConfirmModal === 'cancel' ? '#EF4444' : (piConfirmModal === 'draft' ? '#D97706' : '#0E7490'),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {piConfirmModal === 'cancel' ? <AlertTriangle size={20} /> : <FileCheck size={20} />}
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                  {piConfirmModal === 'cancel' ? 'Discard Proforma Invoice?' : 'Release Proforma Invoice?'}
                 </h3>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
-                  {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                  {piConfirmModal === 'cancel' ? 'Unsaved modifications will be permanently lost' : 'Commercial document confirmation'}
                 </span>
               </div>
+            </div>
 
-              {/* Description */}
-              <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5', margin: 0 }}>
-                Please confirm the details of invoice <strong style={{ color: '#0f172a' }}>{piNumber.toUpperCase()}</strong>:
-              </p>
+            <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.6', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+              {piConfirmModal === 'cancel' ? (
+                <span>Are you sure you want to discard this Proforma Invoice? Any configured line items, preset structures, and addresses will be erased.</span>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div><strong>Customer:</strong> {vendorName || 'Not specified'}</div>
+                  <div><strong>PI Number:</strong> {piNumber || 'N/A'}</div>
+                  <div><strong>Total Value:</strong> ₹{calculatePiTotals().grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (incl. GST)</div>
+                  <div><strong>Line Items / Scope:</strong> {piItems.length} material lines configured</div>
+                </div>
+              )}
+            </div>
 
-              {/* Data Summary List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: '#475569', paddingLeft: '8px', borderLeft: '3px solid #0E7490' }}>
-                <div><strong>Customer:</strong> {vendorName}</div>
-                <div><strong>Scope / Products:</strong> {piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories'}</div>
-                <div><strong>GST No:</strong> {gstNo ? gstNo.toUpperCase() : 'N/A'}</div>
-                <div><strong>Total Amount (incl. GST):</strong> ₹{Math.round(
-                  piItems.reduce((acc, it) => {
-                    const taxable = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
-                    const gstPct = parseFloat(String(it.gstRate || '18%').replace('%', '')) || 18;
-                    return acc + taxable + (taxable * (gstPct / 100));
-                  }, 0)
-                ).toLocaleString('en-IN')}</div>
-              </div>
-
-              {/* Bottom line inside dashed area: Discard on same line as Save Invoice */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', marginTop: '6px' }}>
-                <button
-                  onClick={() => setShowSaveConfirm(false)}
-                  style={{
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#64748b',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={executeCreatePI}
-                  style={{
-                    backgroundColor: '#dbeafe',
-                    color: '#2563eb',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Save Invoice
-                </button>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setPiConfirmModal(null)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (piConfirmModal === 'cancel') {
+                    setPiConfirmModal(null);
+                    resetForm();
+                    setViewMode('list');
+                  } else {
+                    setPiConfirmModal(null);
+                    executeCreatePI(false);
+                  }
+                }}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  backgroundColor: piConfirmModal === 'cancel' ? '#EF4444' : '#0E7490',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                {piConfirmModal === 'cancel' ? 'Yes, Discard' : 'Confirm & Release PI'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== CANCEL/DISCARD DETAILS CONFIRMATION POPUP ==================== */}
-      {showCancelConfirm && (
+      {/* ==================== CLEAR ALL ITEMS CONFIRMATION MODAL ==================== */}
+      {showClearConfirmModal && (
         <div
           style={{
             position: 'fixed',
@@ -2484,7 +3004,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backgroundColor: 'rgba(15, 23, 42, 0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex',
             justifyContent: 'center',
@@ -2495,97 +3015,123 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
           <div
             style={{
               backgroundColor: 'white',
-              borderRadius: '24px',
-              border: '1px solid #e2e8f0',
-              width: '420px',
-              padding: '16px',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              border: '1px solid #FECDD3',
+              width: '400px',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px'
+              gap: '16px'
             }}
           >
-            {/* Embedded Orange/Yellow Header Pill Band: DISCARD */}
-            <div
-              style={{
-                backgroundColor: '#f97316',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: '800',
-                height: '34px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                letterSpacing: '0.15em'
-              }}
-            >
-              DISCARD
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#FFF1F2', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                  Clear All Line Items?
+                </h3>
+                <span style={{ fontSize: '11px', color: '#64748B' }}>This will remove all preset kits and items from the PI</span>
+              </div>
             </div>
 
-            {/* Inner box with dashed border - clean white background */}
-            <div
-              style={{
-                padding: '16px',
-                border: '1.5px dashed #cbd5e1',
-                borderRadius: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                backgroundColor: 'white'
-              }}
-            >
-              {/* Title & Date Row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#1e293b', margin: 0, letterSpacing: '-0.02em' }}>
-                  Discard Changes?
-                </h3>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
-                  {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                </span>
-              </div>
+            <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.5' }}>
+              Are you sure you want to clear all {piItems.length} item lines? This action cannot be undone.
+            </p>
 
-              {/* Description */}
-              <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5', margin: 0 }}>
-                Are you sure you want to discard your changes? All unsaved details for this Performa Invoice will be lost.
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowClearConfirmModal(false)}
+                style={{ padding: '8px 16px', borderRadius: '8px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Keep Items
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPiItems([]);
+                  setPresetGroups({});
+                  setShowClearConfirmModal(false);
+                }}
+                style={{ padding: '8px 18px', borderRadius: '8px', backgroundColor: '#E11D48', color: 'white', border: 'none', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', marginTop: '6px' }}>
-                <button
-                  onClick={() => setShowCancelConfirm(false)}
-                  style={{
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#64748b',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                >
-                  No, Go Back
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCancelConfirm(false);
-                    setViewMode('list');
-                    handleRemoveFile();
-                  }}
-                  style={{
-                    backgroundColor: '#ffedd5',
-                    color: '#ea580c',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Discard Changes
-                </button>
+      {/* ==================== SIGNED DOCUMENT PREVIEW MODAL ==================== */}
+      {previewDocModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1001
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              border: '1px solid #CBD5E1',
+              width: '560px',
+              maxHeight: '85vh',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileCheck size={18} color="#0E7490" />
+                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>{previewDocModal.name}</span>
               </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDocModal(null)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'auto', maxHeight: 'calc(85vh - 70px)' }}>
+              {previewDocModal.dataUrl && previewDocModal.dataUrl.startsWith('data:image') ? (
+                <img
+                  src={previewDocModal.dataUrl}
+                  alt={previewDocModal.name}
+                  style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <FileText size={48} color="#0E7490" />
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>{previewDocModal.name}</span>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>PDF document cached safely in offline local storage</span>
+                  {previewDocModal.dataUrl && (
+                    <a
+                      href={previewDocModal.dataUrl}
+                      download={previewDocModal.name}
+                      style={{ marginTop: '8px', padding: '8px 16px', backgroundColor: '#0E7490', color: 'white', borderRadius: '6px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
+                    >
+                      Download Attached File
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle, Menu } from 'lucide-react';
 
+import { isRoleTargeted } from '../services/notificationService';
+
 export const addLiveNotification = (notif) => {
   try {
     const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
@@ -46,16 +48,9 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     return () => window.removeEventListener('vrm_notifications_updated', handleUpdate);
   }, []);
 
-  const isProdAdmin = userRole === 'Production Admin' || (userRole && userRole.includes('Production'));
-  
   // Filter notifications based on active user login role (or show system-wide alerts)
   const roleNotifications = liveNotifications.filter(n => {
-    if (!n.role || n.role === 'System' || n.role === 'All') return true;
-    if (isProdAdmin) {
-      return n.role === 'Production Admin' || n.role === 'Procurement Admin';
-    } else {
-      return n.role === 'Procurement Admin' || n.role === 'Production Admin';
-    }
+    return isRoleTargeted(userRole, n.targetRoles || n.role);
   });
 
   const unreadNotifications = roleNotifications.filter(n => !readIds.includes(n.id));

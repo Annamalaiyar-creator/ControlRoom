@@ -26,7 +26,7 @@ export default function CrmOpportunitiesView({
     capacityKw: '',
     structureType: 'Aluminium Rooftop Rails',
     stage: 'Requirement Received',
-    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV',
+    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Sales Representative',
     targetCloseDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
     notes: ''
   });
@@ -74,7 +74,7 @@ export default function CrmOpportunitiesView({
 
   // Convert Opportunity to BOM
   const handleConvertToBom = (opp) => {
-    const currentUser = localStorage.getItem('controlroom_logged_user_name') || opp.assignedSalesperson || 'Mohith JV';
+    const currentUser = opp.assignedSalesperson || localStorage.getItem('controlroom_logged_user_name') || 'Sales Representative';
     // Package BOM data
     const bomPayload = {
       customerName: opp.companyName,

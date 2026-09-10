@@ -11,7 +11,7 @@ export default function SearchablePresetSelector({
   value,
   onChange,
   activePresetsMap,
-  placeholder = "Select BOM Kit / Structure Preset...",
+  placeholder = "Select Structure Preset...",
   accentColor = "#4F46E5",
   width = "380px",
   style = {}
@@ -162,12 +162,13 @@ export default function SearchablePresetSelector({
           display: 'flex',
           alignItems: 'center',
           backgroundColor: '#FFFFFF',
-          border: isOpen ? `1.5px solid ${accentColor}` : '1px solid #CBD5E1',
-          borderRadius: '8px',
-          height: '36px',
-          padding: '0 8px 0 10px',
+          border: isOpen ? `1.5px solid ${accentColor}` : '1.5px solid #CBD5E1',
+          borderRadius: '10px',
+          height: style?.height || '42px',
+          padding: '0 12px',
           boxShadow: isOpen ? `0 0 0 2px ${accentColor}1A` : 'none',
           cursor: 'text',
+          boxSizing: 'border-box',
           transition: 'all 0.15s ease'
         }}
       >
@@ -269,7 +270,7 @@ export default function SearchablePresetSelector({
           <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                Preset Kits ({totalPresetsCount})
+                Presets ({totalPresetsCount})
               </span>
               {searchTerm && (
                 <span style={{ fontSize: '11px', color: accentColor, fontWeight: '700' }}>

@@ -1642,16 +1642,22 @@ export default function PurchaseOrdersView({ userRole = 'Procurement Head', targ
                 transform: 'translateX(-50%)',
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E2E8F0',
-                borderRadius: '16px',
-                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                borderRadius: '50px',
+                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 padding: '8px 16px',
                 display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
                 alignItems: 'center',
-                gap: '10px',
+                whiteSpace: 'nowrap',
+                gap: '8px',
                 zIndex: 10000,
+                width: 'max-content',
+                maxWidth: 'calc(100vw - 32px)',
+                overflowX: 'auto',
                 fontFamily: "'Plus Jakarta Sans', sans-serif"
               }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPOs.length}</strong> Selected
                 </span>
 

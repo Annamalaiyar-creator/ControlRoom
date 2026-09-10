@@ -3,10 +3,13 @@ import {
   FileText, Plus, Search, Eye, Share2, MessageSquare, Download, Check,
   Building2, Printer, X, DollarSign, Calendar, Tag, ChevronRight,
   RotateCcw, Edit3, Trash2, CheckCircle, Clock, AlertCircle, Layers,
-  Truck, ArrowRight, Copy, RefreshCw, Send, Mail, Boxes, User, Landmark
+  Truck, ArrowRight, Copy, RefreshCw, Send, Mail, Boxes, User, Landmark,
+  AlertTriangle, ShoppingCart, ShieldCheck
 } from 'lucide-react';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import NotificationToast from '../NotificationToast';
+import { addLiveNotification } from '../Header';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -182,16 +185,27 @@ export default function CrmQuotationsView({
   // Notification / Conversion toast state
   const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg, type = 'success') => {
-    setToastMessage({ msg, type });
-    setTimeout(() => setToastMessage(null), 4000);
+  const showToast = (msg, type = 'success', title = 'Quotation Notice') => {
+    setToastMessage({ message: msg, type, title });
+    addLiveNotification({
+      id: 'quote_notif_' + Date.now(),
+      title: title || 'Quotation Notice',
+      message: msg,
+      time: 'Just now',
+      type: type,
+      role: 'All',
+      targetTab: 'Quotations'
+    });
   };
 
   // Preset Selection in Quote Creation
   const [selectedPreset, setSelectedPreset] = useState('');
   const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
   const [presetSetCount, setPresetSetCount] = useState(1);
+  const [presetGroups, setPresetGroups] = useState({});
   const [selectedItemIndexes, setSelectedItemIndexes] = useState([]);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [quoteConfirmModal, setQuoteConfirmModal] = useState(null); // 'cancel' | 'draft' | 'create'
 
   useEffect(() => {
     const handlePresetUpdate = (e) => {
@@ -200,6 +214,44 @@ export default function CrmQuotationsView({
     window.addEventListener('vrm_presets_updated', handlePresetUpdate);
     return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
   }, []);
+
+  // Customer List from localStorage (aligned with BOM / CRM customers)
+  const [customerList, setCustomerList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_crm_customers') || localStorage.getItem('controlroom_customer_list');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      { code: 'Vikram Solar Pvt Ltd', companyName: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNumber: '33AABCU9603R1ZM', gstNo: '33AABCU9603R1ZM', contactPerson: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@vikramsolar.com', billingAddress: 'Plot 42, SIDCO Industrial Estate, Ambattur', city: 'Chennai', state: 'Tamil Nadu', pincode: '600058' },
+      { code: 'Tata Power Renewable', companyName: 'Tata Power Ltd', c2: 'Tata Power Ltd', gstNumber: '29AAACT2727Q1ZW', gstNo: '29AAACT2727Q1ZW', contactPerson: 'Anish Sharma', phone: '+91 98123 45678', email: 'anish.s@tatapower.com', billingAddress: '12 Electronic City Phase 1', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
+      { code: 'Apex Infra Systems', companyName: 'Apex Infra Ltd', c2: 'Apex Infra Ltd', gstNumber: '33AABCA1234F1Z5', gstNo: '33AABCA1234F1Z5', contactPerson: 'Priya Sundaram', phone: '+91 99400 11223', email: 'priya@apexinfra.com', billingAddress: '88 Mount Road, Guindy', city: 'Chennai', state: 'Tamil Nadu', pincode: '600032' }
+    ];
+  });
+
+  // Items List for Product Dropdown & Stock status (aligned with BOM catalog)
+  const [itemsList, setItemsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_items_list') || localStorage.getItem('controlroom_raw_materials_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      { code: 'MR-40-300', name: 'Mini Rail 40mm x 300mm', category: 'Aluminum Rail', uom: 'NOS', price: '250', rate: '250', stock: 120 },
+      { code: 'MR-40-200', name: 'Mini Rail 40mm x 200mm', category: 'Aluminum Rail', uom: 'NOS', price: '180', rate: '180', stock: 85 },
+      { code: 'MR-100', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', uom: 'NOS', price: '250', rate: '250', stock: 200 },
+      { code: 'MC-30', name: 'Mid Clamp 30mm', category: '6063T6 Clamp', uom: 'NOS', price: '45', rate: '45', stock: 500 },
+      { code: 'MC-35', name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', uom: 'NOS', price: '45', rate: '45', stock: 420 },
+      { code: 'EC-30', name: 'End Clamp 30 mm', category: '6063T6 Clamp', uom: 'NOS', price: '40', rate: '40', stock: 350 },
+      { code: 'EC-35', name: 'End Clamp 35 mm', category: '35mm End Fastener', uom: 'NOS', price: '40', rate: '40', stock: 310 },
+      { code: 'C-LIP-200', name: 'C-Lip Connector 200mm', category: 'Connector', uom: 'NOS', price: '110', rate: '110', stock: 150 },
+      { code: 'EPDM-50', name: 'EPDM Rubber Gasket (50m roll)', category: 'Rubber', uom: 'MTR', price: '320', rate: '320', stock: 45 }
+    ];
+  });
 
   // Resolve currently logged in account user's name dynamically (matching Header & auth state)
   const getActiveUserName = () => {
@@ -248,8 +300,10 @@ export default function CrmQuotationsView({
   const [quoteItems, setQuoteItems] = useState([]);
 
   // Transport & Logistics
-  const [transportMode, setTransportMode] = useState('');
+  const [transportMode, setTransportMode] = useState('Transport');
   const [transporterName, setTransporterName] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
+  const [transportScope, setTransportScope] = useState('VRM Structures');
 
   // Terms & Conditions Preset & Custom State (Matching PO format)
   const [selectedTermsPreset, setSelectedTermsPreset] = useState('');
@@ -376,30 +430,209 @@ export default function CrmQuotationsView({
     }
   };
 
-  // Financial calculations
+  // Financial calculations with multi-preset group and individual items support
   const calculateTotals = () => {
-    let sub = 0;
-    let gstSum = 0;
-    (quoteItems || []).forEach(item => {
+    // 1. Preset Groups Subtotal
+    let kitSubtotal = 0;
+    const groupIds = Object.keys(presetGroups || {});
+    groupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        kitSubtotal += (unitPrice * multiplier);
+      }
+    });
+
+    // 2. Individual items subtotal
+    const itemsSub = (quoteItems || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
-      const lineTaxable = q * r;
-      const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-      const lineGst = lineTaxable * (gstPct / 100);
-      sub += lineTaxable;
-      gstSum += lineGst;
+      return acc + (q * r);
+    }, 0);
+
+    const sub = itemsSub + kitSubtotal;
+
+    // 3. GST: Custom item GSTs + Preset kits GST (dynamically from preset's selected gstRate)
+    const itemsGst = (quoteItems || []).reduce((acc, item) => {
+      if (item.isPresetItem) return acc;
+      const q = parseFloat(item.qty) || 0;
+      const r = parseFloat(item.rate) || 0;
+      const rowTot = q * r;
+      const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+      return acc + (rowTot * (pct / 100));
+    }, 0);
+
+    let kitGst = 0;
+    groupIds.forEach(grpId => {
+      const grp = presetGroups[grpId];
+      let gRateStr = grp?.gstRate;
+      if (!gRateStr) {
+        const firstItem = (quoteItems || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
+        gRateStr = firstItem?.gstRate || '18%';
+      }
+      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+      if (grp) {
+        const unitPrice = parseFloat(grp.kitPrice) || 0;
+        const multiplier = parseInt(grp.setCount) || 1;
+        kitGst += (unitPrice * multiplier) * (gPct / 100);
+      }
     });
-    const grand = sub + gstSum;
+
+    const gst = itemsGst + kitGst;
+
+    const grand = sub + gst;
+    const cgst = gst / 2;
+    const sgst = gst / 2;
     return {
-      sub,
-      gst: gstSum,
-      cgst: gstSum / 2,
-      sgst: gstSum / 2,
-      grand
+      sub: isNaN(sub) ? 0 : sub,
+      kitSubtotal: isNaN(kitSubtotal) ? 0 : kitSubtotal,
+      gst: isNaN(gst) ? 0 : gst,
+      grand: isNaN(grand) ? 0 : grand,
+      cgst: isNaN(cgst) ? 0 : cgst,
+      sgst: isNaN(sgst) ? 0 : sgst
     };
   };
 
   const totals = calculateTotals();
+
+  // Helper handlers for Presets and Items
+  const handleAddMaterialRow = () => {
+    setQuoteItems(prev => [...(prev || []), { name: '', category: '', uom: 'NOS', qty: '1', rate: '', gstRate: '18%' }]);
+  };
+
+  const handleAddPresetToOrder = (presetId, targetPreset, setsCount) => {
+    if (!targetPreset || !targetPreset.items || targetPreset.items.length === 0) return;
+    const groupId = 'preset_grp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const multiplier = Math.max(1, parseInt(setsCount) || 1);
+
+    let defaultPrice = '';
+    if (targetPreset.price || targetPreset.rate) {
+      defaultPrice = String(targetPreset.price || targetPreset.rate);
+    } else {
+      const origSum = targetPreset.items.reduce((acc, it) => acc + (parseFloat(it.qty || 1) * parseFloat(it.rate || 0)), 0);
+      defaultPrice = origSum > 0 ? String(origSum) : '';
+    }
+
+    const presetName = targetPreset.label || presetId;
+    const initialGstRate = targetPreset.gstRate || targetPreset.gst || '18%';
+
+    setPresetGroups(prev => ({
+      ...prev,
+      [groupId]: {
+        groupId,
+        presetId,
+        presetName,
+        setCount: multiplier,
+        kitPrice: defaultPrice,
+        gstRate: initialGstRate
+      }
+    }));
+
+    const newItems = targetPreset.items.map(it => {
+      const baseQ = parseFloat(it.qty) || 1;
+      return {
+        ...it,
+        presetGroupId: groupId,
+        presetName,
+        baseQty: baseQ,
+        qty: String(Math.round(baseQ * multiplier)),
+        rate: '0',
+        gstRate: it.gstRate || initialGstRate,
+        isPresetItem: true
+      };
+    });
+
+    setQuoteItems(prev => [...(prev || []), ...newItems]);
+    setSelectedPreset('');
+    setPresetSetCount(1);
+  };
+
+  const handleRemovePresetGroup = (groupId) => {
+    setQuoteItems(prev => (prev || []).filter(item => (item.presetGroupId || 'legacy_default') !== groupId));
+    setPresetGroups(prev => {
+      const updated = { ...prev };
+      delete updated[groupId];
+      return updated;
+    });
+  };
+
+  const handleRemoveMaterialRow = (idx) => {
+    const itemToRemove = quoteItems[idx];
+    setQuoteItems(prev => {
+      const updated = (prev || []).filter((_, i) => i !== idx);
+      if (itemToRemove && itemToRemove.presetGroupId) {
+        const remainingInGroup = updated.filter(it => it.presetGroupId === itemToRemove.presetGroupId);
+        if (remainingInGroup.length === 0) {
+          setPresetGroups(pgPrev => {
+            const c = { ...pgPrev };
+            delete c[itemToRemove.presetGroupId];
+            return c;
+          });
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleSelectCustomer = (val) => {
+    setCustomerName(val);
+    const target = (val || '').toLowerCase().trim();
+    if (!target) return;
+    const chosen = customerList.find(c => {
+      const code = (c.code || '').toLowerCase().trim();
+      const c2 = (c.c2 || '').toLowerCase().trim();
+      const cName = (c.customerName || c.companyName || '').toLowerCase().trim();
+      return code === target || c2 === target || cName === target ||
+             (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
+             (cName && cName.startsWith(target)) || (cName && cName.includes(target));
+    });
+    if (chosen) {
+      const bObj = chosen.billingAddressObj || {};
+      const bAddr = bObj.address || chosen.billingAddress || chosen.c6 || chosen.address || '';
+      const bCity = bObj.city || chosen.city || '';
+      const bState = bObj.state || chosen.state || '';
+      const bPin = bObj.pincode || chosen.pincode || '';
+
+      const dObj = chosen.deliveryAddressObj || {};
+      const dAddr = dObj.address || chosen.deliveryAddress || chosen.dispatchAddress || chosen.c7 || '';
+      const dCity = dObj.city || chosen.dispatchCity || chosen.deliveryCity || '';
+      const dState = dObj.state || chosen.dispatchState || chosen.deliveryState || '';
+      const dPin = dObj.pincode || chosen.dispatchPincode || chosen.deliveryPincode || '';
+
+      setContactPerson(chosen.contactPerson || chosen.c3 || contactPerson);
+      setPhone(chosen.phone || chosen.c4 || phone);
+      setEmail(chosen.email || chosen.c5 || email);
+      setGstNumber(chosen.gstNumber || chosen.gstNo || gstNumber);
+
+      setBillingStreet(bAddr);
+      setBillingCity(bCity);
+      setBillingState(bState);
+      setBillingPincode(bPin);
+
+      const clean = (s) => String(s || '').trim().toLowerCase();
+      const isSame = !dAddr || (
+        clean(dAddr) === clean(bAddr) &&
+        clean(dCity) === clean(bCity) &&
+        clean(dState) === clean(bState) &&
+        clean(dPin) === clean(bPin)
+      );
+
+      setSameAsBilling(isSame);
+      if (dAddr && !isSame) {
+        setDeliveryStreet(dAddr);
+        setDeliveryCity(dCity);
+        setDeliveryState(dState);
+        setDeliveryPincode(dPin);
+      } else {
+        setDeliveryStreet(bAddr);
+        setDeliveryCity(bCity);
+        setDeliveryState(bState);
+        setDeliveryPincode(bPin);
+      }
+    }
+  };
 
   // Open Create BOM-style Quote
   const handleOpenCreateForm = () => {
@@ -426,13 +659,16 @@ export default function CrmQuotationsView({
     setDeliveryPincode('');
     setSelectedPreset('');
     setPresetSetCount(1);
+    setPresetGroups({});
     setSelectedItemIndexes([]);
     setQuoteItems([]);
-    setTransportMode('');
+    setTransportMode('Transport');
     setTransporterName('');
-    setPaymentTerms('');
-    setSelectedTermsPreset('');
-    setTerms('');
+    setVehicleNo('');
+    setTransportScope('VRM Structures');
+    setPaymentTerms('50% Advance + 50% Before Dispatch');
+    setSelectedTermsPreset(QUOTATION_TERMS_PRESETS[0].key);
+    setTerms(QUOTATION_TERMS_PRESETS[0].text);
     setSalesPerson(getActiveUserName());
     setEditingQuoteId(null);
     setRevisionCount(0);
@@ -463,11 +699,14 @@ export default function CrmQuotationsView({
     setDeliveryPincode(quote.deliveryPincode || '600001');
     setTransportMode(quote.transportMode || 'Transport');
     setTransporterName(quote.transporterName || 'VRL Logistics');
+    setVehicleNo(quote.vehicleNo || '');
+    setTransportScope(quote.transportScope || 'VRM Structures');
     setPaymentTerms(quote.paymentTerms || '50% Advance + 50% Before Dispatch');
     setTerms(quote.terms || quote.notes || QUOTATION_TERMS_PRESETS[0].text);
     setSelectedTermsPreset(quote.termsPresetKey || '');
     setSalesPerson(quote.salesPerson || quote.salesperson || quote.salesRep || getActiveUserName());
     setRevisionCount(Number(quote.revisionCount || quote.revCount || 0));
+    setPresetGroups(quote.presetGroups || {});
 
     if (Array.isArray(quote.items) && quote.items.length > 0) {
       setQuoteItems(quote.items.map(it => ({
@@ -475,8 +714,12 @@ export default function CrmQuotationsView({
         category: it.category || 'MMS Parts',
         uom: it.uom || it.unit || 'NOS',
         qty: String(it.qty || 1),
+        baseQty: it.baseQty || it.qty || 1,
         rate: String(it.rate || 0),
-        gstRate: it.gstRate || '18%'
+        gstRate: it.gstRate || '18%',
+        isPresetItem: Boolean(it.isPresetItem),
+        presetGroupId: it.presetGroupId || '',
+        presetName: it.presetName || ''
       })));
     } else {
       setQuoteItems([
@@ -532,13 +775,15 @@ export default function CrmQuotationsView({
       deliveryPincode: sameAsBilling ? billingPincode : deliveryPincode,
       items: quoteItems.map(it => ({
         ...it,
-        description: it.name,
+        description: it.category || it.name,
         amount: (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)
       })),
+      presetGroups,
       salesperson: salesPerson,
       salesPerson: salesPerson,
       subtotal: calculated.sub,
       taxableAmount: calculated.sub,
+      kitSubtotal: calculated.kitSubtotal,
       discountTotal: 0,
       gstTotal: calculated.gst,
       cgst: calculated.cgst,
@@ -549,6 +794,8 @@ export default function CrmQuotationsView({
       revisionCount: newRevCount,
       transportMode,
       transporterName,
+      vehicleNo,
+      transportScope,
       paymentTerms,
       terms,
       termsPresetKey: selectedTermsPreset,
@@ -773,12 +1020,14 @@ export default function CrmQuotationsView({
   // VIEW 1: FULL BOM-STYLE QUOTATION CREATION / EDITING FORM
   // =========================================================================
   if (showBOMQuoteForm) {
+    const hasAnyPreset = (quoteItems || []).some(it => it.isPresetItem);
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
         
         {/* Top Banner Matching BOM Page */}
         <div style={{
-          background: 'linear-gradient(135deg, #0E7490 0%, #155E75 100%)',
+          background: 'linear-gradient(135deg, #075985 0%, #0E7490 50%, #0891B2 100%)',
           borderRadius: '18px',
           padding: '24px 28px',
           color: '#FFFFFF',
@@ -803,29 +1052,33 @@ export default function CrmQuotationsView({
                 )}
               </div>
               <p style={{ fontSize: '13px', color: '#CFFAFE', margin: '4px 0 0 0' }}>
-                Configure client scope, select preset structure kits, edit line items freely without counting limits, and generate official proposal
+                Configure client scope, compile structure kit presets, customize line items freely, and generate official commercial proposal
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
             <button
-              onClick={() => setShowBOMQuoteForm(false)}
+              onClick={() => setQuoteConfirmModal('cancel')}
               style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}
             >
               Cancel
             </button>
             <button
-              onClick={() => handleSaveQuotationRecord('Draft')}
-              style={{ border: 'none', background: '#FFFFFF', color: '#0E7490', padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}
-            >
-              <FileText style={{ width: '15px', height: '15px' }} />
-              Save as Draft
-            </button>
-            <button
-              onClick={() => handleSaveQuotationRecord('Sent')}
+              onClick={() => {
+                if (!customerName || !customerName.trim()) {
+                  alert('⚠️ Please specify or select a Customer Name before proceeding.');
+                  return;
+                }
+                if (!quoteItems || quoteItems.length === 0) {
+                  alert('⚠️ Please add at least one Product / Item to the quotation materials list.');
+                  return;
+                }
+                setQuoteConfirmModal('create');
+              }}
               style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
             >
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
               <span>{editingQuoteId ? 'Save & Send Revision →' : 'Create Quotation →'}</span>
             </button>
           </div>
@@ -859,6 +1112,7 @@ export default function CrmQuotationsView({
               <input
                 type="date"
                 value={validUntilDate}
+                min={quoteDate}
                 onChange={(e) => setValidUntilDate(e.target.value)}
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
               />
@@ -880,7 +1134,8 @@ export default function CrmQuotationsView({
                 type="text"
                 readOnly
                 disabled
-                value={salesPerson}
+                value={salesPerson || getActiveUserName()}
+                title="Sales representative is tied to the logged-in account and cannot be modified"
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#475569', backgroundColor: '#F1F5F9', cursor: 'not-allowed', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
@@ -894,87 +1149,148 @@ export default function CrmQuotationsView({
               2
             </div>
             <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              CUSTOMER INFORMATION & SCOPE
+              CUSTOMER INFORMATION & SITE DESTINATION
             </h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-            <div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1 }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                Customer / Company Name <span style={{ color: '#EF4444' }}>*</span>
+                Customer Name <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g. Vikram Solar Ltd / Apex Infra"
+                list="quotation-customer-suggestions"
+                placeholder="Type or select customer from CRM directory..."
                 value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontWeight: '600' }}
+                onChange={(e) => handleSelectCustomer(e.target.value)}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', fontWeight: '600' }}
+              />
+              <datalist id="quotation-customer-suggestions">
+                {customerList.map((c, idx) => {
+                  const val = c.code || c.companyName || c.customerName;
+                  const label = c.c2 || c.companyName;
+                  return (
+                    <option key={idx} value={val}>
+                      {label && label !== val ? `${val} (${label})` : val}
+                    </option>
+                  );
+                })}
+              </datalist>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Contact Person</label>
+              <input
+                type="text"
+                placeholder="e.g. Rajesh Kumar"
+                value={contactPerson}
+                onChange={(e) => setContactPerson(e.target.value)}
+                style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
-
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                Phone / WhatsApp Number
-              </label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Phone / WhatsApp</label>
               <input
                 type="text"
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                Customer GST Number
-              </label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Customer GST Number</label>
               <input
                 type="text"
                 placeholder="33AAAAA0000A1Z5"
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', textTransform: 'uppercase', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', textTransform: 'uppercase', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
-
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                Plant Capacity (kW)
-              </label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Plant Capacity (kW)</label>
               <input
                 type="number"
+                placeholder="100"
                 value={capacityKw}
                 onChange={(e) => setCapacityKw(e.target.value)}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #CBD5E1', padding: '0 14px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
           </div>
 
-          {/* Billing & Delivery Address Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '4px' }}>
-            <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Dual Address Cards: Billing Address and Site Delivery Address */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '4px' }}>
+            {/* Card 1: Billing Address */}
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Building2 style={{ width: '16px', height: '16px', color: '#0E7490' }} />
                 <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>Billing Address</h4>
               </div>
-              <input
-                type="text"
-                placeholder="Street Address, Industrial Estate"
-                value={billingStreet}
-                onChange={(e) => setBillingStreet(e.target.value)}
-                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                <input type="text" placeholder="City" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
-                <input type="text" placeholder="State" value={billingState} onChange={(e) => setBillingState(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
-                <input type="text" placeholder="Pincode" value={billingPincode} onChange={(e) => setBillingPincode(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }} />
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Plot No 42, SIDCO Industrial Estate, Ambattur"
+                  value={billingStreet}
+                  onChange={(e) => {
+                    setBillingStreet(e.target.value);
+                    if (sameAsBilling) setDeliveryStreet(e.target.value);
+                  }}
+                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Chennai"
+                    value={billingCity}
+                    onChange={(e) => {
+                      setBillingCity(e.target.value);
+                      if (sameAsBilling) setDeliveryCity(e.target.value);
+                    }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tamil Nadu"
+                    value={billingState}
+                    onChange={(e) => {
+                      setBillingState(e.target.value);
+                      if (sameAsBilling) setDeliveryState(e.target.value);
+                    }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 600058"
+                    value={billingPincode}
+                    onChange={(e) => {
+                      setBillingPincode(e.target.value);
+                      if (sameAsBilling) setDeliveryPincode(e.target.value);
+                    }}
+                    style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: '#FFFFFF' }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Card 2: Site Delivery Address (with Same-as-Billing toggle) */}
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Truck style={{ width: '16px', height: '16px', color: '#0E7490' }} />
@@ -985,8 +1301,9 @@ export default function CrmQuotationsView({
                     type="checkbox"
                     checked={sameAsBilling}
                     onChange={(e) => {
-                      setSameAsBilling(e.target.checked);
-                      if (e.target.checked) {
+                      const checked = e.target.checked;
+                      setSameAsBilling(checked);
+                      if (checked) {
                         setDeliveryStreet(billingStreet);
                         setDeliveryCity(billingCity);
                         setDeliveryState(billingState);
@@ -998,352 +1315,645 @@ export default function CrmQuotationsView({
                   Same as Billing
                 </label>
               </div>
-              <input
-                type="text"
-                placeholder="Solar Site Location / Project Address"
-                value={sameAsBilling ? billingStreet : deliveryStreet}
-                disabled={sameAsBilling}
-                onChange={(e) => setDeliveryStreet(e.target.value)}
-                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF' }}
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                <input type="text" placeholder="City" value={sameAsBilling ? billingCity : deliveryCity} disabled={sameAsBilling} onChange={(e) => setDeliveryCity(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF' }} />
-                <input type="text" placeholder="State" value={sameAsBilling ? billingState : deliveryState} disabled={sameAsBilling} onChange={(e) => setDeliveryState(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF' }} />
-                <input type="text" placeholder="Pincode" value={sameAsBilling ? billingPincode : deliveryPincode} disabled={sameAsBilling} onChange={(e) => setDeliveryPincode(e.target.value)} style={{ height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', boxSizing: 'border-box', outline: 'none', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF' }} />
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* SECTION 3: ITEMS & PRESET COMPILER (EXACT BOM PAGE DESIGN) */}
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                3
-              </div>
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  QUOTATION SCOPE & LINE ITEMS
-                </h3>
-                <span style={{ fontSize: '11px', color: '#64748B' }}>
-                  Select an engineering kit preset or manually compile items. Revise as many times as the customer needs!
-                </span>
-              </div>
-            </div>
-
-            {/* Presets Kit Selector Matching BOM Page */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <SearchablePresetSelector
-                value={selectedPreset}
-                activePresetsMap={activePresetsMap}
-                accentColor="#0E7490"
-                width="340px"
-                placeholder="Type or pick Preset Kit..."
-                onChange={(val, targetPreset) => {
-                  setSelectedPreset(val);
-                  setSelectedItemIndexes([]);
-
-                  if (targetPreset && targetPreset.items) {
-                    const multiplier = parseInt(presetSetCount) || 1;
-                    setQuoteItems(targetPreset.items.map(it => {
-                      const baseQ = parseFloat(it.qty) || 1;
-                      return {
-                        name: it.name,
-                        category: it.category || 'MMS Scope',
-                        uom: it.uom || 'NOS',
-                        qty: String(Math.round(baseQ * multiplier)),
-                        rate: String(it.rate || 0),
-                        gstRate: it.gstRate || '18%'
-                      };
-                    }));
-                  }
-                }}
-              />
-
-              {/* Append Additional Preset Button */}
-              {selectedPreset && quoteItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const targetPreset = activePresetsMap && activePresetsMap[selectedPreset] ? activePresetsMap[selectedPreset] : (VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]);
-                    if (targetPreset && targetPreset.items) {
-                      const multiplier = parseInt(presetSetCount) || 1;
-                      const additional = targetPreset.items.map(it => {
-                        const baseQ = parseFloat(it.qty) || 1;
-                        return {
-                          name: it.name,
-                          category: it.category || 'MMS Scope',
-                          uom: it.uom || 'NOS',
-                          qty: String(Math.round(baseQ * multiplier)),
-                          rate: String(it.rate || 0),
-                          gstRate: it.gstRate || '18%'
-                        };
-                      });
-                      setQuoteItems(prev => [...prev, ...additional]);
-                    }
-                  }}
-                  title="Add another set of this preset kit without replacing existing items"
-                  style={{
-                    backgroundColor: '#F0FDFA',
-                    border: '1px solid #5EEAD4',
-                    color: '#0E7490',
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    height: '38px',
-                    padding: '0 10px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <Plus size={13} /> + Add Another Preset
-                </button>
-              )}
-
-              {/* Set Count Multiplier */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0 8px', borderRadius: '8px', height: '38px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>Sets:</span>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Address</label>
                 <input
-                  type="number"
-                  min="1"
-                  max="999"
-                  value={presetSetCount}
-                  onChange={(e) => {
-                    const rawVal = e.target.value;
-                    const newCount = rawVal === '' ? '' : Math.max(1, parseInt(rawVal) || 1);
-                    setPresetSetCount(newCount);
-                    const multiplier = parseInt(rawVal) || 1;
-                    if (selectedPreset && VRM_HDG_PRESETS && VRM_HDG_PRESETS[selectedPreset]) {
-                      const baseItems = VRM_HDG_PRESETS[selectedPreset].items;
-                      setQuoteItems(baseItems.map(it => {
-                        const baseQ = parseFloat(it.qty) || 1;
-                        return {
-                          name: it.name,
-                          category: it.category || 'MMS Scope',
-                          uom: it.uom || 'NOS',
-                          qty: String(Math.round(baseQ * multiplier)),
-                          rate: String(it.rate || 0),
-                          gstRate: it.gstRate || '18%'
-                        };
-                      }));
-                    }
-                  }}
-                  style={{ width: '50px', height: '28px', borderRadius: '6px', border: '1px solid #94A3B8', padding: '0 4px', fontSize: '13px', fontWeight: '800', color: '#0E7490', textAlign: 'center', outline: 'none', backgroundColor: 'white' }}
+                  type="text"
+                  placeholder="e.g. Solar Site Project Location, Plot 10"
+                  value={sameAsBilling ? billingStreet : deliveryStreet}
+                  disabled={sameAsBilling}
+                  onChange={(e) => setDeliveryStreet(e.target.value)}
+                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
                 />
               </div>
 
-              <button
-                onClick={() => {
-                  if (selectedItemIndexes.length > 0) {
-                    setQuoteItems(prev => prev.filter((_, idx) => !selectedItemIndexes.includes(idx)));
-                    setSelectedItemIndexes([]);
-                  } else {
-                    setQuoteItems([]);
-                    setSelectedPreset('');
-                  }
-                }}
-                title={selectedItemIndexes.length > 0 ? `Remove ${selectedItemIndexes.length} selected item(s)` : 'Clear all items'}
-                style={{
-                  border: selectedItemIndexes.length > 0 ? '1px solid #EF4444' : '1px solid #FCA5A5',
-                  backgroundColor: selectedItemIndexes.length > 0 ? '#EF4444' : '#FEF2F2',
-                  color: selectedItemIndexes.length > 0 ? 'white' : '#EF4444',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <X style={{ width: '18px', height: '18px' }} />
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
+                  <input type="text" placeholder="e.g. Chennai" value={sameAsBilling ? billingCity : deliveryCity} disabled={sameAsBilling} onChange={(e) => setDeliveryCity(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
+                  <input type="text" placeholder="e.g. Tamil Nadu" value={sameAsBilling ? billingState : deliveryState} disabled={sameAsBilling} onChange={(e) => setDeliveryState(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
+                  <input type="text" placeholder="e.g. 600058" value={sameAsBilling ? billingPincode : deliveryPincode} disabled={sameAsBilling} onChange={(e) => setDeliveryPincode(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Items Table Matching BOM Page */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ padding: '12px 10px', width: '30px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={quoteItems.length > 0 && selectedItemIndexes.length === quoteItems.length}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedItemIndexes(quoteItems.map((_, idx) => idx));
-                        else setSelectedItemIndexes([]);
-                      }}
-                      style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                    />
-                  </th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '38%' }}>Product / Item Description <span style={{ color: '#EF4444' }}>*</span></th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%' }}>Price (₹)</th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Taxable (₹)</th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'right' }}>Total (₹)</th>
-                  <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {quoteItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={{ padding: '32px 16px', textAlign: 'center', color: '#64748B', backgroundColor: '#FAFBFC' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                          <Boxes size={20} />
-                        </div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>No items in this quotation yet</div>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>Click "+ Add Product / Scope Item" below or select an engineering kit preset to add line items.</div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : quoteItems.map((item, i) => {
-                  const q = parseFloat(item.qty) || 0;
-                  const r = parseFloat(item.rate) || 0;
-                  const taxable = q * r;
-                  const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-                  const rowTot = taxable + (taxable * (gstPct / 100));
-                  const isChecked = selectedItemIndexes.includes(i);
-
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#ECFEFF' : 'transparent' }}>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedItemIndexes(prev => [...prev, i]);
-                            else setSelectedItemIndexes(prev => prev.filter(idx => idx !== i));
-                          }}
-                          style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        <input
-                          type="text"
-                          value={item.name}
-                          placeholder="e.g. Aluminium Mid Clamp 35mm"
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setQuoteItems(prev => prev.map((it, idx) => idx === i ? { ...it, name: val } : it));
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', fontWeight: '600', boxSizing: 'border-box', outline: 'none' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        <select
-                          value={item.uom || 'NOS'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setQuoteItems(prev => prev.map((it, idx) => idx === i ? { ...it, uom: val } : it));
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', outline: 'none', backgroundColor: '#FFFFFF', fontWeight: '600' }}
-                        >
-                          <option value="NOS">NOS</option>
-                          <option value="SET">SET</option>
-                          <option value="MTR">MTR</option>
-                          <option value="KG">KG</option>
-                          <option value="PCS">PCS</option>
-                          <option value="PKT">PKT</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        <input
-                          type="number"
-                          value={item.qty}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setQuoteItems(prev => prev.map((it, idx) => idx === i ? { ...it, qty: val } : it));
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', boxSizing: 'border-box', outline: 'none' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        <input
-                          type="number"
-                          value={item.rate}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setQuoteItems(prev => prev.map((it, idx) => idx === i ? { ...it, rate: val } : it));
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', boxSizing: 'border-box', outline: 'none' }}
-                        />
-                      </td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <select
-                          value={item.gstRate || '18%'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setQuoteItems(prev => prev.map((it, idx) => idx === i ? { ...it, gstRate: val } : it));
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CCFBF1', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#0E7490', backgroundColor: '#F0FDFA', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
-                        >
-                          <option value="18%">18% GST</option>
-                          <option value="12%">12% GST</option>
-                          <option value="5%">5% GST</option>
-                          <option value="0%">0% Exempt</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>₹{taxable.toFixed(2)}</td>
-                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>₹{rowTot.toFixed(2)}</td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleRemoveItemRow(i)}
-                          style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <Trash2 style={{ width: '14px', height: '14px' }} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div>
-            <button
-              onClick={handleAddItemRow}
-              style={{ border: '1px solid #CCFBF1', background: '#F0FDFA', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Plus style={{ width: '15px', height: '15px' }} />
-              Add Product / Scope Item
-            </button>
           </div>
         </div>
 
-        {/* ROW WITH SECTION 4 & SECTION 5 IN SEPARATE SIDE-BY-SIDE CONTAINERS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(360px, 1fr)', gap: '20px', alignItems: 'stretch' }}>
-          {/* SECTION 4: TERMS & CONDITIONS (PO-STYLE PRESET SELECTOR & EDITABLE TEXTAREA) */}
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                  4
+        {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS (BOM PRESET COMPILER) */}
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+          {/* Section 3 Header — Clean Single Row */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
+            {/* Left: Badge + Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: 'auto' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>3</div>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>QUOTATION SCOPE & LINE ITEMS</span>
+            </div>
+
+            {/* Preset Pill */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+              <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+            </div>
+
+            {/* Searchable Preset Selector */}
+            <SearchablePresetSelector
+              value={selectedPreset}
+              activePresetsMap={activePresetsMap}
+              accentColor="#0E7490"
+              width="380px"
+              placeholder="Pick a Preset to add..."
+              style={{ height: '40px' }}
+              onChange={(val, targetPreset) => {
+                if (val && targetPreset && targetPreset.items) {
+                  handleAddPresetToOrder(val, targetPreset, 1);
+                } else if (!val) {
+                  setSelectedPreset('');
+                }
+              }}
+            />
+
+            {/* Clear Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedItemIndexes.length > 0) {
+                  setQuoteItems(prev => prev.filter((_, idx) => !selectedItemIndexes.includes(idx)));
+                  setSelectedItemIndexes([]);
+                } else {
+                  if (quoteItems.length > 0) setShowClearConfirmModal(true);
+                }
+              }}
+              title={selectedItemIndexes.length > 0 ? `Remove ${selectedItemIndexes.length} selected item(s)` : 'Clear all quotation items'}
+              style={{ border: 'none', backgroundColor: selectedItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+            >
+              <X style={{ width: '18px', height: '18px' }} />
+            </button>
+          </div>
+
+          {/* Active Preset Badges / Pills */}
+          {Object.values(presetGroups).length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '12px 24px 0 24px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B' }}>Active Presets in Quotation:</span>
+              {Object.values(presetGroups).map(grp => (
+                <span
+                  key={grp.groupId}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    border: '1px solid #A5F3FC',
+                    borderRadius: '16px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}
+                >
+                  <Layers size={13} style={{ color: '#0E7490' }} />
+                  {grp.presetName} ({grp.setCount} Set{grp.setCount > 1 ? 's' : ''})
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePresetGroup(grp.groupId)}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 0 2px', display: 'flex', alignItems: 'center', color: '#0891B2' }}
+                    title={`Remove ${grp.presetName}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Clear confirm modal */}
+          {showClearConfirmModal && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle style={{ width: '20px', height: '20px' }} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Clear All Quotation Items?</h3>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>Are you sure you want to delete all items from this quotation scope?</span>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    TERMS AND CONDITIONS
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Select preset or type custom clauses
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                  <button onClick={() => setShowClearConfirmModal(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={() => { setQuoteItems([]); setSelectedPreset(''); setPresetGroups({}); setSelectedItemIndexes([]); setShowClearConfirmModal(false); }} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Clear All Items</button>
                 </div>
               </div>
+            </div>
+          )}
 
+          {/* Clean Modern Items Table */}
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                    <th style={{ padding: '12px 14px', width: '30px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={quoteItems.length > 0 && selectedItemIndexes.length === quoteItems.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedItemIndexes(quoteItems.map((_, idx) => idx));
+                          } else {
+                            setSelectedItemIndexes([]);
+                          }
+                        }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                      />
+                    </th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '30%' }}>Product / Item <span style={{ color: '#EF4444' }}>*</span></th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
+                    {hasAnyPreset && <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', color: '#0E7490', backgroundColor: '#ECFEFF' }}>Preset Amt (₹)</th>}
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Taxable (₹)</th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Total (₹)</th>
+                    <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quoteItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={hasAnyPreset ? 10 : 9} style={{ padding: '48px 16px', textAlign: 'center', color: '#94A3B8' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                          <Boxes size={28} style={{ color: '#CBD5E1' }} />
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B' }}>No products or materials in quotation</span>
+                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>Select an engineering Preset above or click "+ Add Product / Item" to author quotation lines</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    quoteItems.map((item, i) => {
+                      const isChecked = selectedItemIndexes.includes(i);
+                      const isPresetItem = Boolean(item.isPresetItem);
+                      const groupId = item.presetGroupId;
+                      const currentGroup = groupId ? (presetGroups[groupId] || { kitPrice: '', setCount: 1, presetName: item.presetName }) : null;
+
+                      let isFirstInGroup = false;
+                      let groupCount = 0;
+                      if (isPresetItem && groupId) {
+                        const itemsInGroup = quoteItems.filter(it => it.presetGroupId === groupId);
+                        groupCount = itemsInGroup.length;
+                        isFirstInGroup = quoteItems.findIndex(it => it.presetGroupId === groupId) === i;
+                      }
+
+                      const q = parseFloat(item.qty) || 0;
+                      const r = parseFloat(item.rate) || 0;
+                      const taxable = isPresetItem ? 0 : q * r;
+                      const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+                      const itemTotal = taxable + (taxable * (gstPct / 100));
+
+                      return (
+                        <tr
+                          key={i}
+                          style={{
+                            borderBottom: '1px solid #F1F5F9',
+                            backgroundColor: isChecked ? '#ECFEFF' : (isPresetItem ? '#F8FAFC' : 'transparent'),
+                            transition: 'background-color 0.15s ease'
+                          }}
+                        >
+                          <td style={{
+                            padding: '12px 14px',
+                            textAlign: 'center',
+                            borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedItemIndexes(prev => [...prev, i]);
+                                else setSelectedItemIndexes(prev => prev.filter(idx => idx !== i));
+                              }}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ position: 'relative' }}>
+                                <input
+                                  type="text"
+                                  list={`quote-product-list-${i}`}
+                                  placeholder="Type or select product / item..."
+                                  value={item.name || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
+                                    setQuoteItems(prev => prev.map((mat, idx) => idx === i ? {
+                                      ...mat,
+                                      name: matched ? matched.name : val,
+                                      rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                      uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                      category: matched ? (matched.category || matched.description || mat.category) : mat.category
+                                    } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                                />
+                                <datalist id={`quote-product-list-${i}`}>
+                                  {(itemsList || []).map((prod, pidx) => {
+                                    const st = Number(prod.stock !== undefined ? prod.stock : 100);
+                                    const isOutOfStock = st <= 0;
+                                    const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
+                                    return (
+                                      <option key={pidx} value={prod.name}>
+                                        {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                      </option>
+                                    );
+                                  })}
+                                </datalist>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Description..."
+                                value={item.category || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                }}
+                                style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                              />
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <input
+                              type="text"
+                              list={`quote-uom-list-${i}`}
+                              placeholder="UOM"
+                              value={item.uom || 'NOS'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
+                            />
+                            <datalist id={`quote-uom-list-${i}`}>
+                              <option value="NOS" />
+                              <option value="SET" />
+                              <option value="KG" />
+                              <option value="MTR" />
+                              <option value="PCS" />
+                              <option value="BOX" />
+                              <option value="PKT" />
+                              <option value="PAIR" />
+                            </datalist>
+                          </td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <input
+                              type="number"
+                              value={item.qty}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                          </td>
+                          <td style={{ padding: '12px 10px' }}>
+                            {isPresetItem ? (
+                              <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                            ) : (
+                              <input
+                                type="number"
+                                value={item.rate}
+                                placeholder="0.00"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
+                                }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                              />
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          <select
+                            value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (isPresetItem && groupId) {
+                                setQuoteItems(prev => prev.map((mat, idx) =>
+                                  ((mat.presetGroupId || 'legacy_default') === groupId)
+                                    ? { ...mat, gstRate: val }
+                                    : mat
+                                ));
+                                setPresetGroups(prev => ({
+                                  ...prev,
+                                  [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                }));
+                              } else {
+                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                              }
+                            }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                          >
+                            <option value="18%">18% GST</option>
+                            <option value="12%">12% GST</option>
+                            <option value="5%">5% GST</option>
+                            <option value="0%">0% Exempt</option>
+                          </select>
+                        </td>
+                          {hasAnyPreset && (() => {
+                            if (isPresetItem) {
+                              if (isFirstInGroup) {
+                                return (
+                                  <td
+                                    rowSpan={groupCount}
+                                    style={{
+                                      padding: '12px 10px',
+                                      verticalAlign: 'middle',
+                                      backgroundColor: '#EEF2FF',
+                                      borderLeft: '2px solid #C7D2FE',
+                                      borderRight: '2px solid #C7D2FE'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '11px',
+                                          fontWeight: '800',
+                                          color: '#4338CA',
+                                          textAlign: 'center',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          maxWidth: '120px',
+                                          display: 'block'
+                                        }}
+                                        title={currentGroup?.presetName}
+                                      >
+                                        {currentGroup?.presetName}
+                                      </span>
+
+                                      <div style={{ position: 'relative', width: '100%' }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
+                                        <input
+                                          type="number"
+                                          value={currentGroup?.kitPrice || ''}
+                                          placeholder="0.00"
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (groupId) {
+                                              setPresetGroups(prev => ({
+                                                ...prev,
+                                                [groupId]: { ...(prev[groupId] || currentGroup), kitPrice: val }
+                                              }));
+                                            }
+                                          }}
+                                          style={{
+                                            width: '100%', height: '42px', borderRadius: '8px',
+                                            border: '2px solid #818CF8', padding: '0 10px 0 26px',
+                                            fontSize: '15px', fontWeight: '800', color: '#312E81',
+                                            textAlign: 'right', outline: 'none', boxSizing: 'border-box',
+                                            backgroundColor: 'white'
+                                          }}
+                                        />
+                                      </div>
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                          {groupCount} items ×
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="999"
+                                          value={currentGroup?.setCount !== undefined && currentGroup?.setCount !== null ? currentGroup.setCount : ''}
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const rawVal = e.target.value;
+                                            if (rawVal === '') {
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), setCount: '' }
+                                                }));
+                                              }
+                                              return;
+                                            }
+                                            const parsed = parseInt(rawVal);
+                                            const valToSave = isNaN(parsed) ? '' : Math.max(0, parsed);
+                                            if (groupId) {
+                                              setPresetGroups(prev => ({
+                                                ...prev,
+                                                [groupId]: { ...(prev[groupId] || currentGroup), setCount: valToSave }
+                                              }));
+                                            }
+                                            const multiplier = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                                            setQuoteItems(prev => prev.map(mat => {
+                                              if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                                return { ...mat, qty: String(Math.round(mat.baseQty * multiplier)) };
+                                              }
+                                              return mat;
+                                            }));
+                                          }}
+                                          style={{
+                                            width: '42px', height: '26px', borderRadius: '6px',
+                                            border: '1.5px solid #818CF8', fontSize: '13px',
+                                            fontWeight: '800', color: '#312E81', textAlign: 'center',
+                                            padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box'
+                                          }}
+                                          title="Sets multiplier for this preset"
+                                        />
+                                        <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                          set{(parseInt(currentGroup?.setCount) || 1) !== 1 ? 's' : ''}
+                                        </span>
+                                      </div>
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                         <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
+                                         <select
+                                           value={currentGroup?.gstRate || item.gstRate || '18%'}
+                                           onChange={(e) => {
+                                             const val = e.target.value;
+                                             if (groupId) {
+                                               setPresetGroups(prev => ({
+                                                 ...prev,
+                                                 [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                               }));
+                                             }
+                                             setQuoteItems(prev => prev.map((mat, idx) =>
+                                               ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                                 ? { ...mat, gstRate: val }
+                                                 : mat
+                                             ));
+                                           }}
+                                           style={{
+                                             height: '24px', borderRadius: '6px',
+                                             border: '1.5px solid #818CF8', padding: '0 4px',
+                                             fontSize: '11px', fontWeight: '800',
+                                             color: '#312E81', backgroundColor: '#FFFFFF',
+                                             outline: 'none', cursor: 'pointer'
+                                           }}
+                                           title="Change GST Rate for this preset"
+                                         >
+                                           <option value="18%">18%</option>
+                                           <option value="12%">12%</option>
+                                           <option value="5%">5%</option>
+                                           <option value="0%">0%</option>
+                                         </select>
+                                       </div>
+
+                                      {groupId && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemovePresetGroup(groupId)}
+                                          style={{
+                                            border: 'none',
+                                            backgroundColor: 'transparent',
+                                            color: '#EF4444',
+                                            fontSize: '10px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            marginTop: '2px'
+                                          }}
+                                          title={`Remove entire ${currentGroup?.presetName} preset`}
+                                        >
+                                          ✕ Remove Preset
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              }
+                              return null;
+                            }
+                            return (
+                              <td style={{ padding: '12px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '11px' }}>
+                                —
+                              </td>
+                            );
+                          })()}
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: isPresetItem ? '#94A3B8' : '#334155' }}>
+                            {isPresetItem ? <span style={{ fontSize: '11px', fontStyle: 'italic' }}>Kit Inc.</span> : `₹${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: isPresetItem ? '#94A3B8' : '#0F172A' }}>
+                            {isPresetItem ? <span style={{ fontSize: '11px', fontStyle: 'italic' }}>Kit Inc.</span> : `₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMaterialRow(i)}
+                              style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="Delete Item"
+                            >
+                              <Trash2 style={{ width: '13px', height: '13px' }} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={handleAddMaterialRow}
+                style={{
+                  border: '1px solid #A5F3FC',
+                  background: '#ECFEFF',
+                  color: '#0E7490',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Plus style={{ width: '15px', height: '15px' }} />
+                Add Product / Item
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4: TRANSPORT & LOGISTICS DETAILS + TERMS & CONDITIONS */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              4
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              TRANSPORT, LOGISTICS & TERMS AND CONDITIONS
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Mode of Transport</label>
+              <select
+                value={transportMode}
+                onChange={(e) => setTransportMode(e.target.value)}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="Transport">Transport (Road Freight)</option>
+                <option value="Own Vehicle">Own Vehicle</option>
+                <option value="Porter / Local">Porter / Local Delivery</option>
+                <option value="Courier">Courier / Express</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Transporter Name</label>
+              <input
+                type="text"
+                value={transporterName}
+                onChange={(e) => setTransporterName(e.target.value)}
+                placeholder="e.g. VRL Logistics / TCI Freight"
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Vehicle Number</label>
+              <input
+                type="text"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value)}
+                placeholder="e.g. TN 01 AB 1234"
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Logistics Scope</label>
+              <select
+                value={transportScope}
+                onChange={(e) => setTransportScope(e.target.value)}
+                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="VRM Structures">VRM Structures Scope</option>
+                <option value="Customer Scope">Customer Scope (To-Pay)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Terms & Conditions Presets */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155' }}>Quotation Terms & Conditions Clauses</label>
               <span style={{ fontSize: '11px', color: '#0E7490', fontWeight: '700', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '4px 10px', borderRadius: '8px' }}>
                 Preset: {QUOTATION_TERMS_PRESETS.find(p => p.key === selectedTermsPreset)?.label || 'Custom / Typed'}
               </span>
             </div>
 
-            {/* Clean Preset Pill Buttons (Exact PO Style) */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               <button
                 type="button"
@@ -1359,8 +1969,7 @@ export default function CrmQuotationsView({
                   color: selectedTermsPreset === '' ? '#0E7490' : '#475569',
                   fontSize: '11px',
                   fontWeight: selectedTermsPreset === '' ? '700' : '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
+                  cursor: 'pointer'
                 }}
               >
                 Clear / Custom
@@ -1384,9 +1993,7 @@ export default function CrmQuotationsView({
                       color: isSelected ? '#FFFFFF' : '#475569',
                       fontSize: '11px',
                       fontWeight: isSelected ? '700' : '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 2px 4px rgba(14, 116, 144, 0.2)' : 'none'
+                      cursor: 'pointer'
                     }}
                   >
                     {p.label}
@@ -1395,56 +2002,37 @@ export default function CrmQuotationsView({
               })}
             </div>
 
-            {/* Large editable textarea where user can customize or write custom terms */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <textarea
-                value={terms}
-                onChange={(e) => {
-                  setTerms(e.target.value);
-                  if (selectedTermsPreset !== '') {
-                    setSelectedTermsPreset(''); // switch to custom when user edits
-                  }
-                }}
-                rows={9}
-                placeholder="Select a preset above or freely type your custom quotation Terms & Conditions..."
-                style={{
-                  width: '100%',
-                  flex: 1,
-                  borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  padding: '12px 14px',
-                  fontSize: '12px',
-                  fontFamily: 'inherit',
-                  lineHeight: '1.6',
-                  color: '#1E293B',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                  resize: 'vertical',
-                  minHeight: '200px',
-                  backgroundColor: '#FAFBFC'
-                }}
-              />
-              <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '6px' }}>
-                Note: Preset clauses can be edited or typed custom directly in the box.
-              </span>
-            </div>
+            <textarea
+              value={terms}
+              onChange={(e) => {
+                setTerms(e.target.value);
+                if (selectedTermsPreset !== '') setSelectedTermsPreset('');
+              }}
+              rows={6}
+              placeholder="Select a preset above or freely type custom quotation Terms & Conditions..."
+              style={{
+                width: '100%',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                padding: '12px 14px',
+                fontSize: '12px',
+                lineHeight: '1.6',
+                color: '#1E293B',
+                boxSizing: 'border-box',
+                outline: 'none',
+                resize: 'vertical',
+                backgroundColor: '#FAFBFC'
+              }}
+            />
 
-            {/* Company Bank Account Details Card */}
-            <div style={{
-              backgroundColor: '#F0F9FF',
-              border: '1px solid #BAE6FD',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
+            {/* Bank Details Card */}
+            <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Landmark size={14} style={{ color: '#0284C7' }} /> Our Company Bank Account Details
                 </span>
                 <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#E0F2FE', color: '#0284C7', padding: '2px 8px', borderRadius: '6px' }}>
-                  Official B2B Settlement Account
+                  Official Settlement Account
                 </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '11px', color: '#0F172A', marginTop: '4px' }}>
@@ -1457,82 +2045,145 @@ export default function CrmQuotationsView({
               </div>
             </div>
           </div>
+        </div>
 
-          {/* SECTION 5: FINANCIAL SUMMARY CARD (IN SEPARATE CONTAINER IN SAME ROW) */}
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-                  5
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    QUOTATION TOTAL & TAX BREAKDOWN
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Real-time GST and commercial calculations
-                  </span>
-                </div>
-              </div>
+        {/* SECTION 5: FINANCIAL SUMMARY & COMMERCIAL TOTALS */}
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+              5
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              FINANCIAL SUMMARY & COMMERCIAL TOTALS
+            </h3>
+          </div>
 
-              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748B' }}>
-                  <span>Taxable Subtotal:</span>
-                  <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748B' }}>
-                  <span>CGST (9%):</span>
-                  <strong style={{ color: '#0F172A' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748B' }}>
-                  <span>SGST (9%):</span>
-                  <strong style={{ color: '#0F172A' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748B', borderTop: '1px dashed #CBD5E1', paddingTop: '10px' }}>
-                  <span>Total GST (18%):</span>
-                  <strong style={{ color: '#0F172A' }}>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '900', color: '#0E7490', borderTop: '2px solid #0E7490', paddingTop: '12px', marginTop: '4px' }}>
-                  <span>Grand Proposal Total:</span>
-                  <span>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '16px 18px', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <CheckCircle size={20} style={{ color: '#0E7490', flexShrink: 0, marginTop: '2px' }} />
+                <span style={{ fontSize: '12px', color: '#0F766E', lineHeight: '1.6' }}>
+                  All material line items, quantities, and GST tax calculations conform with standard commercial quotation rules. This approved proposal can be converted directly into a Proforma Invoice (PI) or Production Sales BOM with a single click.
+                </span>
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', padding: '12px 16px', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CheckCircle size={18} style={{ color: '#0E7490', flexShrink: 0 }} />
-              <span style={{ fontSize: '11px', color: '#0F766E', lineHeight: '1.4' }}>
-                All line items and GST calculations conform with standard B2B invoicing rules and will transfer automatically when converted to Proforma Invoice (PI).
-              </span>
+            {/* Subtotals & GST Tax Calculation Breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
+              {totals.kitSubtotal > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
+                  <span style={{ fontWeight: '700' }}>Preset Kits Subtotal</span>
+                  <strong style={{ color: '#0E7490' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B' }}>
+                <span>Taxable Subtotal (Before GST)</span>
+                <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
+                <span>CGST (9%)</span>
+                <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
+                <span>SGST (9%)</span>
+                <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
+                <span>Total Applicable GST (18%)</span>
+                <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0F172A', fontSize: '17px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '4px' }}>
+                <span>Grand Total (Incl. GST)</span>
+                <span style={{ color: '#0E7490' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setQuoteConfirmModal('cancel')}
+              style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!customerName || !customerName.trim()) {
+                  alert('⚠️ Please specify or select a Customer Name before proceeding.');
+                  return;
+                }
+                if (!quoteItems || quoteItems.length === 0) {
+                  alert('⚠️ Please add at least one Product / Item to the quotation materials list.');
+                  return;
+                }
+                setQuoteConfirmModal('create');
+              }}
+              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
+              <span>{editingQuoteId ? 'Save & Send Revision →' : 'Create Quotation →'}</span>
+            </button>
           </div>
         </div>
 
-        {/* BOTTOM FORM ACTION BUTTONS */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '20px 24px', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-          <button
-            type="button"
-            onClick={() => setShowBOMQuoteForm(false)}
-            style={{ border: '1px solid #CBD5E1', background: '#FFFFFF', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSaveQuotationRecord('Draft')}
-            style={{ border: '1px solid #0E7490', background: '#F0FDFA', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FileText style={{ width: '15px', height: '15px' }} />
-            Save as Draft
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSaveQuotationRecord('Sent')}
-            style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 26px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.35)', display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <span>{editingQuoteId ? 'Save & Send Revision →' : 'Create Quotation →'}</span>
-          </button>
-        </div>
+        {/* CONFIRMATION / SUBMISSION MODAL */}
+        {quoteConfirmModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: quoteConfirmModal === 'cancel' ? '#FEE2E2' : '#ECFEFF', color: quoteConfirmModal === 'cancel' ? '#DC2626' : '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {quoteConfirmModal === 'cancel' ? <AlertTriangle style={{ width: '20px', height: '20px' }} /> : <Layers style={{ width: '20px', height: '20px' }} />}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                    {quoteConfirmModal === 'cancel' ? 'Discard Quotation?' : (editingQuoteId ? 'Confirm & Send Revision?' : 'Confirm & Create Quotation?')}
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
+                    {quoteConfirmModal === 'cancel'
+                      ? 'Are you sure you want to cancel? Any unsaved changes in this proposal form will be lost.'
+                      : `Are you sure you want to finalize and save Commercial Quotation (${quoteCode})?`}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setQuoteConfirmModal(null)}
+                  style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mode = quoteConfirmModal;
+                    setQuoteConfirmModal(null);
+                    if (mode === 'cancel') {
+                      setShowBOMQuoteForm(false);
+                    } else if (mode === 'create') {
+                      handleSaveQuotationRecord('Sent');
+                    }
+                  }}
+                  style={{
+                    border: 'none',
+                    backgroundColor: quoteConfirmModal === 'cancel' ? '#DC2626' : '#0E7490',
+                    color: 'white',
+                    padding: '9px 20px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {quoteConfirmModal === 'cancel' ? 'Yes, Discard' : 'Confirm & Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     );
@@ -1544,27 +2195,12 @@ export default function CrmQuotationsView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* Toast Alert */}
+      {/* ─── CUSTOM TOAST NOTIFICATION (MATCHING SYSTEM-WIDE NOTIFICATIONS) ─── */}
       {toastMessage && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          backgroundColor: toastMessage.type === 'success' ? '#065F46' : '#991B1B',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: '10px',
-          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
-          fontSize: '13px',
-          fontWeight: '700',
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <CheckCircle size={16} />
-          <span>{toastMessage.msg}</span>
-        </div>
+        <NotificationToast
+          alert={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
       )}
 
       {/* 1. TOP HEADER WITH CREATE BUTTON MATCHING BOM PAGE */}

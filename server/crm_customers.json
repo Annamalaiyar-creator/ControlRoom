@@ -1,5 +1,32 @@
 [
   {
+    "id": "4080449000000370002",
+    "customerCode": "CUST-0002",
+    "companyName": "Test Node Company 99",
+    "customerType": "EPC Contractor",
+    "industry": "Solar Energy / Utility Scale",
+    "gstNumber": "",
+    "panNumber": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "pincode": "",
+    "creditLimit": 2500000,
+    "creditDays": 30,
+    "paymentTerms": "Due on Receipt",
+    "assignedSalesperson": "Mohith JV",
+    "source": "Zoho Books",
+    "zohoContactId": "4080449000000370002",
+    "primaryContact": {
+      "name": "Test Node Cust 99",
+      "designation": "Procurement Head",
+      "phone": "9988776655",
+      "whatsapp": "9988776655",
+      "email": "test99@example.com"
+    },
+    "createdAt": "2026-09-09T15:06:39+0530"
+  },
+  {
     "id": "4080449000000357001",
     "customerCode": "CUST-7001",
     "companyName": "Test Creation Company",
@@ -14,7 +41,7 @@
     "creditLimit": 2500000,
     "creditDays": 30,
     "paymentTerms": "Due on Receipt",
-    "assignedSalesperson": "Mohith JV",
+    "assignedSalesperson": "Saravanan",
     "source": "Zoho Books",
     "zohoContactId": "4080449000000357001",
     "primaryContact": {
@@ -67,7 +94,7 @@
     "creditLimit": 5000000,
     "creditDays": 30,
     "paymentTerms": "Net 30 Days",
-    "assignedSalesperson": "Mohith JV",
+    "assignedSalesperson": "Saravanan",
     "source": "Website",
     "primaryContact": {
       "name": "Rajesh Kannan",
@@ -119,7 +146,7 @@
     "creditLimit": 3000000,
     "creditDays": 15,
     "paymentTerms": "100% Advance",
-    "assignedSalesperson": "Mohith JV",
+    "assignedSalesperson": "Saravanan",
     "source": "WhatsApp",
     "primaryContact": {
       "name": "Dharmesh Patel",

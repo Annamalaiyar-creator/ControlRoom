@@ -22,6 +22,12 @@ import * as XLSX from 'xlsx';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
 import StatusBadge from '../StatusBadge';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import {
+  notifyBomSentToDispatch,
+  notifyBomPackedAndSentToAccounts,
+  notifyAccountsVerificationCompleted,
+  notifyInvoiceCompletedReadyForDispatch
+} from '../../services/notificationService';
 
 
 export default function ProductionViewsEngine(props) {
@@ -343,6 +349,160 @@ export default function ProductionViewsEngine(props) {
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [presetKitPrice, setPresetKitPrice] = useState('');
   const [previewDocModal, setPreviewDocModal] = useState(null); // { title, doc }
+
+  // Helper to render Document Preview Modal consistently
+  const renderDocPreviewModal = () => {
+    if (!previewDocModal) return null;
+    const rawDoc = previewDocModal.doc;
+    const docTitle = previewDocModal.title || 'Document Preview';
+    const docName = typeof rawDoc === 'string' ? rawDoc : (rawDoc?.name || 'Uploaded File');
+
+    let resolvedData = null;
+    if (typeof rawDoc === 'string') {
+      if (rawDoc.startsWith('data:') || rawDoc.startsWith('http://') || rawDoc.startsWith('https://') || rawDoc.startsWith('blob:')) {
+        resolvedData = rawDoc;
+      } else {
+        resolvedData = getMediaFromCache(rawDoc);
+      }
+    } else if (rawDoc && typeof rawDoc === 'object') {
+      resolvedData = rawDoc.dataUrl || rawDoc.url || rawDoc.fileData || rawDoc.proofDocData || (rawDoc.name ? getMediaFromCache(rawDoc.name) : null);
+      if (!resolvedData && rawDoc instanceof Blob) {
+        try {
+          resolvedData = URL.createObjectURL(rawDoc);
+        } catch (e) { }
+      }
+    }
+
+    const isImg = Boolean(
+      resolvedData && (
+        resolvedData.startsWith('data:image/') ||
+        rawDoc?.type?.startsWith('image/') ||
+        /\.(jpg|jpeg|png|webp|gif|bmp|svg)($|\?)/i.test(docName) ||
+        /\.(jpg|jpeg|png|webp|gif|bmp|svg)($|\?)/i.test(resolvedData)
+      )
+    );
+
+    const isVid = Boolean(
+      resolvedData && (
+        resolvedData.startsWith('data:video/') ||
+        rawDoc?.type?.startsWith('video/') ||
+        /\.(mp4|webm|mov|mkv|avi)($|\?)/i.test(docName) ||
+        /\.(mp4|webm|mov|mkv|avi)($|\?)/i.test(resolvedData)
+      )
+    );
+
+    return (
+      <div
+        onClick={() => setPreviewDocModal(null)}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15,23,42,0.75)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '850px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: '1px solid #E2E8F0'
+          }}
+        >
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{docTitle}</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B', wordBreak: 'break-all' }}>{docName}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {resolvedData && (
+                <a
+                  href={resolvedData}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={docName || 'document'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#0E7490',
+                    backgroundColor: '#ECFEFF',
+                    border: '1px solid #A5F3FC',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={13} /> Open / Download
+                </a>
+              )}
+              <button
+                onClick={() => setPreviewDocModal(null)}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '8px' }}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '340px', backgroundColor: '#0F172A' }}>
+            {!resolvedData ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
+                <FileText size={48} style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+                <p style={{ fontSize: '14px', fontWeight: '700', margin: 0, color: '#F1F5F9' }}>No visual preview available</p>
+                <p style={{ fontSize: '12px', marginTop: '6px' }}>Attached file: {docName}</p>
+              </div>
+            ) : isImg ? (
+              <img
+                src={resolvedData}
+                alt={docName}
+                style={{ maxWidth: '100%', maxHeight: '68vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)' }}
+              />
+            ) : isVid ? (
+              <video
+                controls
+                autoPlay
+                src={resolvedData}
+                style={{ maxWidth: '100%', maxHeight: '68vh', borderRadius: '8px', boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)' }}
+              />
+            ) : (
+              <iframe
+                src={resolvedData}
+                title={docName}
+                style={{ width: '100%', height: '580px', border: 'none', borderRadius: '8px', backgroundColor: '#FFFFFF' }}
+              />
+            )}
+          </div>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+            <span style={{ fontSize: '12px', color: '#64748B' }}>
+              {rawDoc?.size ? `Size: ${rawDoc.size}` : ''}
+            </span>
+            <button
+              onClick={() => setPreviewDocModal(null)}
+              style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
   const [selectedBomItemIndexes, setSelectedBomItemIndexes] = useState([]);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [bomConfirmModal, setBomConfirmModal] = useState(null); // { type: 'cancel' | 'draft' | 'create' }
@@ -2718,6 +2878,14 @@ export default function ProductionViewsEngine(props) {
                             }).catch(err => console.warn('Zoho invoice sync notice:', err));
                           } catch (e) { console.error('Zoho invoice fetch trigger error:', e); }
 
+                          // Trigger Real-time Workflow Notifications with synthesized sound & deep-links for Sales & Dispatch
+                          notifyInvoiceCompletedReadyForDispatch({
+                            invoiceNo: invNoText,
+                            bomCode: bomRefText,
+                            customerName: customerText,
+                            salesPerson: inv.salesPerson || (matchingBom && matchingBom.salesPerson)
+                          });
+
                           setViewingInvoiceModal(null);
                           setConfirmInvoiceSuccessModal({
                             invNo: invNoText,
@@ -4251,13 +4419,15 @@ export default function ProductionViewsEngine(props) {
                   tabGroup = 'PartiallyPacked';
                 }
 
+                const salesPersonName = (b.salesPerson || localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim();
                 return {
                   ...b,
                   code: b.bomCode,
                   c2: b.customerName,
-                  salesPerson: (b.salesPerson || localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim(),
-                  c3: b.paymentType,
-                  c4: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
+                  salesPerson: salesPersonName,
+                  c3: salesPersonName,
+                  c4: b.paymentType || '100% Paid',
+                  packingProgressText: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
                   status: statusLabel,
                   stBg: stBg,
                   stFg: stFg,
@@ -8985,6 +9155,14 @@ export default function ProductionViewsEngine(props) {
                             gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
                             grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
                           } : b));
+
+                          // Trigger Real-time Workflow Notification with synthesized sound & deep-link to Dispatch Orders
+                          notifyBomSentToDispatch({
+                            bomCode: confirmingBomModal.bomCode,
+                            customerName: confirmingBomModal.companyName || confirmingBomModal.customerName,
+                            salesPerson: confirmingBomModal.salesPerson
+                          });
+
                           setConfirmingBomModal(null);
                           alert(`✅ BOM (${confirmingBomModal.bomCode}) successfully verified and sent to Production (Work Orders) & Dispatch Orders!`);
                         }}
@@ -9037,7 +9215,7 @@ export default function ProductionViewsEngine(props) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     <div>
                       <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '6px' }}>
-                        CUSTOMER NAME <span style={{ fontSize: '10px', color: '#94A3B8' }}>(🔒 Locked)</span>
+                        CUSTOMER NAME
                       </label>
                       <input
                         type="text"
@@ -9916,6 +10094,13 @@ export default function ProductionViewsEngine(props) {
                 category: 'Dispatch'
               });
               if (allItemsPacked) {
+                // Trigger Real-time Workflow Notifications with synthesized sound & deep-links for Sales & Accounts
+                notifyBomPackedAndSentToAccounts({
+                  bomCode: targetBomCode,
+                  customerName: dispatchPackingModal.customerName || dispatchPackingModal.companyName,
+                  salesPerson: dispatchPackingModal.salesPerson
+                });
+
                 if (isWhileDispatch) {
                   alert(`📦 Dispatch packing completed for BOM (${targetBomCode})!\n🔔 Notification sent to Salesperson to attach Dispatch Payment Receipt before Accounts verification.`);
                 } else {
@@ -10861,6 +11046,14 @@ export default function ProductionViewsEngine(props) {
                   localStorage.setItem('controlroom_invoice_store', JSON.stringify(updated));
                 } catch (e) { }
                 return updated;
+              });
+
+              // Trigger Real-time Workflow Notifications with synthesized sound & deep-links for Billing & Sales
+              notifyAccountsVerificationCompleted({
+                bomCode: targetCode,
+                customerName: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
+                invoiceNo: newInvNo,
+                salesPerson: verifiedBOM.salesPerson
               });
 
               setAccountsVerificationModal(null);
@@ -12539,7 +12732,9 @@ export default function ProductionViewsEngine(props) {
                 const pct = parseFloat(String(item.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
                 return acc + (rowTot * (pct / 100));
               }, 0);
-              const kitGst = kitSubtotal * 0.18;
+              const presetItem = bomMaterialsList.find(it => it.isPresetItem);
+              const presetGstPct = parseFloat(String(presetItem?.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
+              const kitGst = kitSubtotal * (presetGstPct / 100);
               const gst = itemsGst + kitGst;
 
               const grand = sub - disc + gst;
@@ -13110,14 +13305,14 @@ export default function ProductionViewsEngine(props) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '4px 10px', borderRadius: '8px' }}>
                         <Layers style={{ width: '14px', height: '14px', color: '#4F46E5' }} />
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#4338CA' }}>Preset Kit:</span>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#4338CA' }}>Preset:</span>
                       </div>
                       <SearchablePresetSelector
                         value={selectedPreset}
                         activePresetsMap={activePresetsMap}
                         accentColor="#4F46E5"
                         width="340px"
-                        placeholder="Type or pick Preset Kit..."
+                        placeholder="Type or pick Preset..."
                         onChange={(val, targetPreset) => {
                           setSelectedPreset(val);
                           setSelectedBomItemIndexes([]);
@@ -13246,10 +13441,10 @@ export default function ProductionViewsEngine(props) {
                         />
                       </div>
 
-                      {/* Dedicated Preset Kit Full Package Price Input */}
+                      {/* Dedicated Preset Full Package Price Input */}
                       {selectedPreset && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '0 10px', borderRadius: '8px', height: '36px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#4338CA', whiteSpace: 'nowrap' }}>Preset Kit Full Price (₹):</span>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#4338CA', whiteSpace: 'nowrap' }}>Preset Full Price (₹):</span>
                           <input
                             type="number"
                             min="0"
@@ -13473,8 +13668,8 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td style={{ padding: '12px 10px' }}>
                                 {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px', backgroundColor: '#EEF2FF', border: '1px dashed #A5B4FC', borderRadius: '8px', padding: '0 8px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338CA' }}>Included in Kit</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '0 8px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534' }}>Included in Preset</span>
                                   </div>
                                 ) : (
                                   <input
@@ -13491,13 +13686,15 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                                 <select
-                                  value={item.gstRate || '18%'}
-                                  disabled={Boolean(selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0))}
+                                  value={item.gstRate || newBomGstRate || '18%'}
                                   onChange={(e) => {
                                     const val = e.target.value;
-                                    setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                                    setBomMaterialsList(prev => prev.map((mat, idx) =>
+                                      (item.isPresetItem ? (mat.isPresetItem || idx === i) : idx === i) ? { ...mat, gstRate: val } : mat
+                                    ));
+                                    if (item.isPresetItem) setNewBomGstRate(val);
                                   }}
-                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: (selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0)) ? '#F8FAFC' : '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
                                 >
                                   <option value="18%">18% GST</option>
                                   <option value="12%">12% GST</option>
@@ -13507,14 +13704,14 @@ export default function ProductionViewsEngine(props) {
                               </td>
                               <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
                                 {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                                  <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
+                                  <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700' }}>In Preset</span>
                                 ) : (
                                   `₹${taxable.toFixed(2)}`
                                 )}
                               </td>
                               <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
                                 {selectedPreset && (item.isPresetItem || parseFloat(item.rate || 0) === 0) ? (
-                                  <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '700' }}>In Kit</span>
+                                  <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: '700' }}>In Preset</span>
                                 ) : (
                                   `₹${rowTot.toFixed(2)}`
                                 )}
@@ -13815,7 +14012,7 @@ export default function ProductionViewsEngine(props) {
                   <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
                     {selectedPreset && totals.kitSubtotal > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#4338CA', backgroundColor: '#EEF2FF', padding: '6px 10px', borderRadius: '6px' }}>
-                        <span style={{ fontWeight: '700' }}>Preset Kit ({presetSetCount} Set{presetSetCount > 1 ? 's' : ''})</span>
+                        <span style={{ fontWeight: '700' }}>Preset ({presetSetCount} Set{presetSetCount > 1 ? 's' : ''})</span>
                         <strong style={{ color: '#3730A3' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                       </div>
                     )}
@@ -14435,13 +14632,12 @@ export default function ProductionViewsEngine(props) {
                           />
                         </th>
                         {pageConfig.headers.filter(h => h !== 'Action' && h !== 'Actions').map((h, i) => {
-                          const isCenter = h === 'Status' || h === 'Fulfillment Status' || h === 'Dispatch Packing Status';
                           const isRight = h.includes('Total') || h.includes('Value') || h.includes('Rate') || h.includes('Amount');
                           let colWidth = 'auto';
                           let minColWidth = '140px';
                           if (i === 0) { colWidth = '150px'; minColWidth = '150px'; }
                           else if (i === 1) { minColWidth = '220px'; }
-                          else if (isCenter) { colWidth = '140px'; minColWidth = '140px'; }
+                          else if (h === 'Status' || h === 'Fulfillment Status' || h === 'Dispatch Packing Status') { colWidth = '160px'; minColWidth = '160px'; }
                           else if (isRight) { colWidth = '150px'; minColWidth = '150px'; }
                           else if (h.includes('Date')) { colWidth = '130px'; minColWidth = '130px'; }
                           else if (h.includes('Payment')) { colWidth = '150px'; minColWidth = '150px'; }
@@ -14452,7 +14648,7 @@ export default function ProductionViewsEngine(props) {
                               minWidth: minColWidth,
                               padding: '12px 14px',
                               fontWeight: 'bold',
-                              textAlign: isCenter ? 'center' : isRight ? 'right' : 'left',
+                              textAlign: isRight ? 'right' : 'left',
                               boxSizing: 'border-box',
                               whiteSpace: 'nowrap'
                             }}>
@@ -14530,8 +14726,8 @@ export default function ProductionViewsEngine(props) {
                                 {row.c2 || row.name}
                               </td>
                               <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c3 || row.date1}</td>
-                              <td style={{ padding: '12px 14px', color: '#64748B', textAlign: activeTab === 'Dispatch Orders' ? 'center' : 'left' }}>{row.c4 || row.date2}</td>
-                              {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: (row.c5?.toString()?.includes('₹') || activeTab === 'Dispatch Orders') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
+                              <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4 || row.date2}</td>
+                              {row.c5 !== undefined && <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: row.c5?.toString()?.includes('₹') ? 'right' : 'left' }}>{row.c5 || row.value}</td>}
                               {row.c6 !== undefined && activeTab !== 'Customer Management' && (
                                 <td style={{ padding: '12px 14px', color: '#475569' }}>
                                   {activeTab === 'Invoice Management' ? (
@@ -14553,9 +14749,16 @@ export default function ProductionViewsEngine(props) {
                                   )}
                                 </td>
                               )}
-                              {pageConfig.headers.includes('Status') && (
-                                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                                  <StatusBadge status={row.status} size="sm" />
+                              {(pageConfig.headers.includes('Status') || pageConfig.headers.includes('Dispatch Packing Status') || pageConfig.headers.includes('Fulfillment Status')) && (
+                                <td style={{ padding: '12px 14px', textAlign: 'left' }}>
+                                  <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                                    <StatusBadge status={row.status} size="sm" />
+                                    {row.packingProgressText && (
+                                      <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', paddingLeft: '2px', whiteSpace: 'nowrap' }}>
+                                        {row.packingProgressText}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               )}
                             </tr>
@@ -17696,6 +17899,9 @@ export default function ProductionViewsEngine(props) {
           onClose={() => setPrintTaxInvoiceModal(null)}
         />
       )}
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {renderDocPreviewModal()}
 
     </div>
   );

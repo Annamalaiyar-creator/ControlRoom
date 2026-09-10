@@ -33,7 +33,7 @@ export default function CrmLeadsView({
     category: 'Aluminium Mounting Structures',
     estimatedKw: '',
     notes: '',
-    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV'
+    assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Sales Representative'
   });
 
   const [dupWarning, setDupWarning] = useState(null);
@@ -148,7 +148,7 @@ export default function CrmLeadsView({
       category: 'Aluminium Mounting Structures',
       estimatedKw: '',
       notes: '',
-      assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV'
+      assignedSalesperson: localStorage.getItem('controlroom_logged_user_name') || 'Sales Representative'
     });
     setDupWarning(null);
   };

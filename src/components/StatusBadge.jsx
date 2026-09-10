@@ -95,6 +95,75 @@ export function getStatusStyleConfig(statusOrType, customLabel) {
 
   // 0. PO Specific Sequential Workflow States & Accounts Verification States
   if (
+    raw === 'pending dispatch packing' ||
+    raw === 'pending_dispatch_packing'
+  ) {
+    return {
+      label: customLabel || 'Pending Dispatch Packing',
+      bg: '#fff7ed',
+      color: '#c2410c',
+      border: '1px solid #fed7aa',
+      Icon: IconPending
+    };
+  }
+
+  if (
+    raw === 'partially packed' ||
+    raw === 'partially_packed'
+  ) {
+    return {
+      label: customLabel || 'Partially Packed',
+      bg: '#fef3c7',
+      color: '#b45309',
+      border: '1px solid #fde68a',
+      Icon: IconInProgress
+    };
+  }
+
+  if (
+    raw === 'packed & ready for dispatch' ||
+    raw === 'packed' ||
+    raw === 'packing verified' ||
+    raw === 'dispatch packing verified - sent to accounts'
+  ) {
+    return {
+      label: customLabel || 'Packed & Ready for Dispatch',
+      bg: '#dcfce7',
+      color: '#166534',
+      border: '1px solid #86efac',
+      Icon: IconSuccess
+    };
+  }
+
+  if (
+    raw === 'awaiting vehicle loading' ||
+    raw === 'awaiting vehicle loading & dispatch' ||
+    raw === 'awaiting_vehicle_loading'
+  ) {
+    return {
+      label: customLabel || 'Awaiting Vehicle Loading',
+      bg: '#dbeafe',
+      color: '#1e40af',
+      border: '1px solid #93c5fd',
+      Icon: IconInProgress
+    };
+  }
+
+  if (
+    raw === 'completed & dispatched' ||
+    raw === 'closed / dispatched' ||
+    raw === 'fully dispatched & delivered'
+  ) {
+    return {
+      label: customLabel || 'Completed & Dispatched',
+      bg: '#dcfce7',
+      color: '#166534',
+      border: '1px solid #86efac',
+      Icon: IconSuccess
+    };
+  }
+
+  if (
     raw === 'accounts verified' ||
     raw === 'accounts_verified' ||
     raw === 'accounts verified & passed to invoice'

@@ -5,8 +5,9 @@ import {
   Package, AlertCircle, ArrowLeft, Eye
 } from 'lucide-react';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
-import { VRM_HDG_PRESETS, getAllActivePresets, saveCustomPreset } from '../../vrmHdgProposalPresets';
+import { VRM_HDG_PRESETS, getAllActivePresets, saveCustomPreset, deleteCustomPreset } from '../../vrmHdgProposalPresets';
 import { saveCloudStore, fetchCloudStore } from '../../utils/supabaseDataSync';
+import CreatePresetKitView from './CreatePresetKitView';
 
 export default function PresetManagementView(props) {
   const { userRole = 'Tech Support', onChangeTab } = props;
@@ -16,6 +17,10 @@ export default function PresetManagementView(props) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPresetId, setSelectedPresetId] = useState(null);
+
+  // Dedicated Screen for Create / Edit Preset Kit (BOM Screen Aesthetic)
+  const [isCreateScreenOpen, setIsCreateScreenOpen] = useState(false);
+  const [targetPresetForScreen, setTargetPresetForScreen] = useState(null);
 
   // Modal / Drawer state for Create & Edit
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,9 +65,9 @@ export default function PresetManagementView(props) {
     return ['All', ...Array.from(cats)];
   }, [allPresets]);
 
-  // Filtered presets
+  // Filtered presets (Custom & newly created presets placed at the very TOP)
   const filteredPresets = useMemo(() => {
-    return Object.values(allPresets).filter(preset => {
+    const list = Object.values(allPresets).filter(preset => {
       const matchesCat = activeCategory === 'All' || preset.category === activeCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q ||
@@ -72,27 +77,64 @@ export default function PresetManagementView(props) {
         (preset.items || []).some(it => (it.name || '').toLowerCase().includes(q));
       return matchesCat && matchesSearch;
     });
+
+    // Sort: custom / newly created first, then alphabetically by label
+    return list.sort((a, b) => {
+      if (a.isCustom && !b.isCustom) return -1;
+      if (!a.isCustom && b.isCustom) return 1;
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return (a.label || '').localeCompare(b.label || '');
+    });
   }, [allPresets, activeCategory, searchQuery]);
 
-  // Handle open Create Preset modal
+  // Handle open Create Preset Screen (Dedicated Screen like Create BOM)
   const handleOpenCreate = () => {
     const newId = `preset_custom_${Date.now()}`;
-    setEditingPreset({
+    setTargetPresetForScreen({
       id: newId,
       label: '',
-      category: activeCategory !== 'All' ? activeCategory : 'Hat Purline Structures',
+      category: activeCategory !== 'All' ? activeCategory : 'GAL Hat Purline Structures (2 Row)',
       isCustom: true,
       items: [
         { name: '', qty: '1', uom: 'NOS', category: 'General', rate: '0.0', gstRate: '18%' }
       ]
     });
-    setIsEditModalOpen(true);
+    setIsCreateScreenOpen(true);
   };
 
-  // Handle open Edit Preset modal
+  // Handle open Edit Preset Screen
   const handleOpenEdit = (preset) => {
-    setEditingPreset(JSON.parse(JSON.stringify(preset)));
-    setIsEditModalOpen(true);
+    setTargetPresetForScreen(JSON.parse(JSON.stringify(preset)));
+    setIsCreateScreenOpen(true);
+  };
+
+  // Save Preset from Dedicated Screen
+  const handleSaveFromScreen = (savedPreset) => {
+    const updatedAll = saveCustomPreset(savedPreset);
+    if (updatedAll) {
+      setAllPresets({ ...updatedAll });
+    }
+    saveCloudStore('presets_store', updatedAll);
+
+    // Auto-select the preset's category (or 'All') and clear search so the user immediately sees it
+    if (savedPreset.category) {
+      setActiveCategory(savedPreset.category);
+    } else {
+      setActiveCategory('All');
+    }
+    setSearchQuery('');
+    setSelectedPresetId(savedPreset.id);
+    setTimeout(() => setSelectedPresetId(null), 4000);
+
+    setSaveSuccessMsg(`✓ Preset Kit "${savedPreset.label}" created successfully and added to "${savedPreset.category || 'All'}"!`);
+    setTimeout(() => setSaveSuccessMsg(''), 6000);
+    setIsCreateScreenOpen(false);
+    setTargetPresetForScreen(null);
+
+    // Scroll to top of list smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Autocomplete suggestions for product items in editor
@@ -181,13 +223,26 @@ export default function PresetManagementView(props) {
   // Delete custom preset
   const handleDeletePreset = (id, label) => {
     if (!window.confirm(`Are you sure you want to delete preset "${label}"?`)) return;
-    const current = { ...allPresets };
-    delete current[id];
-    setAllPresets(current);
-    localStorage.setItem('controlroom_presets_store', JSON.stringify(current));
-    saveCloudStore('presets_store', current);
-    window.dispatchEvent(new CustomEvent('vrm_presets_updated', { detail: current }));
+    const updated = deleteCustomPreset(id);
+    setAllPresets({ ...updated });
+    saveCloudStore('presets_store', updated);
   };
+
+  // Render Dedicated Screen for Create / Edit Preset Kit (BOM Screen Aesthetic)
+  if (isCreateScreenOpen) {
+    return (
+      <CreatePresetKitView
+        preset={targetPresetForScreen}
+        userRole={userRole}
+        availableCategories={categoriesList.filter(c => c !== 'All')}
+        onSave={handleSaveFromScreen}
+        onCancel={() => {
+          setIsCreateScreenOpen(false);
+          setTargetPresetForScreen(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '1440px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -356,19 +411,21 @@ export default function PresetManagementView(props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
         {filteredPresets.map(preset => {
           const itemCount = (preset.items || []).length;
+          const isJustSaved = selectedPresetId === preset.id;
+
           return (
             <div
               key={preset.id}
               style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: isJustSaved ? '#F0FDFA' : '#FFFFFF',
                 borderRadius: '12px',
-                border: '1px solid #E2E8F0',
+                border: isJustSaved ? '2px solid #0E7490' : '1px solid #E2E8F0',
                 padding: '18px 20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 transition: 'all 0.15s ease',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                boxShadow: isJustSaved ? '0 4px 14px rgba(14, 116, 144, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)'
               }}
             >
               <div>
