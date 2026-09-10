@@ -198,7 +198,19 @@ export default function ProductionViewsEngine(props) {
                   if (k) map.set(k, item);
                 }
               });
-              return Array.from(map.values()).map(stripDataUrlsFromRecord);
+              const parseBomSeq = (code) => {
+                const m = String(code || '').match(/BOM-(\d+)/i);
+                return m ? parseInt(m[1], 10) : 0;
+              };
+              const sorted = Array.from(map.values()).sort((a, b) => {
+                const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+                const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+                if (seqA !== seqB) return seqB - seqA;
+                const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+                const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+                return dateB - dateA;
+              });
+              return sorted.map(stripDataUrlsFromRecord);
             });
           }
         }
@@ -225,12 +237,30 @@ export default function ProductionViewsEngine(props) {
     };
 
     syncFromCloud();
-    const pollInterval = setInterval(syncFromCloud, 5000);
+    const pollInterval = setInterval(syncFromCloud, 4000);
+
+    const handleBomUpdated = (e) => {
+      if (e?.detail?.bom) {
+        const newBom = e.detail.bom;
+        setBomStore(prev => {
+          const k = newBom.bomCode || newBom.code || newBom.id;
+          const filtered = (prev || []).filter(b => b && (b.bomCode !== k && b.code !== k && b.id !== k));
+          const list = [newBom, ...filtered];
+          return list.map(stripDataUrlsFromRecord);
+        });
+      }
+      syncFromCloud();
+    };
+
+    window.addEventListener('controlroom_bom_store_updated', handleBomUpdated);
+    window.addEventListener('controlroom_storage_update', syncFromCloud);
 
     return () => {
       clearInterval(pollInterval);
+      window.removeEventListener('controlroom_bom_store_updated', handleBomUpdated);
+      window.removeEventListener('controlroom_storage_update', syncFromCloud);
     };
-  }, []);
+  }, [activeTab]);
 
   const [bomActionMenuIdx, setBomActionMenuIdx] = useState(null);
   const [showFloatingMoreMenu, setShowFloatingMoreMenu] = useState(false);
@@ -4225,15 +4255,26 @@ export default function ProductionViewsEngine(props) {
               actionText: '',
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
-                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft').length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft' && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Awaiting Vehicle Loading & Dispatch', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true)).length, bg: '#F1F5F9', fg: '#334155' },
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Awaiting Vehicle Loading & Dispatch', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#FFEDD5', fg: '#C2410C' },
                 { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED'].includes(b.status)).length, bg: '#FEF3C7', fg: '#B45309' },
                 { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#DCFCE7', fg: '#166534' },
                 { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
                 { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status'],
-              rows: (bomStore || []).filter(b => b && b.status && b.status !== 'Draft').map(b => {
+              rows: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true)).sort((a, b) => {
+                const parseBomSeq = (code) => {
+                  const m = String(code || '').match(/BOM-(\d+)/i);
+                  return m ? parseInt(m[1], 10) : 0;
+                };
+                const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+                const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+                if (seqA !== seqB) return seqB - seqA;
+                const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+                const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+                return dateB - dateA;
+              }).map(b => {
                 const packedCount = (b.dispatchPacking || []).filter(p => p.packed).length;
                 const totalItemsCount = (b.dispatchPacking || b.items || []).length;
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;

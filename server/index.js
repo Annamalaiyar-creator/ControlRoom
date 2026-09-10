@@ -2564,9 +2564,36 @@ app.get('/api/boms', async (req, res) => {
         if (Array.isArray(parsed)) cloudList = parsed;
       }
     } catch (e) {}
-
-    // Cloud is the single source of truth for BOMs
-    return res.json({ success: true, data: cloudList, total: cloudList.length });
+    // Merge cloud and disk records (cloud takes priority, but any disk records not yet in cloud are preserved)
+    const map = new Map();
+    cloudList.forEach(item => {
+      const c = item?.bomCode || item?.code || item?.id;
+      if (c) map.set(c, item);
+    });
+    diskList.forEach(item => {
+      const c = item?.bomCode || item?.code || item?.id;
+      if (c) {
+        if (map.has(c)) {
+          map.set(c, { ...item, ...map.get(c) });
+        } else {
+          map.set(c, item);
+        }
+      }
+    });
+    const finalBoms = Array.from(map.values());
+    const parseBomSeq = (code) => {
+      const m = String(code || '').match(/BOM-(\d+)/i);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    finalBoms.sort((a, b) => {
+      const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+      const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+      if (seqA !== seqB) return seqB - seqA;
+      const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+      const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+      return dateB - dateA;
+    });
+    return res.json({ success: true, data: finalBoms, total: finalBoms.length });
   } catch (err) {
     console.error('Error fetching BOMs:', err);
     return res.status(500).json({ success: false, message: err.message, data: [] });

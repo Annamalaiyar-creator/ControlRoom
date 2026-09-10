@@ -124,70 +124,55 @@ export default function DispatchDashboardView(props) {
 
 
   useEffect(() => {
-    fetchCloudStore('bom_store', bomStore).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setBomStore(prev => {
-          const map = new Map();
-          let localCurrent = Array.isArray(prev) ? prev : [];
-          try {
-            const savedStr = localStorage.getItem('controlroom_bom_store');
-            if (savedStr) {
-              const parsed = JSON.parse(savedStr);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                // Merge parsed with localCurrent
-                const currentMap = new Map();
-                localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                localCurrent = Array.from(currentMap.values());
-              }
-            }
-          } catch (e) { }
-
-          // Insert cloud data first, then overlay local state so fresh local BOMs ALWAYS overwrite remote data
-          data.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) map.set(k, item);
-            }
-          });
-          localCurrent.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) {
-                if (map.has(k)) {
-                  map.set(k, { ...map.get(k), ...item });
-                } else {
-                  map.set(k, item);
-                }
-              }
-            }
-          });
-          const merged = Array.from(map.values());
-          const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-          
-          return sanitizedMerged;
-        });
-      }
-    });
-
-    const syncFromStorage = () => {
+    const syncBoms = async () => {
       try {
-        const saved = localStorage.getItem('controlroom_bom_store');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setBomStore(parsed);
+        let data = null;
+        try {
+          const apiRes = await fetch('/api/boms');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json && Array.isArray(json.data)) {
+              data = json.data;
+            }
           }
+        } catch (_) {}
+
+        if (data === null) {
+          data = await fetchCloudStore('bom_store', []);
         }
-      } catch (e) { }
+
+        if (data && Array.isArray(data) && data.length > 0) {
+          setBomStore(data.map(stripDataUrlsFromRecord));
+        }
+      } catch (err) {
+        console.error('Error syncing BOMs in DispatchDashboardView:', err);
+      }
     };
 
-    window.addEventListener('storage', syncFromStorage);
-    window.addEventListener('controlroom_storage_update', syncFromStorage);
+    syncBoms();
+    const pollInterval = setInterval(syncBoms, 5000);
+
+    const handleBomUpdate = (e) => {
+      if (e?.detail?.bom) {
+        const item = stripDataUrlsFromRecord(e.detail.bom);
+        setBomStore(prev => {
+          const map = new Map();
+          (prev || []).forEach(b => b && map.set(b.bomCode || b.code || b.id, b));
+          map.set(item.bomCode || item.code || item.id, item);
+          return Array.from(map.values());
+        });
+      } else {
+        syncBoms();
+      }
+    };
+
+    window.addEventListener('controlroom_bom_store_updated', handleBomUpdate);
+    window.addEventListener('controlroom_storage_update', handleBomUpdate);
 
     return () => {
-      window.removeEventListener('storage', syncFromStorage);
-      window.removeEventListener('controlroom_storage_update', syncFromStorage);
+      clearInterval(pollInterval);
+      window.removeEventListener('controlroom_bom_store_updated', handleBomUpdate);
+      window.removeEventListener('controlroom_storage_update', handleBomUpdate);
     };
   }, []);
 
@@ -2152,14 +2137,14 @@ export default function DispatchDashboardView(props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {((props.bomStore || []).filter(b => b && b.status && b.status !== 'Draft')).length === 0 ? (
+                    {(((bomStore && bomStore.length > 0) ? bomStore : (props.bomStore || [])).filter(b => b && b.status && b.status !== 'Draft')).length === 0 ? (
                       <tr>
                         <td colSpan="5" style={{ padding: '24px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
                           No delayed dispatch orders. All orders are up to date.
                         </td>
                       </tr>
                     ) : (
-                      (props.bomStore || []).filter(b => b && b.status && b.status !== 'Draft').slice(0, 5).map((b, i) => (
+                      ((bomStore && bomStore.length > 0) ? bomStore : (props.bomStore || [])).filter(b => b && b.status && b.status !== 'Draft').slice(0, 5).map((b, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{b.bomCode || b.code}</td>
                           <td style={{ padding: '8px 10px', color: '#334155' }}>{b.customerName || b.customer}</td>

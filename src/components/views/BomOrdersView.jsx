@@ -101,8 +101,19 @@ export default function BomOrdersView(props) {
                   if (k) map.set(k, item);
                 }
               });
-              const merged = Array.from(map.values());
-              return merged.map(stripDataUrlsFromRecord);
+              const parseBomSeq = (code) => {
+                const m = String(code || '').match(/BOM-(\d+)/i);
+                return m ? parseInt(m[1], 10) : 0;
+              };
+              const sorted = Array.from(map.values()).sort((a, b) => {
+                const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+                const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+                if (seqA !== seqB) return seqB - seqA;
+                const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+                const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+                return dateB - dateA;
+              });
+              return sorted.map(stripDataUrlsFromRecord);
             });
           }
         }
@@ -2756,6 +2767,7 @@ export default function BomOrdersView(props) {
                       setBomConfirmModal(null);
                       setCurrentPage(1);
                       try {
+                        window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: sanitizedNewBom } }));
                         window.dispatchEvent(new Event('controlroom_storage_update'));
                       } catch (e) { }
 
@@ -3033,6 +3045,11 @@ export default function BomOrdersView(props) {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedBomData), isUpdate: true })
                     }).catch(err => console.error('Error updating BOM to Dispatch:', err));
+                  } catch (_) {}
+
+                  try {
+                    window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: updatedBomData } }));
+                    window.dispatchEvent(new Event('controlroom_storage_update'));
                   } catch (_) {}
 
                   // Trigger Real-time Workflow Notification with synthesized sound & deep-link to Dispatch Orders

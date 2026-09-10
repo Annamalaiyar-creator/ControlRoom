@@ -32,21 +32,61 @@ export default function ProductionAdminView({ activeTab, userRole }) {
   useEffect(() => {
     const loadBoms = async () => {
       try {
-        const cloudBoms = await fetchCloudStore('bom_store', []);
-        if (Array.isArray(cloudBoms) && cloudBoms.length > 0) {
-          setBomStore(cloudBoms);
+        let boms = null;
+        try {
+          const apiRes = await fetch('/api/boms');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json && Array.isArray(json.data)) {
+              boms = json.data;
+            }
+          }
+        } catch (_) {}
+
+        if (boms === null) {
+          boms = await fetchCloudStore('bom_store', []);
+        }
+
+        if (Array.isArray(boms) && boms.length > 0) {
+          const parseBomSeq = (code) => {
+            const m = String(code || '').match(/BOM-(\d+)/i);
+            return m ? parseInt(m[1], 10) : 0;
+          };
+          const sorted = [...boms].sort((a, b) => {
+            const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+            const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+            if (seqA !== seqB) return seqB - seqA;
+            const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+            const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+            return dateB - dateA;
+          });
+          setBomStore(sorted);
         }
       } catch (_) {}
     };
+
     loadBoms();
-    const handleUpdate = () => {
-      try {
-        const saved = localStorage.getItem('controlroom_bom_store');
-        if (saved) setBomStore(JSON.parse(saved));
-      } catch (_) {}
+    const pollInterval = setInterval(loadBoms, 5000);
+
+    const handleUpdate = (e) => {
+      if (e?.detail?.bom) {
+        const newBom = e.detail.bom;
+        setBomStore(prev => {
+          const k = newBom.bomCode || newBom.code || newBom.id;
+          const filtered = (prev || []).filter(b => b && (b.bomCode !== k && b.code !== k && b.id !== k));
+          return [newBom, ...filtered];
+        });
+      }
+      loadBoms();
     };
+
+    window.addEventListener('controlroom_bom_store_updated', handleUpdate);
     window.addEventListener('controlroom_storage_update', handleUpdate);
-    return () => window.removeEventListener('controlroom_storage_update', handleUpdate);
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('controlroom_bom_store_updated', handleUpdate);
+      window.removeEventListener('controlroom_storage_update', handleUpdate);
+    };
   }, []);
 
   // Live Zoho Inventory Work Orders State
