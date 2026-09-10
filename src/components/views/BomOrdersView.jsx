@@ -172,6 +172,7 @@ export default function BomOrdersView(props) {
 
   // Create BOM Form Specific State
   const [newBomCode, setNewBomCode] = useState('');
+  const [newBomDeliveryDate, setNewBomDeliveryDate] = useState('');
   const [newBomProductName, setNewBomProductName] = useState('');
   const [newBomDeliveryAddress, setNewBomDeliveryAddress] = useState('');
   const [newBomDeliveryStreet, setNewBomDeliveryStreet] = useState('');
@@ -189,6 +190,90 @@ export default function BomOrdersView(props) {
   const [newBomVehicleNo, setNewBomVehicleNo] = useState('');
   const [newBomTransportScope, setNewBomTransportScope] = useState('VRM Structures');
   const [newBomLrNo, setNewBomLrNo] = useState('');
+  const [formErrors, setFormErrors] = useState({});
+
+  // Comprehensive BOM Form Validation Helper
+  const validateBomForm = (isDraft = false) => {
+    const errors = {};
+    const missingList = [];
+
+    // 1. Customer Name
+    if (!newBomProductName || !newBomProductName.trim()) {
+      errors.customerName = 'Customer Name is required';
+      missingList.push({
+        field: 'Customer Name',
+        message: 'Please select or enter the customer name from the list.',
+        targetId: 'field-newBomProductName'
+      });
+    }
+
+    // 2. Delivery Date (required for confirmed orders)
+    if (!isDraft && (!newBomDeliveryDate || !newBomDeliveryDate.trim())) {
+      errors.deliveryDate = 'Delivery Date is required';
+      missingList.push({
+        field: 'Delivery Date',
+        message: 'Please select the committed delivery date for Dispatch fulfillment.',
+        targetId: 'field-newBomDeliveryDate'
+      });
+    }
+
+    // 3. Materials / Items List
+    if (!bomMaterialsList || bomMaterialsList.length === 0) {
+      errors.items = 'At least 1 product item or preset kit is required';
+      missingList.push({
+        field: 'Order Items / Materials',
+        message: 'Please add at least one material/product item or select a preset kit.',
+        targetId: 'field-bomMaterialsList'
+      });
+    } else {
+      const invalidItems = [];
+      bomMaterialsList.forEach((it, idx) => {
+        const qty = parseFloat(it.qty) || 0;
+        if (!it.name || !it.name.trim()) {
+          invalidItems.push(`Item #${idx + 1}: Item name is missing`);
+        } else if (qty <= 0) {
+          invalidItems.push(`Item #${idx + 1} (${it.name}): Quantity must be greater than 0`);
+        }
+      });
+      if (invalidItems.length > 0) {
+        errors.items = invalidItems.join(', ');
+        missingList.push({
+          field: 'Item Details Missing',
+          message: invalidItems.join(' • '),
+          targetId: 'field-bomMaterialsList'
+        });
+      }
+    }
+
+    // 4. Delivery Address
+    if (!sameAsBilling) {
+      const street = (newBomDeliveryStreet || '').trim();
+      const city = (newBomDeliveryCity || '').trim();
+      if (!street || !city) {
+        errors.deliveryAddress = 'Delivery Address and City are required';
+        missingList.push({
+          field: 'Delivery Address',
+          message: 'Delivery street address and city are required when not matching billing (or check "Same as Billing").',
+          targetId: 'field-newBomDeliveryStreet'
+        });
+      }
+    }
+
+    // 5. Payment Proof for 100% Paid / Advance Orders
+    if (!isDraft && (newBomPaymentType === '100% Paid' || newBomPaymentType.includes('Advance'))) {
+      if (!newBomPaymentProofDoc) {
+        errors.paymentProof = 'Payment Attachment / Slip is required';
+        missingList.push({
+          field: 'Payment Slip / Advice',
+          message: `Payment proof attachment is mandatory for "${newBomPaymentType}" orders. Please attach the payment advice or slip.`,
+          targetId: 'field-newBomPaymentProofDoc'
+        });
+      }
+    }
+
+    setFormErrors(errors);
+    return { isValid: missingList.length === 0, missingList, errors };
+  };
   const getEffectiveSalesPerson = () => {
     const storedName = localStorage.getItem('controlroom_logged_user_name');
     if (storedName && storedName.trim() && storedName !== 'undefined' && storedName !== 'null') {
@@ -661,19 +746,23 @@ export default function BomOrdersView(props) {
     alert(`✅ BOM (${bCode}) has been successfully CANCELLED.\nAll items have been restored and unblocked in live inventory.`);
   };
 
-  // Alert function
-  const showCustomAlert = (msg, title = null, type = null) => {
-    let detectedType = type;
-    let detectedTitle = title;
-    const strMsg = String(msg || '');
+  // Alert function supporting structured error details and target scrolling
+  const showCustomAlert = (msg, title = null, type = null, details = null, targetFieldId = null) => {
+    const payload = typeof msg === 'object' && msg !== null && !Array.isArray(msg) && msg.message !== undefined
+      ? msg
+      : { message: msg, title, type, details, targetFieldId };
+
+    let detectedType = payload.type;
+    let detectedTitle = payload.title;
+    const strMsg = String(payload.message || '');
 
     if (!detectedType) {
       if (strMsg.includes('❌') || strMsg.toLowerCase().includes('wrong') || strMsg.toLowerCase().includes('error') || strMsg.toLowerCase().includes('fail') || strMsg.toLowerCase().includes('invalid')) {
         detectedType = 'error';
         if (!detectedTitle) detectedTitle = 'Uh oh! Something went wrong';
-      } else if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs')) {
+      } else if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || (payload.details && payload.details.length > 0)) {
         detectedType = 'warning';
-        if (!detectedTitle) detectedTitle = 'Attention Required';
+        if (!detectedTitle) detectedTitle = 'Missing Required Information';
       } else if (strMsg.includes('✅') || strMsg.toLowerCase().includes('success') || strMsg.toLowerCase().includes('created') || strMsg.toLowerCase().includes('verified')) {
         detectedType = 'success';
         if (!detectedTitle) detectedTitle = 'Action Successful';
@@ -687,7 +776,9 @@ export default function BomOrdersView(props) {
     setCustomAlert({
       title: detectedTitle || (detectedType === 'error' ? 'Uh oh! Something went wrong' : 'Notification'),
       message: cleanMsg || 'Action completed.',
-      type: detectedType || 'info'
+      type: detectedType || 'info',
+      details: payload.details || null,
+      targetFieldId: payload.targetFieldId || null
     });
   };
 
@@ -1255,7 +1346,20 @@ export default function BomOrdersView(props) {
               Cancel
             </button>
             <button
-              onClick={() => setBomConfirmModal('draft')}
+              onClick={() => {
+                const validation = validateBomForm(true);
+                if (!validation.isValid) {
+                  showCustomAlert({
+                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                    message: 'Please complete the highlighted details before saving as draft:',
+                    type: 'warning',
+                    details: validation.missingList,
+                    targetFieldId: validation.missingList[0]?.targetId
+                  });
+                  return;
+                }
+                setBomConfirmModal('draft');
+              }}
               style={{ border: 'none', background: '#FFFFFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
             >
               <FileText style={{ width: '15px', height: '15px' }} />
@@ -1263,12 +1367,15 @@ export default function BomOrdersView(props) {
             </button>
             <button
               onClick={() => {
-                if (!newBomProductName || !newBomProductName.trim()) {
-                  alert('⚠️ Please select or enter a Customer Name before creating the BOM order.');
-                  return;
-                }
-                if (!bomMaterialsList || bomMaterialsList.length === 0) {
-                  alert('⚠️ Please add at least one Product / Item to the BOM materials list.');
+                const validation = validateBomForm(false);
+                if (!validation.isValid) {
+                  showCustomAlert({
+                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                    message: 'Please complete the highlighted details before creating this BOM order:',
+                    type: 'warning',
+                    details: validation.missingList,
+                    targetFieldId: validation.missingList[0]?.targetId
+                  });
                   return;
                 }
                 setBomConfirmModal('create');
@@ -1308,11 +1415,34 @@ export default function BomOrdersView(props) {
                 Delivery Date <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
+                id="field-newBomDeliveryDate"
                 type="date"
                 min={new Date().toISOString().split('T')[0]}
                 placeholder="Select date"
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                value={newBomDeliveryDate}
+                onChange={(e) => {
+                  setNewBomDeliveryDate(e.target.value);
+                  setFormErrors(prev => ({ ...prev, deliveryDate: null }));
+                }}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: formErrors.deliveryDate ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                  backgroundColor: formErrors.deliveryDate ? '#FEF2F2' : 'white',
+                  boxShadow: formErrors.deliveryDate ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none',
+                  padding: '0 14px',
+                  fontSize: '13px',
+                  color: '#0F172A',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
               />
+              {formErrors.deliveryDate && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
+                  <AlertCircle size={12} /> {formErrors.deliveryDate}
+                </span>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Order Number</label>
@@ -1369,6 +1499,7 @@ export default function BomOrdersView(props) {
                 Customer Name <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
+                id="field-newBomProductName"
                 type="text"
                 list="bom-customer-name-suggestions"
                 placeholder="Type or select customer from list..."
@@ -1376,6 +1507,7 @@ export default function BomOrdersView(props) {
                 onChange={(e) => {
                   const val = e.target.value;
                   setNewBomProductName(val);
+                  setFormErrors(prev => ({ ...prev, customerName: null }));
                   const target = (val || '').toLowerCase().trim();
                   if (!target) return;
 
@@ -1419,8 +1551,25 @@ export default function BomOrdersView(props) {
                     }
                   }
                 }}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: formErrors.customerName ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                  backgroundColor: formErrors.customerName ? '#FEF2F2' : 'white',
+                  boxShadow: formErrors.customerName ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none',
+                  padding: '0 14px',
+                  fontSize: '13px',
+                  color: '#0F172A',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
               />
+              {formErrors.customerName && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
+                  <AlertCircle size={12} /> {formErrors.customerName}
+                </span>
+              )}
               <datalist id="bom-customer-name-suggestions">
                 {customerList.map((c, idx) => {
                   const val = c.code || c.customerName || c.companyName;
@@ -1549,19 +1698,58 @@ export default function BomOrdersView(props) {
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Address</label>
                       <input
+                        id="field-newBomDeliveryStreet"
                         type="text"
                         placeholder="e.g. Plot No 42, SIDCO Industrial Estate, Ambattur"
                         value={sameAsBilling ? (billingStreet !== '—' ? billingStreet : '') : newBomDeliveryStreet}
                         disabled={sameAsBilling}
-                        onChange={(e) => setNewBomDeliveryStreet(e.target.value)}
-                        style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }}
+                        onChange={(e) => {
+                          setNewBomDeliveryStreet(e.target.value);
+                          setFormErrors(prev => ({ ...prev, deliveryAddress: null }));
+                        }}
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          borderRadius: '8px',
+                          border: formErrors.deliveryAddress ? '2px solid #EF4444' : '1px solid #CBD5E1',
+                          padding: '0 12px',
+                          fontSize: '12px',
+                          color: sameAsBilling ? '#64748B' : '#0F172A',
+                          backgroundColor: formErrors.deliveryAddress ? '#FEF2F2' : (sameAsBilling ? '#F1F5F9' : '#FFFFFF'),
+                          boxShadow: formErrors.deliveryAddress ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none',
+                          boxSizing: 'border-box',
+                          outline: 'none',
+                          cursor: sameAsBilling ? 'not-allowed' : 'text'
+                        }}
                       />
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
-                        <input type="text" placeholder="e.g. Chennai" value={sameAsBilling ? (billingCity !== '—' ? billingCity : '') : newBomDeliveryCity} disabled={sameAsBilling} onChange={(e) => setNewBomDeliveryCity(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                        <input
+                          type="text"
+                          placeholder="e.g. Chennai"
+                          value={sameAsBilling ? (billingCity !== '—' ? billingCity : '') : newBomDeliveryCity}
+                          disabled={sameAsBilling}
+                          onChange={(e) => {
+                            setNewBomDeliveryCity(e.target.value);
+                            setFormErrors(prev => ({ ...prev, deliveryAddress: null }));
+                          }}
+                          style={{
+                            width: '100%',
+                            height: '38px',
+                            borderRadius: '8px',
+                            border: formErrors.deliveryAddress && !newBomDeliveryCity ? '2px solid #EF4444' : '1px solid #CBD5E1',
+                            padding: '0 12px',
+                            fontSize: '12px',
+                            color: sameAsBilling ? '#64748B' : '#0F172A',
+                            backgroundColor: formErrors.deliveryAddress && !newBomDeliveryCity ? '#FEF2F2' : (sameAsBilling ? '#F1F5F9' : '#FFFFFF'),
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            cursor: sameAsBilling ? 'not-allowed' : 'text'
+                          }}
+                        />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
@@ -1572,6 +1760,11 @@ export default function BomOrdersView(props) {
                         <input type="text" placeholder="e.g. 600058" value={sameAsBilling ? (billingPincode !== '—' ? billingPincode : '') : newBomDeliveryPincode} disabled={sameAsBilling} onChange={(e) => setNewBomDeliveryPincode(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
                       </div>
                     </div>
+                    {formErrors.deliveryAddress && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '-4px' }}>
+                        <AlertCircle size={12} /> {formErrors.deliveryAddress}
+                      </span>
+                    )}
                     {(() => {
                       const effectiveDeliveryStreet = sameAsBilling ? (billingStreet !== '—' ? billingStreet : '') : newBomDeliveryStreet;
                       const effectiveDeliveryCity = sameAsBilling ? (billingCity !== '—' ? billingCity : '') : newBomDeliveryCity;
@@ -1701,7 +1894,13 @@ export default function BomOrdersView(props) {
         </div>
 
         {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS */}
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+        <div id="field-bomMaterialsList" style={{ backgroundColor: 'white', borderRadius: '16px', border: formErrors.items ? '2px solid #EF4444' : '1px solid #E2E8F0', boxShadow: formErrors.items ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none', display: 'flex', flexDirection: 'column' }}>
+          {formErrors.items && (
+            <div style={{ backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#DC2626', fontSize: '12px', fontWeight: '700' }}>
+              <AlertCircle size={16} />
+              <span>{formErrors.items}</span>
+            </div>
+          )}
           {/* Section 3 Header — Clean Single Row */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
             {/* Left: Badge + Title */}
@@ -2448,6 +2647,7 @@ export default function BomOrdersView(props) {
                     </div>
                   ) : (
                     <div
+                      id="field-newBomPaymentProofDoc"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -2457,14 +2657,26 @@ export default function BomOrdersView(props) {
                             if (res) {
                               if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
                               setNewBomPaymentProofDoc(res);
+                              setFormErrors(prev => ({ ...prev, paymentProof: null }));
                             }
                           });
                         }
                       }}
-                      style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
+                      style={{
+                        border: formErrors.paymentProof ? '2px dashed #EF4444' : '2px dashed #CBD5E1',
+                        borderRadius: '12px',
+                        padding: '24px 16px',
+                        textAlign: 'center',
+                        backgroundColor: formErrors.paymentProof ? '#FEF2F2' : '#FAFAFA',
+                        boxShadow: formErrors.paymentProof ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '10px'
+                      }}
                     >
-                      <UploadCloud style={{ width: '34px', height: '34px', color: '#6366F1' }} />
-                      <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                      <UploadCloud style={{ width: '34px', height: '34px', color: formErrors.paymentProof ? '#EF4444' : '#6366F1' }} />
+                      <span style={{ fontSize: '13px', color: formErrors.paymentProof ? '#B91C1C' : '#475569', fontWeight: '700' }}>
                         Drag & drop payment slip / bank advice here or
                       </span>
 
@@ -2483,6 +2695,7 @@ export default function BomOrdersView(props) {
                                   if (res) {
                                     if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
                                     setNewBomPaymentProofDoc(res);
+                                    setFormErrors(prev => ({ ...prev, paymentProof: null }));
                                   }
                                 });
                               }
@@ -2492,6 +2705,11 @@ export default function BomOrdersView(props) {
                       </div>
                       <span style={{ fontSize: '11px', color: '#94A3B8' }}>Supported formats: PDF, JPG, PNG (Max 5MB)</span>
                     </div>
+                  )}
+                  {formErrors.paymentProof && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '6px' }}>
+                      <AlertCircle size={12} /> {formErrors.paymentProof}
+                    </span>
                   )}
                 </div>
               )}
@@ -2530,15 +2748,36 @@ export default function BomOrdersView(props) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
             <button onClick={() => setBomConfirmModal('cancel')} style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={() => setBomConfirmModal('draft')} style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText style={{ width: '15px', height: '15px' }} /> Save as Draft</button>
             <button
               onClick={() => {
-                if (!newBomProductName || !newBomProductName.trim()) {
-                  alert('⚠️ Please select or enter a Customer Name before creating the BOM order.');
+                const validation = validateBomForm(true);
+                if (!validation.isValid) {
+                  showCustomAlert({
+                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                    message: 'Please complete the highlighted details before saving as draft:',
+                    type: 'warning',
+                    details: validation.missingList,
+                    targetFieldId: validation.missingList[0]?.targetId
+                  });
                   return;
                 }
-                if (!bomMaterialsList || bomMaterialsList.length === 0) {
-                  alert('⚠️ Please add at least one Product / Item to the BOM materials list.');
+                setBomConfirmModal('draft');
+              }}
+              style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <FileText style={{ width: '15px', height: '15px' }} /> Save as Draft
+            </button>
+            <button
+              onClick={() => {
+                const validation = validateBomForm(false);
+                if (!validation.isValid) {
+                  showCustomAlert({
+                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                    message: 'Please complete the highlighted details before creating this BOM order:',
+                    type: 'warning',
+                    details: validation.missingList,
+                    targetFieldId: validation.missingList[0]?.targetId
+                  });
                   return;
                 }
                 setBomConfirmModal('create');
@@ -2639,6 +2878,7 @@ export default function BomOrdersView(props) {
                         bomCode: finalCode,
                         code: finalCode,
                         date: new Date().toISOString().split('T')[0],
+                        deliveryDate: newBomDeliveryDate || null,
                         customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
                         companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
                         mobile: selCust?.c4 || '-',
@@ -5105,30 +5345,88 @@ export default function BomOrdersView(props) {
         </div>
       )}
 
-      {/* CUSTOM ALERT POPUP */}
+      {/* CUSTOM ALERT POPUP WITH MISSING FIELDS SUPPORT */}
       {customAlert && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '18px', padding: '24px', maxWidth: '480px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
               <div style={{
-                width: '38px', height: '38px', borderRadius: '10px',
+                width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
                 backgroundColor: customAlert.type === 'error' ? '#FEE2E2' : customAlert.type === 'warning' ? '#FEF3C7' : '#DCFCE7',
-                color: customAlert.type === 'error' ? '#DC2626' : customAlert.type === 'warning' ? '#B45309' : '#166534',
+                color: customAlert.type === 'error' ? '#DC2626' : customAlert.type === 'warning' ? '#D97706' : '#166534',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {customAlert.type === 'error' ? <AlertCircle size={20} /> : customAlert.type === 'warning' ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
+                {customAlert.type === 'error' ? <AlertCircle size={24} /> : customAlert.type === 'warning' ? <AlertTriangle size={24} /> : <CheckCircle size={24} />}
               </div>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>{customAlert.title}</h3>
-                <span style={{ fontSize: '12px', color: '#64748B' }}>{customAlert.message}</span>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: '0 0 4px 0' }}>{customAlert.title}</h3>
+                <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.4', whiteSpace: 'pre-line' }}>{customAlert.message}</p>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+
+            {/* Render Missing Fields Card List if provided */}
+            {Array.isArray(customAlert.details) && customAlert.details.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
+                {customAlert.details.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (item.targetId) {
+                        const el = document.getElementById(item.targetId);
+                        if (el) {
+                          setCustomAlert(null);
+                          setTimeout(() => {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el.focus();
+                          }, 100);
+                        }
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '10px',
+                      padding: '10px 14px', backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA', borderRadius: '10px',
+                      cursor: item.targetId ? 'pointer' : 'default'
+                    }}
+                  >
+                    <AlertCircle size={16} style={{ color: '#EF4444', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#991B1B' }}>{item.field}</div>
+                      <div style={{ fontSize: '12px', color: '#B91C1C', marginTop: '2px' }}>{item.message}</div>
+                    </div>
+                    {item.targetId && (
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '6px', alignSelf: 'center', whiteSpace: 'nowrap' }}>
+                        Fill Field →
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
               <button
-                onClick={() => setCustomAlert(null)}
-                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                onClick={() => {
+                  const targetId = customAlert.targetFieldId || (customAlert.details?.[0]?.targetId);
+                  setCustomAlert(null);
+                  if (targetId) {
+                    setTimeout(() => {
+                      const el = document.getElementById(targetId);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.focus();
+                      }
+                    }, 100);
+                  }
+                }}
+                style={{
+                  padding: '9px 22px', borderRadius: '10px', border: 'none',
+                  backgroundColor: customAlert.type === 'error' ? '#DC2626' : '#0E7490',
+                  color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(14,116,144,0.3)'
+                }}
               >
-                OK
+                {customAlert.details?.length > 0 ? 'Review & Fill Details →' : 'OK'}
               </button>
             </div>
           </div>

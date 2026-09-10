@@ -291,11 +291,91 @@ export default function ProductionViewsEngine(props) {
   const dispatchCameraStreamRef = useRef(null);
 
   const [newBomCode, setNewBomCode] = useState('');
+  const [newBomDeliveryDate, setNewBomDeliveryDate] = useState('');
   const [newBomProductName, setNewBomProductName] = useState('');
   const [newBomSku, setNewBomSku] = useState('');
   const [newBomRevision, setNewBomRevision] = useState('');
   const [newBomTargetQty, setNewBomTargetQty] = useState('');
   const [newBomStatus, setNewBomStatus] = useState('ACTIVE');
+  const [bomFormErrors, setBomFormErrors] = useState({});
+
+  // Validation for Production BOM creation
+  const validateProductionBomForm = (isDraft = false) => {
+    const errors = {};
+    const missingList = [];
+
+    if (!newBomProductName || !newBomProductName.trim()) {
+      errors.customerName = 'Customer Name is required';
+      missingList.push({
+        field: 'Customer Name',
+        message: 'Please select or enter the customer name.',
+        targetId: 'prod-field-newBomProductName'
+      });
+    }
+
+    if (!isDraft && (!newBomDeliveryDate || !newBomDeliveryDate.trim())) {
+      errors.deliveryDate = 'Delivery Date is required';
+      missingList.push({
+        field: 'Delivery Date',
+        message: 'Please select expected Delivery Date for Dispatch.',
+        targetId: 'prod-field-newBomDeliveryDate'
+      });
+    }
+
+    if (!bomMaterialsList || bomMaterialsList.length === 0) {
+      errors.items = 'At least 1 product item or preset kit is required';
+      missingList.push({
+        field: 'Order Items / Materials',
+        message: 'Please add at least one material/product item or select a preset kit.',
+        targetId: 'prod-field-bomMaterialsList'
+      });
+    } else {
+      const invalidItems = [];
+      bomMaterialsList.forEach((it, idx) => {
+        const qty = parseFloat(it.qty) || 0;
+        if (!it.name || !it.name.trim()) {
+          invalidItems.push(`Item #${idx + 1}: Name is missing`);
+        } else if (qty <= 0) {
+          invalidItems.push(`Item #${idx + 1} (${it.name}): Quantity must be > 0`);
+        }
+      });
+      if (invalidItems.length > 0) {
+        errors.items = invalidItems.join(', ');
+        missingList.push({
+          field: 'Item Details Missing',
+          message: invalidItems.join(' • '),
+          targetId: 'prod-field-bomMaterialsList'
+        });
+      }
+    }
+
+    if (!sameAsBilling) {
+      const street = (newBomDeliveryStreet || '').trim();
+      const city = (newBomDeliveryCity || '').trim();
+      if (!street || !city) {
+        errors.deliveryAddress = 'Delivery Address and City are required';
+        missingList.push({
+          field: 'Delivery Address',
+          message: 'Delivery street and city are required when different from billing.',
+          targetId: 'prod-field-newBomDeliveryStreet'
+        });
+      }
+    }
+
+    if (!isDraft && (newBomPaymentType === '100% Paid' || newBomPaymentType.includes('Advance'))) {
+      if (!newBomPaymentProofDoc) {
+        errors.paymentProof = 'Payment Attachment / Slip is required';
+        missingList.push({
+          field: 'Payment Slip / Advice',
+          message: `Payment proof attachment is mandatory for "${newBomPaymentType}" orders.`,
+          targetId: 'prod-field-newBomPaymentProofDoc'
+        });
+      }
+    }
+
+    setBomFormErrors(errors);
+    return { isValid: missingList.length === 0, missingList, errors };
+  };
   const [newBomDeliveryAddress, setNewBomDeliveryAddress] = useState('');
   const [newBomDeliveryStreet, setNewBomDeliveryStreet] = useState('');
   const [newBomDeliveryCity, setNewBomDeliveryCity] = useState('');
@@ -574,16 +654,20 @@ export default function ProductionViewsEngine(props) {
 
   const [customAlert, setCustomAlert] = useState(null);
 
-  const showCustomAlert = (msg, title = null, type = null) => {
-    let detectedType = type;
-    let detectedTitle = title;
-    const strMsg = String(msg || '');
+  const showCustomAlert = (msg, title = null, type = null, details = null, targetFieldId = null) => {
+    const payload = typeof msg === 'object' && msg !== null && !Array.isArray(msg) && msg.message !== undefined
+      ? msg
+      : { message: msg, title, type, details, targetFieldId };
+
+    let detectedType = payload.type;
+    let detectedTitle = payload.title;
+    const strMsg = String(payload.message || '');
 
     if (!detectedType) {
       if (strMsg.includes('❌') || strMsg.toLowerCase().includes('wrong') || strMsg.toLowerCase().includes('error') || strMsg.toLowerCase().includes('fail') || strMsg.toLowerCase().includes('invalid') || strMsg.toLowerCase().includes('unable') || strMsg.toLowerCase().includes('cannot')) {
         detectedType = 'error';
         if (!detectedTitle) detectedTitle = 'Uh oh! Something went wrong';
-      } else if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || strMsg.toLowerCase().includes('please')) {
+      } else if (strMsg.includes('⚠️') || strMsg.toLowerCase().includes('warning') || strMsg.toLowerCase().includes('mandatory') || strMsg.toLowerCase().includes('differs') || strMsg.toLowerCase().includes('please') || (payload.details && payload.details.length > 0)) {
         detectedType = 'warning';
         if (!detectedTitle) detectedTitle = 'Attention Required';
       } else if (strMsg.includes('✅') || strMsg.toLowerCase().includes('success') || strMsg.toLowerCase().includes('approved') || strMsg.toLowerCase().includes('verified') || strMsg.toLowerCase().includes('completed')) {
@@ -599,7 +683,9 @@ export default function ProductionViewsEngine(props) {
     setCustomAlert({
       title: detectedTitle || (detectedType === 'error' ? 'Uh oh! Something went wrong' : 'Notification'),
       message: cleanMsg || (detectedType === 'error' ? 'We apologize for the inconvenience you experienced.' : 'Action completed.'),
-      type: detectedType || 'info'
+      type: detectedType || 'info',
+      details: payload.details || null,
+      targetFieldId: payload.targetFieldId || null
     });
   };
 
@@ -12859,7 +12945,20 @@ export default function ProductionViewsEngine(props) {
                     </button>
 
                     <button
-                      onClick={() => setBomConfirmModal('draft')}
+                      onClick={() => {
+                        const validation = validateProductionBomForm(true);
+                        if (!validation.isValid) {
+                          showCustomAlert({
+                            title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                            message: 'Please complete the highlighted details before saving draft:',
+                            type: 'warning',
+                            details: validation.missingList,
+                            targetFieldId: validation.missingList[0]?.targetId
+                          });
+                          return;
+                        }
+                        setBomConfirmModal('draft');
+                      }}
                       style={{ border: 'none', background: '#FFFFFF', color: '#4F46E5', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                     >
                       <FileText style={{ width: '15px', height: '15px' }} />
@@ -12868,18 +12967,22 @@ export default function ProductionViewsEngine(props) {
 
                     <button
                       onClick={() => {
-                        if (!newBomProductName || !newBomProductName.trim()) {
-                          alert('⚠️ Please select or enter a Customer Name before creating the BOM order.');
-                          return;
-                        }
-                        if (!bomMaterialsList || bomMaterialsList.length === 0) {
-                          alert('⚠️ Please add at least one Product / Item to the BOM materials list.');
+                        const validation = validateProductionBomForm(false);
+                        if (!validation.isValid) {
+                          showCustomAlert({
+                            title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                            message: 'Please complete the highlighted details before creating this BOM order:',
+                            type: 'warning',
+                            details: validation.missingList,
+                            targetFieldId: validation.missingList[0]?.targetId
+                          });
                           return;
                         }
                         setBomConfirmModal('create');
                       }}
                       style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
+                      <CheckCircle style={{ width: '16px', height: '16px' }} />
                       Create Order →
                     </button>
                   </div>
@@ -12915,11 +13018,28 @@ export default function ProductionViewsEngine(props) {
                         Delivery Date <span style={{ color: '#EF4444' }}>*</span>
                       </label>
                       <input
+                        id="prod-field-newBomDeliveryDate"
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
-                        placeholder="Select date"
-                        style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                        value={newBomDeliveryDate}
+                        onChange={(e) => {
+                          setNewBomDeliveryDate(e.target.value);
+                          if (bomFormErrors.deliveryDate) {
+                            setBomFormErrors(prev => ({ ...prev, deliveryDate: null }));
+                          }
+                        }}
+                        style={{
+                          width: '100%', height: '42px', borderRadius: '10px',
+                          border: bomFormErrors.deliveryDate ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                          backgroundColor: bomFormErrors.deliveryDate ? '#FEF2F2' : 'white',
+                          padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none'
+                        }}
                       />
+                      {bomFormErrors.deliveryDate && (
+                        <div style={{ color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
+                          ⚠️ {bomFormErrors.deliveryDate}
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -13002,9 +13122,23 @@ export default function ProductionViewsEngine(props) {
                                 setNewBomDeliveryPincode(bObj.pincode || chosen.pincode || '');
                               }
                             }
+                            if (bomFormErrors.customerName) {
+                              setBomFormErrors(prev => ({ ...prev, customerName: null }));
+                            }
                           }}
-                          style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
+                          id="prod-field-newBomProductName"
+                          style={{
+                            width: '100%', height: '42px', borderRadius: '10px',
+                            border: bomFormErrors.customerName ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                            backgroundColor: bomFormErrors.customerName ? '#FEF2F2' : 'white',
+                            padding: '0 14px', fontSize: '13px', color: '#0F172A', boxSizing: 'border-box', outline: 'none'
+                          }}
                         />
+                        {bomFormErrors.customerName && (
+                          <div style={{ color: '#DC2626', fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
+                            ⚠️ {bomFormErrors.customerName}
+                          </div>
+                        )}
                         <datalist id="bom-customer-name-suggestions">
                           {customerList.map((c, idx) => {
                             const val = c.code || c.customerName || c.companyName;
