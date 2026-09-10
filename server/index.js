@@ -2685,6 +2685,22 @@ app.post('/api/boms', async (req, res) => {
           return resolveOuter();
         }
 
+        // Server-side guarantee: recursively strip any raw base64 data URLs to prevent store bloating
+        const stripServerDataUrls = (target) => {
+          if (!target || typeof target !== 'object') return;
+          if (target.dataUrl) delete target.dataUrl;
+          if (target.fileData) delete target.fileData;
+          if (target.proofDocData) delete target.proofDocData;
+          Object.keys(target).forEach(k => {
+            if (typeof target[k] === 'string' && (target[k].startsWith('data:') || (target[k].length > 1000 && /^[A-Za-z0-9+/=]+$/.test(target[k].slice(0, 100))))) {
+              delete target[k];
+            } else if (target[k] && typeof target[k] === 'object') {
+              stripServerDataUrls(target[k]);
+            }
+          });
+        };
+        stripServerDataUrls(bom);
+
         const filePath = getStoreFilePath('bom_store.json');
         let diskList = [];
         if (fs.existsSync(filePath)) {

@@ -10,7 +10,7 @@ import {
   CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Save
 } from 'lucide-react';
 import CreateWorkOrderPage from '../CreateWorkOrderPage';
-import { fetchCloudStore, saveCloudStore, subscribeToCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, subscribeToCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
 import { getSafeZohoItems, getSafeZohoVendors } from '../../services/zohoSafeSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
@@ -14522,6 +14522,7 @@ export default function ProductionViewsEngine(props) {
                               sanitizedNewBom.code = finalAssignedCode;
                               sanitizedNewBom.id = finalAssignedCode;
 
+                              let sResOk = false;
                               try {
                                 const sRes = await fetch('/api/boms', {
                                   method: 'POST',
@@ -14529,6 +14530,7 @@ export default function ProductionViewsEngine(props) {
                                   body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
                                 });
                                 if (sRes.ok) {
+                                  sResOk = true;
                                   const sData = await sRes.json();
                                   if (sData && (sData.bomCode || sData.bom?.bomCode)) {
                                     finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
@@ -14545,6 +14547,16 @@ export default function ProductionViewsEngine(props) {
                                 const current = Array.isArray(prev) ? prev : [];
                                 const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
                                 const updatedList = [sanitizedNewBom, ...filtered];
+
+                                // Fallback cloud save guarantee: if server didn't respond, save directly to Supabase so it's never lost on refresh
+                                if (!sResOk) {
+                                  try {
+                                    saveCloudStoreImmediate('bom_store', updatedList);
+                                  } catch (sErr) {
+                                    console.error('Error in fallback saveCloudStoreImmediate:', sErr);
+                                  }
+                                }
+
                                 setShowBOMForm(false);
                                 setBomConfirmModal(null);
                                 setCurrentPage(1);

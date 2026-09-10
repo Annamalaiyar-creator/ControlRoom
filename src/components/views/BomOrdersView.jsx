@@ -2953,6 +2953,7 @@ export default function BomOrdersView(props) {
 
                       // 1. Synchronize with server backend & assign atomic sequential BOM code
                       let finalAssignedCode = null;
+                      let sResOk = false;
                       try {
                         const sRes = await fetch('/api/boms', {
                           method: 'POST',
@@ -2960,6 +2961,7 @@ export default function BomOrdersView(props) {
                           body: JSON.stringify({ bom: sanitizedNewBom, isNew: true })
                         });
                         if (sRes.ok) {
+                          sResOk = true;
                           const sData = await sRes.json();
                           if (sData && (sData.bomCode || sData.bom?.bomCode)) {
                             finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
@@ -3001,6 +3003,15 @@ export default function BomOrdersView(props) {
                       const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
                       const updatedList = [sanitizedNewBom, ...filtered];
                       setBomStore(updatedList);
+
+                      // Direct cloud persistence guarantee: if server API didn't respond, save directly to Supabase so it's never lost on refresh
+                      if (!sResOk) {
+                        try {
+                          await saveCloudStoreImmediate('bom_store', updatedList);
+                        } catch (sErr) {
+                          console.error('Error in fallback saveCloudStoreImmediate:', sErr);
+                        }
+                      }
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
                       setCurrentPage(1);

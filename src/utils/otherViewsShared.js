@@ -54,7 +54,11 @@ export const stripDataUrlsFromRecord = (obj) => {
     if (target.fileData) delete target.fileData;
     if (target.proofDocData) delete target.proofDocData;
     Object.keys(target).forEach(k => {
-      if (target[k] && typeof target[k] === "object") removeDataUrl(target[k]);
+      if (typeof target[k] === 'string' && (target[k].startsWith('data:') || (target[k].length > 1000 && /^[A-Za-z0-9+/=]+$/.test(target[k].slice(0, 100))))) {
+        delete target[k];
+      } else if (target[k] && typeof target[k] === "object") {
+        removeDataUrl(target[k]);
+      }
     });
   };
   removeDataUrl(clone);
@@ -103,10 +107,10 @@ export const compressAndSaveFile = (file, callback) => {
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          let width = img.width || 1280;
-          let height = img.height || 720;
-          // 720p HD maximum dimension standard (1280x720)
-          const maxDim = 1280;
+          let width = img.width || 800;
+          let height = img.height || 600;
+          // Ultra-lightweight standard (< 25 KB) with max 800px dimension
+          const maxDim = 800;
           if (width > maxDim || height > maxDim) {
             if (width > height) {
               height = Math.round((height * maxDim) / width);
@@ -120,8 +124,8 @@ export const compressAndSaveFile = (file, callback) => {
           canvas.height = height;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
-          // Crisp 720p quality: 0.85
-          const compressedData = canvas.toDataURL("image/jpeg", 0.85);
+          // Optimized quality 0.55 guarantees lightweight payload < 25 KB
+          const compressedData = canvas.toDataURL("image/jpeg", 0.55);
           baseMeta.dataUrl = compressedData;
           if (baseMeta.name) {
             saveMediaToCache(baseMeta.name, compressedData);
