@@ -1,0 +1,512 @@
+[
+  {
+    "piNo": "PI-00006",
+    "vendor": "Tata Power Solar Systems Ltd",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "contactPerson": "Ar Annamalaiyar",
+    "phone": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "gstNo": "27AAACT2345D1ZA",
+    "productName": "LEG 500 mm (HDG), LEG 1000 mm (HDG), RAFTER 3900 mm (GAL), Purlin 'HAT' Type - 2400 mm (GAL), Universal Mid Clamp, Mid Clamp 35mm, End Clamp 30 mm, End Clamp 35 mm, SS304 Allen Bolt M8*50, SS304 Allen Bolt M8*20, SS304 Allen Bolt M8*20, SS304 Hexa Bolt M12*30, SS304 Hexa Bolt M10*30, GI Anchor Bolt M10*100",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "qty": "10",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "qty": "10",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "qty": "10",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "qty": "40",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "qty": "40",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": "40",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": "60",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 12,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16,
+        "isPresetItem": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789064585371_p232",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16,
+        "isPresetItem": true
+      }
+    ],
+    "presetGroups": {
+      "preset_grp_1789064585371_p232": {
+        "groupId": "preset_grp_1789064585371_p232",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 5,
+        "kitPrice": "21000",
+        "gstRate": "18%"
+      }
+    },
+    "salesPerson": "Mohit JV",
+    "billingAddress": {
+      "street": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "deliveryAddress": {
+      "street": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "sameAsBilling": true,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "transportScope": "VRM Structures",
+    "paymentTerms": "50% Advance + 50% Before Dispatch",
+    "creditDays": "",
+    "remarks": "",
+    "unitValue": 105000,
+    "quantity": 470,
+    "subtotal": 105000,
+    "kitSubtotal": 105000,
+    "taxTotal": 18900,
+    "cgst": 9450,
+    "sgst": 9450,
+    "grandTotal": 123900,
+    "amount": "₹1,23,900",
+    "pdfName": "pi_document.pdf",
+    "signedPiDoc": null,
+    "piDate": "2026-09-10",
+    "expDate": "2026-09-12",
+    "status": "Issued",
+    "statusType": "issued",
+    "salesperson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "id": "PI-1789064595783",
+    "zohoEstimateId": "4080449000000371002"
+  },
+  {
+    "piNo": "PI-00004",
+    "vendor": "Adani Solar Technologies",
+    "customerName": "Adani Solar Technologies",
+    "piDate": "2026-09-10",
+    "items": [
+      {
+        "name": "Heavy Duty Solar Ground Mounting Structure",
+        "qty": 5,
+        "rate": 50000
+      }
+    ],
+    "remarks": "End to end verification estimate",
+    "id": "PI-1789064450679",
+    "zohoEstimateId": "4080449000000386011"
+  },
+  {
+    "piNo": "PI-00005",
+    "vendor": "Adani Solar Technologies",
+    "customerName": "Adani Solar Technologies",
+    "piDate": "2026-09-10",
+    "items": [
+      {
+        "name": "HDG Rafter 3900mm Kit",
+        "qty": 10,
+        "rate": 15000
+      }
+    ],
+    "remarks": "Live Zoho verification",
+    "id": "PI-1789064432810",
+    "zohoEstimateId": "4080449000000389001"
+  },
+  {
+    "piNo": "PI-00003",
+    "vendor": "AK SMART AUTOMATIONS",
+    "customerName": "AK SMART AUTOMATIONS",
+    "customerId": "4080449000000372001",
+    "items": [
+      {
+        "name": "Solar Mounting Structure",
+        "qty": 1,
+        "rate": 1000
+      }
+    ],
+    "id": "PI-1789064074640"
+  },
+  {
+    "piNo": "PI-00002",
+    "vendor": "Tata Power Solar Systems Ltd",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "contactPerson": "Ar Annamalaiyar",
+    "phone": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "gstNo": "27AAACT2345D1ZA",
+    "productName": "LEG 500 mm (HDG), LEG 1000 mm (HDG), RAFTER 3900 mm (GAL), Purlin 'HAT' Type - 3600 mm (GAL), Universal Mid Clamp, Mid Clamp 35mm, End Clamp 30 mm, End Clamp 35 mm, SS304 Allen Bolt M8*50, SS304 Allen Bolt M8*20, SS304 Allen Bolt M8*20, SS304 Hexa Bolt M12*30, SS304 Hexa Bolt M10*30, GI Anchor Bolt M10*100",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "qty": "20",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2,
+        "isPresetItem": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "qty": "40",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": "80",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": "160",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "qty": "40",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4,
+        "isPresetItem": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "qty": "160",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16,
+        "isPresetItem": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "qty": "160",
+        "uom": "NOS",
+        "category": "GAL",
+        "rate": "0",
+        "gstRate": "18%",
+        "presetGroupId": "preset_grp_1789063477923_md2t",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16,
+        "isPresetItem": true
+      }
+    ],
+    "presetGroups": {
+      "preset_grp_1789063477923_md2t": {
+        "groupId": "preset_grp_1789063477923_md2t",
+        "presetId": "hp_2_3_hp__500_x_1000_",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 10,
+        "kitPrice": "21000",
+        "gstRate": "18%"
+      }
+    },
+    "salesPerson": "Mohit JV",
+    "billingAddress": {
+      "street": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "deliveryAddress": {
+      "street": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "sameAsBilling": true,
+    "transportMode": "Transport",
+    "transporterName": "",
+    "vehicleNo": "",
+    "transportScope": "VRM Structures",
+    "paymentTerms": "50% Advance + 50% Before Dispatch",
+    "creditDays": "",
+    "remarks": "",
+    "unitValue": 210000,
+    "quantity": 1100,
+    "subtotal": 210000,
+    "kitSubtotal": 210000,
+    "taxTotal": 37800,
+    "cgst": 18900,
+    "sgst": 18900,
+    "grandTotal": 247800,
+    "amount": "₹2,47,800",
+    "pdfName": "pi_document.pdf",
+    "signedPiDoc": null,
+    "piDate": "2026-09-10",
+    "expDate": "2026-09-11",
+    "status": "Issued",
+    "statusType": "issued",
+    "salesperson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "zohoEstimateId": "4080449000000357019",
+    "id": "PI-1789063528511"
+  }
+]

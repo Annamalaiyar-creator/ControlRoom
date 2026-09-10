@@ -11,6 +11,7 @@ node_modules
 # dist included for Plesk Windows deployment
 dist-ssr
 *.local
+server/zoho_token_cache.json
 
 # Editor directories and files
 .vscode/*

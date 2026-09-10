@@ -19,8 +19,8 @@ const defaultSalesPIs = [
     pdfName: 'sales_pi_apex_infra.pdf',
     piDate: '24 May 2025',
     expDate: '24 Jun 2025',
-    status: 'Approved',
-    statusType: 'approved',
+    status: 'Issued',
+    statusType: 'issued',
     type: 'Sales PI'
   },
   {
@@ -34,8 +34,8 @@ const defaultSalesPIs = [
     pdfName: 'sales_pi_sungrid.pdf',
     piDate: '22 May 2025',
     expDate: '22 Jun 2025',
-    status: 'Pending Approval',
-    statusType: 'pending',
+    status: 'Issued',
+    statusType: 'issued',
     type: 'Sales PI'
   }
 ];
@@ -52,8 +52,8 @@ const defaultProcurementPIs = [
     pdfName: 'pi_tata_steel_2025.pdf',
     piDate: '20 May 2025',
     expDate: '20 Jun 2025',
-    status: 'Pending Approval',
-    statusType: 'pending',
+    status: 'Issued',
+    statusType: 'issued',
     type: 'Procurement PI'
   },
   {
@@ -67,8 +67,8 @@ const defaultProcurementPIs = [
     pdfName: 'pi_jindal_ref_99.pdf',
     piDate: '19 May 2025',
     expDate: '19 Jun 2025',
-    status: 'Pending Approval',
-    statusType: 'pending',
+    status: 'Issued',
+    statusType: 'issued',
     type: 'Procurement PI'
   },
   {
@@ -82,11 +82,19 @@ const defaultProcurementPIs = [
     pdfName: 'pi_havells_elect.pdf',
     piDate: '18 May 2025',
     expDate: '18 Jun 2025',
-    status: 'Approved',
-    statusType: 'approved',
+    status: 'Issued',
+    statusType: 'issued',
     type: 'Procurement PI'
   }
 ];
+
+const normalizePiRecord = (item) => {
+  if (!item) return item;
+  if (item.status === 'Pending Approval' || item.status === 'Approved') {
+    return { ...item, status: 'Issued', statusType: 'issued' };
+  }
+  return item;
+};
 
 export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procurement Head' }) {
   const isSalesRole = userRole === 'Sales Head' || userRole === 'Sales Executive';
@@ -102,7 +110,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(normalizePiRecord);
       }
       // If procurement store is checked but sales has records, check if user has converted PIs
       if (!isSalesRole) {
@@ -110,12 +118,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         if (salesSaved) {
           const salesParsed = JSON.parse(salesSaved);
           if (Array.isArray(salesParsed) && salesParsed.length > 0) {
-            return [...salesParsed, ...defaultProcurementPIs];
+            return [...salesParsed, ...defaultProcurementPIs].map(normalizePiRecord);
           }
         }
       }
     } catch (e) {}
-    return isSalesRole ? defaultSalesPIs : defaultProcurementPIs;
+    return (isSalesRole ? defaultSalesPIs : defaultProcurementPIs).map(normalizePiRecord);
   });
 
   const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
@@ -161,11 +169,31 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
   useEffect(() => {
     const cloudKey = isSalesRole ? 'sales_pi_store' : 'procurement_pi_store';
-    fetchCloudStore(cloudKey).then(cloudData => {
-      if (Array.isArray(cloudData) && cloudData.length > 0) {
-        setPiList(cloudData);
+    Promise.all([
+      fetchCloudStore(cloudKey).catch(() => []),
+      fetch('/api/zoho/estimates').then(r => r.ok ? r.json() : []).catch(() => [])
+    ]).then(([cloudData, zohoData]) => {
+      const mergedMap = new Map();
+      if (Array.isArray(cloudData)) {
+        cloudData.forEach(p => { if (p && p.piNo) mergedMap.set(String(p.piNo).toLowerCase(), p); });
+      }
+      if (Array.isArray(zohoData)) {
+        zohoData.forEach(zp => {
+          if (zp && zp.piNo) {
+            const k = String(zp.piNo).toLowerCase();
+            if (!mergedMap.has(k)) {
+              mergedMap.set(k, zp);
+            } else {
+              mergedMap.set(k, { ...mergedMap.get(k), ...zp });
+            }
+          }
+        });
+      }
+      if (mergedMap.size > 0) {
+        const result = Array.from(mergedMap.values()).map(normalizePiRecord);
+        setPiList(result);
         try {
-          localStorage.setItem(storageKey, JSON.stringify(cloudData));
+          localStorage.setItem(storageKey, JSON.stringify(result));
         } catch (_) {}
       }
     }).catch(() => {});
@@ -373,13 +401,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [vehicleNo, setVehicleNo] = useState('');
   const [transportScope, setTransportScope] = useState('VRM Structures');
 
-  // Commercial & Approval Fields
+  // Commercial Fields
   const [paymentTerms, setPaymentTerms] = useState('50% Advance + 50% Before Dispatch');
   const [creditDays, setCreditDays] = useState('');
   const [remarks, setRemarks] = useState('');
-  const [approvalRequired, setApprovalRequired] = useState('Yes');
-  const [approver, setApprover] = useState('Velmurugan Rathinam (CEO)');
-  const [approvalPriority, setApprovalPriority] = useState('High');
 
   // Customer auto-suggest handler
   const handleSelectCustomer = (cName) => {
@@ -576,12 +601,31 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setPiItems(prev => (prev || []).filter((_, i) => i !== idx));
   };
 
+  const fetchNextPiNumber = async () => {
+    try {
+      setPiNumber('Fetching...');
+      const res = await fetch('/api/zoho/next-pi-number');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.nextPiNo) {
+          setPiNumber(data.nextPiNo);
+          return data.nextPiNo;
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching next PI number:', e);
+    }
+    const fallback = `PI-${String((piList.length || 0) + 1).padStart(5, '0')}`;
+    setPiNumber(fallback);
+    return fallback;
+  };
+
   const resetForm = () => {
     setPdfFile(null);
     setSignedPiDoc(null);
     setUploadProgress(0);
     setIsUploading(false);
-    setPiNumber('');
+    setPiNumber('Auto-Assigned');
     setPiDate(new Date().toISOString().split('T')[0]);
     setValidUntilDate('');
     setVendorName('');
@@ -632,13 +676,17 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   };
 
   // Submits the new or edited PI
-  const executeCreatePI = (isDraft = false) => {
+  const executeCreatePI = async (isDraft = false) => {
     const totals = calculatePiTotals();
     const joinedProducts = piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
 
-    const cleanPiNo = (piNumber && piNumber.trim())
+    let cleanPiNo = (piNumber && piNumber.trim() && piNumber !== 'Auto-Assigned' && !piNumber.startsWith('Fetching'))
       ? piNumber.trim().toUpperCase()
-      : `PI-${new Date().getFullYear()}-${String(piList.length + 101).padStart(3, '0')}`;
+      : null;
+
+    if (!cleanPiNo) {
+      cleanPiNo = await fetchNextPiNumber();
+    }
 
     const newPI = {
       piNo: cleanPiNo,
@@ -683,18 +731,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       amount: '₹' + Math.round(totals.grand).toLocaleString('en-IN'),
       pdfName: pdfFile ? pdfFile.name : (signedPiDoc ? signedPiDoc.name : 'pi_document.pdf'),
       signedPiDoc: signedPiDoc || null,
-      piDate: piDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: isDraft ? 'Draft' : (editIdx !== null ? piList[editIdx].status : 'Pending Approval'),
-      statusType: isDraft ? 'draft' : (editIdx !== null ? piList[editIdx].statusType : 'pending'),
+      piDate: piDate || new Date().toISOString().split('T')[0],
+      expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      status: isDraft ? 'Draft' : (editIdx !== null ? (piList[editIdx].status === 'Pending Approval' || piList[editIdx].status === 'Approved' ? 'Issued' : piList[editIdx].status) : 'Issued'),
+      statusType: isDraft ? 'draft' : (editIdx !== null ? (piList[editIdx].statusType === 'pending' || piList[editIdx].statusType === 'approved' ? 'issued' : piList[editIdx].statusType) : 'issued'),
       salesPerson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
       salesperson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
       salesPersonCode: editIdx !== null ? (piList[editIdx].salesPersonCode || currentEmpId) : currentEmpId,
       createdBy: editIdx !== null ? (piList[editIdx].createdBy || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
-      createdById: editIdx !== null ? (piList[editIdx].createdById || currentEmpId) : currentEmpId,
-      approvalRequired,
-      approver,
-      approvalPriority
+      createdById: editIdx !== null ? (piList[editIdx].createdById || currentEmpId) : currentEmpId
     };
 
     if (editIdx !== null) {
@@ -704,6 +749,24 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       setEditIdx(null);
     } else {
       updatePiList([newPI, ...piList]);
+    }
+
+    // Background push to Zoho Books Estimates API
+    try {
+      fetch('/api/zoho/estimates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPI)
+      }).then(res => res.json()).then(data => {
+        if (data && data.estimate) {
+          console.log('[ZOHO ESTIMATE SYNC SUCCESS]', data.estimate);
+          if (data.estimate.zohoEstimateId) {
+            setPiList(prev => prev.map(p => p.piNo === newPI.piNo ? { ...p, zohoEstimateId: data.estimate.zohoEstimateId } : p));
+          }
+        }
+      }).catch(err => console.warn('[ZOHO ESTIMATE SYNC NOTICE]', err));
+    } catch (e) {
+      console.warn('Error pushing to Zoho estimate API:', e);
     }
 
     resetForm();
@@ -766,9 +829,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     } else {
       setSignedPiDoc(null);
     }
-    setApprovalRequired(pi.approvalRequired || 'Yes');
-    setApprover(pi.approver || 'Velmurugan Rathinam (CEO)');
-    setApprovalPriority(pi.approvalPriority || 'High');
     setPdfFile(pi.pdfName ? { name: pi.pdfName, size: 3.2 * 1024 * 1024 } : null);
     setUploadProgress(100);
     setViewMode('edit');
@@ -886,8 +946,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             (pi.vendor || '').toLowerCase().includes(searchLower) ||
             (pi.gstNo || '').toLowerCase().includes(searchLower) ||
             (pi.productName || '').toLowerCase().includes(searchLower);
-          const matchesStatus = statusFilter === 'All' || pi.status === statusFilter;
-          const matchesTab = piTab === 'All' || pi.status === piTab;
+          const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
+          const matchesStatus = statusFilter === 'All' || currentStatus === statusFilter;
+          const matchesTab = piTab === 'All' || currentStatus === piTab;
           return matchesSearch && matchesStatus && matchesTab;
         });
 
@@ -905,7 +966,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   Performa Invoices
                 </h2>
                 <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                  Manage drafts and client approvals of Performa Invoices
+                  Manage commercial Proforma Invoices and customer billing
                 </span>
               </div>
 
@@ -914,6 +975,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   resetForm();
                   setEditIdx(null);
                   setViewMode('create');
+                  fetchNextPiNumber();
                 }}
                 style={{
                   backgroundColor: '#0E7490',
@@ -1012,9 +1074,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                 {[
                   { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
+                  { id: 'Issued', label: 'Issued / Active', count: visiblePIList.filter(pi => {
+                    const st = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
+                    return st === 'Issued';
+                  }).length },
                   { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM').length },
-                  { id: 'Pending Approval', label: 'Pending Approval', count: visiblePIList.filter(pi => pi.status === 'Pending Approval').length },
-                  { id: 'Approved', label: 'Approved', count: visiblePIList.filter(pi => pi.status === 'Approved').length },
                   { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
@@ -1040,8 +1104,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       fontSize: '10px',
                       padding: '2px 7px',
                       borderRadius: '12px',
-                      backgroundColor: tab.id === 'Converted to BOM' ? '#ecfdf5' : tab.id === 'Cancelled' ? '#fef2f2' : '#f1f5f9',
-                      color: tab.id === 'Converted to BOM' ? '#059669' : tab.id === 'Cancelled' ? '#b91c1c' : '#475569',
+                      backgroundColor: tab.id === 'Converted to BOM' ? '#ecfdf5' : tab.id === 'Issued' ? '#f0fdf4' : tab.id === 'Cancelled' ? '#fef2f2' : '#f1f5f9',
+                      color: tab.id === 'Converted to BOM' ? '#059669' : tab.id === 'Issued' ? '#16a34a' : tab.id === 'Cancelled' ? '#b91c1c' : '#475569',
                       fontWeight: 'bold'
                     }}>
                       {tab.count}
@@ -1070,13 +1134,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                         />
                       </th>
-                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', boxSizing: 'border-box' }}>PI No.</th>
-                      <th style={{ width: '160px', minWidth: '160px', padding: '12px 14px', boxSizing: 'border-box' }}>Product</th>
-                      <th style={{ minWidth: '180px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Project</th>
-                      <th style={{ width: '150px', minWidth: '150px', padding: '12px 14px', boxSizing: 'border-box' }}>GST No.</th>
-                      <th style={{ width: '110px', minWidth: '110px', padding: '12px 14px', boxSizing: 'border-box' }}>PI Date</th>
-                      <th style={{ width: '130px', minWidth: '130px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Total Amount</th>
-                      <th style={{ width: '120px', minWidth: '120px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
+                      <th style={{ width: '150px', minWidth: '140px', padding: '12px 14px', boxSizing: 'border-box' }}>PI No.</th>
+                      <th style={{ minWidth: '220px', padding: '12px 14px', boxSizing: 'border-box' }}>Customer / Company</th>
+                      <th style={{ width: '160px', minWidth: '150px', padding: '12px 14px', boxSizing: 'border-box' }}>GST No.</th>
+                      <th style={{ width: '130px', minWidth: '120px', padding: '12px 14px', boxSizing: 'border-box' }}>PI Date</th>
+                      <th style={{ width: '150px', minWidth: '130px', padding: '12px 14px', textAlign: 'right', boxSizing: 'border-box' }}>Total Amount</th>
+                      <th style={{ width: '130px', minWidth: '120px', padding: '12px 14px', textAlign: 'center', boxSizing: 'border-box' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1086,19 +1149,17 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                         let statusBg = '#eff6ff';
                         let statusFg = '#2563eb';
-                        if (pi.status === 'Approved') {
+                        const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
+                        if (currentStatus === 'Issued') {
                           statusBg = '#f0fdf4';
                           statusFg = '#16a34a';
-                        } else if (pi.status === 'Converted to BOM') {
+                        } else if (currentStatus === 'Converted to BOM') {
                           statusBg = '#ecfdf5';
                           statusFg = '#059669';
-                        } else if (pi.status === 'Pending Approval') {
-                          statusBg = '#fffbebe6';
-                          statusFg = '#d97706';
-                        } else if (pi.status === 'Cancelled') {
+                        } else if (currentStatus === 'Cancelled') {
                           statusBg = '#fef2f2';
                           statusFg = '#b91c1c';
-                        } else if (pi.status === 'Draft' || pi.status === 'Overdue') {
+                        } else if (currentStatus === 'Draft' || currentStatus === 'Overdue') {
                           statusBg = '#fef2f2';
                           statusFg = '#dc2626';
                         }
@@ -1129,24 +1190,24 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                 style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
                               />
                             </td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}>
+                            <td
+                              onClick={() => setSelectedPi(pi)}
+                              style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
+                            >
                               {pi.piNo}
                             </td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#1E293B' }}>
-                              {pi.productName || 'Solar Mounting Structure'}
+                            <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>
+                              {pi.vendor || pi.customerName || 'N/A'}
                             </td>
-                            <td style={{ padding: '12px 14px', color: '#475569' }}>
-                              {pi.vendor}
-                            </td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#475569' }}>{pi.gstNo}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#475569' }}>{pi.gstNo || '—'}</td>
                             <td style={{ padding: '12px 14px', color: '#64748B' }}>{pi.piDate}</td>
-                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A' }}>{pi.amount}</td>
+                            <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>{pi.amount}</td>
                             
                             {/* Pill status badge with bullet dot */}
-                            <td style={{ padding: '12px 14px' }}>
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                               <span style={{ backgroundColor: statusBg, color: statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusFg }}></span>
-                                {pi.status}
+                                {currentStatus}
                               </span>
                             </td>
 
@@ -1283,6 +1344,69 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPIs.length}</strong> Selected
                 </span>
+
+                {/* Direct View Details button */}
+                <button
+                  onClick={() => {
+                    if (selectedPIs.length > 1) {
+                      alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                      return;
+                    }
+                    const target = piList.find(p => p.piNo === selectedPIs[0]);
+                    if (target) setSelectedPi(target);
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                </button>
+
+                {/* Direct Convert to BOM button */}
+                {(() => {
+                  const target = selectedPIs.length === 1 ? piList.find(p => p.piNo === selectedPIs[0]) : null;
+                  const canConvert = target && target.status !== 'Cancelled' && target.status !== 'Converted to BOM';
+                  if (!canConvert) return null;
+
+                  return (
+                    <button
+                      onClick={() => handleConvertToBom(target)}
+                      style={{
+                        backgroundColor: '#4F46E5',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '6px 16px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 4px rgba(79, 70, 229, 0.3)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4338CA'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4F46E5'}
+                    >
+                      <Layers size={14} style={{ color: '#FFFFFF' }} /> Convert to BOM →
+                    </button>
+                  );
+                })()}
 
                 <button
                   onClick={() => {
@@ -1598,15 +1722,46 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    PI Number
+                    PI Number (Zoho Quote Sequence)
                   </label>
-                  <input
-                    type="text"
-                    value={piNumber}
-                    placeholder="e.g. PI-2026-001 (Auto-assigned)"
-                    onChange={(e) => setPiNumber(e.target.value)}
-                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={piNumber || 'Auto-Assigned'}
+                      placeholder="Auto-Assigned (Zoho Quote Sequence)"
+                      style={{
+                        width: '100%',
+                        height: '42px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        padding: '0 14px',
+                        fontSize: '13px',
+                        fontWeight: '800',
+                        color: '#0E7490',
+                        backgroundColor: '#F8FAFC',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        cursor: 'not-allowed'
+                      }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      color: '#0E7490',
+                      backgroundColor: '#ECFEFF',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #A5F3FC'
+                    }}>
+                      Locked (Auto)
+                    </span>
+                  </div>
                 </div>
 
                 <div>

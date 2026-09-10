@@ -235,13 +235,26 @@ const loadCredentialsFromEnv = () => {
 
 const initialCreds = loadCredentialsFromEnv();
 
+let cachedToken = '';
+let cachedExpiresAt = 0;
+try {
+  const p = path.join(__dirname, 'zoho_token_cache.json');
+  if (fs.existsSync(p)) {
+    const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (c.accessToken && c.tokenExpiresAt > Date.now() + 60000) {
+      cachedToken = c.accessToken;
+      cachedExpiresAt = c.tokenExpiresAt;
+    }
+  }
+} catch (_) {}
+
 // In-memory session store for Zoho OAuth tokens, initializing from env if present
 let zohoSession = {
   connected: initialCreds.connected,
   orgId: initialCreds.orgId,
   apiToken: initialCreds.apiToken,
-  accessToken: '',
-  tokenExpiresAt: 0,
+  accessToken: cachedToken,
+  tokenExpiresAt: cachedExpiresAt,
   organizationName: 'ARMS AI'
 };
 
@@ -742,6 +755,12 @@ const getZohoAccessToken = () => {
             zohoSession.accessToken = parsed.access_token;
             // Cache token and set expiration timestamp
             zohoSession.tokenExpiresAt = Date.now() + (parsed.expires_in || 3600) * 1000;
+            try {
+              fs.writeFileSync(path.join(__dirname, 'zoho_token_cache.json'), JSON.stringify({
+                accessToken: zohoSession.accessToken,
+                tokenExpiresAt: zohoSession.tokenExpiresAt
+              }), 'utf8');
+            } catch (_) {}
             resolve(parsed.access_token);
           } else {
             reject(new Error(parsed.error || 'No access token returned.'));
@@ -3225,6 +3244,69 @@ app.post('/api/zoho/invoices', async (req, res) => {
 });
 
 // Proforma Invoices / Estimates endpoints
+// Returns next sequential PI number matching Zoho Quotes sequence (PI-000XX)
+app.get(['/api/zoho/next-pi-number', '/api/zoho/next-estimate-number'], async (req, res) => {
+  let maxNum = 0;
+
+  // 1. Check Zoho Books Estimates/Quotes
+  if (zohoSession.connected) {
+    try {
+      const accessToken = await getZohoAccessToken();
+      const zohoRes = await new Promise((resolve) => {
+        const options = {
+          hostname: 'www.zohoapis.in',
+          port: 443,
+          path: `/books/v3/estimates?organization_id=${zohoSession.orgId}&per_page=200&sort_column=created_time&sort_order=D`,
+          method: 'GET',
+          headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+        };
+        const req = https.request(options, (resp) => {
+          let d = '';
+          resp.on('data', c => d += c);
+          resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+        });
+        req.on('error', () => resolve(null));
+        req.end();
+      });
+
+      if (zohoRes && Array.isArray(zohoRes.estimates)) {
+        zohoRes.estimates.forEach(est => {
+          const numStr = String(est.estimate_number || '');
+          const match = numStr.match(/^PI-(\d+)/i) || numStr.match(/^QI-(\d+)/i);
+          if (match) {
+            const val = parseInt(match[1], 10);
+            if (val > maxNum && val < 1000000) maxNum = val;
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching next estimate from Zoho:', err);
+    }
+  }
+
+  // 2. Check local proforma_invoice_store.json
+  try {
+    const p = getStoreFilePath('proforma_invoice_store.json');
+    if (fs.existsSync(p)) {
+      const localPIs = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (Array.isArray(localPIs)) {
+        localPIs.forEach(item => {
+          const numStr = String(item.piNo || item.id || '');
+          const match = numStr.match(/^PI-(\d+)/i) || numStr.match(/^QI-(\d+)/i);
+          if (match) {
+            const val = parseInt(match[1], 10);
+            if (val > maxNum && val < 1000000) maxNum = val;
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  const nextNum = maxNum + 1;
+  const nextPiNo = 'PI-' + String(nextNum).padStart(5, '0');
+  res.json({ nextPiNo, nextNum });
+});
+
 app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res) => {
   let localEstimates = [];
   try {
@@ -3262,15 +3344,19 @@ app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res)
       customerId: est.customer_id,
       amount: `₹${Number(est.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
       total: est.total,
-      status: est.status === 'accepted' ? 'Approved' : (est.status === 'invoiced' ? 'Invoiced' : 'Pending'),
-      statusType: est.status
+      status: est.status === 'invoiced' ? 'Invoiced' : (est.status === 'declined' ? 'Cancelled' : (est.status === 'draft' ? 'Draft' : 'Issued')),
+      statusType: est.status === 'invoiced' ? 'invoiced' : (est.status === 'declined' ? 'cancelled' : (est.status === 'draft' ? 'draft' : 'issued'))
     }));
 
     const piMap = new Map();
     mappedPIs.forEach(p => piMap.set(String(p.piNo).toLowerCase(), p));
     localEstimates.forEach(lp => {
       const k = String(lp.piNo).toLowerCase();
-      if (!piMap.has(k)) piMap.set(k, lp);
+      if (!piMap.has(k)) {
+        piMap.set(k, lp);
+      } else {
+        piMap.set(k, { ...lp, ...piMap.get(k) });
+      }
     });
 
     res.json(Array.from(piMap.values()));
@@ -3294,21 +3380,100 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
 
   try {
     const accessToken = await getZohoAccessToken();
-    const payload = {
-      customer_id: req.body.customerId || '4080449000000039008',
-      estimate_number: req.body.piNo || undefined,
-      date: req.body.piDate || new Date().toISOString().split('T')[0],
-      line_items: (req.body.items || []).map(it => ({
+
+    // Resolve customer ID from Zoho if name provided
+    let customerId = req.body.customerId;
+    const clientName = (req.body.customerName || req.body.vendor || '').trim();
+    if (!customerId && clientName) {
+      try {
+        const cName = encodeURIComponent(clientName);
+        const contactRes = await new Promise((resolve) => {
+          const opt = {
+            hostname: 'www.zohoapis.in',
+            port: 443,
+            path: `/books/v3/contacts?organization_id=${zohoSession.orgId}&search_text=${cName}`,
+            method: 'GET',
+            headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+          };
+          const r = https.request(opt, (resp) => {
+            let d = '';
+            resp.on('data', c => d += c);
+            resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+          });
+          r.on('error', () => resolve(null));
+          r.end();
+        });
+        if (contactRes && Array.isArray(contactRes.contacts) && contactRes.contacts.length > 0) {
+          customerId = contactRes.contacts[0].contact_id;
+        } else {
+          // Dynamic contact provision in Zoho Books so Quote reflects the real customer name
+          const newCustPayload = JSON.stringify({
+            contact_name: clientName,
+            company_name: clientName,
+            contact_type: 'customer'
+          });
+          const createCustRes = await new Promise((resolve) => {
+            const opt = {
+              hostname: 'www.zohoapis.in',
+              port: 443,
+              path: `/books/v3/contacts?organization_id=${zohoSession.orgId}`,
+              method: 'POST',
+              headers: {
+                'Authorization': `Zoho-oauthtoken ${accessToken}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(newCustPayload)
+              }
+            };
+            const r = https.request(opt, (resp) => {
+              let d = '';
+              resp.on('data', c => d += c);
+              resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+            });
+            r.on('error', () => resolve(null));
+            r.write(newCustPayload);
+            r.end();
+          });
+          if (createCustRes && createCustRes.contact && createCustRes.contact.contact_id) {
+            customerId = createCustRes.contact.contact_id;
+          }
+        }
+      } catch (_) {}
+    }
+    if (!customerId) customerId = '4080449000000033179'; // Fallback to verified Zoho customer
+
+    const lineItems = (req.body.items || []).map(it => {
+      const q = parseFloat(it.qty || it.quantity) || 1;
+      const r = parseFloat(it.rate || it.unitValue) || 100;
+      return {
         name: it.name || it.productName || 'Solar Module Mounting Structures',
-        rate: Number(it.rate || it.unitValue || 100),
-        quantity: Number(it.qty || it.quantity || 1)
-      }))
+        rate: r,
+        quantity: q,
+        description: it.description || it.category || 'Engineering structure line item'
+      };
+    });
+
+    if (lineItems.length === 0) {
+      lineItems.push({
+        name: req.body.productName || 'Solar Mounting Structure Kit',
+        rate: parseFloat(req.body.subtotal) || 1000,
+        quantity: 1
+      });
+    }
+
+    const payload = {
+      customer_id: customerId,
+      estimate_number: req.body.piNo || undefined,
+      date: req.body.piDate ? (new Date(req.body.piDate).toISOString().split('T')[0] || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+      expiry_date: req.body.validUntilDate || req.body.expDate || undefined,
+      line_items: lineItems,
+      notes: (req.body.remarks || req.body.notes || 'Proforma Invoice generated via Control Room').slice(0, 100)
     };
+
     const postData = JSON.stringify(payload);
     const options = {
       hostname: 'www.zohoapis.in',
       port: 443,
-      path: `/books/v3/estimates?organization_id=${zohoSession.orgId}`,
+      path: `/books/v3/estimates?organization_id=${zohoSession.orgId}&ignore_auto_number_generation=true`,
       method: 'POST',
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
@@ -3316,6 +3481,7 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
         'Content-Length': Buffer.byteLength(postData)
       }
     };
+
     const zohoRes = await new Promise((resolve) => {
       const r = https.request(options, (resp) => {
         let d = '';
@@ -3327,10 +3493,36 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
       r.end();
     });
 
-    if (zohoRes && zohoRes.estimate) {
-      newPI.zohoEstimateId = zohoRes.estimate.estimate_id;
+    if (zohoRes && (zohoRes.estimate || zohoRes.code === 0)) {
+      const createdEst = zohoRes.estimate;
+      if (createdEst) {
+        newPI.zohoEstimateId = createdEst.estimate_id;
+        newPI.piNo = createdEst.estimate_number || newPI.piNo;
+        // Mark as Sent in Zoho Books so it is directly Issued/active
+        try {
+          await new Promise((resolve) => {
+            const r = https.request({
+              hostname: 'www.zohoapis.in',
+              port: 443,
+              path: `/books/v3/estimates/${createdEst.estimate_id}/status/sent?organization_id=${zohoSession.orgId}`,
+              method: 'POST',
+              headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+            }, () => resolve());
+            r.on('error', () => resolve());
+            r.end();
+          });
+        } catch (_) {}
+      }
+      try {
+        const reUpdated = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+        fs.writeFileSync(p, JSON.stringify(reUpdated, null, 2), 'utf8');
+      } catch (_) {}
+    } else {
+      console.warn('[ZOHO ESTIMATE REJECTED]', zohoRes);
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn('[ZOHO ESTIMATE POST NOTICE]', err);
+  }
 
   res.json({ success: true, estimate: newPI });
 });
