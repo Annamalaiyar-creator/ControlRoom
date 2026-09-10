@@ -345,7 +345,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [signedPiDoc, setSignedPiDoc] = useState(null);
   const [piNumber, setPiNumber] = useState('');
   const [piDate, setPiDate] = useState(new Date().toISOString().split('T')[0]);
-  const [validUntilDate, setValidUntilDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+  const [validUntilDate, setValidUntilDate] = useState('');
   const [salesPerson, setSalesPerson] = useState(getActiveUserName());
   const [vendorName, setVendorName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
@@ -364,10 +364,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [deliveryState, setDeliveryState] = useState('');
   const [deliveryPincode, setDeliveryPincode] = useState('');
 
-  // Structured Line Items State
-  const [piItems, setPiItems] = useState([
-    { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
-  ]);
+  // Structured Line Items State (Fresh empty default)
+  const [piItems, setPiItems] = useState([]);
 
   // Transport & Logistics
   const [transportMode, setTransportMode] = useState('Transport');
@@ -584,6 +582,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setUploadProgress(0);
     setIsUploading(false);
     setPiNumber('');
+    setPiDate(new Date().toISOString().split('T')[0]);
+    setValidUntilDate('');
     setVendorName('');
     setContactPerson('');
     setPhone('');
@@ -606,13 +606,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setPaymentTerms('50% Advance + 50% Before Dispatch');
     setCreditDays('');
     setRemarks('');
-    setPiItems([
-      { name: 'Solar Mounting Structures & Fasteners', category: 'Structure Kit', uom: 'SET', qty: '1', rate: '25000', gstRate: '18%' }
-    ]);
+    setPiItems([]); // Fresh empty default with 0 prefilled items
     setSelectedPreset('');
     setPresetSetCount(1);
     setPresetKitPrice('');
     setPresetGroups({});
+    setSelectedItemIndexes([]);
     setShowSaveConfirm(false);
     setShowClearConfirmModal(false);
     setPiConfirmModal(null);
@@ -621,11 +620,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   // Triggers Save Confirmation modal
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
-    if (!piNumber || !vendorName) {
-      alert('Please enter PI Number and Customer Name.');
+    if (!vendorName || !vendorName.trim()) {
+      alert('Please enter Customer / Company Name.');
       return;
     }
-    if (piItems.length === 0) {
+    if (!Array.isArray(piItems) || piItems.length === 0) {
       alert('Please add at least one line item or select a preset kit.');
       return;
     }
@@ -637,8 +636,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     const totals = calculatePiTotals();
     const joinedProducts = piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
 
+    const cleanPiNo = (piNumber && piNumber.trim())
+      ? piNumber.trim().toUpperCase()
+      : `PI-${new Date().getFullYear()}-${String(piList.length + 101).padStart(3, '0')}`;
+
     const newPI = {
-      piNo: piNumber.toUpperCase(),
+      piNo: cleanPiNo,
       vendor: vendorName,
       customerName: vendorName,
       contactPerson,
@@ -910,9 +913,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 onClick={() => {
                   resetForm();
                   setEditIdx(null);
-                  setPiNumber(`PI-${new Date().getFullYear()}-${String(piList.length + 101).padStart(3, '0')}`);
-                  setPiDate(new Date().toISOString().split('T')[0]);
-                  setValidUntilDate(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
                   setViewMode('create');
                 }}
                 style={{
@@ -1614,7 +1614,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
-                    Payment Due / Valid Until Date <span style={{ color: '#EF4444' }}>*</span>
+                    Payment Due / Valid Until Date
                   </label>
                   <input
                     type="date"
@@ -1626,12 +1626,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
-                    PI Number <span style={{ color: '#EF4444' }}>*</span>
+                    PI Number
                   </label>
                   <input
                     type="text"
                     value={piNumber}
-                    placeholder="e.g. PI-2026-001"
+                    placeholder="e.g. PI-2026-001 (Auto-assigned on save if blank)"
                     onChange={(e) => setPiNumber(e.target.value)}
                     style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
