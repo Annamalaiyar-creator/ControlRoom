@@ -24,6 +24,7 @@ import {
   INITIAL_WHATSAPP_CONVERSATIONS,
   INITIAL_CRM_QUOTATIONS
 } from '../../services/crmStore';
+import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
 
 export default function SalesCrmEngine({
   userRole = 'Sales Executive',
@@ -60,10 +61,26 @@ export default function SalesCrmEngine({
   const [quotations, setQuotations] = useState(() => getCrmStore('quotations', INITIAL_CRM_QUOTATIONS));
 
   // Live Zoho customers sync on mount
+  // Live Supabase Cloud + Zoho sync on mount
   useEffect(() => {
     let isMounted = true;
-    const syncLiveCustomers = async () => {
+    const syncCloudCrm = async () => {
       try {
+        const [cloudCust, cloudLeads, cloudOpps, cloudQuotes] = await Promise.all([
+          fetchCloudStore('customer_store', []),
+          fetchCloudStore('crm_leads', []),
+          fetchCloudStore('crm_opportunities', []),
+          fetchCloudStore('crm_quotations', [])
+        ]);
+
+        if (isMounted) {
+          if (Array.isArray(cloudCust) && cloudCust.length > 0) setCustomers(cloudCust);
+          if (Array.isArray(cloudLeads) && cloudLeads.length > 0) setLeads(cloudLeads);
+          if (Array.isArray(cloudOpps) && cloudOpps.length > 0) setOpportunities(cloudOpps);
+          if (Array.isArray(cloudQuotes) && cloudQuotes.length > 0) setQuotations(cloudQuotes);
+        }
+
+        // Also fetch live Zoho Customers
         const res = await fetch('/api/zoho/customers');
         if (res.ok) {
           const liveList = await res.json();
@@ -81,16 +98,16 @@ export default function SalesCrmEngine({
                 }
               });
               const unified = Array.from(map.values());
-              saveCrmStore('customers', unified);
+              saveCloudStore('customer_store', unified);
               return unified;
             });
           }
         }
       } catch (err) {
-        console.warn('Initial Zoho customers sync:', err);
+        console.warn('Initial Supabase/Zoho CRM sync notice:', err);
       }
     };
-    syncLiveCustomers();
+    syncCloudCrm();
     return () => { isMounted = false; };
   }, []);
 
@@ -111,6 +128,7 @@ export default function SalesCrmEngine({
       });
       const unified = Array.from(map.values());
       saveCrmStore('customers', unified);
+      saveCloudStore('customer_store', unified);
       return unified;
     });
   };
@@ -127,32 +145,32 @@ export default function SalesCrmEngine({
     setCustomers(updated);
     saveCrmStore('customers', updated);
 
-    // Also sync to BOM customer store so BOM creation picks it up immediately
+    // Also sync to Supabase customer store so BOM creation picks it up immediately
     try {
-      const existingBOMCust = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
-      const filtered = existingBOMCust.filter(c => {
-        const cCode = (c.customerCode || c.code || c.id || '').toLowerCase().trim();
-        const targetCode = (customer.customerCode || customer.id || customer.code || '').toLowerCase().trim();
-        return cCode !== targetCode;
+      fetchCloudStore('customer_store', []).then(existingBOMCust => {
+        const list = Array.isArray(existingBOMCust) ? existingBOMCust : [];
+        const filtered = list.filter(c => {
+          const cCode = (c.customerCode || c.code || c.id || '').toLowerCase().trim();
+          const targetCode = (customer.customerCode || customer.id || customer.code || '').toLowerCase().trim();
+          return cCode !== targetCode;
+        });
+        const bomRecord = {
+          code: customer.companyName || customer.customerName || customer.customerCode,
+          c2: customer.companyName || customer.customerName || customer.customerCode,
+          gstNo: customer.gstNumber || '',
+          c3: (customer.primaryContact && customer.primaryContact.name) || '',
+          c4: (customer.primaryContact && customer.primaryContact.phone) || '',
+          c5: (customer.primaryContact && customer.primaryContact.email) || '',
+          status: 'ACTIVE',
+          customerCode: customer.customerCode || customer.id,
+          ...customer
+        };
+        const updatedBOMCust = [bomRecord, ...filtered];
+        saveCloudStore('customer_store', updatedBOMCust);
+        window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: bomRecord }));
       });
-      const bomRecord = {
-        code: customer.companyName || customer.customerName || customer.customerCode,
-        c2: customer.companyName || customer.customerName || customer.customerCode,
-        gstNo: customer.gstNumber || '',
-        c3: (customer.primaryContact && customer.primaryContact.name) || '',
-        c4: (customer.primaryContact && customer.primaryContact.phone) || '',
-        c5: (customer.primaryContact && customer.primaryContact.email) || '',
-        status: 'ACTIVE',
-        customerCode: customer.customerCode || customer.id,
-        ...customer
-      };
-      const updatedBOMCust = [bomRecord, ...filtered];
-      localStorage.setItem('controlroom_customer_store', JSON.stringify(updatedBOMCust));
-      localStorage.setItem('controlroom_customer_list', JSON.stringify(updatedBOMCust));
-      window.dispatchEvent(new Event('controlroom_storage_update'));
-      window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: bomRecord }));
     } catch (e) {
-      console.warn('Error syncing customer to BOM store:', e);
+      console.warn('Error syncing customer to cloud store:', e);
     }
 
     // Automatically synchronize to Zoho Books

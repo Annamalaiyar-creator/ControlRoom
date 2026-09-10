@@ -25,6 +25,7 @@ import WorkflowNotificationBanner from './components/WorkflowNotificationBanner'
 import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt, RefreshCw } from 'lucide-react';
 import { useEffect, Component } from 'react';
 import { heartbeatActiveSession, registerActiveSession, revokeSession } from './services/sessionService';
+import { getSafeZohoPOs, getSafeZohoItems } from './services/zohoSafeSync';
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -155,15 +156,17 @@ function App() {
     return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
   });
 
-  // One-time fresh reset for BOM and Invoice stores to guarantee clean testing state
+  // Ensure all local data stores are purged from localStorage so Supabase cloud is 100% authoritative
   useEffect(() => {
-    if (!localStorage.getItem('controlroom_fresh_test_reset_v5')) {
-      localStorage.setItem('controlroom_bom_store', '[]');
-      localStorage.setItem('controlroom_invoice_store', '[]');
-      localStorage.setItem('controlroom_fresh_test_reset_v5', 'done');
-      fetch('/api/reset-all-testing-data', { method: 'POST' }).catch(() => {});
-      window.dispatchEvent(new Event('controlroom_storage_update'));
-    }
+    try {
+      localStorage.removeItem('controlroom_bom_store');
+      localStorage.removeItem('controlroom_invoice_store');
+      localStorage.removeItem('controlroom_po_store');
+      localStorage.removeItem('controlroom_customer_store');
+      localStorage.removeItem('controlroom_customer_list');
+      localStorage.removeItem('controlroom_vendor_store');
+      localStorage.removeItem('controlroom_item_store');
+    } catch (_) {}
   }, []);
 
   const [targetPoNo, setTargetPoNo] = useState(null);
@@ -245,24 +248,18 @@ function App() {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        const [poRes, itemsRes] = await Promise.all([
-          fetch('/api/zoho/purchaseorders'),
-          fetch('/api/zoho/items')
+        const [poData, itemsData] = await Promise.all([
+          getSafeZohoPOs(),
+          getSafeZohoItems()
         ]);
         
-        if (poRes.ok) {
-          const poData = await poRes.json();
-          setPurchaseOrders(Array.isArray(poData) ? poData : []);
+        if (Array.isArray(poData)) {
+          setPurchaseOrders(poData);
         }
-        if (itemsRes.ok) {
-          const itemsData = await itemsRes.json();
-          const validItems = Array.isArray(itemsData) ? itemsData : [];
-          setItemsList(validItems);
+        if (Array.isArray(itemsData)) {
+          setItemsList(itemsData);
           try {
-            if (validItems.length > 0) {
-              localStorage.setItem('controlroom_items_list', JSON.stringify(validItems));
-              window.dispatchEvent(new Event('central_inventory_updated'));
-            }
+            window.dispatchEvent(new Event('central_inventory_updated'));
           } catch (e) {}
         }
       } catch (err) {

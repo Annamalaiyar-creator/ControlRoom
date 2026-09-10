@@ -662,28 +662,14 @@ export const INITIAL_CRM_ACTIVITIES = [
  * Universal safe store loader and syncer
  */
 export function getCrmStore(key, initialData = []) {
-  try {
-    const raw = localStorage.getItem(`controlroom_crm_${key}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.error(`Error loading CRM ${key}:`, e);
-  }
-  // Initialize with seed data
-  try {
-    localStorage.setItem(`controlroom_crm_${key}`, JSON.stringify(initialData));
-  } catch (e) {}
   return initialData;
 }
 
 export function saveCrmStore(key, data) {
   try {
-    localStorage.setItem(`controlroom_crm_${key}`, JSON.stringify(data));
     saveCloudStore(`crm_${key}`, data);
     // Dispatch local custom event for cross-component re-rendering
-    window.dispatchEvent(new CustomEvent('controlroom_crm_update', { detail: { key, count: data.length } }));
+    window.dispatchEvent(new CustomEvent('controlroom_crm_update', { detail: { key, count: Array.isArray(data) ? data.length : 1 } }));
   } catch (e) {
     console.error(`Error saving CRM ${key}:`, e);
   }

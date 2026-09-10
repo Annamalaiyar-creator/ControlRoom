@@ -100,22 +100,7 @@ export default function ProductionViewsEngine(props) {
   const [custFormDeliveryState, setCustFormDeliveryState] = useState('');
   const [custFormDeliveryPincode, setCustFormDeliveryPincode] = useState('');
 
-  const [customerList, setCustomerList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_customer_list');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      { code: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNo: '33AABCU9603R1ZM', c3: 'Rajesh Kumar', c4: '+91 98765 43210', c5: 'rajesh@vikramsolar.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
-      { code: 'Tata Power Renewable', c2: 'Tata Power Ltd', gstNo: '29AAACT2727Q1ZW', c3: 'Anish Sharma', c4: '+91 98123 45678', c5: 'anish.s@tatapower.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' },
-      { code: 'Apex Infra Systems', c2: 'Apex Infra Ltd', gstNo: '33AABCA1234F1Z5', c3: 'Priya Sundaram', c4: '+91 99400 11223', c5: 'priya@apexinfra.com', status: 'ACTIVE', stBg: '#dcfce7', stFg: '#166534', stBorder: '1px solid #bbf7d0', tabGroup: 'Active' }
-    ];
-  });
+  const [customerList, setCustomerList] = useState([]);
 
   // Sync customerList with Supabase cloud database
   const isInitialCustMount = useRef(true);
@@ -182,6 +167,21 @@ export default function ProductionViewsEngine(props) {
             });
           }
         }
+
+        // Sync Customers directly from Supabase & Zoho Books
+        try {
+          let custs = await fetchCloudStore('customer_store', []);
+          if (!Array.isArray(custs) || custs.length === 0) {
+            const zohoCustRes = await fetch('/api/zoho/customers');
+            if (zohoCustRes.ok) {
+              const zCusts = await zohoCustRes.json();
+              if (Array.isArray(zCusts) && zCusts.length > 0) custs = zCusts;
+            }
+          }
+          if (Array.isArray(custs) && custs.length > 0) {
+            setCustomerList(custs);
+          }
+        } catch (_) {}
       } catch (err) {
         console.error('Error syncing BOMs in ProductionViewsEngine:', err);
       } finally {
@@ -1502,11 +1502,7 @@ export default function ProductionViewsEngine(props) {
       setItemsList(prev => {
         const filtered = (prev || []).filter(i => (i.itemId || i.id || i.sku) !== (createdItem.itemId || createdItem.sku));
         const updated = [createdItem, ...filtered];
-        // 2. Persist to localStorage immediately
-        try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
-        } catch (e) {}
-        // 3. Persist directly to Supabase leaves cloud store (ITEM_STORE)
+        // 2. Persist directly to Supabase leaves cloud store (ITEM_STORE)
         try {
           saveCloudStore('item_store', updated);
         } catch (e) {}
@@ -1544,9 +1540,6 @@ export default function ProductionViewsEngine(props) {
       setItemsList(prev => {
         const filtered = (prev || []).filter(i => (i.itemId || i.id || i.sku) !== (fallback.itemId || fallback.sku));
         const updated = [fallback, ...filtered];
-        try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
-        } catch (e) {}
         try {
           saveCloudStore('item_store', updated);
         } catch (e) {}
@@ -1595,9 +1588,6 @@ export default function ProductionViewsEngine(props) {
       setItemsList(prev => {
         const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? { ...it, ...editingItem, ...payload } : it);
         try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
-        } catch (e) {}
-        try {
           saveCloudStore('item_store', updated);
         } catch (e) {}
         return updated;
@@ -1611,9 +1601,6 @@ export default function ProductionViewsEngine(props) {
       console.error("Error updating item:", err);
       setItemsList(prev => {
         const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? editingItem : it);
-        try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
-        } catch (e) {}
         try {
           saveCloudStore('item_store', updated);
         } catch (e) {}

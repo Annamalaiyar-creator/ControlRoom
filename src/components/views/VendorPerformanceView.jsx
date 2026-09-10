@@ -119,98 +119,9 @@ export default function VendorPerformanceView(props) {
   const [previewAddressProofModal, setPreviewAddressProofModal] = useState(null);
   const [bomActionMenuPos, setBomActionMenuPos] = useState({ top: 0, left: 0 });
 
-  const [bomStore, setBomStore] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_bom_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error("Error reading controlroom_bom_store", e);
-    }
-    return [
-      {
-        bomCode: 'BOM-101',
-        date: '2026-07-10',
-        customerName: 'Vikram Solar Pvt Ltd',
-        companyName: 'Vikram Solar Pvt Ltd',
-        mobile: '+91 98765 43210',
-        email: 'rajesh@vikramsolar.com',
-        billingAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
-        deliveryAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
-        paymentType: '100% Advance',
-        status: 'Pending Confirmation',
-        items: [
-          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 4, rate: 250, confirmed: false },
-          { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: 6, rate: 45, confirmed: false },
-          { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: 4, rate: 40, confirmed: false }
-        ],
-        payments: {
-          advance50Uploaded: false,
-          dispatch50Uploaded: false,
-          advance100Uploaded: false,
-          net30Uploaded: false,
-          proofDoc: null
-        },
-        dispatchPacking: [],
-        accountsVerification: {
-          paymentStatus: null,
-          hardCopyReceived: false,
-          softCopyReceived: false
-        },
-        invoiceConfirmed: false,
-        invoiceDeducted: false,
-        grandTotal: 1430
-      },
-      {
-        bomCode: 'BOM-102',
-        date: '2026-07-12',
-        customerName: 'Tata Power Renewable',
-        companyName: 'Tata Power Ltd',
-        mobile: '+91 98123 45678',
-        email: 'anish.s@tatapower.com',
-        billingAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
-        deliveryAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
-        paymentType: '50% Advance + 50% Dispatch',
-        status: 'Sent to Production',
-        items: [
-          { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, confirmed: true },
-          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, confirmed: true }
-        ],
-        payments: {
-          advance50Uploaded: true,
-          dispatch50Uploaded: false,
-          proofDoc: 'payment_proof_50pct.pdf'
-        },
-        dispatchPacking: [
-          { name: 'Long Rail 3000 mm', bomQty: 8, packed: true },
-          { name: 'Mini Rail 100 mm', bomQty: 12, packed: true }
-        ],
-        accountsVerification: {
-          paymentStatus: '50% Received',
-          hardCopyReceived: true,
-          softCopyReceived: true
-        },
-        invoiceConfirmed: false,
-        invoiceDeducted: false,
-        grandTotal: 17400
-      }
-    ];
-  });
+  const [bomStore, setBomStore] = useState([]);
 
-  // Save bomStore to localStorage on every change and sync cloud store
-  useEffect(() => {
-    if (bomStore && Array.isArray(bomStore) && bomStore.length > 0) {
-      const sanitized = bomStore.map(stripDataUrlsFromRecord);
-      try {
-        localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
-      } catch (e) {
-        console.error("Error setting controlroom_bom_store", e);
-      }
-      saveCloudStore('bom_store', sanitized);
-    }
-  }, [bomStore]);
+  // bomStore saving removed from secondary view
 
   useEffect(() => {
     fetchCloudStore('bom_store', bomStore).then(data => {
@@ -253,7 +164,7 @@ export default function VendorPerformanceView(props) {
           });
           const merged = Array.from(map.values());
           const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
+          
           return sanitizedMerged;
         });
       }
@@ -1416,7 +1327,7 @@ export default function VendorPerformanceView(props) {
         const updated = [createdItem, ...filtered];
         // 2. Persist to localStorage immediately
         try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+          saveCloudStore('item_store', updated);
         } catch (e) {}
         // 3. Persist directly to Supabase leaves cloud store (ITEM_STORE)
         try {
@@ -1457,7 +1368,7 @@ export default function VendorPerformanceView(props) {
         const filtered = (prev || []).filter(i => (i.itemId || i.id || i.sku) !== (fallback.itemId || fallback.sku));
         const updated = [fallback, ...filtered];
         try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+          saveCloudStore('item_store', updated);
         } catch (e) {}
         try {
           saveCloudStore('item_store', updated);
@@ -1507,7 +1418,7 @@ export default function VendorPerformanceView(props) {
       setItemsList(prev => {
         const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? { ...it, ...editingItem, ...payload } : it);
         try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+          saveCloudStore('item_store', updated);
         } catch (e) {}
         try {
           saveCloudStore('item_store', updated);
@@ -1524,7 +1435,7 @@ export default function VendorPerformanceView(props) {
       setItemsList(prev => {
         const updated = (prev || []).map(it => (it.itemId === editingItem.itemId || it.id === editingItem.itemId) ? editingItem : it);
         try {
-          localStorage.setItem('controlroom_item_store', JSON.stringify(updated));
+          saveCloudStore('item_store', updated);
         } catch (e) {}
         try {
           saveCloudStore('item_store', updated);

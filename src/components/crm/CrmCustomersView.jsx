@@ -9,6 +9,7 @@ import {
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import Customer360PageView from './Customer360PageView';
+import { saveCloudStore, fetchCloudStore } from '../../utils/supabaseDataSync';
 
 export default function CrmCustomersView({
   customers = [],
@@ -465,23 +466,23 @@ export default function CrmCustomersView({
     // 1. Immediately save to CRM store
     onSaveCustomer(record);
 
-    // 2. Also save to BOM customer store so BOM Creation picks it up instantly
+    // 2. Also save to Supabase customer_store so BOM Creation & whole app picks it up
     try {
-      const existingBOMCust = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
-      const filtered = existingBOMCust.filter(c => {
-        const cCode = (c.code || c.customerName || c.customerCode || '').toLowerCase().trim();
-        const cComp = (c.c2 || c.companyName || '').toLowerCase().trim();
-        const targetName = (record.code || '').toLowerCase().trim();
-        const targetComp = (record.c2 || '').toLowerCase().trim();
-        return cCode !== targetName && cComp !== targetComp;
+      fetchCloudStore('customer_store', []).then(existingBOMCust => {
+        const list = Array.isArray(existingBOMCust) ? existingBOMCust : [];
+        const filtered = list.filter(c => {
+          const cCode = (c.code || c.customerName || c.customerCode || '').toLowerCase().trim();
+          const cComp = (c.c2 || c.companyName || '').toLowerCase().trim();
+          const targetName = (record.code || '').toLowerCase().trim();
+          const targetComp = (record.c2 || '').toLowerCase().trim();
+          return cCode !== targetName && cComp !== targetComp;
+        });
+        const updatedBOMCust = [record, ...filtered];
+        saveCloudStore('customer_store', updatedBOMCust);
+        window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: record }));
       });
-      const updatedBOMCust = [record, ...filtered];
-      localStorage.setItem('controlroom_customer_store', JSON.stringify(updatedBOMCust));
-      localStorage.setItem('controlroom_customer_list', JSON.stringify(updatedBOMCust));
-      window.dispatchEvent(new Event('controlroom_storage_update'));
-      window.dispatchEvent(new CustomEvent('controlroom_customer_update', { detail: record }));
     } catch (e) {
-      console.error('Error syncing customer to BOM store:', e);
+      console.error('Error syncing customer to cloud store:', e);
     }
 
     // 3. Post to Zoho Books sync API
@@ -496,16 +497,16 @@ export default function CrmCustomersView({
         const mergedFinal = { ...record, ...resJson.customer };
         onSaveCustomer(mergedFinal);
         try {
-          const list = JSON.parse(localStorage.getItem('controlroom_customer_store') || '[]');
-          const idx = list.findIndex(c => c.id === record.id || c.code === record.code);
-          if (idx >= 0) {
-            list[idx] = { ...list[idx], ...resJson.customer };
-          } else {
-            list.unshift(mergedFinal);
-          }
-          localStorage.setItem('controlroom_customer_store', JSON.stringify(list));
-          localStorage.setItem('controlroom_customer_list', JSON.stringify(list));
-          window.dispatchEvent(new Event('controlroom_storage_update'));
+          fetchCloudStore('customer_store', []).then(existingList => {
+            const list = Array.isArray(existingList) ? existingList : [];
+            const idx = list.findIndex(c => c.id === record.id || c.code === record.code);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], ...resJson.customer };
+            } else {
+              list.unshift(mergedFinal);
+            }
+            saveCloudStore('customer_store', list);
+          });
         } catch (e) {}
       }
       setZohoSyncMessage({

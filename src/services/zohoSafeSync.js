@@ -1,233 +1,279 @@
 import { supabase } from '../supabaseClient';
+import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 
 /**
- * Universal safe fetcher for Zoho data in ControlRoom.
- * If backend Express /api/zoho/* is alive, it queries it.
- * If backend returns 404/405/HTML (e.g. IIS static hosting without Node.js),
- * it seamlessly pulls from the Supabase leaves cloud store or local cache.
+ * Universal Safe Synchronizer for Zoho Books + Supabase in Control Room.
+ * 
+ * ARCHITECTURAL MANDATE:
+ * 1. Supabase Cloud + Zoho Books are the authoritative dual storage engines.
+ * 2. Zero reliance on browser localStorage.
+ * 3. All items, POs, Vendors, Customers, and Invoices are stored in Zoho Books AND Supabase Cloud.
  */
 
-export async function getSafeZohoItems() {
-  // Read local cache first
-  let localCached = [];
-  try {
-    const raw = localStorage.getItem('controlroom_item_store');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) localCached = parsed;
-    }
-  } catch (_) {}
-
-  const mergeWithLocal = (freshItems) => {
-    if (!Array.isArray(freshItems) || freshItems.length === 0) return localCached;
-    const map = new Map();
-    // 1. Index local items first
-    localCached.forEach(it => {
-      const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
-      if (key) map.set(key, it);
-    });
-    // 2. Overlay fresh items from Zoho on top so fresh Zoho updates (name, rate, status, sku, description, unit) reflect immediately
-    freshItems.forEach(it => {
-      const key = String(it.code || it.sku || it.itemId || it.id || it.name || '').toLowerCase();
-      if (key) {
-        const existing = map.get(key) || {};
-        map.set(key, { ...existing, ...it });
-      }
-    });
-    const result = Array.from(map.values()).map(item => ({
-      ...item,
-      stock: (item.stock !== undefined && item.stock !== null) ? Number(item.stock) : 5000,
-      openingStock: (item.openingStock !== undefined && item.openingStock !== null) ? Number(item.openingStock) : 5000
-    }));
-    try {
-      localStorage.setItem('controlroom_item_store', JSON.stringify(result));
-    } catch (_) {}
-    return result;
-  };
-
-  // 1. Try backend endpoint first
-  try {
-    const res = await fetch('/api/zoho/items');
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      if (Array.isArray(data) && data.length > 0) {
-        return mergeWithLocal(data);
-      }
-    }
-  } catch (_) {}
-
-  // 2. Fallback to Supabase leaves cloud store (where items are synced)
-  try {
-    const { data: record } = await supabase
-      .from('leaves')
-      .select('reason')
-      .eq('employee', 'ITEM_STORE')
-      .maybeSingle();
-
-    if (record && record.reason) {
-      const parsed = JSON.parse(record.reason);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return mergeWithLocal(parsed);
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase items fetch notice:', err);
-  }
-
-  return localCached;
-}
-
-export async function getSafeZohoVendors() {
-  // 1. Try backend endpoint first
-  try {
-    const res = await fetch('/api/zoho/vendors');
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      if (Array.isArray(data) && data.length > 0) {
-        localStorage.setItem('controlroom_vendor_store', JSON.stringify(data));
-        return data;
-      }
-    }
-  } catch (_) {}
-
-  // 2. Fallback to Supabase leaves cloud store
-  try {
-    const { data: record } = await supabase
-      .from('leaves')
-      .select('reason')
-      .eq('employee', 'VENDOR_STORE')
-      .maybeSingle();
-
-    if (record && record.reason) {
-      const parsed = JSON.parse(record.reason);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        localStorage.setItem('controlroom_vendor_store', JSON.stringify(parsed));
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase vendors fetch notice:', err);
-  }
-
-  // 3. Fallback to localStorage
-  try {
-    const local = localStorage.getItem('controlroom_vendor_store');
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (_) {}
-
-  return [];
-}
-
+// ---------------------------
+// 1. PURCHASE ORDERS (PO)
+// ---------------------------
 export async function getSafeZohoPOs() {
-  // 1. Try backend endpoint first
+  // 1. Fetch from live Zoho backend
   try {
     const res = await fetch('/api/zoho/purchaseorders');
     if (res.ok) {
       const data = await res.json().catch(() => null);
       if (Array.isArray(data) && data.length > 0) {
-        localStorage.setItem('controlroom_po_store', JSON.stringify(data));
+        saveCloudStore('po_store', data);
         return data;
       }
     }
   } catch (_) {}
 
-  // 2. Fallback to Supabase leaves cloud store
+  // 2. Fallback to Supabase cloud store
   try {
-    const { data: record } = await supabase
-      .from('leaves')
-      .select('reason')
-      .eq('employee', 'PO_STORE')
-      .maybeSingle();
-
-    if (record && record.reason) {
-      const parsed = JSON.parse(record.reason);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        localStorage.setItem('controlroom_po_store', JSON.stringify(parsed));
-        return parsed;
-      }
+    const cloudData = await fetchCloudStore('po_store', []);
+    if (Array.isArray(cloudData) && cloudData.length > 0) {
+      return cloudData;
     }
   } catch (err) {
-    console.warn('Supabase POs fetch notice:', err);
+    console.warn('[getSafeZohoPOs] Supabase fetch notice:', err);
   }
-
-  // 3. Fallback to localStorage
-  try {
-    const local = localStorage.getItem('controlroom_po_store');
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (_) {}
 
   return [];
 }
 
-/**
- * Universal safe saver for Purchase Orders.
- * Persists immediately to localStorage and cloud Supabase 'PO_STORE'
- * so POs are never lost regardless of whether the Node backend is reachable.
- */
 export async function saveSafeZohoPO(newOrUpdatedPO) {
   if (!newOrUpdatedPO) return;
   try {
-    // 1. Update localStorage
-    let currentList = [];
-    const localRaw = localStorage.getItem('controlroom_po_store');
-    if (localRaw) {
-      try {
-        const parsed = JSON.parse(localRaw);
-        if (Array.isArray(parsed)) currentList = parsed;
-      } catch (_) {}
-    }
+    // 1. Fetch current cloud list from Supabase
+    const cloudList = await fetchCloudStore('po_store', []);
     const targetId = newOrUpdatedPO.poNo || newOrUpdatedPO.id;
-    const existingIdx = currentList.findIndex(p => (p.poNo && p.poNo === targetId) || (p.id && p.id === targetId));
+    const existingIdx = cloudList.findIndex(p => (p.poNo && p.poNo === targetId) || (p.id && p.id === targetId));
+    let updatedList;
     if (existingIdx !== -1) {
-      currentList[existingIdx] = { ...currentList[existingIdx], ...newOrUpdatedPO };
+      cloudList[existingIdx] = { ...cloudList[existingIdx], ...newOrUpdatedPO };
+      updatedList = cloudList;
     } else {
-      currentList.unshift(newOrUpdatedPO);
+      updatedList = [newOrUpdatedPO, ...cloudList];
     }
-    localStorage.setItem('controlroom_po_store', JSON.stringify(currentList));
 
-    // 2. Persist to Supabase leaves cloud store (PO_STORE)
-    const { data: record } = await supabase
-      .from('leaves')
-      .select('id, reason')
-      .eq('employee', 'PO_STORE')
-      .maybeSingle();
+    // 2. Persist immediately to Supabase Cloud
+    saveCloudStore('po_store', updatedList);
 
-    if (record && record.id) {
-      let cloudList = [];
-      try {
-        const parsedCloud = JSON.parse(record.reason);
-        if (Array.isArray(parsedCloud)) cloudList = parsedCloud;
-      } catch (_) {}
-      const cIdx = cloudList.findIndex(p => (p.poNo && p.poNo === targetId) || (p.id && p.id === targetId));
-      if (cIdx !== -1) {
-        cloudList[cIdx] = { ...cloudList[cIdx], ...newOrUpdatedPO };
-      } else {
-        cloudList.unshift(newOrUpdatedPO);
-      }
-      await supabase
-        .from('leaves')
-        .update({ reason: JSON.stringify(cloudList), status: 'active' })
-        .eq('id', record.id);
-    } else {
-      await supabase
-        .from('leaves')
-        .insert({
-          employee: 'PO_STORE',
-          reason: JSON.stringify(currentList),
-          status: 'active',
-          start_date: '2026-01-01',
-          end_date: '2026-01-01',
-          type: 'Store'
-        });
-    }
+    // 3. Post to Zoho Books API
+    try {
+      fetch('/api/zoho/purchaseorders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrUpdatedPO)
+      }).catch(e => console.warn('[saveSafeZohoPO] Zoho sync notice:', e));
+    } catch (_) {}
+
+    return updatedList;
   } catch (err) {
-    console.warn('saveSafeZohoPO notice:', err);
+    console.warn('[saveSafeZohoPO] Error:', err);
   }
 }
 
+// ---------------------------
+// 2. VENDORS
+// ---------------------------
+export async function getSafeZohoVendors() {
+  // 1. Try Zoho backend endpoint
+  try {
+    const res = await fetch('/api/zoho/vendors');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data) && data.length > 0) {
+        saveCloudStore('vendor_store', data);
+        return data;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback to Supabase cloud store
+  try {
+    const cloudVendors = await fetchCloudStore('vendor_store', []);
+    if (Array.isArray(cloudVendors) && cloudVendors.length > 0) {
+      return cloudVendors;
+    }
+  } catch (err) {
+    console.warn('[getSafeZohoVendors] Supabase fetch notice:', err);
+  }
+
+  return [];
+}
+
+export async function saveSafeZohoVendor(vendor) {
+  if (!vendor) return;
+  try {
+    const cloudList = await fetchCloudStore('vendor_store', []);
+    const vId = vendor.contact_id || vendor.id || vendor.vendorCode || vendor.code;
+    const existingIdx = cloudList.findIndex(v => (v.contact_id && v.contact_id === vId) || (v.id && v.id === vId) || (v.code && v.code === vId));
+    let updatedList;
+    if (existingIdx !== -1) {
+      cloudList[existingIdx] = { ...cloudList[existingIdx], ...vendor };
+      updatedList = cloudList;
+    } else {
+      updatedList = [vendor, ...cloudList];
+    }
+
+    saveCloudStore('vendor_store', updatedList);
+
+    try {
+      fetch('/api/zoho/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendor)
+      }).catch(() => {});
+    } catch (_) {}
+
+    return updatedList;
+  } catch (err) {
+    console.warn('[saveSafeZohoVendor] Error:', err);
+  }
+}
+
+// ---------------------------
+// 3. CUSTOMERS
+// ---------------------------
+export async function getSafeZohoCustomers() {
+  // 1. Try Zoho backend endpoint
+  try {
+    const res = await fetch('/api/zoho/customers');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data) && data.length > 0) {
+        saveCloudStore('customer_store', data);
+        return data;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback to Supabase cloud store
+  try {
+    const cloudCustomers = await fetchCloudStore('customer_store', []);
+    if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
+      return cloudCustomers;
+    }
+  } catch (err) {
+    console.warn('[getSafeZohoCustomers] Supabase fetch notice:', err);
+  }
+
+  return [];
+}
+
+export async function saveSafeZohoCustomer(customer) {
+  if (!customer) return;
+  try {
+    const cloudList = await fetchCloudStore('customer_store', []);
+    const cId = customer.contact_id || customer.customerCode || customer.id || customer.code;
+    const existingIdx = cloudList.findIndex(c => (c.customerCode && c.customerCode === cId) || (c.id && c.id === cId) || (c.code && c.code === cId));
+    let updatedList;
+    if (existingIdx !== -1) {
+      cloudList[existingIdx] = { ...cloudList[existingIdx], ...customer };
+      updatedList = cloudList;
+    } else {
+      updatedList = [customer, ...cloudList];
+    }
+
+    saveCloudStore('customer_store', updatedList);
+
+    try {
+      fetch('/api/zoho/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer)
+      }).catch(() => {});
+    } catch (_) {}
+
+    return updatedList;
+  } catch (err) {
+    console.warn('[saveSafeZohoCustomer] Error:', err);
+  }
+}
+
+// ---------------------------
+// 4. ITEMS & CATALOG
+// ---------------------------
+export async function getSafeZohoItems() {
+  // 1. Try Zoho backend endpoint
+  try {
+    const res = await fetch('/api/zoho/items');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data) && data.length > 0) {
+        saveCloudStore('item_store', data);
+        return data;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback to Supabase cloud store
+  try {
+    const cloudItems = await fetchCloudStore('item_store', []);
+    if (Array.isArray(cloudItems) && cloudItems.length > 0) {
+      return cloudItems;
+    }
+  } catch (err) {
+    console.warn('[getSafeZohoItems] Supabase fetch notice:', err);
+  }
+
+  return [];
+}
+
+// ---------------------------
+// 5. INVOICES
+// ---------------------------
+export async function getSafeZohoInvoices() {
+  // 1. Try Zoho backend endpoint
+  try {
+    const res = await fetch('/api/zoho/invoices');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data) && data.length > 0) {
+        saveCloudStore('invoice_store', data);
+        return data;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback to Supabase cloud store
+  try {
+    const cloudInvoices = await fetchCloudStore('invoice_store', []);
+    if (Array.isArray(cloudInvoices) && cloudInvoices.length > 0) {
+      return cloudInvoices;
+    }
+  } catch (err) {
+    console.warn('[getSafeZohoInvoices] Supabase fetch notice:', err);
+  }
+
+  return [];
+}
+
+export async function saveSafeZohoInvoice(invoice) {
+  if (!invoice) return;
+  try {
+    const cloudList = await fetchCloudStore('invoice_store', []);
+    const invId = invoice.invNo || invoice.id || invoice.invoice_id;
+    const existingIdx = cloudList.findIndex(i => (i.invNo && i.invNo === invId) || (i.id && i.id === invId));
+    let updatedList;
+    if (existingIdx !== -1) {
+      cloudList[existingIdx] = { ...cloudList[existingIdx], ...invoice };
+      updatedList = cloudList;
+    } else {
+      updatedList = [invoice, ...cloudList];
+    }
+
+    saveCloudStore('invoice_store', updatedList);
+
+    try {
+      fetch('/api/zoho/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice)
+      }).catch(() => {});
+    } catch (_) {}
+
+    return updatedList;
+  } catch (err) {
+    console.warn('[saveSafeZohoInvoice] Error:', err);
+  }
+}

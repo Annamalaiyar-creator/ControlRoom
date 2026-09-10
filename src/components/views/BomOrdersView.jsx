@@ -39,23 +39,8 @@ export default function BomOrdersView(props) {
   // BOM Store from localStorage & Supabase
   const [bomStore, setBomStore] = useState([]);
 
-  // Customer List from localStorage
-  const [customerList, setCustomerList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_customer_list');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      { code: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNo: '33AABCU9603R1ZM', c3: 'Rajesh Kumar', c4: '+91 98765 43210', c5: 'rajesh@vikramsolar.com', status: 'ACTIVE' },
-      { code: 'Tata Power Renewable', c2: 'Tata Power Ltd', gstNo: '29AAACT2727Q1ZW', c3: 'Anish Sharma', c4: '+91 98123 45678', c5: 'anish.s@tatapower.com', status: 'ACTIVE' },
-      { code: 'Apex Infra Systems', c2: 'Apex Infra Ltd', gstNo: '33AABCA1234F1Z5', c3: 'Priya Sundaram', c4: '+91 99400 11223', c5: 'priya@apexinfra.com', status: 'ACTIVE' }
-    ];
-  });
+  // Customer List from Supabase & Zoho
+  const [customerList, setCustomerList] = useState([]);
 
   // Active Presets state (loaded from master JSON + localStorage/cloud)
   const [activePresetsMap, setActivePresetsMap] = useState(() => getAllActivePresets());
@@ -121,6 +106,21 @@ export default function BomOrdersView(props) {
             });
           }
         }
+
+        // Sync Customers directly from Supabase & Zoho Books
+        try {
+          let custs = await fetchCloudStore('customer_store', []);
+          if (!Array.isArray(custs) || custs.length === 0) {
+            const zohoCustRes = await fetch('/api/zoho/customers');
+            if (zohoCustRes.ok) {
+              const zCusts = await zohoCustRes.json();
+              if (Array.isArray(zCusts) && zCusts.length > 0) custs = zCusts;
+            }
+          }
+          if (Array.isArray(custs) && custs.length > 0) {
+            setCustomerList(custs);
+          }
+        } catch (_) {}
       } catch (err) {
         console.error('Error in syncFromCloud:', err);
       }
@@ -133,13 +133,7 @@ export default function BomOrdersView(props) {
     const pollInterval = setInterval(syncFromCloud, 6000);
 
     const syncFromStorage = () => {
-      try {
-        const savedCust = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_customer_list');
-        if (savedCust) {
-          const parsedCust = JSON.parse(savedCust);
-          if (Array.isArray(parsedCust) && parsedCust.length > 0) setCustomerList(parsedCust);
-        }
-      } catch (e) { }
+      syncFromCloud();
     };
 
     window.addEventListener('storage', syncFromStorage);

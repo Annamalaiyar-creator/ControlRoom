@@ -11,12 +11,16 @@ import {
   Zap, CreditCard, Layers, Briefcase
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
+import { fetchCloudStore } from '../utils/supabaseDataSync';
 
 export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, userRole = 'Procurement Head' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoveredItemPos, setHoveredItemPos] = useState(null);
   const [, setEngineTick] = useState(0);
+  const [realBOMCount, setRealBOMCount] = useState(0);
+  const [realPendingPOCount, setRealPendingPOCount] = useState(0);
+  const [realAccountsAwaitingPOCount, setRealAccountsAwaitingPOCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = prodModuleEngine.subscribe(() => {
@@ -25,42 +29,31 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const updateCounts = async () => {
+      try {
+        const [boms, pos] = await Promise.all([
+          fetchCloudStore('bom_store', []),
+          fetchCloudStore('po_store', [])
+        ]);
+        if (Array.isArray(boms)) setRealBOMCount(boms.length);
+        if (Array.isArray(pos)) {
+          setRealPendingPOCount(pos.filter(p => p.status === 'Draft' || p.status === 'WAITING FOR APPROVAL' || p.status === 'Pending Approval' || p.statusType === 'draft' || p.statusType === 'pending').length);
+          setRealAccountsAwaitingPOCount(pos.filter(p => p.status === 'MD Approved' || p.statusType === 'md_approved').length);
+        }
+      } catch (_) {}
+    };
+    updateCounts();
+    window.addEventListener('controlroom_storage_update', updateCounts);
+    return () => window.removeEventListener('controlroom_storage_update', updateCounts);
+  }, []);
+
   // Only count active/open work orders (decreases when a work order is completed / approved & closed)
   const allWorkOrders = prodModuleEngine.getWorkOrders();
   const realWOCount = allWorkOrders.filter(w => {
     const status = String(w.status || '').toUpperCase();
     return status !== 'APPROVED_CLOSED' && status !== 'COMPLETED' && status !== 'CLOSED' && status !== 'CANCELLED';
   }).length;
-  const realBOMCount = (() => {
-    try {
-      const boms = JSON.parse(localStorage.getItem('controlroom_bom_store') || '[]');
-      return Array.isArray(boms) ? boms.length : 0;
-    } catch (e) {
-      return 0;
-    }
-  })();
-  const realPendingPOCount = (() => {
-    try {
-      const pos = JSON.parse(localStorage.getItem('controlroom_purchase_orders') || '[]');
-      if (Array.isArray(pos)) {
-        return pos.filter(p => p.status === 'Draft' || p.status === 'WAITING FOR APPROVAL' || p.status === 'Pending Approval' || p.statusType === 'draft' || p.statusType === 'pending').length;
-      }
-      return 0;
-    } catch (e) {
-      return 0;
-    }
-  })();
-  const realAccountsAwaitingPOCount = (() => {
-    try {
-      const pos = JSON.parse(localStorage.getItem('controlroom_purchase_orders') || '[]');
-      if (Array.isArray(pos)) {
-        return pos.filter(p => p.status === 'MD Approved' || p.statusType === 'md_approved').length;
-      }
-      return 0;
-    } catch (e) {
-      return 0;
-    }
-  })();
 
   // Categorized Menu Sections Structure matching exact design layout
   const procurementSections = [
