@@ -53,7 +53,8 @@ export default function RecentPurchaseOrders({ purchaseOrders: realPurchaseOrder
     }
   ];
 
-  const purchaseOrders = realPurchaseOrders.length > 0 ? realPurchaseOrders.slice(0, 5) : defaultPurchaseOrders;
+  const safeRealOrders = Array.isArray(realPurchaseOrders) ? realPurchaseOrders : [];
+  const purchaseOrders = safeRealOrders.length > 0 ? safeRealOrders.slice(0, 5) : defaultPurchaseOrders;
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {

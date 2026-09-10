@@ -2,22 +2,23 @@ import React from 'react';
 import { Wallet, Package, FileCheck, Truck, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function KPIGrid({ purchaseOrders = [], items = [], isLoading = false }) {
+  const safeOrders = Array.isArray(purchaseOrders) ? purchaseOrders : [];
   const cleanAmount = (amountStr) => {
     if (!amountStr) return 0;
     const cleaned = String(amountStr).replace(/[^0-9.]/g, '');
     return parseFloat(cleaned) || 0;
   };
 
-  const hasRealData = purchaseOrders.length > 0;
+  const hasRealData = safeOrders.length > 0;
 
   // Real calculations
-  const realTotalValue = purchaseOrders.reduce((sum, po) => sum + cleanAmount(po.amount), 0);
-  const realIssued = purchaseOrders.length;
-  const realPending = purchaseOrders.filter(po => {
+  const realTotalValue = safeOrders.reduce((sum, po) => sum + cleanAmount(po.amount), 0);
+  const realIssued = safeOrders.length;
+  const realPending = safeOrders.filter(po => {
     const st = (po.statusText || '').toLowerCase();
     return st.includes('pending') || st.includes('draft');
   }).length;
-  const realCompleted = purchaseOrders.filter(po => {
+  const realCompleted = safeOrders.filter(po => {
     const st = (po.statusText || '').toLowerCase();
     return st.includes('shipped') || st.includes('billed') || st.includes('received') || st.includes('open') || st.includes('approved');
   }).length;

@@ -317,10 +317,52 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ success: true, message: `PO ${targetId} moved to Proceed PO and issued in Zoho Books for GRN generation!` }));
       }
 
-      // If not an API request, serve the static frontend files
-      const fs = require('fs');
-      const path = require('path');
+      // 5. Items list endpoint
+      if (pathname === '/api/zoho/items' || pathname.endsWith('/items')) {
+        try {
+          const token = await getZohoAccessToken();
+          const zohoRes = await callZoho('GET', '/books/v3/items?per_page=200', null, token);
+          const mappedItems = ((zohoRes && zohoRes.items) || []).map(i => ({
+            id: i.item_id || i.id,
+            itemId: i.item_id || i.id,
+            name: i.name,
+            code: i.sku || i.item_id || '—',
+            sku: i.sku || '—',
+            rate: i.rate || 0,
+            price: i.rate || 0,
+            status: i.status === 'active' ? 'Active' : 'Inactive',
+            description: i.description || '—'
+          }));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify(mappedItems));
+        } catch (itemErr) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify([]));
+        }
+      }
 
+      // 6. Vendors list endpoint
+      if (pathname === '/api/zoho/vendors' || pathname.endsWith('/vendors')) {
+        try {
+          const token = await getZohoAccessToken();
+          const zohoRes = await callZoho('GET', '/books/v3/contacts?contact_type=vendor&per_page=200', null, token);
+          const mappedVendors = ((zohoRes && zohoRes.contacts) || []).map(c => ({
+            id: c.contact_id || c.id,
+            vendorId: c.contact_id || c.id,
+            name: c.contact_name || c.vendor_name,
+            email: c.email || '—',
+            phone: c.phone || '—',
+            status: c.status === 'active' ? 'Active' : 'Inactive'
+          }));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify(mappedVendors));
+        } catch (vendorErr) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify([]));
+        }
+      }
+
+      // If not an API request, serve the static frontend files
       let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
       
       // If file exists, serve it with proper content type

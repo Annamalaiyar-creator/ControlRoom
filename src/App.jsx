@@ -241,11 +241,11 @@ function App() {
         
         if (poRes.ok) {
           const poData = await poRes.json();
-          setPurchaseOrders(poData || []);
+          setPurchaseOrders(Array.isArray(poData) ? poData : []);
         }
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
-          setItemsList(itemsData || []);
+          setItemsList(Array.isArray(itemsData) ? itemsData : []);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
