@@ -37,18 +37,7 @@ export default function BomOrdersView(props) {
   const [isExportingFormat, setIsExportingFormat] = useState(null); // 'pdf' | 'jpg' | 'csv' | null
 
   // BOM Store from localStorage & Supabase
-  const [bomStore, setBomStore] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_bom_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error('Error reading controlroom_bom_store', e);
-    }
-    return [];
-  });
+  const [bomStore, setBomStore] = useState([]);
 
   // Customer List from localStorage
   const [customerList, setCustomerList] = useState(() => {
@@ -88,15 +77,10 @@ export default function BomOrdersView(props) {
     };
   }, []);
 
-  // Sync bomStore to localStorage & Supabase
+  // Sync bomStore to Supabase cloud database
   useEffect(() => {
     if (bomStore && Array.isArray(bomStore) && bomStore.length > 0) {
       const sanitized = bomStore.map(stripDataUrlsFromRecord);
-      try {
-        localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
-      } catch (e) {
-        console.error('Error setting controlroom_bom_store', e);
-      }
       saveCloudStore('bom_store', sanitized);
     }
   }, [bomStore]);
@@ -123,7 +107,6 @@ export default function BomOrdersView(props) {
         if (data && Array.isArray(data)) {
           if (data.length === 0) {
             setBomStore([]);
-            try { localStorage.setItem('controlroom_bom_store', '[]'); } catch (e) { }
           } else {
             setBomStore(prev => {
               const map = new Map();
@@ -134,9 +117,7 @@ export default function BomOrdersView(props) {
                 }
               });
               const merged = Array.from(map.values());
-              const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-              try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
-              return sanitizedMerged;
+              return merged.map(stripDataUrlsFromRecord);
             });
           }
         }
@@ -153,13 +134,6 @@ export default function BomOrdersView(props) {
 
     const syncFromStorage = () => {
       try {
-        const saved = localStorage.getItem('controlroom_bom_store');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setBomStore(parsed);
-          }
-        }
         const savedCust = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_customer_list');
         if (savedCust) {
           const parsedCust = JSON.parse(savedCust);
@@ -626,7 +600,6 @@ export default function BomOrdersView(props) {
         cancelledAt: new Date().toISOString()
       } : b);
       const sanitized = updated.map(stripDataUrlsFromRecord);
-      try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized)); } catch (_) {}
       saveCloudStore('bom_store', sanitized);
       return sanitized;
     });
@@ -2710,11 +2683,6 @@ export default function BomOrdersView(props) {
                         const current = Array.isArray(prev) ? prev : [];
                         const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
                         const updatedList = [sanitizedNewBom, ...filtered];
-                        try {
-                          localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
-                        } catch (e) {
-                          console.warn('Storage quota hit for local storage', e);
-                        }
                         saveCloudStore('bom_store', updatedList);
                         setShowBOMForm(false);
                         setBomConfirmModal(null);

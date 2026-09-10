@@ -134,30 +134,14 @@ export default function ProductionViewsEngine(props) {
   const [previewAddressProofModal, setPreviewAddressProofModal] = useState(null);
   const [bomActionMenuPos, setBomActionMenuPos] = useState({ top: 0, left: 0 });
 
-  const [bomStore, setBomStore] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_bom_store');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error("Error reading controlroom_bom_store", e);
-    }
-    return [];
-  });
+  const [bomStore, setBomStore] = useState([]);
 
   const hasInitialSyncedRef = useRef(false);
 
-  // Save bomStore to localStorage on every change and sync cloud store only after initial load
+  // Sync bomStore changes directly to Supabase cloud database
   useEffect(() => {
     if (bomStore && Array.isArray(bomStore) && bomStore.length > 0) {
       const sanitized = bomStore.map(stripDataUrlsFromRecord);
-      try {
-        localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
-      } catch (e) {
-        console.error("Error setting controlroom_bom_store", e);
-      }
       if (hasInitialSyncedRef.current) {
         saveCloudStore('bom_store', sanitized);
       }
@@ -185,7 +169,6 @@ export default function ProductionViewsEngine(props) {
         if (data && Array.isArray(data)) {
           if (data.length === 0) {
             setBomStore([]);
-            try { localStorage.setItem('controlroom_bom_store', '[]'); } catch (e) { }
           } else {
             setBomStore(prev => {
               const map = new Map();
@@ -195,10 +178,7 @@ export default function ProductionViewsEngine(props) {
                   if (k) map.set(k, item);
                 }
               });
-              const merged = Array.from(map.values());
-              const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-              try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
-              return sanitizedMerged;
+              return Array.from(map.values()).map(stripDataUrlsFromRecord);
             });
           }
         }
@@ -210,27 +190,10 @@ export default function ProductionViewsEngine(props) {
     };
 
     syncFromCloud();
-    const pollInterval = setInterval(syncFromCloud, 6000);
-
-    const syncFromStorage = () => {
-      try {
-        const saved = localStorage.getItem('controlroom_bom_store');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setBomStore(parsed);
-          }
-        }
-      } catch (e) { }
-    };
-
-    window.addEventListener('storage', syncFromStorage);
-    window.addEventListener('controlroom_storage_update', syncFromStorage);
+    const pollInterval = setInterval(syncFromCloud, 5000);
 
     return () => {
       clearInterval(pollInterval);
-      window.removeEventListener('storage', syncFromStorage);
-      window.removeEventListener('controlroom_storage_update', syncFromStorage);
     };
   }, []);
 
@@ -1882,17 +1845,7 @@ export default function ProductionViewsEngine(props) {
   const [closeReasonText, setCloseReasonText] = useState('');
   const [pendingDcModal, setPendingDcModal] = useState(null);
   const [confirmInvoiceSuccessModal, setConfirmInvoiceSuccessModal] = useState(null);
-  const INITIAL_INVOICES = [];
-
-  const [invoiceList, setInvoiceList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_invoice_store');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error('Error parsing stored invoice list', e);
-    }
-    return INITIAL_INVOICES;
-  });
+  const [invoiceList, setInvoiceList] = useState([]);
 
   // Sync invoiceList with Supabase cloud database
   useEffect(() => {
@@ -2328,7 +2281,6 @@ export default function ProductionViewsEngine(props) {
                     : item
                 );
                 try {
-                  localStorage.setItem("controlroom_invoice_store", JSON.stringify(updated));
                   saveCloudStore("invoice_store", updated);
                 } catch (e) { }
                 return updated;
@@ -2352,7 +2304,6 @@ export default function ProductionViewsEngine(props) {
                   invoiceNo: invoiceEditForm.invNo || b.invoiceNo
                 } : b);
                 try {
-                  localStorage.setItem("controlroom_bom_store", JSON.stringify(updatedBoms));
                   saveCloudStore("bom_store", updatedBoms);
                 } catch (e) { }
                 return updatedBoms;
@@ -2713,7 +2664,6 @@ export default function ProductionViewsEngine(props) {
                               unpackedItemsRemaining: unpackedItems
                             } : item);
                             try {
-                              localStorage.setItem("controlroom_invoice_store", JSON.stringify(updatedInvoices));
                               saveCloudStore("invoice_store", updatedInvoices);
                             } catch (e) { }
                             return updatedInvoices;
@@ -10949,7 +10899,7 @@ export default function ProductionViewsEngine(props) {
                 const filtered = (prev || []).filter(i => i.poNo !== targetCode && i.bomCode !== targetCode && i.invNo !== newInvNo && i.code !== newInvNo);
                 const updated = [newInvEntry, ...filtered];
                 try {
-                  localStorage.setItem('controlroom_invoice_store', JSON.stringify(updated));
+                  saveCloudStore('invoice_store', updated);
                 } catch (e) { }
                 return updated;
               });
@@ -14210,11 +14160,6 @@ export default function ProductionViewsEngine(props) {
                                 const current = Array.isArray(prev) ? prev : [];
                                 const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
                                 const updatedList = [sanitizedNewBom, ...filtered];
-                                try {
-                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
-                                } catch (e) {
-                                  console.warn("Storage quota hit for local storage", e);
-                                }
                                 saveCloudStore('bom_store', updatedList);
                                 setShowBOMForm(false);
                                 setBomConfirmModal(null);
@@ -16630,7 +16575,6 @@ export default function ProductionViewsEngine(props) {
               completedAt: new Date().toISOString()
             } : b);
             try {
-              localStorage.setItem('controlroom_bom_store', JSON.stringify(updated));
               saveCloudStore('bom_store', updated);
             } catch (e) { }
             return updated;
@@ -16645,7 +16589,6 @@ export default function ProductionViewsEngine(props) {
               vehicleLoading: loadingPayload
             } : i);
             try {
-              localStorage.setItem('controlroom_invoice_store', JSON.stringify(updatedInvoices));
               saveCloudStore('invoice_store', updatedInvoices);
             } catch (e) { }
             return updatedInvoices;
@@ -17811,7 +17754,6 @@ export default function ProductionViewsEngine(props) {
                     setBomStore(prev => {
                       const updated = prev.filter(b => (b.bomCode || b.code) !== (row.bomCode || row.code));
                       try {
-                        localStorage.setItem("controlroom_bom_store", JSON.stringify(updated));
                         saveCloudStore("bom_store", updated);
                       } catch (err) { }
                       return updated;

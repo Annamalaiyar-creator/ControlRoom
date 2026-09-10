@@ -1,12 +1,11 @@
 import { supabase } from '../supabaseClient';
 
-// Ensure clean testing state at module load time before any React component mounts
+// Ensure all local browser caches for BOM and Invoice stores are purged so data lives 100% in Supabase
 if (typeof window !== 'undefined' && window.localStorage) {
-  if (localStorage.getItem('controlroom_fresh_test_reset_v5') !== 'done') {
-    localStorage.setItem('controlroom_bom_store', '[]');
-    localStorage.setItem('controlroom_invoice_store', '[]');
-    localStorage.setItem('controlroom_fresh_test_reset_v5', 'done');
-  }
+  try {
+    localStorage.removeItem('controlroom_bom_store');
+    localStorage.removeItem('controlroom_invoice_store');
+  } catch (_) {}
 }
 
 /**
@@ -26,7 +25,6 @@ function mergeDatasets(localArray, remoteArray) {
   };
 
   const map = new Map();
-  // 1. Add all local items first
   localArray.forEach(item => {
     if (item) {
       const id = getId(item);
@@ -34,7 +32,6 @@ function mergeDatasets(localArray, remoteArray) {
     }
   });
 
-  // 2. Overlay remote items on top so the database/server is the authoritative source of truth
   remoteArray.forEach(item => {
     if (item) {
       const id = getId(item);
@@ -50,24 +47,12 @@ function mergeDatasets(localArray, remoteArray) {
 }
 
 /**
- * Fetch a data collection from Supabase or server API with localStorage & fallback
+ * Fetch a data collection DIRECTLY from Supabase cloud database
  * @param {string} storeKey - Unique identifier (e.g. 'bom_store', 'invoice_store', 'customer_store')
  * @param {Array|Object} fallbackData - Default initial data if cloud is empty
  * @returns {Promise<Array|Object>}
  */
 export async function fetchCloudStore(storeKey, fallbackData = []) {
-  // Read current cached local data first
-  let cachedLocal = fallbackData;
-  try {
-    const localStr = localStorage.getItem(`controlroom_${storeKey}`);
-    if (localStr) {
-      const parsed = JSON.parse(localStr);
-      if (parsed && (Array.isArray(parsed) ? parsed.length > 0 : Object.keys(parsed).length > 0)) {
-        cachedLocal = parsed;
-      }
-    }
-  } catch (e) {}
-
   // For employees_store, fetch directly from Supabase users table
   if (storeKey === 'employees_store') {
     try {
@@ -77,7 +62,7 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
 
       if (!userErr && Array.isArray(dbUsers) && dbUsers.length > 0) {
         // Only map genuine ControlRoom registered employees (those with CODE:::ROLE:::STATUS metadata)
-        const remoteEmployees = dbUsers
+        return dbUsers
           .filter(u => u.department && u.department.includes(':::'))
           .map(u => {
             const parts = u.department.split(':::');
@@ -96,19 +81,11 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
               status: status
             };
           });
-
-        const merged = mergeDatasets(cachedLocal, remoteEmployees);
-        try {
-          localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
-          const codes = merged.map(e => e.employee_code || e.code).filter(Boolean);
-          localStorage.setItem('controlroom_registered_codes', JSON.stringify(codes));
-        } catch (e) {}
-        return merged;
       }
     } catch (err) {}
   }
 
-  // 1. Try fetching directly via Supabase client using working leaves table store
+  // 1. Fetch directly from Supabase leaves table store
   try {
     const { data: records, error } = await supabase
       .from('leaves')
@@ -123,10 +100,6 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
       try {
         const cloudParsed = JSON.parse(record.reason);
         if (Array.isArray(cloudParsed)) {
-          // Cloud array is authoritative: sync immediately to localStorage
-          try {
-            localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(cloudParsed));
-          } catch (e) {}
           return cloudParsed;
         } else if (cloudParsed && typeof cloudParsed === 'object') {
           return cloudParsed;
@@ -137,41 +110,29 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
     // continue to server API fallback
   }
 
-  // 2. Fallback to Node server endpoint /api/store/:key
+  // 2. Fallback to Node server endpoint /api/store/:key (which queries Supabase)
   try {
     const res = await fetch(`/api/store/${storeKey}`);
     if (res.ok) {
       const json = await res.json();
-      if (json && json.data && (Array.isArray(json.data) ? json.data.length > 0 : Object.keys(json.data).length > 0)) {
-        const merged = mergeDatasets(cachedLocal, json.data);
-        try {
-          localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
-        } catch (e) {}
-        return merged;
+      if (json && json.data && Array.isArray(json.data)) {
+        return json.data;
       }
     }
-  } catch (err) {
-    // continue to local storage
-  }
+  } catch (err) {}
 
-  // 3. Fallback to localStorage / initial data
-  return cachedLocal;
+  return fallbackData;
 }
 
 const saveDebounceTimers = {};
 const pendingSaveData = {};
 
 /**
- * Save a data collection to Supabase, server API, & localStorage (Debounced to prevent lag)
+ * Save a data collection DIRECTLY to Supabase cloud database (No localStorage dependency)
  * @param {string} storeKey - Unique identifier
  * @param {Array|Object} storeData - Data to save
  */
 export function saveCloudStore(storeKey, storeData) {
-  // 1. Immediately cache in localStorage (fast sync)
-  try {
-    localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(storeData));
-  } catch (e) {}
-
   pendingSaveData[storeKey] = storeData;
 
   // Clear existing debounce timer
@@ -179,10 +140,10 @@ export function saveCloudStore(storeKey, storeData) {
     clearTimeout(saveDebounceTimers[storeKey]);
   }
 
-  // 2. Debounced save to Supabase cloud database & server API (500ms delay)
+  // Debounced save to Supabase cloud database & server API (300ms delay)
   saveDebounceTimers[storeKey] = setTimeout(async () => {
     const dataToSave = pendingSaveData[storeKey];
-    if (!dataToSave) return;
+    if (dataToSave === undefined || dataToSave === null) return;
 
     // Direct persistence for employees to Supabase users table
     if (storeKey === 'employees_store' && Array.isArray(dataToSave)) {
@@ -332,24 +293,7 @@ export async function getAndReserveNextBomCode(commit = true) {
       } catch (_) {}
     }
 
-    // Also check local storage as backup
-    let localMax = 0;
-    try {
-      const localStr = localStorage.getItem('controlroom_bom_store');
-      if (localStr) {
-        const localList = JSON.parse(localStr);
-        if (Array.isArray(localList)) {
-          const nums = localList.map(b => {
-            const raw = String(b.bomCode || b.code || b.id || '');
-            const match = raw.match(/BOM-(\d+)/i);
-            return match ? parseInt(match[1]) : 0;
-          }).filter(n => !isNaN(n) && n > 0);
-          if (nums.length > 0) localMax = Math.max(...nums);
-        }
-      }
-    } catch (_) {}
-
-    highestNum = Math.max(seqCounter, storeMax, localMax, 0);
+    highestNum = Math.max(seqCounter, storeMax, 0);
     const nextNum = highestNum + 1;
     const formattedCode = `BOM-${String(nextNum).padStart(3, '0')}`;
 
@@ -357,10 +301,10 @@ export async function getAndReserveNextBomCode(commit = true) {
       const seqPayload = JSON.stringify({
         lastNumber: nextNum,
         updatedAt: new Date().toISOString(),
-        reservedBy: localStorage.getItem('controlroom_logged_user_name') || 'Sales Rep'
+        reservedBy: 'Sales Rep'
       });
 
-      if (seqRes.data && seqRes.data.id) {
+      if (seqRow && seqRow.id) {
         await supabase
           .from('leaves')
           .update({
@@ -369,7 +313,7 @@ export async function getAndReserveNextBomCode(commit = true) {
             status: 'active',
             duration: String(nextNum)
           })
-          .eq('id', seqRes.data.id);
+          .eq('id', seqRow.id);
       } else {
         await supabase
           .from('leaves')
@@ -387,16 +331,7 @@ export async function getAndReserveNextBomCode(commit = true) {
     return formattedCode;
   } catch (err) {
     console.error('Error reserving next BOM code from Supabase:', err);
-    let max = 0;
-    try {
-      const localStr = localStorage.getItem('controlroom_bom_store');
-      if (localStr) {
-        const localList = JSON.parse(localStr);
-        const nums = localList.map(b => parseInt(String(b.bomCode || b.code || '').replace(/[^0-9]/g, ''))).filter(n => !isNaN(n));
-        if (nums.length > 0) max = Math.max(...nums);
-      }
-    } catch (_) {}
-    return `BOM-${String(max + 1).padStart(3, '0')}`;
+    return 'BOM-001';
   }
 }
 
