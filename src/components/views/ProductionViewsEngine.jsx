@@ -14523,24 +14523,29 @@ export default function ProductionViewsEngine(props) {
                               sanitizedNewBom.id = finalAssignedCode;
 
                               let sResOk = false;
-                              try {
-                                const sRes = await fetch('/api/boms', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
-                                });
-                                if (sRes.ok) {
-                                  sResOk = true;
-                                  const sData = await sRes.json();
-                                  if (sData && (sData.bomCode || sData.bom?.bomCode)) {
-                                    finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
-                                    sanitizedNewBom.bomCode = finalAssignedCode;
-                                    sanitizedNewBom.code = finalAssignedCode;
-                                    sanitizedNewBom.id = finalAssignedCode;
+                              const postPayload = JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft });
+                              const endpoints = ['/api/boms', 'http://localhost:5001/api/boms'];
+                              for (const url of endpoints) {
+                                try {
+                                  const sRes = await fetch(url, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: postPayload
+                                  });
+                                  if (sRes.ok) {
+                                    sResOk = true;
+                                    const sData = await sRes.json();
+                                    if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                                      finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                                      sanitizedNewBom.bomCode = finalAssignedCode;
+                                      sanitizedNewBom.code = finalAssignedCode;
+                                      sanitizedNewBom.id = finalAssignedCode;
+                                    }
+                                    break;
                                   }
+                                } catch (err) {
+                                  console.warn(`Sync attempt to ${url} failed, trying next:`, err);
                                 }
-                              } catch (err) {
-                                console.error('Error in /api/boms sync:', err);
                               }
 
                               setBomStore(prev => {
