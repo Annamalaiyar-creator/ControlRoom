@@ -2477,7 +2477,7 @@ app.get('/api/zoho/next-po-number', async (req, res) => {
 
 // Centralized Next BOM Code generator guaranteeing unique sequential codes across all users
 app.get('/api/boms/next-code', async (req, res) => {
-  let maxNum = 624; // Default seed based on existing records
+  let maxNum = 0; // Default seed 0 when starting fresh
   try {
     const filePath = getStoreFilePath('bom_store.json');
     let allRecords = [];
@@ -2522,7 +2522,7 @@ app.get('/api/boms/next-code', async (req, res) => {
   } catch (err) {
     console.error('Error computing next BOM code:', err);
   }
-  const nextBomCode = `BOM-${maxNum + 1}`;
+  const nextBomCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
   res.json({ success: true, nextBomCode, maxNum });
 });
 

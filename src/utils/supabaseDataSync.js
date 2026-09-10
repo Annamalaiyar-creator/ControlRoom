@@ -226,7 +226,7 @@ export function saveCloudStore(storeKey, storeData) {
         .maybeSingle();
 
       let finalPayload = dataToSave;
-      if (Array.isArray(dataToSave) && record && record.reason) {
+      if (Array.isArray(dataToSave) && dataToSave.length > 0 && record && record.reason) {
         try {
           const existingCloud = JSON.parse(record.reason);
           if (Array.isArray(existingCloud) && existingCloud.length > 0) {
@@ -279,7 +279,7 @@ export function saveCloudStore(storeKey, storeData) {
  * @returns {Promise<string>} Next BOM code (e.g., 'BOM-625')
  */
 export async function getAndReserveNextBomCode(commit = true) {
-  let highestNum = 624;
+  let highestNum = 0;
 
   try {
     // 1. Fetch current sequence counter and BOM store from Supabase in parallel
@@ -328,8 +328,9 @@ export async function getAndReserveNextBomCode(commit = true) {
       }
     } catch (_) {}
 
-    highestNum = Math.max(seqCounter, storeMax, localMax, 624);
+    highestNum = Math.max(seqCounter, storeMax, localMax, 0);
     const nextNum = highestNum + 1;
+    const formattedCode = `BOM-${String(nextNum).padStart(3, '0')}`;
 
     if (commit) {
       const seqPayload = JSON.stringify({
@@ -362,10 +363,10 @@ export async function getAndReserveNextBomCode(commit = true) {
       }
     }
 
-    return `BOM-${nextNum}`;
+    return formattedCode;
   } catch (err) {
     console.error('Error reserving next BOM code from Supabase:', err);
-    let max = 624;
+    let max = 0;
     try {
       const localStr = localStorage.getItem('controlroom_bom_store');
       if (localStr) {
@@ -374,7 +375,7 @@ export async function getAndReserveNextBomCode(commit = true) {
         if (nums.length > 0) max = Math.max(...nums);
       }
     } catch (_) {}
-    return `BOM-${max + 1}`;
+    return `BOM-${String(max + 1).padStart(3, '0')}`;
   }
 }
 

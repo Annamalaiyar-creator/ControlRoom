@@ -47,74 +47,7 @@ export default function BomOrdersView(props) {
     } catch (e) {
       console.error('Error reading controlroom_bom_store', e);
     }
-    return [
-      {
-        bomCode: 'BOM-101',
-        date: '2026-07-10',
-        customerName: 'Vikram Solar Pvt Ltd',
-        companyName: 'Vikram Solar Pvt Ltd',
-        mobile: '+91 98765 43210',
-        email: 'rajesh@vikramsolar.com',
-        billingAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
-        deliveryAddress: 'No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai',
-        paymentType: '100% Advance',
-        status: 'Pending Confirmation',
-        items: [
-          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 4, rate: 250, confirmed: false },
-          { name: 'Mid Clamp 35 mm', category: '35mm Aluminum Clamp', qty: 6, rate: 45, confirmed: false },
-          { name: 'End Clamp 35 mm', category: '35mm End Fastener', qty: 4, rate: 40, confirmed: false }
-        ],
-        payments: {
-          advance50Uploaded: false,
-          dispatch50Uploaded: false,
-          advance100Uploaded: false,
-          net30Uploaded: false,
-          proofDoc: null
-        },
-        dispatchPacking: [],
-        accountsVerification: {
-          paymentStatus: null,
-          hardCopyReceived: false,
-          softCopyReceived: false
-        },
-        invoiceConfirmed: false,
-        invoiceDeducted: false,
-        grandTotal: 1430
-      },
-      {
-        bomCode: 'BOM-102',
-        date: '2026-07-12',
-        customerName: 'Tata Power Renewable',
-        companyName: 'Tata Power Ltd',
-        mobile: '+91 98123 45678',
-        email: 'anish.s@tatapower.com',
-        billingAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
-        deliveryAddress: 'Tata Power Tech Park, Whitefield, Bengaluru',
-        paymentType: '50% Advance + 50% Dispatch',
-        status: 'Sent to Production',
-        items: [
-          { name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, confirmed: true },
-          { name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, confirmed: true }
-        ],
-        payments: {
-          advance50Uploaded: true,
-          dispatch50Uploaded: false,
-          proofDoc: 'payment_proof_50pct.pdf'
-        },
-        dispatchPacking: [
-          { name: 'Long Rail 3000 mm', bomQty: 8, packed: true },
-          { name: 'Mini Rail 100 mm', bomQty: 12, packed: true }
-        ],
-        accountsVerification: {
-          paymentStatus: '50% Received',
-          hardCopyReceived: true,
-          softCopyReceived: true
-        },
-        invoiceConfirmed: false,
-        invoiceDeducted: false,
-        grandTotal: 17400
-      }
-    ];
+    return [];
   });
 
   // Customer List from localStorage
@@ -187,48 +120,25 @@ export default function BomOrdersView(props) {
           data = await fetchCloudStore('bom_store', []);
         }
 
-        if (data && Array.isArray(data) && data.length > 0) {
-          setBomStore(prev => {
-            const map = new Map();
-            let localCurrent = Array.isArray(prev) ? prev : [];
-            try {
-              const savedStr = localStorage.getItem('controlroom_bom_store');
-              if (savedStr) {
-                const parsed = JSON.parse(savedStr);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  const currentMap = new Map();
-                  localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                  parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                  localCurrent = Array.from(currentMap.values());
+        if (data && Array.isArray(data)) {
+          if (data.length === 0) {
+            setBomStore([]);
+            try { localStorage.setItem('controlroom_bom_store', '[]'); } catch (e) { }
+          } else {
+            setBomStore(prev => {
+              const map = new Map();
+              data.forEach(item => {
+                if (item) {
+                  const k = item.bomCode || item.code;
+                  if (k) map.set(k, item);
                 }
-              }
-            } catch (e) { }
-
-            // Remote database is primary source
-            data.forEach(item => {
-              if (item) {
-                const k = item.bomCode || item.code;
-                if (k) map.set(k, item);
-              }
+              });
+              const merged = Array.from(map.values());
+              const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
+              try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
+              return sanitizedMerged;
             });
-            // Merge with local items
-            localCurrent.forEach(item => {
-              if (item) {
-                const k = item.bomCode || item.code;
-                if (k) {
-                  if (map.has(k)) {
-                    map.set(k, { ...map.get(k), ...item });
-                  } else {
-                    map.set(k, item);
-                  }
-                }
-              }
-            });
-            const merged = Array.from(map.values());
-            const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-            try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
-            return sanitizedMerged;
-          });
+          }
         }
       } catch (err) {
         console.error('Error in syncFromCloud:', err);

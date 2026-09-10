@@ -155,6 +155,15 @@ function App() {
     return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
   });
 
+  // One-time fresh reset for BOM store to guarantee clean state starting from BOM-001
+  useEffect(() => {
+    if (!localStorage.getItem('controlroom_bom_fresh_reset_001')) {
+      localStorage.setItem('controlroom_bom_store', '[]');
+      localStorage.setItem('controlroom_bom_fresh_reset_001', 'done');
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+    }
+  }, []);
+
   const [targetPoNo, setTargetPoNo] = useState(null);
   const [targetPoTab, setTargetPoTab] = useState(null);
   const [convertingPiData, setConvertingPiData] = useState(null);
