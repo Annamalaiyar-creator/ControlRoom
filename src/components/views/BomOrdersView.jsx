@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, getAndReserveNextBomCode, resolveBomCollisions } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
@@ -98,29 +98,13 @@ export default function BomOrdersView(props) {
             setBomStore(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
           } else {
             setBomStore(prev => {
-              const map = new Map();
-              // Preserve any locally added/pending BOMs from previous state so background polling never wipes them
-              if (Array.isArray(prev)) {
-                prev.forEach(item => {
-                  if (item) {
-                    const k = item.bomCode || item.code || item.id;
-                    if (k) map.set(k, item);
-                  }
-                });
-              }
-              data.forEach(item => {
-                if (item) {
-                  const k = item.bomCode || item.code || item.id;
-                  if (k) {
-                    map.set(k, { ...(map.get(k) || {}), ...item });
-                  }
-                }
-              });
+              const combined = [...(Array.isArray(data) ? data : []), ...(Array.isArray(prev) ? prev : [])];
+              const { list: resolvedList } = resolveBomCollisions(combined, 658);
               const parseBomSeq = (code) => {
                 const m = String(code || '').match(/BOM-(\d+)/i);
                 return m ? parseInt(m[1], 10) : 0;
               };
-              const sorted = Array.from(map.values()).sort((a, b) => {
+              const sorted = resolvedList.sort((a, b) => {
                 const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
                 const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
                 if (seqA !== seqB) return seqB - seqA;
@@ -3019,7 +3003,8 @@ export default function BomOrdersView(props) {
                       // Update local React state without clobbering concurrent records in the cloud
                       const current = Array.isArray(bomStore) ? bomStore : [];
                       const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
-                      const updatedList = [sanitizedNewBom, ...filtered];
+                      const combined = [sanitizedNewBom, ...filtered];
+                      const { list: updatedList } = resolveBomCollisions(combined, 658);
                       setBomStore(updatedList);
 
                       // Direct cloud persistence guarantee: ALWAYS save directly to Supabase cloud store so it is never lost on refresh or live server

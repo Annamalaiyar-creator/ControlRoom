@@ -2494,7 +2494,7 @@ const getOrReserveNextBomAtomic = async (commit = false) => {
   return new Promise((resolve, reject) => {
     serverBomReservationLock = serverBomReservationLock.then(async () => {
       try {
-        let maxNum = 0;
+        let maxNum = 658;
         const filePath = getStoreFilePath('bom_store.json');
         let allRecords = [];
         if (fs.existsSync(filePath)) {
@@ -2555,7 +2555,7 @@ const getOrReserveNextBomAtomic = async (commit = false) => {
           } catch (_) {}
         }
 
-        resolve({ success: true, nextBomCode, maxNum: nextNum });
+        resolve({ success: true, nextBomCode, nextCode: nextBomCode, maxNum: nextNum });
       } catch (err) {
         reject(err);
       }
@@ -2734,7 +2734,7 @@ app.post('/api/boms', async (req, res) => {
         });
 
         // Compute true max sequence number across existing BOMs
-        let maxNum = 0;
+        let maxNum = 658;
         for (const key of map.keys()) {
           const match = String(key).match(/^BOM-(\d+)/i);
           if (match) {
@@ -2809,7 +2809,7 @@ app.post('/api/boms', async (req, res) => {
         } catch (_) {}
         
         // RESPOND TO CLIENT WITH CONFIRMED BOM
-        res.json({ success: true, bom, bomCode: finalCode, total: mergedList.length });
+        res.json({ success: true, bom, bomCode: finalCode, nextCode: finalCode, nextBomCode: finalCode, total: mergedList.length });
         resolveOuter();
       } catch (err) {
         console.error('Error saving BOM:', err);

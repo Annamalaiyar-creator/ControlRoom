@@ -248,6 +248,67 @@ export function saveCloudStore(storeKey, storeData) {
 }
 
 /**
+ * Automatically detects and resolves any duplicate BOM code collisions.
+ * Preserves both orders by renumbering the conflicting order to the next available sequence code.
+ */
+export function resolveBomCollisions(bomList, sequenceMax = 658) {
+  if (!Array.isArray(bomList)) return { list: [], maxSeq: sequenceMax };
+  let maxSeq = Math.max(sequenceMax, 658);
+  
+  bomList.forEach(b => {
+    const m = String(b?.bomCode || b?.code || b?.id || '').match(/^BOM-(\d+)/i);
+    if (m) {
+      const val = parseInt(m[1], 10);
+      if (Number.isFinite(val) && val > maxSeq) maxSeq = val;
+    }
+  });
+
+  const seenCodes = new Map();
+  const resolvedList = [];
+
+  for (const b of bomList) {
+    if (!b) continue;
+    const code = String(b.bomCode || b.code || b.id || '').trim();
+    if (!code || code === 'BOM-PENDING') {
+      maxSeq += 1;
+      const newCode = `BOM-${String(maxSeq).padStart(3, '0')}`;
+      resolvedList.push({ ...b, id: newCode, bomCode: newCode, code: newCode });
+      continue;
+    }
+
+    if (!seenCodes.has(code)) {
+      seenCodes.set(code, b);
+      resolvedList.push(b);
+    } else {
+      const existing = seenCodes.get(code);
+      const bCust = (b.companyName || b.customerName || '').trim().toLowerCase();
+      const exCust = (existing.companyName || existing.customerName || '').trim().toLowerCase();
+      const bSales = (b.salesPerson || '').trim().toLowerCase();
+      const exSales = (existing.salesPerson || '').trim().toLowerCase();
+      const bDate = b.salesConfirmedAt || b.createdAt || b.date;
+      const exDate = existing.salesConfirmedAt || existing.createdAt || existing.date;
+
+      const isExactSame = (bCust && exCust && bCust === exCust && bSales === exSales) || (bDate && exDate && bDate === exDate);
+      if (isExactSame) {
+        const idx = resolvedList.findIndex(r => (r.bomCode || r.code || r.id) === code);
+        if (idx !== -1) {
+          resolvedList[idx] = { ...resolvedList[idx], ...b };
+        }
+      } else {
+        maxSeq += 1;
+        const newCode = `BOM-${String(maxSeq).padStart(3, '0')}`;
+        console.warn(`[Collision Guard] Distinct order for '${b.companyName || b.customerName}' renumbered from ${code} to ${newCode}`);
+        const renumbered = { ...b, id: newCode, bomCode: newCode, code: newCode };
+        resolvedList.push(renumbered);
+        seenCodes.set(newCode, renumbered);
+      }
+    }
+  }
+
+  return { list: resolvedList, maxSeq };
+}
+
+/**
  * Atomically reserve or peek the next sequential BOM code from Supabase.
  * Guaranteed uniqueness across 5+ concurrent salespeople.
  * @param {boolean} [commit=true] - If true, atomically increments and saves the new counter.
@@ -264,13 +325,14 @@ export async function getAndReserveNextBomCode(commit = true) {
     });
     if (apiRes.ok) {
       const data = await apiRes.json();
-      if (data && data.nextBomCode) {
-        return data.nextBomCode;
+      const resolved = data?.nextBomCode || data?.nextCode;
+      if (resolved && /^BOM-\d+$/i.test(resolved)) {
+        return resolved;
       }
     }
   } catch (_) {}
 
-  let highestNum = 0;
+  let highestNum = 658;
 
   try {
     const [seqRes, storeRes] = await Promise.all([
@@ -310,8 +372,8 @@ export async function getAndReserveNextBomCode(commit = true) {
 
     const safeSeq = Number.isFinite(seqCounter) && seqCounter > 0 ? seqCounter : 0;
     const safeStore = Number.isFinite(storeMax) && storeMax > 0 ? storeMax : 0;
-    highestNum = Math.max(safeSeq, safeStore, 0);
-    const nextNum = (Number.isFinite(highestNum) && highestNum >= 0 ? highestNum : 0) + 1;
+    highestNum = Math.max(safeSeq, safeStore, 658);
+    const nextNum = highestNum + 1;
     const formattedCode = `BOM-${String(nextNum).padStart(3, '0')}`;
 
     if (commit) {
@@ -348,7 +410,7 @@ export async function getAndReserveNextBomCode(commit = true) {
     return formattedCode;
   } catch (err) {
     console.error('Error reserving next BOM code from Supabase:', err);
-    return 'BOM-001';
+    return `BOM-${String(highestNum + 1).padStart(3, '0')}`;
   }
 }
 

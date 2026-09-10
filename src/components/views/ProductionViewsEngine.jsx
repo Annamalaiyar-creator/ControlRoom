@@ -10,7 +10,7 @@ import {
   CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Save
 } from 'lucide-react';
 import CreateWorkOrderPage from '../CreateWorkOrderPage';
-import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, subscribeToCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, subscribeToCloudStore, getAndReserveNextBomCode, resolveBomCollisions } from '../../utils/supabaseDataSync';
 import { getSafeZohoItems, getSafeZohoVendors } from '../../services/zohoSafeSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
@@ -193,29 +193,13 @@ export default function ProductionViewsEngine(props) {
             setBomStore([]);
           } else {
             setBomStore(prev => {
-              const map = new Map();
-              // Preserve any locally added/pending BOMs from previous state so background polling never wipes them
-              if (Array.isArray(prev)) {
-                prev.forEach(item => {
-                  if (item) {
-                    const k = item.bomCode || item.code || item.id;
-                    if (k) map.set(k, item);
-                  }
-                });
-              }
-              data.forEach(item => {
-                if (item) {
-                  const k = item.bomCode || item.code || item.id;
-                  if (k) {
-                    map.set(k, { ...(map.get(k) || {}), ...item });
-                  }
-                }
-              });
+              const combined = [...(Array.isArray(data) ? data : []), ...(Array.isArray(prev) ? prev : [])];
+              const { list: resolvedList } = resolveBomCollisions(combined, 658);
               const parseBomSeq = (code) => {
                 const m = String(code || '').match(/BOM-(\d+)/i);
                 return m ? parseInt(m[1], 10) : 0;
               };
-              const sorted = Array.from(map.values()).sort((a, b) => {
+              const sorted = resolvedList.sort((a, b) => {
                 const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
                 const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
                 if (seqA !== seqB) return seqB - seqA;
@@ -14561,7 +14545,8 @@ export default function ProductionViewsEngine(props) {
                               setBomStore(prev => {
                                 const current = Array.isArray(prev) ? prev : [];
                                 const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
-                                const updatedList = [sanitizedNewBom, ...filtered];
+                                const combined = [sanitizedNewBom, ...filtered];
+                                const { list: updatedList } = resolveBomCollisions(combined, 658);
 
                                 // Direct cloud persistence guarantee: ALWAYS save directly to Supabase cloud store so it is never lost on refresh or live server
                                 try {

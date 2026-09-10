@@ -52,6 +52,104 @@ try {
   console.warn('[Plesk Gateway] @supabase/supabase-js not found, falling back to direct HTTPS REST API:', e.message);
 }
 
+let appBomSequenceCounter = null;
+let appBomReservationLock = Promise.resolve();
+
+function withBomLock(fn) {
+  const current = appBomReservationLock;
+  let release;
+  appBomReservationLock = new Promise(resolve => { release = resolve; });
+  return current.then(() => fn()).finally(() => { release(); });
+}
+
+function resolveBomCollisions(bomList, sequenceMax = 658) {
+  if (!Array.isArray(bomList)) return { list: [], maxSeq: sequenceMax };
+  let maxSeq = Math.max(sequenceMax, 658);
+  
+  bomList.forEach(b => {
+    const m = String(b?.bomCode || b?.code || b?.id || '').match(/^BOM-(\d+)/i);
+    if (m) {
+      const val = parseInt(m[1], 10);
+      if (Number.isFinite(val) && val > maxSeq) maxSeq = val;
+    }
+  });
+
+  const seenCodes = new Map();
+  const resolvedList = [];
+
+  for (const b of bomList) {
+    if (!b) continue;
+    const code = String(b.bomCode || b.code || b.id || '').trim();
+    if (!code || code === 'BOM-PENDING') {
+      maxSeq += 1;
+      const newCode = `BOM-${String(maxSeq).padStart(3, '0')}`;
+      resolvedList.push({ ...b, id: newCode, bomCode: newCode, code: newCode });
+      continue;
+    }
+
+    if (!seenCodes.has(code)) {
+      seenCodes.set(code, b);
+      resolvedList.push(b);
+    } else {
+      const existing = seenCodes.get(code);
+      const bCust = (b.companyName || b.customerName || '').trim().toLowerCase();
+      const exCust = (existing.companyName || existing.customerName || '').trim().toLowerCase();
+      const bSales = (b.salesPerson || '').trim().toLowerCase();
+      const exSales = (existing.salesPerson || '').trim().toLowerCase();
+      const bDate = b.salesConfirmedAt || b.createdAt || b.date;
+      const exDate = existing.salesConfirmedAt || existing.createdAt || existing.date;
+
+      const isExactSame = (bCust && exCust && bCust === exCust && bSales === exSales) || (bDate && exDate && bDate === exDate);
+      if (isExactSame) {
+        const idx = resolvedList.findIndex(r => (r.bomCode || r.code || r.id) === code);
+        if (idx !== -1) {
+          resolvedList[idx] = { ...resolvedList[idx], ...b };
+        }
+      } else {
+        maxSeq += 1;
+        const newCode = `BOM-${String(maxSeq).padStart(3, '0')}`;
+        console.warn(`[Plesk Collision Resolved] Order for '${b.companyName || b.customerName}' renumbered from ${code} to ${newCode}`);
+        const renumbered = { ...b, id: newCode, bomCode: newCode, code: newCode };
+        resolvedList.push(renumbered);
+        seenCodes.set(newCode, renumbered);
+      }
+    }
+  }
+
+  return { list: resolvedList, maxSeq };
+}
+
+async function getAtomicHighestBomNumber() {
+  let diskList = loadStore('bom_store.json', []);
+  let cloudList = await fetchSupabaseStore('bom_store') || [];
+  let seqData = await fetchSupabaseStore('BOM_SEQUENCE');
+  
+  let maxNum = 658;
+  if (appBomSequenceCounter && appBomSequenceCounter > maxNum) {
+    maxNum = appBomSequenceCounter;
+  }
+  if (seqData) {
+    const sNum = parseInt(String(seqData.lastNumber || seqData.counter || 0).replace(/[^0-9]/g, ''), 10);
+    if (Number.isFinite(sNum) && sNum > maxNum) maxNum = sNum;
+  }
+  const scan = (item) => {
+    const c = item?.bomCode || item?.code || item?.id || '';
+    const m = String(c).match(/^BOM-(\d+)/i);
+    if (m) {
+      const val = parseInt(m[1], 10);
+      if (Number.isFinite(val) && val > maxNum) maxNum = val;
+    }
+  };
+  (Array.isArray(diskList) ? diskList : []).forEach(scan);
+  (Array.isArray(cloudList) ? cloudList : []).forEach(scan);
+  
+  return {
+    maxNum,
+    diskList: Array.isArray(diskList) ? diskList : [],
+    cloudList: Array.isArray(cloudList) ? cloudList : []
+  };
+}
+
 // Fallback direct HTTPS fetch to Supabase REST API if @supabase/supabase-js is not installed on the server
 async function supabaseDirectQuery(method, endpoint, body = null) {
   return new Promise((resolve) => {
@@ -973,168 +1071,138 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // 10. Sequential BOM Code Reservation Endpoints
+      // 10. Sequential BOM Code Reservation Endpoints (Thread-Safe Mutex Lock)
       if (pathname === '/api/boms/next-code' || pathname.endsWith('/boms/next-code')) {
-        let diskList = loadStore('bom_store.json', []);
-        let cloudList = await fetchSupabaseStore('bom_store') || [];
-        let maxNum = 650;
-        const scan = (item) => {
-          const c = item?.bomCode || item?.code || item?.id || '';
-          const m = String(c).match(/^BOM-(\d+)/i);
-          if (m) {
-            const val = parseInt(m[1], 10);
-            if (Number.isFinite(val) && val > maxNum) maxNum = val;
-          }
-        };
-        (Array.isArray(diskList) ? diskList : []).forEach(scan);
-        (Array.isArray(cloudList) ? cloudList : []).forEach(scan);
-        const nextCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, nextCode }));
+        return withBomLock(async () => {
+          const { maxNum } = await getAtomicHighestBomNumber();
+          const nextCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, nextCode, nextBomCode: nextCode, maxNum: maxNum + 1 }));
+        });
       }
 
       if (pathname === '/api/boms/reserve-code' || pathname.endsWith('/boms/reserve-code')) {
-        let diskList = loadStore('bom_store.json', []);
-        let cloudList = await fetchSupabaseStore('bom_store') || [];
-        let maxNum = 650;
-        const scan = (item) => {
-          const c = item?.bomCode || item?.code || item?.id || '';
-          const m = String(c).match(/^BOM-(\d+)/i);
-          if (m) {
-            const val = parseInt(m[1], 10);
-            if (Number.isFinite(val) && val > maxNum) maxNum = val;
-          }
-        };
-        (Array.isArray(diskList) ? diskList : []).forEach(scan);
-        (Array.isArray(cloudList) ? cloudList : []).forEach(scan);
-        const nextCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
-        await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: maxNum + 1, reservedAt: new Date().toISOString() });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, nextCode }));
+        return withBomLock(async () => {
+          const { maxNum } = await getAtomicHighestBomNumber();
+          const nextNum = maxNum + 1;
+          const nextCode = `BOM-${String(nextNum).padStart(3, '0')}`;
+          appBomSequenceCounter = nextNum;
+          await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: nextNum, reservedAt: new Date().toISOString() });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, nextCode, nextBomCode: nextCode, maxNum: nextNum }));
+        });
       }
 
-      // 11. Centralized BOM Orders Management (GET & POST with Disk + Supabase Persistence)
+      // 11. Centralized BOM Orders Management (GET & POST with Disk + Supabase Persistence & Collision Resolution)
       if (pathname === '/api/boms' || pathname.endsWith('/api/boms')) {
         if (req.method === 'GET') {
-          let diskList = loadStore('bom_store.json', []);
-          let cloudList = await fetchSupabaseStore('bom_store') || [];
-          if (!Array.isArray(diskList)) diskList = [];
-          if (!Array.isArray(cloudList)) cloudList = [];
+          return withBomLock(async () => {
+            let diskList = loadStore('bom_store.json', []);
+            let cloudList = await fetchSupabaseStore('bom_store') || [];
+            if (!Array.isArray(diskList)) diskList = [];
+            if (!Array.isArray(cloudList)) cloudList = [];
 
-          const map = new Map();
-          cloudList.forEach(item => {
-            const c = item?.bomCode || item?.code || item?.id;
-            if (c) map.set(c, item);
-          });
-          diskList.forEach(item => {
-            const c = item?.bomCode || item?.code || item?.id;
-            if (c) {
-              if (map.has(c)) {
-                map.set(c, { ...map.get(c), ...item });
-              } else {
-                map.set(c, item);
-              }
+            const combined = [...cloudList, ...diskList];
+            const { list: resolvedBoms, maxSeq } = resolveBomCollisions(combined, 658);
+            if (maxSeq > (appBomSequenceCounter || 0)) {
+              appBomSequenceCounter = maxSeq;
             }
-          });
 
-          const finalBoms = Array.from(map.values());
-          const parseBomSeq = (code) => {
-            const m = String(code || '').match(/BOM-(\d+)/i);
-            return m ? parseInt(m[1], 10) : 0;
-          };
-          finalBoms.sort((a, b) => {
-            const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
-            const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
-            if (seqA !== seqB) return seqB - seqA;
-            const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
-            const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
-            return dateB - dateA;
-          });
+            const parseBomSeq = (code) => {
+              const m = String(code || '').match(/BOM-(\d+)/i);
+              return m ? parseInt(m[1], 10) : 0;
+            };
+            resolvedBoms.sort((a, b) => {
+              const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+              const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+              if (seqA !== seqB) return seqB - seqA;
+              const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+              const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+              return dateB - dateA;
+            });
 
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: true, data: finalBoms, total: finalBoms.length }));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: true, data: resolvedBoms, total: resolvedBoms.length }));
+          });
         }
 
         if (req.method === 'POST') {
-          let { bom, isNew, isUpdate } = body || {};
-          if (!bom) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ success: false, message: 'Valid bom record required' }));
-          }
+          return withBomLock(async () => {
+            let { bom, isNew, isUpdate } = body || {};
+            if (!bom) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ success: false, message: 'Valid bom record required' }));
+            }
 
-          stripServerDataUrls(bom);
+            stripServerDataUrls(bom);
 
-          let diskList = loadStore('bom_store.json', []);
-          let cloudList = await fetchSupabaseStore('bom_store') || [];
-          if (!Array.isArray(diskList)) diskList = [];
-          if (!Array.isArray(cloudList)) cloudList = [];
+            const { maxNum, diskList, cloudList } = await getAtomicHighestBomNumber();
+            const combinedRaw = [...cloudList, ...diskList];
+            const { list: cleanMasterList, maxSeq } = resolveBomCollisions(combinedRaw, maxNum);
 
-          const map = new Map();
-          cloudList.forEach(item => {
-            const c = item?.bomCode || item?.code || item?.id;
-            if (c) map.set(c, item);
-          });
-          diskList.forEach(item => {
-            const c = item?.bomCode || item?.code || item?.id;
-            if (c) {
-              if (map.has(c)) {
-                map.set(c, { ...map.get(c), ...item });
+            const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
+            const isPending = !incomingCode || incomingCode === 'BOM-PENDING';
+
+            const existingIdx = cleanMasterList.findIndex(it => {
+              const itCode = it?.bomCode || it?.code || it?.id;
+              return itCode && itCode.toUpperCase() === incomingCode.toUpperCase();
+            });
+
+            let finalCode = incomingCode;
+            let nextCounter = Math.max(maxSeq, maxNum);
+
+            if (isPending || (isNew && existingIdx !== -1) || !/^BOM-\d+$/i.test(incomingCode)) {
+              nextCounter += 1;
+              finalCode = `BOM-${String(nextCounter).padStart(3, '0')}`;
+            } else if (existingIdx !== -1) {
+              const existing = cleanMasterList[existingIdx];
+              const bCust = (bom.companyName || bom.customerName || '').trim().toLowerCase();
+              const exCust = (existing.companyName || existing.customerName || '').trim().toLowerCase();
+              const bSales = (bom.salesPerson || '').trim().toLowerCase();
+              const exSales = (existing.salesPerson || '').trim().toLowerCase();
+              const isSameOrder = (bCust && exCust && bCust === exCust) || (bSales && exSales && bSales === exSales);
+
+              if (isSameOrder || isUpdate || bom.isUpdate) {
+                finalCode = incomingCode;
+                cleanMasterList[existingIdx] = { ...existing, ...bom, id: finalCode, bomCode: finalCode, code: finalCode };
               } else {
-                map.set(c, item);
+                nextCounter += 1;
+                finalCode = `BOM-${String(nextCounter).padStart(3, '0')}`;
+                console.warn(`[Plesk Concurrency Guard] Collision detected on ${incomingCode}. Reassigned new order to ${finalCode}`);
               }
             }
+
+            bom.bomCode = finalCode;
+            bom.code = finalCode;
+            bom.id = finalCode;
+
+            if (cleanMasterList.findIndex(it => (it?.bomCode || it?.code || it?.id) === finalCode) === -1) {
+              cleanMasterList.unshift(bom);
+            }
+
+            const { list: finalList, maxSeq: finalMax } = resolveBomCollisions(cleanMasterList, nextCounter);
+            appBomSequenceCounter = finalMax;
+
+            saveStore('bom_store.json', finalList);
+
+            try {
+              await pushSupabaseStore('bom_store', finalList);
+              await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: finalMax, updatedAt: new Date().toISOString() });
+            } catch (cloudErr) {
+              console.warn('[Plesk Gateway] Failed to push BOM to Supabase:', cloudErr.message);
+            }
+
+            console.log(`[Plesk Gateway] BOM ${finalCode} saved. Total: ${finalList.length}, Sequence: ${finalMax}`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({
+              success: true,
+              bom,
+              bomCode: finalCode,
+              nextBomCode: finalCode,
+              nextCode: finalCode,
+              total: finalList.length
+            }));
           });
-
-          let maxNum = 650;
-          for (const key of map.keys()) {
-            const match = String(key).match(/^BOM-(\d+)/i);
-            if (match) {
-              const val = parseInt(match[1], 10);
-              if (Number.isFinite(val) && val > maxNum) maxNum = val;
-            }
-          }
-
-          const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
-          const alreadyExists = incomingCode && map.has(incomingCode);
-          const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
-
-          let finalCode = incomingCode;
-          if (isValidIncomingCode && (!alreadyExists || isUpdate || bom.isUpdate)) {
-            finalCode = incomingCode;
-            const numMatch = incomingCode.match(/^BOM-(\d+)/i);
-            if (numMatch) {
-              const cNum = parseInt(numMatch[1], 10);
-              if (Number.isFinite(cNum) && cNum > maxNum) maxNum = cNum;
-            }
-          } else {
-            maxNum += 1;
-            finalCode = `BOM-${String(maxNum).padStart(3, '0')}`;
-          }
-
-          bom.bomCode = finalCode;
-          bom.code = finalCode;
-          bom.id = finalCode;
-
-          if (map.has(finalCode)) {
-            map.set(finalCode, { ...map.get(finalCode), ...bom });
-          } else {
-            map.set(finalCode, bom);
-          }
-
-          const mergedList = Array.from(map.values());
-          saveStore('bom_store.json', mergedList);
-
-          // Await Supabase cloud synchronization before responding
-          try {
-            await pushSupabaseStore('bom_store', mergedList);
-            await pushSupabaseStore('BOM_SEQUENCE', { lastNumber: maxNum, updatedAt: new Date().toISOString() });
-          } catch (cloudErr) {
-            console.warn('[Plesk Gateway] Failed to push BOM to Supabase:', cloudErr.message);
-          }
-
-          console.log(`[Plesk Gateway] BOM ${finalCode} saved. Total: ${mergedList.length}`);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: true, bom, bomCode: finalCode, total: mergedList.length }));
         }
       }
 
