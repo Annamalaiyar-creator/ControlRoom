@@ -274,7 +274,9 @@ export async function getAndReserveNextBomCode(commit = true) {
     if (seqRow && seqRow.reason) {
       try {
         const parsedSeq = JSON.parse(seqRow.reason);
-        seqCounter = parseInt(parsedSeq?.lastNumber || parsedSeq?.counter || parsedSeq || 0);
+        const rawSeq = parsedSeq?.lastNumber ?? parsedSeq?.counter ?? parsedSeq ?? 0;
+        const pVal = parseInt(String(rawSeq).replace(/[^0-9]/g, ''), 10);
+        if (Number.isFinite(pVal) && pVal > 0) seqCounter = pVal;
       } catch (_) {}
     }
 
@@ -286,15 +288,19 @@ export async function getAndReserveNextBomCode(commit = true) {
           const nums = list.map(b => {
             const raw = String(b.bomCode || b.code || b.id || '');
             const match = raw.match(/BOM-(\d+)/i);
-            return match ? parseInt(match[1]) : 0;
-          }).filter(n => !isNaN(n) && n > 0);
-          if (nums.length > 0) storeMax = Math.max(...nums);
+            if (!match) return 0;
+            const parsed = parseInt(match[1], 10);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }).filter(n => Number.isFinite(n) && n > 0);
+          if (nums.length > 0) storeMax = Math.max(0, ...nums);
         }
       } catch (_) {}
     }
 
-    highestNum = Math.max(seqCounter, storeMax, 0);
-    const nextNum = highestNum + 1;
+    const safeSeq = Number.isFinite(seqCounter) && seqCounter > 0 ? seqCounter : 0;
+    const safeStore = Number.isFinite(storeMax) && storeMax > 0 ? storeMax : 0;
+    highestNum = Math.max(safeSeq, safeStore, 0);
+    const nextNum = (Number.isFinite(highestNum) && highestNum >= 0 ? highestNum : 0) + 1;
     const formattedCode = `BOM-${String(nextNum).padStart(3, '0')}`;
 
     if (commit) {

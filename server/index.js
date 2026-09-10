@@ -2522,15 +2522,16 @@ app.get('/api/boms/next-code', async (req, res) => {
 
     allRecords.forEach(b => {
       const str = String(b.bomCode || b.code || b.id || '');
-      const match = str.match(/BOM-(\d+)/i);
+      const match = str.match(/^BOM-(\d+)$/i);
       if (match) {
         const val = parseInt(match[1], 10);
-        if (val > maxNum) maxNum = val;
+        if (Number.isFinite(val) && val > maxNum) maxNum = val;
       }
     });
   } catch (err) {
     console.error('Error computing next BOM code:', err);
   }
+  maxNum = (Number.isFinite(maxNum) && maxNum >= 0) ? maxNum : 0;
   const nextBomCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
   res.json({ success: true, nextBomCode, maxNum });
 });
@@ -2649,26 +2650,38 @@ app.post('/api/boms', async (req, res) => {
     });
 
     // Compute true max sequence number across ALL existing BOMs
-    let maxNum = 621;
+    let maxNum = 0;
     for (const key of map.keys()) {
       const match = String(key).match(/^BOM-(\d+)/i);
       if (match) {
         const val = parseInt(match[1], 10);
-        if (val > maxNum) maxNum = val;
+        if (Number.isFinite(val) && val > maxNum) maxNum = val;
       }
     }
 
-    const incomingCode = bom.bomCode || bom.code || bom.id;
+    const incomingCode = String(bom.bomCode || bom.code || bom.id || '').trim();
     // Determine if this is a brand new creation or an update to an existing confirmed BOM
     const alreadyExists = incomingCode && map.has(incomingCode);
-    const shouldAssignNewCode = isNew || !incomingCode || (alreadyExists && !bom.isUpdate);
+    const isValidIncomingCode = /^BOM-\d+$/i.test(incomingCode);
+    
+    // Only assign a new code if incoming code is missing, invalid, or already exists for a different new BOM
+    const shouldAssignNewCode = !isValidIncomingCode || (alreadyExists && isNew && !bom.isUpdate);
 
     if (shouldAssignNewCode) {
       maxNum += 1;
-      const assignedCode = `BOM-${maxNum}`;
+      const assignedCode = `BOM-${String(maxNum).padStart(3, '0')}`;
       bom.bomCode = assignedCode;
       bom.code = assignedCode;
       bom.id = assignedCode;
+    } else if (isValidIncomingCode) {
+      bom.bomCode = incomingCode;
+      bom.code = incomingCode;
+      bom.id = incomingCode;
+      const numMatch = incomingCode.match(/^BOM-(\d+)/i);
+      if (numMatch) {
+        const cNum = parseInt(numMatch[1], 10);
+        if (Number.isFinite(cNum) && cNum > maxNum) maxNum = cNum;
+      }
     }
 
     const finalCode = bom.bomCode || bom.code || bom.id;

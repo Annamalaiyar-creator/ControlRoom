@@ -10,7 +10,7 @@ import {
   CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Save
 } from 'lucide-react';
 import CreateWorkOrderPage from '../CreateWorkOrderPage';
-import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, subscribeToCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
 import { getSafeZohoItems, getSafeZohoVendors } from '../../services/zohoSafeSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
@@ -20,7 +20,7 @@ import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import VRMTaxInvoicePrintTemplate from '../VRMTaxInvoicePrintTemplate';
 import * as XLSX from 'xlsx';
-import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
+import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import StatusBadge from '../StatusBadge';
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import {
@@ -120,6 +120,41 @@ export default function ProductionViewsEngine(props) {
   const [bomActionMenuPos, setBomActionMenuPos] = useState({ top: 0, left: 0 });
 
   const [bomStore, setBomStore] = useState([]);
+
+  const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+  const currentEmpName = (localStorage.getItem('controlroom_logged_user_name') || '').trim();
+  const currentLoggedEmail = (localStorage.getItem('controlroom_logged_user') || '').trim().toLowerCase();
+
+  const isRestrictedSalesUser = userRole === 'Sales Executive';
+
+  const visibleBomStore = useMemo(() => {
+    const rawList = (bomStore || []).filter(Boolean);
+    if (!isRestrictedSalesUser) return rawList;
+
+    const curCode = currentEmpId.toUpperCase();
+    const curName = currentEmpName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const curEmail = currentLoggedEmail;
+
+    return rawList.filter(b => {
+      if (!b) return false;
+      const spCode = (b.salesPersonCode || b.createdById || '').trim().toUpperCase();
+      if (curCode && spCode && spCode === curCode) return true;
+
+      const spName = (b.salesPerson || b.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (curName && spName) {
+        if (spName === curName) return true;
+        const cleanSp = spName.replace(/\s+/g, '');
+        const cleanCur = curName.replace(/\s+/g, '');
+        if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
+      }
+
+      if (curEmail && (b.salesPersonEmail || b.email || '').toLowerCase() === curEmail) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
 
   const hasInitialSyncedRef = useRef(false);
 
@@ -4416,19 +4451,19 @@ export default function ProductionViewsEngine(props) {
               actionText: '+ Create BOM',
               searchPlaceholder: 'Search Sales BOM (BOM Code, Customer Name, Product)...',
               tabs: [
-                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'All', label: 'All BOMs', count: (visibleBomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (visibleBomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (visibleBomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (visibleBomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
-              rows: (bomStore || []).map(b => ({
+              rows: (visibleBomStore || []).map(b => ({
                 ...b,
                 code: b.bomCode || 'BOM-101',
                 c2: b.date || new Date().toISOString().split('T')[0],
                 c3: b.customerName || b.companyName || 'Customer Order',
                 c4: b.paymentType || '100% Advance',
-                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                c5: formatCurrency(b.grandTotal),
                 status: b.status || 'Pending Confirmation',
                 stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
                 stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
@@ -4442,19 +4477,19 @@ export default function ProductionViewsEngine(props) {
               actionText: '+ Create BOM',
               searchPlaceholder: 'Search BOM (BOM Code, Customer Name, Product)...',
               tabs: [
-                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'All', label: 'All BOMs', count: (visibleBomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (visibleBomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (visibleBomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (visibleBomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
-              rows: (bomStore || []).map(b => ({
+              rows: (visibleBomStore || []).map(b => ({
                 ...b,
                 code: b.bomCode || 'BOM-101',
                 c2: b.date || new Date().toISOString().split('T')[0],
                 c3: b.customerName || b.companyName || 'Customer Order',
                 c4: b.paymentType || '100% Advance',
-                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                c5: formatCurrency(b.grandTotal),
                 status: b.status || 'Pending Confirmation',
                 stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
                 stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
@@ -4468,19 +4503,19 @@ export default function ProductionViewsEngine(props) {
               actionText: '+ Create BOM',
               searchPlaceholder: 'Search BOM Orders (BOM Code, Customer Name, Product)...',
               tabs: [
-                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'All', label: 'All BOMs', count: (visibleBomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (visibleBomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (visibleBomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (visibleBomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
-              rows: (bomStore || []).map(b => ({
+              rows: (visibleBomStore || []).map(b => ({
                 ...b,
                 code: b.bomCode || 'BOM-101',
                 c2: b.date || new Date().toISOString().split('T')[0],
                 c3: b.customerName || b.companyName || 'Customer Order',
                 c4: b.paymentType || '100% Advance',
-                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                c5: formatCurrency(b.grandTotal),
                 status: b.status || 'Pending Confirmation',
                 stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
                 stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
@@ -4514,19 +4549,19 @@ export default function ProductionViewsEngine(props) {
               actionText: '+ Create BOM',
               searchPlaceholder: 'Search BOM (BOM Code, Customer Name, Product)...',
               tabs: [
-                { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-                { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-                { id: 'Pending', label: 'Pending Confirmation', count: (bomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
-                { id: 'Sent', label: 'Sent to Production', count: (bomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
+                { id: 'All', label: 'All BOMs', count: (visibleBomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+                { id: 'Draft', label: 'Draft', count: (visibleBomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+                { id: 'Pending', label: 'Pending Confirmation', count: (visibleBomStore || []).filter(b => !b.status || b.status.includes('Pending')).length, bg: '#fef3c7', fg: '#b45309' },
+                { id: 'Sent', label: 'Sent to Production', count: (visibleBomStore || []).filter(b => b.status === 'Sent to Production' || b.status === 'Confirmed').length, bg: '#dcfce7', fg: '#166534' }
               ],
               headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Payment Type', 'Total (₹)', 'Status', 'Action'],
-              rows: (bomStore || []).map(b => ({
+              rows: (visibleBomStore || []).map(b => ({
                 ...b,
                 code: b.bomCode || 'BOM-101',
                 c2: b.date || new Date().toISOString().split('T')[0],
                 c3: b.customerName || b.companyName || 'Customer Order',
                 c4: b.paymentType || '100% Advance',
-                c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                c5: formatCurrency(b.grandTotal),
                 status: b.status || 'Pending Confirmation',
                 stBg: b.status === 'Draft' ? '#fff7ed' : (!b.status || b.status.includes('Pending')) ? '#fef3c7' : '#dcfce7',
                 stFg: b.status === 'Draft' ? '#c2410c' : (!b.status || b.status.includes('Pending')) ? '#b45309' : '#166534',
@@ -10778,7 +10813,7 @@ export default function ProductionViewsEngine(props) {
             const bomCodeText = (accountsVerificationModal && (accountsVerificationModal.bomCode || accountsVerificationModal.code)) || 'BOM-2026';
             const custNameText = (accountsVerificationModal && (accountsVerificationModal.customerName || accountsVerificationModal.c2)) || 'Customer';
             const payTypeText = (accountsVerificationModal && (accountsVerificationModal.paymentType || accountsVerificationModal.c3)) || 'Net 30 Days';
-            const orderValue = parseFloat(accountsVerificationModal.grandTotal || 0);
+            const orderValue = cleanNum(accountsVerificationModal.grandTotal, 0);
 
             // Accounts Verification State & Derived Variables (NOT prefilled by default)
             const currentPayDate = accVerif.paymentDate !== undefined 
@@ -10788,8 +10823,8 @@ export default function ProductionViewsEngine(props) {
               ? accVerif.totalAmount 
               : (isAlreadyCompleted ? (orderValue > 0 ? orderValue : '') : '');
 
-            const isVerified = Boolean(currentPayStatus && currentPayDate && currentTotalAmount !== '' && parseFloat(currentTotalAmount) > 0);
-            const isPartialVerified = Boolean(currentPayStatus || currentPayDate || (currentTotalAmount !== '' && parseFloat(currentTotalAmount) > 0)) && !isVerified;
+            const isVerified = Boolean(currentPayStatus && currentPayDate && currentTotalAmount !== '' && cleanNum(currentTotalAmount, 0) > 0);
+            const isPartialVerified = Boolean(currentPayStatus || currentPayDate || (currentTotalAmount !== '' && cleanNum(currentTotalAmount, 0) > 0)) && !isVerified;
 
             const payStatusConfig = {
               'Payment Received — 100%': { bg: '#DCFCE7', color: '#166534', label: '100% Received', icon: <CheckCircle style={{ width: '18px', height: '18px' }} /> },
@@ -10803,7 +10838,7 @@ export default function ProductionViewsEngine(props) {
                 alert('⚠️ Please select the Payment Date before completing accounts verification.');
                 return;
               }
-              if (currentTotalAmount === '' || isNaN(parseFloat(currentTotalAmount)) || parseFloat(currentTotalAmount) <= 0) {
+              if (currentTotalAmount === '' || cleanNum(currentTotalAmount, 0) <= 0) {
                 alert('⚠️ Please enter a valid Total Amount (₹) before completing accounts verification.');
                 return;
               }
@@ -10815,13 +10850,13 @@ export default function ProductionViewsEngine(props) {
               setBomStore(prev => (prev || []).map(b => (b.bomCode === targetCode || b.code === targetCode) ? {
                 ...b,
                 invoiceNo: newInvNo,
-                grandTotal: parseFloat(currentTotalAmount) || 0,
+                grandTotal: cleanNum(currentTotalAmount, 0),
                 paymentDate: currentPayDate,
                 accountsVerification: {
                   ...(b.accountsVerification || {}),
                   paymentStatus: currentPayStatus,
                   paymentDate: currentPayDate,
-                  totalAmount: parseFloat(currentTotalAmount) || 0,
+                  totalAmount: cleanNum(currentTotalAmount, 0),
                   hardCopyReceived: true,
                   verified: true,
                   verifiedBy: b.accountsVerification?.verifiedBy || 'Accounts Executive (Venkatesh)',
@@ -10837,10 +10872,10 @@ export default function ProductionViewsEngine(props) {
                 ? verifiedBOM.dispatchPacking.map((p, pIdx) => ({
                   code: p.code || `PRD-00${pIdx + 1}`,
                   name: p.name || `Item ${pIdx + 1}`,
-                  qty: p.bomQty || p.qty || 1,
-                  bomQty: p.bomQty || p.qty || 1,
-                  invQty: p.bomQty || p.qty || 1,
-                  rate: p.rate || 1000,
+                  qty: cleanNum(p.bomQty || p.qty, 1),
+                  bomQty: cleanNum(p.bomQty || p.qty, 1),
+                  invQty: cleanNum(p.bomQty || p.qty, 1),
+                  rate: cleanNum(p.rate, 1000),
                   selected: Boolean(p.packed),
                   packed: Boolean(p.packed)
                 }))
@@ -10852,13 +10887,13 @@ export default function ProductionViewsEngine(props) {
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                 vendor: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
                 customerName: verifiedBOM.customerName || verifiedBOM.companyName || custNameText,
-                salesPerson: (verifiedBOM.salesPerson || localStorage.getItem('controlroom_logged_user_name') || 'Mohith JV').replace(/\s*\([^)]*\)/g, '').trim(),
+                salesPerson: (verifiedBOM.salesPerson || verifiedBOM.createdBy || localStorage.getItem('controlroom_logged_user_name') || 'Sales Executive').replace(/\s*\([^)]*\)/g, '').trim(),
                 poNo: targetCode,
                 bomCode: targetCode,
                 grnNo: 'GRN-VERIFIED',
-                invAmt: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                poVal: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                grnVal: `₹ ${currentTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                invAmt: formatCurrency(cleanNum(currentTotalAmount, 0)),
+                poVal: formatCurrency(cleanNum(currentTotalAmount, 0)),
+                grnVal: formatCurrency(cleanNum(currentTotalAmount, 0)),
                 diff: '0.00', match: 'Matched',
                 pay: 'Ready for Payment',
                 status: 'Ready for Payment',
@@ -10873,7 +10908,7 @@ export default function ProductionViewsEngine(props) {
                 accountsVerification: {
                   paymentStatus: currentPayStatus,
                   paymentDate: currentPayDate,
-                  totalAmount: currentTotalAmount,
+                  totalAmount: cleanNum(currentTotalAmount, 0),
                   hardCopyReceived: hardCopy,
                   verified: true
                 },
@@ -12555,35 +12590,43 @@ export default function ProductionViewsEngine(props) {
           // Render Create BOM Form matching exact user reference screenshot design system
           if (showBOMForm) {
             const calculateBOMTotals = () => {
-              const kitUnitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
-              const kitMultiplier = parseInt(presetSetCount) || 1;
-              const kitSubtotal = kitUnitPrice * kitMultiplier;
+              const kitUnitPrice = (selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, 0) : 0;
+              const kitMultiplier = parseInt(String(presetSetCount).replace(/[^0-9]/g, '')) || 1;
+              const kitSubtotal = selectedPreset ? (kitUnitPrice * kitMultiplier) : 0;
 
-              const itemsSub = bomMaterialsList.reduce((acc, item) => {
-                const q = parseFloat(item.qty) || 0;
-                const r = parseFloat(item.rate) || 0;
+              const itemsSub = (bomMaterialsList || []).reduce((acc, item) => {
+                const q = cleanNum(item.qty, 0);
+                const r = cleanNum(item.rate, 0);
                 return acc + (q * r);
               }, 0);
 
               const sub = itemsSub + kitSubtotal;
               const disc = 0;
 
-              const itemsGst = bomMaterialsList.reduce((acc, item) => {
-                const q = parseFloat(item.qty) || 0;
-                const r = parseFloat(item.rate) || 0;
+              const itemsGst = (bomMaterialsList || []).reduce((acc, item) => {
+                const q = cleanNum(item.qty, 0);
+                const r = cleanNum(item.rate, 0);
                 const rowTot = q * r;
-                const pct = parseFloat(String(item.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
+                const pct = cleanNum(String(item.gstRate || newBomGstRate || '18%').replace('%', ''), 18);
                 return acc + (rowTot * (pct / 100));
               }, 0);
-              const presetItem = bomMaterialsList.find(it => it.isPresetItem);
-              const presetGstPct = parseFloat(String(presetItem?.gstRate || newBomGstRate || '18%').replace('%', '')) || 18;
+              const presetItem = (bomMaterialsList || []).find(it => it.isPresetItem);
+              const presetGstPct = cleanNum(String(presetItem?.gstRate || newBomGstRate || '18%').replace('%', ''), 18);
               const kitGst = kitSubtotal * (presetGstPct / 100);
               const gst = itemsGst + kitGst;
 
               const grand = sub - disc + gst;
               const cgst = gst / 2;
               const sgst = gst / 2;
-              return { sub, kitSubtotal, disc, gst, grand, cgst, sgst };
+              return {
+                sub: cleanNum(sub, 0),
+                kitSubtotal: cleanNum(kitSubtotal, 0),
+                disc: cleanNum(disc, 0),
+                gst: cleanNum(gst, 0),
+                grand: cleanNum(grand, 0),
+                cgst: cleanNum(cgst, 0),
+                sgst: cleanNum(sgst, 0)
+              };
             };
 
             const totals = calculateBOMTotals();
@@ -14041,9 +14084,25 @@ export default function ProductionViewsEngine(props) {
                                 ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                                 : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                              const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-                              const maxNumRec = existingNumsRec.length > 0 ? Math.max(...existingNumsRec) : 600;
-                              const finalCode = newBomCode || `BOM-${maxNumRec + 1}`;
+                              const existingNumsRec = (bomStore || []).map(b => {
+                                const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
+                                return match ? parseInt(match[1], 10) : 0;
+                              }).filter(n => Number.isFinite(n) && n > 0);
+                              const maxNumRec = existingNumsRec.length > 0 ? Math.max(0, ...existingNumsRec) : 0;
+                              const finalCode = (newBomCode && /^BOM-\d+$/i.test(newBomCode)) ? newBomCode : `BOM-${String(maxNumRec + 1).padStart(3, '0')}`;
+
+                              const effectiveSalesPersonName = (() => {
+                                const stored = localStorage.getItem('controlroom_logged_user_name');
+                                if (stored && stored.trim() && stored !== 'undefined' && stored !== 'null') return stored.trim();
+                                const storedUser = localStorage.getItem('controlroom_logged_user');
+                                if (storedUser && storedUser.trim() && storedUser !== 'undefined' && storedUser !== 'null') return storedUser.trim();
+                                if (userRole === 'Sales Head') return 'Vijay';
+                                if (userRole === 'Accounts Head') return 'Venkatesh';
+                                if (userRole === 'Accounts Executive') return 'Priya';
+                                if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
+                                return userRole || 'Sales Executive';
+                              })();
+                              const effectiveSalesPersonCode = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
 
                               const hasPaymentProof = Boolean(newBomPaymentProofDoc);
                               const newBomRecord = {
@@ -14073,20 +14132,16 @@ export default function ProductionViewsEngine(props) {
                                 status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
                                 salesConfirmed: !isDraft,
                                 salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
-                                salesPerson: (() => {
-                                  const stored = localStorage.getItem('controlroom_logged_user_name');
-                                  if (stored && stored.trim() && stored !== 'undefined' && stored !== 'null') return stored.trim();
-                                  if (userRole === 'Sales Head') return 'Vijay';
-                                  if (userRole === 'Sales Executive') return 'Mohith JV';
-                                  if (userRole === 'Accounts Head') return 'Venkatesh';
-                                  return 'Mohith JV';
-                                })(),
+                                salesPerson: effectiveSalesPersonName,
+                                salesPersonCode: effectiveSalesPersonCode,
+                                createdBy: effectiveSalesPersonName,
+                                createdById: effectiveSalesPersonCode,
                                 items: (bomMaterialsList || []).map(item => ({
                                   name: item.name || 'Custom Item',
                                   category: item.category || '',
                                   uom: item.uom || 'NOS',
-                                  qty: parseFloat(item.qty) || 0,
-                                  rate: parseFloat(item.rate) || 0,
+                                  qty: cleanNum(item.qty, 1),
+                                  rate: cleanNum(item.rate, 0),
                                   gstRate: item.gstRate || newBomGstRate || '18%',
                                   confirmed: !isDraft
                                 })),
@@ -14101,7 +14156,7 @@ export default function ProductionViewsEngine(props) {
                                 },
                                 dispatchPacking: (bomMaterialsList || []).map(item => ({
                                   name: item.name || 'Custom Item',
-                                  bomQty: parseFloat(item.qty) || 0,
+                                  bomQty: cleanNum(item.qty, 1),
                                   packed: false
                                 })),
                                 accountsVerification: {
@@ -14112,18 +14167,32 @@ export default function ProductionViewsEngine(props) {
                                 invoiceConfirmed: false,
                                 invoiceDeducted: false,
                                 presetName: selectedPreset || null,
-                                presetKitPrice: (selectedPreset && presetKitPrice !== '') ? parseFloat(presetKitPrice) : null,
-                                presetSetCount: selectedPreset ? (parseInt(presetSetCount) || 1) : null,
-                                subTotal: totals.sub || 0,
-                                gstAmount: totals.gst || 0,
-                                cgstAmount: totals.cgst || 0,
-                                sgstAmount: totals.sgst || 0,
-                                grandTotal: totals.grand || 0
+                                presetKitPrice: (selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null,
+                                presetSetCount: selectedPreset ? (parseInt(String(presetSetCount).replace(/[^0-9]/g, '')) || 1) : null,
+                                subTotal: cleanNum(totals.sub, 0),
+                                gstAmount: cleanNum(totals.gst, 0),
+                                cgstAmount: cleanNum(totals.cgst, 0),
+                                sgstAmount: cleanNum(totals.sgst, 0),
+                                grandTotal: cleanNum(totals.grand, 0)
                               };
 
                               let sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
 
                               let finalAssignedCode = finalCode;
+                              if (!isDraft) {
+                                try {
+                                  const reserved = await getAndReserveNextBomCode(true);
+                                  if (reserved && /^BOM-\d+$/i.test(reserved)) {
+                                    finalAssignedCode = reserved;
+                                  }
+                                } catch (err) {
+                                  console.error('Error reserving atomic BOM code:', err);
+                                }
+                              }
+                              sanitizedNewBom.bomCode = finalAssignedCode;
+                              sanitizedNewBom.code = finalAssignedCode;
+                              sanitizedNewBom.id = finalAssignedCode;
+
                               try {
                                 const sRes = await fetch('/api/boms', {
                                   method: 'POST',

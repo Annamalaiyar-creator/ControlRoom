@@ -10,7 +10,7 @@ import jsPDF from 'jspdf';
 import { fetchCloudStore, saveCloudStore, getAndReserveNextBomCode } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
-import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile } from '../../utils/otherViewsShared';
+import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
@@ -187,17 +187,58 @@ export default function BomOrdersView(props) {
     if (storedUser && storedUser.trim() && storedUser !== 'undefined' && storedUser !== 'null') {
       return storedUser.trim();
     }
+    const storedEmp = localStorage.getItem('controlroom_logged_emp_id');
+    if (storedEmp && storedEmp.trim() && storedEmp !== 'undefined' && storedEmp !== 'null') {
+      return storedEmp.trim();
+    }
     if (userRole === 'Sales Head') return 'Vijay';
-    if (userRole === 'Sales Executive') return 'Mohith JV';
     if (userRole === 'Accounts Head') return 'Venkatesh';
     if (userRole === 'Accounts Executive') return 'Priya';
     if (userRole === 'Technical Administrator' || userRole === 'CEO') return 'Annamalaiyar';
     if (userRole === 'Procurement Head') return 'ARUN BOOPATHI M';
     if (userRole === 'Production Head') return 'Senthil Kumar';
-    return 'Mohith JV';
+    return userRole || 'Sales Executive';
   };
   const defaultSalesPersonName = getEffectiveSalesPerson();
   const [newBomSalesPerson, setNewBomSalesPerson] = useState(defaultSalesPersonName);
+
+  const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+  const currentEmpName = (localStorage.getItem('controlroom_logged_user_name') || '').trim();
+  const currentLoggedEmail = (localStorage.getItem('controlroom_logged_user') || '').trim().toLowerCase();
+
+  // Role check: Only individual Sales Executives are isolated to their own BOMs.
+  // Management & Fulfillment roles (Sales Head, CEO, Managing Director, Technical Administrator, Accounts Head, Accounts Executive, Production Head, Floor Supervisor, Dispatch Head, Procurement Head, Billing) see all BOMs.
+  const isRestrictedSalesUser = userRole === 'Sales Executive';
+
+  const visibleBomStore = React.useMemo(() => {
+    const rawList = (bomStore || []).filter(Boolean);
+    if (!isRestrictedSalesUser) return rawList;
+
+    const curCode = currentEmpId.toUpperCase();
+    const curName = currentEmpName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const curEmail = currentLoggedEmail;
+
+    return rawList.filter(b => {
+      if (!b) return false;
+      const spCode = (b.salesPersonCode || b.createdById || '').trim().toUpperCase();
+      if (curCode && spCode && spCode === curCode) return true;
+
+      const spName = (b.salesPerson || b.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (curName && spName) {
+        if (spName === curName) return true;
+        const cleanSp = spName.replace(/\s+/g, '');
+        const cleanCur = curName.replace(/\s+/g, '');
+        if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
+      }
+
+      if (curEmail && (b.salesPersonEmail || b.email || '').toLowerCase() === curEmail) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
+
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
   const [presetKitPrice, setPresetKitPrice] = useState('');
@@ -226,7 +267,7 @@ export default function BomOrdersView(props) {
     const customer = record.customerName || record.companyName || 'Customer';
     const date = record.createdAt || record.date || new Date().toISOString().split('T')[0];
     const status = record.status || 'Active';
-    const salesPerson = (record.salesPerson || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim();
+    const salesPerson = (record.salesPerson || record.createdBy || defaultSalesPersonName).replace(/\s*\([^)]*\)/g, '').trim();
     const paymentType = record.paymentType || '100% Paid';
 
     const bObj = record.billingAddressObj || {};
@@ -719,9 +760,12 @@ export default function BomOrdersView(props) {
       }
     } catch (err) {
       console.error('Error reserving next BOM code:', err);
-      const existingNums = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-      const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 624;
-      setNewBomCode(`BOM-${maxNum + 1}`);
+      const existingNums = (bomStore || []).map(b => {
+        const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      }).filter(n => Number.isFinite(n) && n > 0);
+      const maxNum = existingNums.length > 0 ? Math.max(0, ...existingNums) : 0;
+      setNewBomCode(`BOM-${String(maxNum + 1).padStart(3, '0')}`);
     }
 
     setShowBOMForm(true);
@@ -749,15 +793,15 @@ export default function BomOrdersView(props) {
     actionText: 'Create BOM',
     searchPlaceholder: `Search ${activeTab} (BOM Code, Customer Name, Product)...`,
     tabs: [
-      { id: 'All', label: 'All BOMs', count: (bomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
-      { id: 'Draft', label: 'Draft', count: (bomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
-      { id: 'Pending', label: 'Pending Sales Confirmation', count: (bomStore || []).filter(b => !b.status || b.status === 'Pending Sales Confirmation' || b.status.includes('Pending Confirmation') || b.status === 'Draft').length, bg: '#fef3c7', fg: '#b45309' },
-      { id: 'AddressAction', label: 'Address Proof Requested', count: (bomStore || []).filter(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales').length, bg: '#fee2e2', fg: '#b91c1c' },
-      { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (bomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' },
-      { id: 'Cancelled', label: 'Cancelled & Restored', count: (bomStore || []).filter(b => b.status === 'Cancelled & Stock Restored' || b.cancelled).length, bg: '#f1f5f9', fg: '#64748b' }
+      { id: 'All', label: 'All BOMs', count: (visibleBomStore || []).length, bg: '#e2e8f0', fg: '#475569' },
+      { id: 'Draft', label: 'Draft', count: (visibleBomStore || []).filter(b => b.status === 'Draft').length, bg: '#fff7ed', fg: '#c2410c' },
+      { id: 'Pending', label: 'Pending Sales Confirmation', count: (visibleBomStore || []).filter(b => !b.status || b.status === 'Pending Sales Confirmation' || b.status.includes('Pending Confirmation') || b.status === 'Draft').length, bg: '#fef3c7', fg: '#b45309' },
+      { id: 'AddressAction', label: 'Address Proof Requested', count: (visibleBomStore || []).filter(b => b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales').length, bg: '#fee2e2', fg: '#b91c1c' },
+      { id: 'Sent', label: 'Sales Confirmed / Forwarded', count: (visibleBomStore || []).filter(b => b.status === 'Sales Confirmed - Sent to Dispatch' || b.status === 'Sent to Production' || b.status === 'Confirmed' || b.salesConfirmed).length, bg: '#dcfce7', fg: '#166534' },
+      { id: 'Cancelled', label: 'Cancelled & Restored', count: (visibleBomStore || []).filter(b => b.status === 'Cancelled & Stock Restored' || b.cancelled).length, bg: '#f1f5f9', fg: '#64748b' }
     ],
     headers: ['BOM Code', 'Date of Entry', 'Customer Name', 'Sales Person', 'Payment Type', 'Total (₹)', 'Status'],
-    rows: (bomStore || []).filter(Boolean).map(b => {
+    rows: (visibleBomStore || []).filter(Boolean).map(b => {
       const isDraft = b.status === 'Draft';
       const isCancelled = b.status === 'Cancelled & Stock Restored' || b.cancelled;
       const isAddressRequested = b.addressProofReuploadRequested || b.status === 'Address Proof Requested from Sales';
@@ -803,12 +847,12 @@ export default function BomOrdersView(props) {
         c2: b.date || new Date().toISOString().split('T')[0],
         c3: b.customerName || b.companyName || 'Customer Order',
         salesPerson: (() => {
-          const sp = (b.salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
-          if (!sp) return (defaultSalesPersonName || 'Sales Executive');
+          const sp = (b.salesPerson || b.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim();
+          if (!sp) return defaultSalesPersonName;
           return sp;
         })(),
         c4: b.paymentType || '100% Advance',
-        c5: `₹ ${parseFloat(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        c5: formatCurrency(b.grandTotal),
         status: isAddressRequested ? 'Address Proof Requested from Sales' : (b.status || 'Pending Sales Confirmation'),
         stBg,
         stFg,
@@ -854,12 +898,12 @@ export default function BomOrdersView(props) {
     activeGroupIds.forEach(grpId => {
       const grp = presetGroups[grpId];
       if (grp) {
-        const unitPrice = parseFloat(grp.kitPrice) || 0;
-        const multiplier = parseInt(grp.setCount) || 1;
+        const unitPrice = cleanNum(grp.kitPrice, 0);
+        const multiplier = parseInt(String(grp.setCount).replace(/[^0-9]/g, ''), 10) || 1;
         kitSubtotal += (unitPrice * multiplier);
       } else if (grpId === 'legacy_default') {
-        const unitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
-        const multiplier = parseInt(presetSetCount) || 1;
+        const unitPrice = (selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, 0) : 0;
+        const multiplier = parseInt(String(presetSetCount).replace(/[^0-9]/g, ''), 10) || 1;
         kitSubtotal += (unitPrice * multiplier);
       }
     });
@@ -867,8 +911,8 @@ export default function BomOrdersView(props) {
     // 2. Individual items subtotal (exclude preset items because their cost is in kitSubtotal)
     const itemsSub = (bomMaterialsList || []).reduce((acc, item) => {
       if (item.isPresetItem) return acc;
-      const q = parseFloat(item.qty) || 0;
-      const r = parseFloat(item.rate) || 0;
+      const q = cleanNum(item.qty, 0);
+      const r = cleanNum(item.rate, 0);
       return acc + (q * r);
     }, 0);
 
@@ -878,10 +922,10 @@ export default function BomOrdersView(props) {
     // 3. GST: Custom item GSTs + Preset kits GST (dynamically from each preset's selected gstRate)
     const itemsGst = (bomMaterialsList || []).reduce((acc, item) => {
       if (item.isPresetItem) return acc;
-      const q = parseFloat(item.qty) || 0;
-      const r = parseFloat(item.rate) || 0;
+      const q = cleanNum(item.qty, 0);
+      const r = cleanNum(item.rate, 0);
       const rowTot = q * r;
-      const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
+      const pct = cleanNum(String(item.gstRate || '18%').replace('%', ''), 18);
       return acc + (rowTot * (pct / 100));
     }, 0);
 
@@ -893,33 +937,32 @@ export default function BomOrdersView(props) {
         const firstItem = (bomMaterialsList || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
         gRateStr = firstItem?.gstRate || '18%';
       }
-      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+      const gPct = cleanNum(String(gRateStr).replace('%', ''), 18);
       let groupTotal = 0;
       if (grp) {
-        const unitPrice = parseFloat(grp.kitPrice) || 0;
-        const multiplier = parseInt(grp.setCount) || 1;
+        const unitPrice = cleanNum(grp.kitPrice, 0);
+        const multiplier = parseInt(String(grp.setCount).replace(/[^0-9]/g, ''), 10) || 1;
         groupTotal = unitPrice * multiplier;
       } else if (grpId === 'legacy_default') {
-        const unitPrice = (selectedPreset && presetKitPrice !== '') ? (parseFloat(presetKitPrice) || 0) : 0;
-        const multiplier = parseInt(presetSetCount) || 1;
+        const unitPrice = (selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, 0) : 0;
+        const multiplier = parseInt(String(presetSetCount).replace(/[^0-9]/g, ''), 10) || 1;
         groupTotal = unitPrice * multiplier;
       }
       kitGst += groupTotal * (gPct / 100);
     });
 
     const gst = itemsGst + kitGst;
-
     const grand = sub - disc + gst;
     const cgst = gst / 2;
     const sgst = gst / 2;
     return {
-      sub: isNaN(sub) ? 0 : sub,
-      kitSubtotal: isNaN(kitSubtotal) ? 0 : kitSubtotal,
-      disc: isNaN(disc) ? 0 : disc,
-      gst: isNaN(gst) ? 0 : gst,
-      grand: isNaN(grand) ? 0 : grand,
-      cgst: isNaN(cgst) ? 0 : cgst,
-      sgst: isNaN(sgst) ? 0 : sgst
+      sub: cleanNum(sub, 0),
+      kitSubtotal: cleanNum(kitSubtotal, 0),
+      disc: cleanNum(disc, 0),
+      gst: cleanNum(gst, 0),
+      grand: cleanNum(grand, 0),
+      cgst: cleanNum(cgst, 0),
+      sgst: cleanNum(sgst, 0)
     };
   };
 
@@ -2563,9 +2606,16 @@ export default function BomOrdersView(props) {
                         ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
                         : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                      const existingNumsRec = (bomStore || []).map(b => parseInt(String(b.bomCode || b.code || b.id || '').replace('BOM-', ''))).filter(n => !isNaN(n));
-                      const maxNumRec = existingNumsRec.length > 0 ? Math.max(621, ...existingNumsRec) : 621;
-                      const finalCode = newBomCode || `BOM-${maxNumRec + 1}`;
+                      const existingNumsRec = (bomStore || []).map(b => {
+                        const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
+                        return match ? parseInt(match[1], 10) : 0;
+                      }).filter(n => Number.isFinite(n) && n > 0);
+                      const maxNumRec = existingNumsRec.length > 0 ? Math.max(0, ...existingNumsRec) : 0;
+                      const finalCode = (newBomCode && /^BOM-\d+$/i.test(newBomCode)) ? newBomCode : `BOM-${String(maxNumRec + 1).padStart(3, '0')}`;
+
+                      const effectiveSalesPersonName = (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName;
+                      const effectiveSalesPersonCode = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+                      const effectiveCreatorName = (localStorage.getItem('controlroom_logged_user_name') || effectiveSalesPersonName).trim();
 
                       const hasPaymentProof = Boolean(newBomPaymentProofDoc);
                       const newBomRecord = {
@@ -2596,13 +2646,16 @@ export default function BomOrdersView(props) {
                         status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
                         salesConfirmed: !isDraft,
                         salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
-                        salesPerson: (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName,
+                        salesPerson: effectiveSalesPersonName,
+                        salesPersonCode: effectiveSalesPersonCode,
+                        createdBy: effectiveCreatorName,
+                        createdById: effectiveSalesPersonCode,
                         items: (bomMaterialsList || []).map(item => ({
                           name: item.name || 'Custom Item',
                           category: item.category || '',
                           uom: item.uom || 'NOS',
-                          qty: parseFloat(item.qty) || 0,
-                          rate: parseFloat(item.rate) || 0,
+                          qty: cleanNum(item.qty, 1),
+                          rate: cleanNum(item.rate, 0),
                           gstRate: item.gstRate || '18%',
                           confirmed: !isDraft
                         })),
@@ -2617,7 +2670,7 @@ export default function BomOrdersView(props) {
                         },
                         dispatchPacking: (bomMaterialsList || []).map(item => ({
                           name: item.name || 'Custom Item',
-                          bomQty: parseFloat(item.qty) || 0,
+                          bomQty: cleanNum(item.qty, 1),
                           packed: false
                         })),
                         accountsVerification: {
@@ -2630,14 +2683,14 @@ export default function BomOrdersView(props) {
                         stockBlocked: !isDraft,
                         stockBlockedAt: !isDraft ? new Date().toISOString() : null,
                         presetName: Object.values(presetGroups).map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') || selectedPreset || null,
-                        presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? parseFloat(presetKitPrice) : null),
+                        presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null),
                         presetSetCount: Object.values(presetGroups).reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) || (selectedPreset ? (parseInt(presetSetCount) || 1) : null),
                         presetGroups: Object.values(presetGroups),
-                        subTotal: totals.sub || 0,
-                        gstAmount: totals.gst || 0,
-                        cgstAmount: totals.cgst || 0,
-                        sgstAmount: totals.sgst || 0,
-                        grandTotal: totals.grand || 0
+                        subTotal: cleanNum(totals.sub, 0),
+                        gstAmount: cleanNum(totals.gst, 0),
+                        cgstAmount: cleanNum(totals.cgst, 0),
+                        sgstAmount: cleanNum(totals.sgst, 0),
+                        grandTotal: cleanNum(totals.grand, 0)
                       };
 
                       // Block and reserve inventory immediately so other sales reps see 0 stock
@@ -2652,7 +2705,7 @@ export default function BomOrdersView(props) {
                       if (!isDraft) {
                         try {
                           const reservedCode = await getAndReserveNextBomCode(true);
-                          if (reservedCode) {
+                          if (reservedCode && /^BOM-\d+$/i.test(reservedCode)) {
                             finalAssignedCode = reservedCode;
                           }
                         } catch (err) {
@@ -2901,16 +2954,16 @@ export default function BomOrdersView(props) {
                     deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                     items: finalizedItems,
                     dispatchPacking: packingItems,
-                    salesPerson: (confirmingBomModal.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim(),
+                    salesPerson: (confirmingBomModal.salesPerson || confirmingBomModal.createdBy || defaultSalesPersonName).replace(/\s*\([^)]*\)/g, '').trim(),
                     status: 'Sales Confirmed - Sent to Dispatch',
                     salesConfirmed: true,
                     salesConfirmedAt: new Date().toISOString(),
                     stockBlocked: true,
                     stockBlockedAt: confirmingBomModal.stockBlockedAt || new Date().toISOString(),
                     addressProofReuploadRequested: false,
-                    subTotal: confirmingBomModal.subTotal || grandTotalCalc,
-                    gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
-                    grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
+                    subTotal: cleanNum(confirmingBomModal.subTotal, grandTotalCalc),
+                    gstAmount: cleanNum(confirmingBomModal.gstAmount, grandTotalCalc * 0.18),
+                    grandTotal: cleanNum(confirmingBomModal.grandTotal, grandTotalCalc * 1.18)
                   };
 
                   setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
@@ -3030,7 +3083,7 @@ export default function BomOrdersView(props) {
                 SALES PERSON / CREATOR
               </label>
               <div style={{ fontSize: '13px', fontWeight: '800', color: '#0E7490', height: '40px', display: 'flex', alignItems: 'center', backgroundColor: '#F0FDFA', padding: '0 12px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
-                👤 {(confirmingBomModal.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
+                👤 {(confirmingBomModal.salesPerson || confirmingBomModal.createdBy || defaultSalesPersonName).replace(/\s*\([^)]*\)/g, '').trim()}
               </div>
             </div>
           </div>
@@ -4020,7 +4073,7 @@ export default function BomOrdersView(props) {
                     <td style={{ padding: '12px 14px', fontWeight: '600', color: '#1E293B' }}>{row.c3}</td>
                     <td style={{ padding: '12px 14px', color: '#0E7490', fontWeight: '700', fontSize: '12px' }}>
                       <span style={{ backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        👤 {(row.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
+                        👤 {(row.salesPerson || row.createdBy || defaultSalesPersonName).replace(/\s*\([^)]*\)/g, '').trim()}
                       </span>
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.c4}</td>
@@ -4495,7 +4548,7 @@ export default function BomOrdersView(props) {
               <div>
                 <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', display: 'block', textTransform: 'uppercase' }}>ORDER VALUE</span>
                 <strong style={{ fontSize: '15px', color: '#0F172A', fontWeight: '800' }}>
-                  {quickPreviewRecord.grandTotal ? `₹ ${Number(quickPreviewRecord.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (quickPreviewRecord.c5 || '—')}
+                  {quickPreviewRecord.grandTotal ? formatCurrency(quickPreviewRecord.grandTotal) : (quickPreviewRecord.c5 || '—')}
                 </strong>
               </div>
             </div>
@@ -4505,7 +4558,7 @@ export default function BomOrdersView(props) {
               <div>
                 <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block' }}>Sales Creator</span>
                 <strong style={{ fontSize: '13px', color: '#0E7490', fontWeight: '800' }}>
-                  👤 {(quickPreviewRecord.salesPerson || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim()}
+                  👤 {(quickPreviewRecord.salesPerson || quickPreviewRecord.createdBy || defaultSalesPersonName).replace(/\s*\([^)]*\)/g, '').trim()}
                 </strong>
               </div>
               <div>
