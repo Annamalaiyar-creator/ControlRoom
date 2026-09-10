@@ -170,8 +170,23 @@ export default function BomOrdersView(props) {
 
   // Initial cloud fetch, polling and cross-tab storage listener
   useEffect(() => {
-    const syncFromCloud = () => {
-      fetchCloudStore('bom_store', []).then(data => {
+    const syncFromCloud = async () => {
+      try {
+        let data = null;
+        try {
+          const apiRes = await fetch('/api/boms');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json && Array.isArray(json.data) && json.data.length > 0) {
+              data = json.data;
+            }
+          }
+        } catch (_) {}
+
+        if (!data) {
+          data = await fetchCloudStore('bom_store', []);
+        }
+
         if (data && Array.isArray(data) && data.length > 0) {
           setBomStore(prev => {
             const map = new Map();
@@ -196,7 +211,7 @@ export default function BomOrdersView(props) {
                 if (k) map.set(k, item);
               }
             });
-            // Merge with local items that might be newer or pending
+            // Merge with local items
             localCurrent.forEach(item => {
               if (item) {
                 const k = item.bomCode || item.code;
@@ -215,14 +230,16 @@ export default function BomOrdersView(props) {
             return sanitizedMerged;
           });
         }
-      });
+      } catch (err) {
+        console.error('Error in syncFromCloud:', err);
+      }
     };
 
     // Initial fetch
     syncFromCloud();
 
-    // Auto-poll cloud every 10 seconds so all sales people see newly created BOMs without reloading
-    const pollInterval = setInterval(syncFromCloud, 10000);
+    // Auto-poll every 6 seconds so all 5 sales people and dispatch see newly created BOMs and status changes in real time
+    const pollInterval = setInterval(syncFromCloud, 6000);
 
     const syncFromStorage = () => {
       try {
@@ -2595,9 +2612,9 @@ export default function BomOrdersView(props) {
                 }
                 setBomConfirmModal('create');
               }}
-              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ border: 'none', background: '#0E7490', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(14,116,144,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              <Check style={{ width: '16px', height: '16px' }} /> Create BOM Order
+              <Check style={{ width: '16px', height: '16px' }} /> Create & Send to Dispatch
             </button>
           </div>
         </div>
@@ -2614,12 +2631,12 @@ export default function BomOrdersView(props) {
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
                     {bomConfirmModal === 'cancel' && 'Discard BOM Form?'}
                     {bomConfirmModal === 'draft' && 'Save BOM as Draft?'}
-                    {bomConfirmModal === 'create' && 'Confirm & Create BOM?'}
+                    {bomConfirmModal === 'create' && 'Confirm & Send to Dispatch?'}
                   </h3>
                   <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
                     {bomConfirmModal === 'cancel' && 'Are you sure you want to cancel? Any unsaved changes entered in this BOM form will be lost.'}
                     {bomConfirmModal === 'draft' && 'Save this Bill of Materials as a draft order so you can review and update it later?'}
-                    {bomConfirmModal === 'create' && `Are you sure you want to finalize and create BOM Order (${newBomCode})?`}
+                    {bomConfirmModal === 'create' && `Are you sure you want to create this BOM order and forward it directly to Dispatch for packing?`}
                   </p>
                 </div>
               </div>
@@ -2627,7 +2644,7 @@ export default function BomOrdersView(props) {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                 <button onClick={() => setBomConfirmModal(null)} style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Go Back</button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (bomConfirmModal === 'cancel') {
                       setShowBOMForm(false);
                       setBomConfirmModal(null);
@@ -2704,7 +2721,9 @@ export default function BomOrdersView(props) {
                         paymentProofDoc: newBomPaymentProofDoc || null,
                         paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                         remarks: newBomRemarks || '',
-                        status: isDraft ? 'Draft' : 'Pending Sales Confirmation',
+                        status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
+                        salesConfirmed: !isDraft,
+                        salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
                         salesPerson: (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName,
                         items: (bomMaterialsList || []).map(item => ({
                           name: item.name || 'Custom Item',
@@ -2713,7 +2732,7 @@ export default function BomOrdersView(props) {
                           qty: parseFloat(item.qty) || 0,
                           rate: parseFloat(item.rate) || 0,
                           gstRate: item.gstRate || '18%',
-                          confirmed: false
+                          confirmed: !isDraft
                         })),
                         payments: {
                           advance50Uploaded: false,
@@ -2754,19 +2773,33 @@ export default function BomOrdersView(props) {
                         blockInventoryForBom(newBomRecord.items, newBomRecord.bomCode);
                       }
 
-                      const sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
+                      let sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
 
-                      // 1. Immediately send to Central Server & Supabase Database
-                      fetch('/api/boms', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ bom: sanitizedNewBom })
-                      }).catch(err => console.error('Error in /api/boms sync:', err));
+                      // 1. Immediately send to Central Server with isNew flag to guarantee unique sequential number
+                      let finalAssignedCode = finalCode;
+                      try {
+                        const sRes = await fetch('/api/boms', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
+                        });
+                        if (sRes.ok) {
+                          const sData = await sRes.json();
+                          if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                            finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                            sanitizedNewBom.bomCode = finalAssignedCode;
+                            sanitizedNewBom.code = finalAssignedCode;
+                            sanitizedNewBom.id = finalAssignedCode;
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Error in /api/boms sync:', err);
+                      }
 
                       // 2. Update local state and persist
                       setBomStore(prev => {
                         const current = Array.isArray(prev) ? prev : [];
-                        const filtered = current.filter(item => item && (item.bomCode !== newBomRecord.bomCode && item.code !== newBomRecord.bomCode));
+                        const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
                         const updatedList = [sanitizedNewBom, ...filtered];
                         try {
                           localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
@@ -2782,6 +2815,18 @@ export default function BomOrdersView(props) {
                         } catch (e) { }
                         return updatedList;
                       });
+
+                      // 3. If sent to dispatch, trigger live notifications and synthesized sound
+                      if (!isDraft) {
+                        notifyBomSentToDispatch({
+                          bomCode: finalAssignedCode,
+                          customerName: sanitizedNewBom.companyName || sanitizedNewBom.customerName,
+                          salesPerson: sanitizedNewBom.salesPerson
+                        });
+                        alert(`✅ BOM (${finalAssignedCode}) successfully created and sent to Dispatch for packing!`);
+                      } else {
+                        alert(`📝 BOM (${finalAssignedCode}) saved as Draft.`);
+                      }
 
                       setNewBomPaymentProofDoc(null);
                       setNewBomDeliveryProofDoc(null);
@@ -2975,10 +3020,10 @@ export default function BomOrdersView(props) {
                     blockInventoryForBom(finalizedItems, confirmingBomModal.bomCode);
                   }
 
-                  setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
-                    ...b,
-                    companyName: confirmingBomModal.companyName || b.companyName,
-                    paymentType: confirmingBomModal.paymentType || b.paymentType,
+                  const updatedBomData = {
+                    ...confirmingBomModal,
+                    companyName: confirmingBomModal.companyName,
+                    paymentType: confirmingBomModal.paymentType,
                     billingAddress: bStr,
                     billingAddressObj: bObj,
                     deliveryAddress: dStr,
@@ -2986,17 +3031,31 @@ export default function BomOrdersView(props) {
                     deliveryAddressProofDoc: confirmingBomModal.sameAsBilling ? null : (confirmingBomModal.deliveryAddressProofDoc || null),
                     items: finalizedItems,
                     dispatchPacking: packingItems,
-                    salesPerson: (confirmingBomModal.salesPerson || b.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim(),
+                    salesPerson: (confirmingBomModal.salesPerson || defaultSalesPersonName || 'Mohit JV').replace(/\s*\([^)]*\)/g, '').trim(),
                     status: 'Sales Confirmed - Sent to Dispatch',
                     salesConfirmed: true,
                     salesConfirmedAt: new Date().toISOString(),
                     stockBlocked: true,
-                    stockBlockedAt: b.stockBlockedAt || new Date().toISOString(),
-                    addressProofReuploadRequested: false, // cleared if sales re-confirmed
+                    stockBlockedAt: confirmingBomModal.stockBlockedAt || new Date().toISOString(),
+                    addressProofReuploadRequested: false,
                     subTotal: confirmingBomModal.subTotal || grandTotalCalc,
                     gstAmount: confirmingBomModal.gstAmount || (grandTotalCalc * 0.18),
                     grandTotal: confirmingBomModal.grandTotal || (grandTotalCalc * 1.18)
+                  };
+
+                  setBomStore(prev => prev.map(b => b.bomCode === confirmingBomModal.bomCode ? {
+                    ...b,
+                    ...updatedBomData
                   } : b));
+
+                  // Push to server immediately so Dispatch sees it in real time
+                  try {
+                    fetch('/api/boms', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedBomData), isUpdate: true })
+                    }).catch(err => console.error('Error updating BOM to Dispatch:', err));
+                  } catch (_) {}
 
                   // Trigger Real-time Workflow Notification with synthesized sound & deep-link to Dispatch Orders
                   notifyBomSentToDispatch({

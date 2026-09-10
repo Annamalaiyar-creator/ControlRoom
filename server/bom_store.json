@@ -4085,7 +4085,10 @@
     "stockBlockedAt": "2026-09-09T10:10:35.056Z",
     "salesConfirmed": true,
     "salesConfirmedAt": "2026-09-09T10:11:56.490Z",
-    "addressProofReuploadRequested": false
+    "addressProofReuploadRequested": false,
+    "presetName": "hp_2_7_hp__500_x_1000_",
+    "presetKitPrice": 45000,
+    "presetSetCount": 1
   },
   {
     "id": "BOM-622",

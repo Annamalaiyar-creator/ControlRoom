@@ -570,15 +570,55 @@ app.post('/api/store/:key', async (req, res) => {
   const storeData = req.body;
   try {
     const filePath = getStoreFilePath(`${key}.json`);
+    let finalDataToSave = storeData;
+
+    // For array stores (like bom_store, customer_store, po_store), merge smartly so concurrent users don't overwrite each other
+    if (Array.isArray(storeData)) {
+      let existingList = [];
+      if (fs.existsSync(filePath)) {
+        try {
+          const raw = fs.readFileSync(filePath, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) existingList = parsed;
+        } catch (e) {
+          existingList = [];
+        }
+      }
+
+      const getId = (item) => {
+        if (!item || typeof item !== 'object') return null;
+        return item.bomCode || item.code || item.id || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.email || item.name;
+      };
+
+      const map = new Map();
+      existingList.forEach(item => {
+        const id = getId(item);
+        if (id) map.set(id, item);
+      });
+
+      storeData.forEach(item => {
+        const id = getId(item);
+        if (id) {
+          if (map.has(id)) {
+            map.set(id, { ...map.get(id), ...item });
+          } else {
+            map.set(id, item);
+          }
+        }
+      });
+
+      finalDataToSave = Array.from(map.values());
+    }
+
     try {
-      fs.writeFileSync(filePath, JSON.stringify(storeData, null, 2), 'utf8');
+      fs.writeFileSync(filePath, JSON.stringify(finalDataToSave, null, 2), 'utf8');
     } catch (e) {}
     try {
-      await pushStoreToSupabase(key, storeData);
+      await pushStoreToSupabase(key, finalDataToSave);
     } catch (e) {
       console.warn(`[Supabase Store Push Warning for ${key}]:`, e.message);
     }
-    res.json({ success: true, count: Array.isArray(storeData) ? storeData.length : 1 });
+    res.json({ success: true, count: Array.isArray(finalDataToSave) ? finalDataToSave.length : 1 });
   } catch (err) {
     res.json({ success: true, count: Array.isArray(storeData) ? storeData.length : 0 });
   }
@@ -2277,15 +2317,65 @@ app.get('/api/boms/next-code', async (req, res) => {
   res.json({ success: true, nextBomCode, maxNum });
 });
 
-// Centralized atomic BOM creation/update endpoint - merges into disk and pushes to Supabase
+// Centralized GET all BOMs endpoint - reads authoritative list from disk & Supabase
+app.get('/api/boms', async (req, res) => {
+  try {
+    const filePath = getStoreFilePath('bom_store.json');
+    let diskList = [];
+    if (fs.existsSync(filePath)) {
+      try {
+        diskList = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (e) {
+        diskList = [];
+      }
+    }
+    if (!Array.isArray(diskList)) diskList = [];
+
+    let cloudList = [];
+    try {
+      const { data: record } = await supabase
+        .from('leaves')
+        .select('reason')
+        .eq('employee', 'BOM_STORE')
+        .maybeSingle();
+      if (record && record.reason) {
+        const parsed = JSON.parse(record.reason);
+        if (Array.isArray(parsed)) cloudList = parsed;
+      }
+    } catch (e) {}
+
+    const map = new Map();
+    cloudList.forEach(b => {
+      const c = b?.bomCode || b?.code || b?.id;
+      if (c) map.set(c, b);
+    });
+    diskList.forEach(b => {
+      const c = b?.bomCode || b?.code || b?.id;
+      if (c) {
+        if (map.has(c)) {
+          map.set(c, { ...map.get(c), ...b });
+        } else {
+          map.set(c, b);
+        }
+      }
+    });
+
+    const allBoms = Array.from(map.values());
+    return res.json({ success: true, data: allBoms, total: allBoms.length });
+  } catch (err) {
+    console.error('Error fetching BOMs:', err);
+    return res.status(500).json({ success: false, message: err.message, data: [] });
+  }
+});
+
+// Centralized atomic BOM creation/update endpoint - guarantees sequential non-clashing codes
 app.post('/api/boms', async (req, res) => {
   try {
-    const { bom } = req.body;
-    if (!bom || (!bom.bomCode && !bom.code)) {
+    let { bom, isNew } = req.body;
+    if (!bom) {
       return res.status(400).json({ success: false, message: 'Valid bom record required' });
     }
 
-    const code = bom.bomCode || bom.code;
     const filePath = getStoreFilePath('bom_store.json');
     let diskList = [];
     if (fs.existsSync(filePath)) {
@@ -2314,11 +2404,11 @@ app.post('/api/boms', async (req, res) => {
     // Merge map with existing boms
     const map = new Map();
     cloudList.forEach(item => {
-      const c = item?.bomCode || item?.code;
+      const c = item?.bomCode || item?.code || item?.id;
       if (c) map.set(c, item);
     });
     diskList.forEach(item => {
-      const c = item?.bomCode || item?.code;
+      const c = item?.bomCode || item?.code || item?.id;
       if (c) {
         if (map.has(c)) {
           map.set(c, { ...map.get(c), ...item });
@@ -2328,11 +2418,36 @@ app.post('/api/boms', async (req, res) => {
       }
     });
 
+    // Compute true max sequence number across ALL existing BOMs
+    let maxNum = 621;
+    for (const key of map.keys()) {
+      const match = String(key).match(/^BOM-(\d+)/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (val > maxNum) maxNum = val;
+      }
+    }
+
+    const incomingCode = bom.bomCode || bom.code || bom.id;
+    // Determine if this is a brand new creation or an update to an existing confirmed BOM
+    const alreadyExists = incomingCode && map.has(incomingCode);
+    const shouldAssignNewCode = isNew || !incomingCode || (alreadyExists && !bom.isUpdate);
+
+    if (shouldAssignNewCode) {
+      maxNum += 1;
+      const assignedCode = `BOM-${maxNum}`;
+      bom.bomCode = assignedCode;
+      bom.code = assignedCode;
+      bom.id = assignedCode;
+    }
+
+    const finalCode = bom.bomCode || bom.code || bom.id;
+
     // Merge or insert new BOM record
-    if (map.has(code)) {
-      map.set(code, { ...map.get(code), ...bom });
+    if (map.has(finalCode)) {
+      map.set(finalCode, { ...map.get(finalCode), ...bom });
     } else {
-      map.set(code, bom);
+      map.set(finalCode, bom);
     }
 
     const mergedList = Array.from(map.values());
@@ -2351,8 +2466,8 @@ app.post('/api/boms', async (req, res) => {
       console.error('Error pushing bom_store to Supabase:', e);
     }
 
-    console.log(`[BOM Store] BOM ${code} saved to central database. Total BOMs: ${mergedList.length}`);
-    return res.json({ success: true, bom, total: mergedList.length });
+    console.log(`[BOM Store] BOM ${finalCode} saved (isNew: ${shouldAssignNewCode}). Status: ${bom.status}. Total BOMs: ${mergedList.length}`);
+    return res.json({ success: true, bom, bomCode: finalCode, total: mergedList.length });
   } catch (err) {
     console.error('Error saving BOM:', err);
     return res.status(500).json({ success: false, message: err.message });

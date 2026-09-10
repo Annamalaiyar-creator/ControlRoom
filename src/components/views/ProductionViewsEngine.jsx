@@ -228,51 +228,73 @@ export default function ProductionViewsEngine(props) {
   }, [bomStore]);
 
   useEffect(() => {
-    fetchCloudStore('bom_store', bomStore).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setBomStore(prev => {
-          const map = new Map();
-          let localCurrent = Array.isArray(prev) ? prev : [];
-          try {
-            const savedStr = localStorage.getItem('controlroom_bom_store');
-            if (savedStr) {
-              const parsed = JSON.parse(savedStr);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                // Merge parsed with localCurrent
-                const currentMap = new Map();
-                localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
-                localCurrent = Array.from(currentMap.values());
-              }
+    const syncFromCloud = async () => {
+      try {
+        let data = null;
+        try {
+          const apiRes = await fetch('/api/boms');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json && Array.isArray(json.data) && json.data.length > 0) {
+              data = json.data;
             }
-          } catch (e) { }
+          }
+        } catch (_) {}
 
-          // Insert cloud data first, then overlay local state so fresh local BOMs ALWAYS overwrite remote data
-          data.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) map.set(k, item);
-            }
-          });
-          localCurrent.forEach(item => {
-            if (item) {
-              const k = item.bomCode || item.code;
-              if (k) {
-                if (map.has(k)) {
-                  map.set(k, { ...map.get(k), ...item });
-                } else {
-                  map.set(k, item);
+        if (!data) {
+          data = await fetchCloudStore('bom_store', bomStore);
+        }
+
+        if (data && Array.isArray(data) && data.length > 0) {
+          setBomStore(prev => {
+            const map = new Map();
+            let localCurrent = Array.isArray(prev) ? prev : [];
+            try {
+              const savedStr = localStorage.getItem('controlroom_bom_store');
+              if (savedStr) {
+                const parsed = JSON.parse(savedStr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  const currentMap = new Map();
+                  localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                  parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
+                  localCurrent = Array.from(currentMap.values());
                 }
               }
-            }
+            } catch (e) { }
+
+            // Insert cloud/server data first
+            data.forEach(item => {
+              if (item) {
+                const k = item.bomCode || item.code;
+                if (k) map.set(k, item);
+              }
+            });
+            // Overlay local state
+            localCurrent.forEach(item => {
+              if (item) {
+                const k = item.bomCode || item.code;
+                if (k) {
+                  if (map.has(k)) {
+                    map.set(k, { ...map.get(k), ...item });
+                  } else {
+                    map.set(k, item);
+                  }
+                }
+              }
+            });
+            const merged = Array.from(map.values());
+            const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
+            try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
+            return sanitizedMerged;
           });
-          const merged = Array.from(map.values());
-          const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-          try { localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitizedMerged)); } catch (e) { }
-          return sanitizedMerged;
-        });
+        }
+      } catch (err) {
+        console.error('Error syncing BOMs in ProductionViewsEngine:', err);
       }
-    });
+    };
+
+    syncFromCloud();
+    const pollInterval = setInterval(syncFromCloud, 6000);
 
     const syncFromStorage = () => {
       try {
@@ -290,6 +312,7 @@ export default function ProductionViewsEngine(props) {
     window.addEventListener('controlroom_storage_update', syncFromStorage);
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
     };
@@ -10067,6 +10090,25 @@ export default function ProductionViewsEngine(props) {
                   ? b.accountsVerification
                   : (allItemsPacked ? { paymentStatus: isWhileDispatch ? 'Awaiting Sales Payment Slip' : null, hardCopyReceived: false, softCopyReceived: false, verified: false } : (b.accountsVerification || {}))
               } : b));
+
+              // Push to server immediately so Accounts sees it in real time
+              try {
+                const updatedPackedBom = {
+                  ...dispatchPackingModal,
+                  dispatchPacking: itemsToPack,
+                  dispatchPackingMedia: dispatchPackingModal.dispatchPackingMedia || null,
+                  status: nextStatus,
+                  pendingSalesDispatchPayment: needsSalesPaymentNotification,
+                  reissuedByAccounts: false,
+                  isAccountsDone: false
+                };
+                fetch('/api/boms', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedPackedBom), isUpdate: true })
+                }).catch(() => {});
+              } catch (_) {}
+
               const targetBomCode = dispatchPackingModal.bomCode;
               const targetNum = targetBomCode ? targetBomCode.replace(/[^0-9]/g, '') : '';
               setInvoiceList(prev => prev.map(inv => {
@@ -14152,7 +14194,7 @@ export default function ProductionViewsEngine(props) {
                         </button>
 
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (bomConfirmModal === 'cancel') {
                               setShowBOMForm(false);
                               setBomConfirmModal(null);
@@ -14224,7 +14266,9 @@ export default function ProductionViewsEngine(props) {
                                 paymentProofDoc: newBomPaymentProofDoc || null,
                                 paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
                                 remarks: newBomRemarks || '',
-                                status: isDraft ? 'Draft' : 'Sent to Production',
+                                status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
+                                salesConfirmed: !isDraft,
+                                salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
                                 salesPerson: (() => {
                                   const stored = localStorage.getItem('controlroom_logged_user_name');
                                   if (stored && stored.trim() && stored !== 'undefined' && stored !== 'null') return stored.trim();
@@ -14240,7 +14284,7 @@ export default function ProductionViewsEngine(props) {
                                   qty: parseFloat(item.qty) || 0,
                                   rate: parseFloat(item.rate) || 0,
                                   gstRate: item.gstRate || newBomGstRate || '18%',
-                                  confirmed: false
+                                  confirmed: !isDraft
                                 })),
                                 payments: {
                                   advance50Uploaded: false,
@@ -14273,17 +14317,38 @@ export default function ProductionViewsEngine(props) {
                                 grandTotal: totals.grand || 0
                               };
 
+                              let sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
+
+                              let finalAssignedCode = finalCode;
+                              try {
+                                const sRes = await fetch('/api/boms', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ bom: sanitizedNewBom, isNew: !isDraft })
+                                });
+                                if (sRes.ok) {
+                                  const sData = await sRes.json();
+                                  if (sData && (sData.bomCode || sData.bom?.bomCode)) {
+                                    finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                                    sanitizedNewBom.bomCode = finalAssignedCode;
+                                    sanitizedNewBom.code = finalAssignedCode;
+                                    sanitizedNewBom.id = finalAssignedCode;
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Error in /api/boms sync:', err);
+                              }
+
                               setBomStore(prev => {
                                 const current = Array.isArray(prev) ? prev : [];
-                                const filtered = current.filter(item => item && (item.bomCode !== newBomRecord.bomCode && item.code !== newBomRecord.bomCode));
-                                const updatedList = [newBomRecord, ...filtered];
-                                const sanitized = updatedList.map(stripDataUrlsFromRecord);
+                                const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode));
+                                const updatedList = [sanitizedNewBom, ...filtered];
                                 try {
-                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
+                                  localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList));
                                 } catch (e) {
                                   console.warn("Storage quota hit for local storage", e);
                                 }
-                                saveCloudStore('bom_store', sanitized);
+                                saveCloudStore('bom_store', updatedList);
                                 setShowBOMForm(false);
                                 setBomConfirmModal(null);
                                 setCurrentPage(1);
@@ -14292,6 +14357,18 @@ export default function ProductionViewsEngine(props) {
                                 } catch (e) { }
                                 return updatedList;
                               });
+
+                              if (!isDraft) {
+                                notifyBomSentToDispatch({
+                                  bomCode: finalAssignedCode,
+                                  customerName: sanitizedNewBom.companyName || sanitizedNewBom.customerName,
+                                  salesPerson: sanitizedNewBom.salesPerson
+                                });
+                                alert(`✅ BOM (${finalAssignedCode}) created successfully and sent to Dispatch for packing!`);
+                              } else {
+                                alert(`📝 BOM (${finalAssignedCode}) saved as Draft.`);
+                              }
+
                               setNewBomPaymentProofDoc(null);
                               setNewBomDeliveryProofDoc(null);
                               setNewBomRemarks('');
@@ -14308,7 +14385,6 @@ export default function ProductionViewsEngine(props) {
                               setNewBomCode('');
                               setShowBOMForm(false);
                               setBomConfirmModal(null);
-                              alert(isDraft ? `📝 BOM (${newBomRecord.bomCode}) saved as Draft!` : `✅ BOM (${newBomRecord.bomCode}) created and sent to Production & Dispatch!`);
                             }
                           }}
                           style={{
