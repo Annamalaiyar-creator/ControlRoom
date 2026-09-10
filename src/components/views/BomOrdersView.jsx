@@ -110,13 +110,13 @@ export default function BomOrdersView(props) {
           const apiRes = await fetch('/api/boms');
           if (apiRes.ok) {
             const json = await apiRes.json();
-            if (json && Array.isArray(json.data) && json.data.length > 0) {
+            if (json && Array.isArray(json.data)) {
               data = json.data;
             }
           }
         } catch (_) {}
 
-        if (!data) {
+        if (data === null) {
           data = await fetchCloudStore('bom_store', []);
         }
 

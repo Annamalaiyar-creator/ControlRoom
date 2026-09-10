@@ -155,11 +155,13 @@ function App() {
     return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
   });
 
-  // One-time fresh reset for BOM store to guarantee clean state starting from BOM-001
+  // One-time fresh reset for BOM and Invoice stores to guarantee clean testing state
   useEffect(() => {
-    if (!localStorage.getItem('controlroom_bom_fresh_reset_001')) {
+    if (!localStorage.getItem('controlroom_fresh_test_reset_v5')) {
       localStorage.setItem('controlroom_bom_store', '[]');
-      localStorage.setItem('controlroom_bom_fresh_reset_001', 'done');
+      localStorage.setItem('controlroom_invoice_store', '[]');
+      localStorage.setItem('controlroom_fresh_test_reset_v5', 'done');
+      fetch('/api/reset-all-testing-data', { method: 'POST' }).catch(() => {});
       window.dispatchEvent(new Event('controlroom_storage_update'));
     }
   }, []);

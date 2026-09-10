@@ -1,5 +1,14 @@
 import { supabase } from '../supabaseClient';
 
+// Ensure clean testing state at module load time before any React component mounts
+if (typeof window !== 'undefined' && window.localStorage) {
+  if (localStorage.getItem('controlroom_fresh_test_reset_v5') !== 'done') {
+    localStorage.setItem('controlroom_bom_store', '[]');
+    localStorage.setItem('controlroom_invoice_store', '[]');
+    localStorage.setItem('controlroom_fresh_test_reset_v5', 'done');
+  }
+}
+
 /**
  * Helper function to safely merge local and remote array datasets without losing local records
  */
@@ -101,21 +110,26 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
 
   // 1. Try fetching directly via Supabase client using working leaves table store
   try {
-    const { data: record, error } = await supabase
+    const { data: records, error } = await supabase
       .from('leaves')
       .select('reason')
       .eq('employee', storeKey.toUpperCase())
-      .maybeSingle();
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const record = (records && records.length > 0) ? records[0] : null;
 
     if (!error && record && record.reason) {
       try {
         const cloudParsed = JSON.parse(record.reason);
-        if (cloudParsed && (Array.isArray(cloudParsed) ? cloudParsed.length > 0 : Object.keys(cloudParsed).length > 0)) {
-          const merged = mergeDatasets(cachedLocal, cloudParsed);
+        if (Array.isArray(cloudParsed)) {
+          // Cloud array is authoritative: sync immediately to localStorage
           try {
-            localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(merged));
+            localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(cloudParsed));
           } catch (e) {}
-          return merged;
+          return cloudParsed;
+        } else if (cloudParsed && typeof cloudParsed === 'object') {
+          return cloudParsed;
         }
       } catch (pErr) {}
     }
@@ -219,21 +233,26 @@ export function saveCloudStore(storeKey, storeData) {
 
     try {
       const employeeKey = storeKey.toUpperCase();
-      const { data: record } = await supabase
+      const { data: records } = await supabase
         .from('leaves')
         .select('id, reason')
         .eq('employee', employeeKey)
-        .maybeSingle();
+        .order('id', { ascending: false })
+        .limit(1);
+
+      const record = (records && records.length > 0) ? records[0] : null;
 
       let finalPayload = dataToSave;
-      if (Array.isArray(dataToSave) && dataToSave.length > 0 && record && record.reason) {
-        try {
-          const existingCloud = JSON.parse(record.reason);
-          if (Array.isArray(existingCloud) && existingCloud.length > 0) {
-            // merge existing cloud records with dataToSave so we NEVER delete or regress cloud items
-            finalPayload = mergeDatasets(existingCloud, dataToSave);
-          }
-        } catch (_) {}
+      if (storeKey !== 'bom_store' && storeKey !== 'invoice_store') {
+        if (Array.isArray(dataToSave) && dataToSave.length > 0 && record && record.reason) {
+          try {
+            const existingCloud = JSON.parse(record.reason);
+            if (Array.isArray(existingCloud) && existingCloud.length > 0) {
+              // merge existing cloud records with dataToSave
+              finalPayload = mergeDatasets(existingCloud, dataToSave);
+            }
+          } catch (_) {}
+        }
       }
 
       if (record && record.id) {
@@ -282,24 +301,26 @@ export async function getAndReserveNextBomCode(commit = true) {
   let highestNum = 0;
 
   try {
-    // 1. Fetch current sequence counter and BOM store from Supabase in parallel
     const [seqRes, storeRes] = await Promise.all([
-      supabase.from('leaves').select('id, reason').eq('employee', 'BOM_SEQUENCE').maybeSingle(),
-      supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').maybeSingle()
+      supabase.from('leaves').select('id, reason').eq('employee', 'BOM_SEQUENCE').order('id', { ascending: false }).limit(1),
+      supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').order('id', { ascending: false }).limit(1)
     ]);
 
+    const seqRow = seqRes.data?.[0];
+    const storeRow = storeRes.data?.[0];
+
     let seqCounter = 0;
-    if (seqRes.data && seqRes.data.reason) {
+    if (seqRow && seqRow.reason) {
       try {
-        const parsedSeq = JSON.parse(seqRes.data.reason);
+        const parsedSeq = JSON.parse(seqRow.reason);
         seqCounter = parseInt(parsedSeq?.lastNumber || parsedSeq?.counter || parsedSeq || 0);
       } catch (_) {}
     }
 
     let storeMax = 0;
-    if (storeRes.data && storeRes.data.reason) {
+    if (storeRow && storeRow.reason) {
       try {
-        const list = JSON.parse(storeRes.data.reason);
+        const list = JSON.parse(storeRow.reason);
         if (Array.isArray(list)) {
           const nums = list.map(b => {
             const raw = String(b.bomCode || b.code || b.id || '');

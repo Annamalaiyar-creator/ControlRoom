@@ -33,16 +33,23 @@ let supabaseMemoryStore = {
 const syncStoreWithSupabase = async (key, localData) => {
   const employeeKey = key.toUpperCase();
   try {
-    const { data: record, error } = await supabase
+    const { data: records, error } = await supabase
       .from('leaves')
       .select('id, reason')
       .eq('employee', employeeKey)
-      .maybeSingle();
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const record = (records && records.length > 0) ? records[0] : null;
 
     if (!error && record && record.reason) {
       try {
         const cloudParsed = JSON.parse(record.reason);
-        if (Array.isArray(cloudParsed) && cloudParsed.length > 0) {
+        if (Array.isArray(cloudParsed)) {
+          if (cloudParsed.length === 0) {
+            supabaseMemoryStore[key] = [];
+            return [];
+          }
           if (Array.isArray(localData) && localData.length > 0) {
             const itemMap = new Map();
             cloudParsed.forEach(item => {
@@ -636,8 +643,8 @@ app.post('/api/store/:key', async (req, res) => {
     const filePath = getStoreFilePath(`${key}.json`);
     let finalDataToSave = storeData;
 
-    // For array stores (like bom_store, customer_store, po_store), merge smartly so concurrent users don't overwrite each other
-    if (Array.isArray(storeData)) {
+    // For array stores (like customer_store, po_store), merge smartly so concurrent users don't overwrite each other
+    if (Array.isArray(storeData) && key !== 'bom_store' && key !== 'invoice_store') {
       let existingList = [];
       if (fs.existsSync(filePath)) {
         try {
@@ -2493,19 +2500,21 @@ app.get('/api/boms/next-code', async (req, res) => {
     // Also fetch from Supabase BOM_SEQUENCE and BOM_STORE
     try {
       const [seqRes, storeRes] = await Promise.all([
-        supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').maybeSingle(),
-        supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').maybeSingle()
+        supabase.from('leaves').select('reason').eq('employee', 'BOM_SEQUENCE').order('id', { ascending: false }).limit(1),
+        supabase.from('leaves').select('reason').eq('employee', 'BOM_STORE').order('id', { ascending: false }).limit(1)
       ]);
-      if (seqRes.data && seqRes.data.reason) {
+      const seqRecord = seqRes.data?.[0];
+      const storeRecord = storeRes.data?.[0];
+      if (seqRecord && seqRecord.reason) {
         try {
-          const parsed = JSON.parse(seqRes.data.reason);
+          const parsed = JSON.parse(seqRecord.reason);
           const seqVal = parseInt(parsed?.lastNumber || parsed?.counter || 0);
           if (seqVal > maxNum) maxNum = seqVal;
         } catch (_) {}
       }
-      if (storeRes.data && storeRes.data.reason) {
+      if (storeRecord && storeRecord.reason) {
         try {
-          const cloudBoms = JSON.parse(storeRes.data.reason);
+          const cloudBoms = JSON.parse(storeRecord.reason);
           if (Array.isArray(cloudBoms)) allRecords = [...allRecords, ...cloudBoms];
         } catch (_) {}
       }
@@ -2542,38 +2551,50 @@ app.get('/api/boms', async (req, res) => {
 
     let cloudList = [];
     try {
-      const { data: record } = await supabase
+      const { data: records } = await supabase
         .from('leaves')
         .select('reason')
         .eq('employee', 'BOM_STORE')
-        .maybeSingle();
+        .order('id', { ascending: false })
+        .limit(1);
+      const record = (records && records.length > 0) ? records[0] : null;
       if (record && record.reason) {
         const parsed = JSON.parse(record.reason);
         if (Array.isArray(parsed)) cloudList = parsed;
       }
     } catch (e) {}
 
-    const map = new Map();
-    cloudList.forEach(b => {
-      const c = b?.bomCode || b?.code || b?.id;
-      if (c) map.set(c, b);
-    });
-    diskList.forEach(b => {
-      const c = b?.bomCode || b?.code || b?.id;
-      if (c) {
-        if (map.has(c)) {
-          map.set(c, { ...map.get(c), ...b });
-        } else {
-          map.set(c, b);
-        }
-      }
-    });
-
-    const allBoms = Array.from(map.values());
-    return res.json({ success: true, data: allBoms, total: allBoms.length });
+    // Cloud is the single source of truth for BOMs
+    return res.json({ success: true, data: cloudList, total: cloudList.length });
   } catch (err) {
     console.error('Error fetching BOMs:', err);
     return res.status(500).json({ success: false, message: err.message, data: [] });
+  }
+});
+
+app.post('/api/reset-all-testing-data', async (req, res) => {
+  try {
+    // 1. Wipe Supabase BOM_STORE, INVOICE_STORE, and BOM_SEQUENCE
+    await supabase.from('leaves').delete().in('employee', ['BOM_STORE', 'INVOICE_STORE', 'BOM_SEQUENCE']);
+    await supabase.from('leaves').insert([
+      { employee: 'BOM_STORE', reason: '[]', status: 'active', duration: '0', dates: new Date().toISOString(), type: 'Store' },
+      { employee: 'INVOICE_STORE', reason: '[]', status: 'active', duration: '0', dates: new Date().toISOString(), type: 'Store' },
+      { employee: 'BOM_SEQUENCE', reason: JSON.stringify({ lastNumber: 0, reservedAt: new Date().toISOString() }), status: 'active', duration: '0', dates: new Date().toISOString(), type: 'Store' }
+    ]);
+
+    // 2. Wipe in-memory stores
+    supabaseMemoryStore.bom_store = [];
+    supabaseMemoryStore.invoice_store = [];
+
+    // 3. Wipe disk backup files
+    try {
+      fs.writeFileSync(getStoreFilePath('bom_store.json'), '[]', 'utf8');
+      fs.writeFileSync(getStoreFilePath('invoice_store.json'), '[]', 'utf8');
+    } catch (_) {}
+
+    return res.json({ success: true, message: 'All testing data wiped clean' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

@@ -208,7 +208,6 @@ export default function DispatchDashboardView(props) {
       } catch (e) {
         console.error("Error setting controlroom_bom_store", e);
       }
-      saveCloudStore('bom_store', sanitized);
     }
   }, [bomStore]);
 
@@ -1747,62 +1746,7 @@ export default function DispatchDashboardView(props) {
   const [closeReasonText, setCloseReasonText] = useState('');
   const [pendingDcModal, setPendingDcModal] = useState(null);
   const [confirmInvoiceSuccessModal, setConfirmInvoiceSuccessModal] = useState(null);
-  const INITIAL_INVOICES = [
-    {
-      invNo: 'INV-2026-102',
-      date: '12 Jul 2026',
-      vendor: 'Tata Power Renewable',
-      poNo: 'BOM-102',
-      grnNo: 'GRN-VERIFIED',
-      invAmt: '₹ 17,400.00',
-      poVal: '₹ 17,400.00',
-      grnVal: '₹ 17,400.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-001', name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, selected: true },
-        { code: 'PRD-002', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, selected: false }
-      ]
-    },
-    {
-      invNo: 'INV-2026-088',
-      date: '02 Jul 2026',
-      vendor: 'Apex Infra Systems',
-      poNo: 'BOM-098',
-      grnNo: 'GRN-1824',
-      invAmt: '₹ 45,000.00',
-      poVal: '₹ 45,000.00',
-      grnVal: '₹ 45,000.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-101', name: 'Steel Pipe', category: '2 inch GI Pipe', qty: 100, rate: 400, selected: true },
-        { code: 'PRD-102', name: 'Flange', category: '2 inch MS Flange', qty: 50, rate: 100, selected: false }
-      ]
-    },
-    {
-      invNo: 'INV-2026-075',
-      date: '25 Jun 2026',
-      vendor: 'Vikram Solar Pvt Ltd',
-      poNo: 'BOM-092',
-      grnNo: 'GRN-1811',
-      invAmt: '₹ 28,500.00',
-      poVal: '₹ 28,500.00',
-      grnVal: '₹ 28,500.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-201', name: 'Solar Cable 4sqmm', category: 'DC Solar Cable', qty: 500, rate: 50, selected: true },
-        { code: 'PRD-202', name: 'MC4 Connector Pair', category: 'Connectors', qty: 70, rate: 50, selected: true }
-      ]
-    }
-  ];
+  const INITIAL_INVOICES = [];
 
   const [invoiceList, setInvoiceList] = useState(() => {
     try {
@@ -1814,10 +1758,7 @@ export default function DispatchDashboardView(props) {
     return INITIAL_INVOICES;
   });
 
-  // Sync invoiceList with Supabase cloud database
-  useEffect(() => {
-    saveCloudStore('invoice_store', invoiceList);
-  }, [invoiceList]);
+
 
   // Initial cloud fetch for invoices
   useEffect(() => {
@@ -2299,24 +2240,27 @@ export default function DispatchDashboardView(props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { order: 'WO-1', cust: 'ABC Solar Pvt Ltd', delay: 2, reason: 'Material Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
-                      { order: 'WO-2', cust: 'Sun Power EPC', delay: 2, reason: 'Packing Pending', st: 'Overdue', stBg: '#FEE2E2', stFg: '#DC2626' },
-                      { order: 'WO-3', cust: 'Green Infra Ltd', delay: 1, reason: 'Invoice Pending', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' },
-                      { order: 'WO-4', cust: 'Bright Energy', delay: 1, reason: 'Vehicle Not Available', st: 'Pending', stBg: '#FEF3C7', stFg: '#B45309' }
-                    ].map((row, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{row.order}</td>
-                        <td style={{ padding: '8px 10px', color: '#334155' }}>{row.cust}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', color: '#DC2626' }}>{row.delay}</td>
-                        <td style={{ padding: '8px 10px', color: '#64748B' }}>{row.reason}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: row.stBg, color: row.stFg }}>
-                            {row.st}
-                          </span>
+                    {((props.bomStore || []).filter(b => b && b.status && b.status !== 'Draft')).length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '24px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                          No delayed dispatch orders. All orders are up to date.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      (props.bomStore || []).filter(b => b && b.status && b.status !== 'Draft').slice(0, 5).map((b, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#0F172A' }}>{b.bomCode || b.code}</td>
+                          <td style={{ padding: '8px 10px', color: '#334155' }}>{b.customerName || b.customer}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', color: '#DC2626' }}>1</td>
+                          <td style={{ padding: '8px 10px', color: '#64748B' }}>Packing Pending</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#FEF3C7', color: '#B45309' }}>
+                              Pending
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

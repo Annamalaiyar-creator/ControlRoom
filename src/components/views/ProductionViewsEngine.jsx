@@ -172,14 +172,14 @@ export default function ProductionViewsEngine(props) {
           const apiRes = await fetch('/api/boms');
           if (apiRes.ok) {
             const json = await apiRes.json();
-            if (json && Array.isArray(json.data) && json.data.length > 0) {
+            if (json && Array.isArray(json.data)) {
               data = json.data;
             }
           }
         } catch (_) {}
 
-        if (!data) {
-          data = await fetchCloudStore('bom_store', bomStore);
+        if (data === null) {
+          data = await fetchCloudStore('bom_store', []);
         }
 
         if (data && Array.isArray(data)) {
@@ -1882,62 +1882,7 @@ export default function ProductionViewsEngine(props) {
   const [closeReasonText, setCloseReasonText] = useState('');
   const [pendingDcModal, setPendingDcModal] = useState(null);
   const [confirmInvoiceSuccessModal, setConfirmInvoiceSuccessModal] = useState(null);
-  const INITIAL_INVOICES = [
-    {
-      invNo: 'INV-2026-102',
-      date: '12 Jul 2026',
-      vendor: 'Tata Power Renewable',
-      poNo: 'BOM-102',
-      grnNo: 'GRN-VERIFIED',
-      invAmt: '₹ 17,400.00',
-      poVal: '₹ 17,400.00',
-      grnVal: '₹ 17,400.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-001', name: 'Long Rail 3000 mm', category: '3 Meter Heavy Duty Rail', qty: 8, rate: 1800, selected: true },
-        { code: 'PRD-002', name: 'Mini Rail 100 mm', category: 'Aluminum Mounting Rail', qty: 12, rate: 250, selected: false }
-      ]
-    },
-    {
-      invNo: 'INV-2026-088',
-      date: '02 Jul 2026',
-      vendor: 'Apex Infra Systems',
-      poNo: 'BOM-098',
-      grnNo: 'GRN-1824',
-      invAmt: '₹ 45,000.00',
-      poVal: '₹ 45,000.00',
-      grnVal: '₹ 45,000.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-101', name: 'Steel Pipe', category: '2 inch GI Pipe', qty: 100, rate: 400, selected: true },
-        { code: 'PRD-102', name: 'Flange', category: '2 inch MS Flange', qty: 50, rate: 100, selected: false }
-      ]
-    },
-    {
-      invNo: 'INV-2026-075',
-      date: '25 Jun 2026',
-      vendor: 'Vikram Solar Pvt Ltd',
-      poNo: 'BOM-092',
-      grnNo: 'GRN-1811',
-      invAmt: '₹ 28,500.00',
-      poVal: '₹ 28,500.00',
-      grnVal: '₹ 28,500.00',
-      diff: '0.00',
-      match: 'Matched',
-      pay: 'Ready',
-      status: 'Ready for Payment',
-      items: [
-        { code: 'PRD-201', name: 'Solar Cable 4sqmm', category: 'DC Solar Cable', qty: 500, rate: 50, selected: true },
-        { code: 'PRD-202', name: 'MC4 Connector Pair', category: 'Connectors', qty: 70, rate: 50, selected: true }
-      ]
-    }
-  ];
+  const INITIAL_INVOICES = [];
 
   const [invoiceList, setInvoiceList] = useState(() => {
     try {
@@ -1956,8 +1901,8 @@ export default function ProductionViewsEngine(props) {
 
   // Initial cloud fetch for invoices
   useEffect(() => {
-    fetchCloudStore('invoice_store', invoiceList).then(data => {
-      if (data && Array.isArray(data) && data.length > 0) setInvoiceList(data);
+    fetchCloudStore('invoice_store', []).then(data => {
+      if (data && Array.isArray(data)) setInvoiceList(data);
     });
     const sub = subscribeToCloudStore('invoice_store', (latest) => {
       if (latest && Array.isArray(latest)) setInvoiceList(latest);
