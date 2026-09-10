@@ -79,6 +79,28 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
   const safeName = (userName && userName !== 'undefined' && userName !== 'null') ? userName : 'Annamalaiyar';
   const avatarLetter = (safeName.charAt(0) || 'A').toUpperCase();
 
+  const deleteItem = (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
+      const filtered = existing.filter(n => n.id !== id);
+      localStorage.setItem('vrm_live_notifications', JSON.stringify(filtered));
+      setLiveNotifications(filtered);
+      window.dispatchEvent(new Event('vrm_notifications_updated'));
+    } catch (err) {}
+  };
+
+  const clearAllNotifications = (e) => {
+    if (e) e.stopPropagation();
+    try {
+      localStorage.removeItem('vrm_live_notifications');
+      localStorage.removeItem('controlroom_read_notification_ids');
+      setLiveNotifications([]);
+      setReadIds([]);
+      window.dispatchEvent(new Event('vrm_notifications_updated'));
+    } catch (err) {}
+  };
+
   const markItemAsRead = (id, e) => {
     if (e) e.stopPropagation();
     const updated = Array.from(new Set([...readIds, id]));
@@ -322,14 +344,27 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
                     </span>
                   )}
                 </div>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    style={{ border: 'none', background: 'none', color: '#0284C7', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
-                  >
-                    Mark all read
-                  </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      style={{ border: 'none', background: 'none', color: '#0284C7', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  {roleNotifications.length > 0 && (
+                    <button
+                      onClick={clearAllNotifications}
+                      title="Clear all saved notifications"
+                      style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#DC2626'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
@@ -363,8 +398,8 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
                           {notif.title}
                         </div>
                         <button
-                          title="Mark as read"
-                          onClick={(e) => markItemAsRead(notif.id, e)}
+                          title="Delete notification"
+                          onClick={(e) => deleteItem(notif.id, e)}
                           style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '12px', cursor: 'pointer', padding: '0 2px' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#DC2626'}
                           onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}

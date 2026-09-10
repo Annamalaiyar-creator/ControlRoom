@@ -260,6 +260,51 @@ export function sendWorkflowNotification({
   return notification;
 }
 
+/**
+ * Marks a notification ID as read in localStorage and dispatches an update event.
+ */
+export function markNotificationAsRead(notifId) {
+  if (!notifId) return;
+  try {
+    const existing = JSON.parse(localStorage.getItem('controlroom_read_notification_ids') || '[]');
+    if (!existing.includes(notifId)) {
+      const updated = [...existing, notifId];
+      localStorage.setItem('controlroom_read_notification_ids', JSON.stringify(updated));
+    }
+    window.dispatchEvent(new Event('vrm_notifications_updated'));
+  } catch (e) {
+    console.error('Error marking notification as read:', e);
+  }
+}
+
+/**
+ * Removes a notification completely from storage.
+ */
+export function deleteLiveNotification(notifId) {
+  if (!notifId) return;
+  try {
+    const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
+    const filtered = existing.filter(n => n.id !== notifId);
+    localStorage.setItem('vrm_live_notifications', JSON.stringify(filtered));
+    window.dispatchEvent(new Event('vrm_notifications_updated'));
+  } catch (e) {
+    console.error('Error deleting live notification:', e);
+  }
+}
+
+/**
+ * Clears all live notifications and read history from storage.
+ */
+export function clearAllLiveNotifications() {
+  try {
+    localStorage.removeItem('vrm_live_notifications');
+    localStorage.removeItem('controlroom_read_notification_ids');
+    window.dispatchEvent(new Event('vrm_notifications_updated'));
+  } catch (e) {
+    console.error('Error clearing live notifications:', e);
+  }
+}
+
 // ===================================================================================
 // DEDICATED WORKFLOW HELPERS AS REQUESTED
 // ===================================================================================

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Volume2, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { isRoleTargeted, playWorkflowNotificationSound } from '../services/notificationService';
+import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead } from '../services/notificationService';
 
 export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
   const [activeToast, setActiveToast] = useState(null);
@@ -41,6 +41,10 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
       }, stepMs);
 
       timerRef.current = setTimeout(() => {
+        // Automatically mark as read once acknowledged on screen
+        if (notif && notif.id) {
+          markNotificationAsRead(notif.id);
+        }
         setActiveToast(null);
         if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       }, durationMs);
@@ -62,7 +66,13 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     
     const targetTab = activeToast.targetTab;
+    const notifId = activeToast.id;
     setActiveToast(null);
+
+    // Mark as read in storage so it never persists unread on page reload
+    if (notifId) {
+      markNotificationAsRead(notifId);
+    }
 
     if (onNavigate && targetTab) {
       onNavigate(targetTab);
@@ -73,7 +83,13 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
     if (e) e.stopPropagation();
     if (timerRef.current) clearTimeout(timerRef.current);
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    const notifId = activeToast.id;
     setActiveToast(null);
+
+    // Mark as read in storage so it never persists unread on page reload
+    if (notifId) {
+      markNotificationAsRead(notifId);
+    }
   };
 
   // Icon mapping
