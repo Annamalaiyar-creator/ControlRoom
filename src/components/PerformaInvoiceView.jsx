@@ -170,15 +170,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   }, [piList, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
 
   useEffect(() => {
-    const cloudKey = isSalesRole ? 'sales_pi_store' : 'procurement_pi_store';
     Promise.all([
-      fetchCloudStore(cloudKey).catch(() => []),
+      fetchCloudStore('sales_pi_store').catch(() => []),
+      fetchCloudStore('proforma_invoice_store').catch(() => []),
       fetch('/api/zoho/estimates').then(r => r.ok ? r.json() : []).catch(() => [])
-    ]).then(([cloudData, zohoData]) => {
+    ]).then(([salesCloud, proformaCloud, zohoData]) => {
       const mergedMap = new Map();
-      if (Array.isArray(cloudData)) {
-        cloudData.forEach(p => { if (p && p.piNo) mergedMap.set(String(p.piNo).toLowerCase(), p); });
+
+      if (Array.isArray(salesCloud)) {
+        salesCloud.forEach(p => { if (p && p.piNo) mergedMap.set(String(p.piNo).toLowerCase(), p); });
       }
+
+      if (Array.isArray(proformaCloud)) {
+        proformaCloud.forEach(p => {
+          if (p && p.piNo) {
+            const k = String(p.piNo).toLowerCase();
+            if (mergedMap.has(k)) {
+              mergedMap.set(k, { ...p, ...mergedMap.get(k) });
+            } else {
+              mergedMap.set(k, p);
+            }
+          }
+        });
+      }
+
       if (Array.isArray(zohoData)) {
         zohoData.forEach(zp => {
           if (zp && zp.piNo) {
@@ -186,16 +201,23 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             if (!mergedMap.has(k)) {
               mergedMap.set(k, zp);
             } else {
-              mergedMap.set(k, { ...mergedMap.get(k), ...zp });
+              const existing = mergedMap.get(k);
+              mergedMap.set(k, {
+                ...zp,
+                ...existing, // Local records take priority for salesPerson, status ('Converted to BOM'), items
+                zohoEstimateId: zp.id || zp.zohoEstimateId || existing.zohoEstimateId
+              });
             }
           }
         });
       }
+
       if (mergedMap.size > 0) {
         const result = Array.from(mergedMap.values()).map(normalizePiRecord);
         setPiList(result);
         try {
-          localStorage.setItem(storageKey, JSON.stringify(result));
+          localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(result));
+          localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(result));
         } catch (_) {}
       }
     }).catch(() => {});
@@ -204,8 +226,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const updatePiList = (newList) => {
     setPiList(newList);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(newList));
-      saveCloudStore(isSalesRole ? 'sales_pi_store' : 'procurement_pi_store', newList);
+      localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(newList));
+      localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(newList));
+      saveCloudStore('sales_pi_store', newList);
+      saveCloudStore('proforma_invoice_store', newList);
       window.dispatchEvent(new Event('controlroom_storage_update'));
     } catch (e) {}
   };
@@ -251,9 +275,23 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
     };
 
-    // Update PI record status to 'Converted to BOM' for accurate tracking
-    const updatedList = piList.map(item => item.piNo === pi.piNo ? { ...item, status: 'Converted to BOM', statusType: 'converted' } : item);
+    // Update PI record status to 'Converted to BOM' and ensure it persists safely
+    const updatedRecord = {
+      ...pi,
+      id: pi.id || pi.piNo,
+      status: 'Converted to BOM',
+      statusType: 'converted',
+      convertedToBom: true
+    };
+    const updatedList = piList.map(item => item.piNo === pi.piNo ? updatedRecord : item);
     updatePiList(updatedList);
+
+    // Also persist update to server and Zoho
+    fetch('/api/zoho/estimates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedRecord)
+    }).catch(() => {});
 
     try {
       localStorage.setItem('controlroom_pending_pi_to_bom', JSON.stringify(conversionData));
@@ -772,6 +810,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     }
 
     const newPI = {
+      id: cleanPiNo,
       piNo: cleanPiNo,
       vendor: vendorName,
       customerName: vendorName,
@@ -1030,8 +1069,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             (pi.gstNo || '').toLowerCase().includes(searchLower) ||
             (pi.productName || '').toLowerCase().includes(searchLower);
           const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-          const matchesStatus = statusFilter === 'All' || currentStatus === statusFilter;
-          const matchesTab = piTab === 'All' || currentStatus === piTab;
+          const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom);
+          const matchesStatus = statusFilter === 'All'
+            || (statusFilter === 'Issued' && (currentStatus === 'Issued' || isConverted))
+            || (statusFilter === 'Converted to BOM' && isConverted)
+            || currentStatus === statusFilter;
+          const matchesTab = piTab === 'All'
+            || (piTab === 'Issued' && (currentStatus === 'Issued' || isConverted))
+            || (piTab === 'Converted to BOM' && isConverted)
+            || currentStatus === piTab;
           return matchesSearch && matchesStatus && matchesTab;
         });
 
@@ -1161,9 +1207,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
                   { id: 'Issued', label: 'Issued / Active', count: visiblePIList.filter(pi => {
                     const st = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-                    return st === 'Issued';
+                    return st === 'Issued' || st === 'Converted to BOM' || Boolean(pi.convertedToBom);
                   }).length },
-                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM').length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM' || Boolean(pi.convertedToBom)).length },
                   { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (

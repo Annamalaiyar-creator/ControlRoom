@@ -676,7 +676,7 @@ app.post('/api/store/:key', async (req, res) => {
 
       const getId = (item) => {
         if (!item || typeof item !== 'object') return null;
-        return item.bomCode || item.code || item.id || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.email || item.name;
+        return item.piNo || item.estimate_number || item.estimateId || item.bomCode || item.code || item.id || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.email || item.name;
       };
 
       const map = new Map();
@@ -3310,8 +3310,29 @@ app.get(['/api/zoho/next-pi-number', '/api/zoho/next-estimate-number'], async (r
 app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res) => {
   let localEstimates = [];
   try {
-    const p = getStoreFilePath('proforma_invoice_store.json');
-    if (fs.existsSync(p)) localEstimates = JSON.parse(fs.readFileSync(p, 'utf8'));
+    const p1 = getStoreFilePath('proforma_invoice_store.json');
+    if (fs.existsSync(p1)) localEstimates = JSON.parse(fs.readFileSync(p1, 'utf8'));
+  } catch (_) {}
+  try {
+    const p2 = getStoreFilePath('sales_pi_store.json');
+    if (fs.existsSync(p2)) {
+      const salesData = JSON.parse(fs.readFileSync(p2, 'utf8'));
+      if (Array.isArray(salesData)) {
+        const localMap = new Map();
+        localEstimates.forEach(x => { if (x && x.piNo) localMap.set(String(x.piNo).toLowerCase(), x); });
+        salesData.forEach(s => {
+          if (s && s.piNo) {
+            const k = String(s.piNo).toLowerCase();
+            if (localMap.has(k)) {
+              localMap.set(k, { ...s, ...localMap.get(k) });
+            } else {
+              localMap.set(k, s);
+            }
+          }
+        });
+        localEstimates = Array.from(localMap.values());
+      }
+    }
   } catch (_) {}
 
   if (!zohoSession.connected) return res.json(localEstimates);
@@ -3355,7 +3376,14 @@ app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res)
       if (!piMap.has(k)) {
         piMap.set(k, lp);
       } else {
-        piMap.set(k, { ...lp, ...piMap.get(k) });
+        const zp = piMap.get(k);
+        piMap.set(k, {
+          ...zp,
+          ...lp,
+          zohoEstimateId: zp.id || lp.zohoEstimateId,
+          status: lp.status || zp.status,
+          statusType: lp.statusType || zp.statusType
+        });
       }
     });
 

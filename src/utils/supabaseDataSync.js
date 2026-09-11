@@ -15,7 +15,7 @@ function mergeDatasets(localArray, remoteArray) {
   const getId = (item) => {
     if (!item || typeof item !== 'object') return JSON.stringify(item);
     if (item.email && (item.employee_code || item.role)) return `emp_${item.email.toLowerCase().trim()}`;
-    return item.employee_code || item.bomCode || item.id || item.workOrderNo || item.woNo || item.code || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.coilNo || item.email || item.name;
+    return item.piNo || item.estimate_number || item.estimateId || item.employee_code || item.bomCode || item.id || item.workOrderNo || item.woNo || item.code || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.coilNo || item.email || item.name;
   };
 
   const map = new Map();

@@ -12823,5 +12823,4580 @@
     "cgstAmount": 8100,
     "sgstAmount": 8100,
     "grandTotal": 106200
+  },
+  {
+    "id": "BOM-681",
+    "bomCode": "BOM-681",
+    "code": "BOM-681",
+    "sourcePiNo": "PI-00008",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-19",
+    "customerName": "VS AQUA",
+    "companyName": "VS AQUA",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-08-31 at 3.48.01 PM.jpeg",
+      "size": "0.17 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T10:00:56.075Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "Converted automatically from Proforma Invoice (PI-00008) dated 2026-09-11.",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T10:01:09.450Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-08-31 at 3.48.01 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-08-31 at 3.48.01 PM.jpeg",
+        "size": "0.17 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T10:00:56.075Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T10:01:09.450Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0
+  },
+  {
+    "id": "BOM-680",
+    "bomCode": "BOM-680",
+    "code": "BOM-680",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Adani Solar Technologies",
+    "companyName": "Adani Solar Technologies",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL ",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "550_Wp_Bifacial_Datasheet.pdf",
+      "size": "11.40 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-11T05:45:55.056Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:45:58.861Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "550_Wp_Bifacial_Datasheet.pdf",
+      "proofDocObj": {
+        "name": "550_Wp_Bifacial_Datasheet.pdf",
+        "size": "11.40 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-11T05:45:55.056Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:45:58.862Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789105538758_8rew",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160,
+    "dispatchPackingMedia": null,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "c2": "Adani Solar Technologies",
+    "c3": "MOHITH J V",
+    "c4": "Partial Payment",
+    "packingProgressText": "0 of 14 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking"
+  },
+  {
+    "id": "BOM-679",
+    "bomCode": "BOM-679",
+    "code": "BOM-679",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Adani Solar Technologies",
+    "companyName": "Adani Solar Technologies",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "8/1 Agathiyar nagar, Chennai, Tamil Nadu, Pincode: 600059",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600059"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+      "size": "0.91 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-11T05:42:56.083Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+      "size": "0.91 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-11T05:43:06.347Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:43:12.517Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+        "size": "0.91 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-11T05:43:06.347Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:43:12.517Z",
+    "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": null,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789105379200_6zyu",
+        "presetId": "hp_2_3_hp__500_x_1000_",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0
+  },
+  {
+    "id": "BOM-678",
+    "bomCode": "BOM-678",
+    "code": "BOM-678",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-18",
+    "customerName": "Designer private limited",
+    "companyName": "Designer private limited",
+    "mobile": "702996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "8/1 nagar, Chennai, tamil nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "8/1 nagar",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Nut.jpeg",
+      "size": "0.04 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:24:23.245Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:24:28.184Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "category": "FRLS",
+        "uom": "NOS",
+        "qty": 288,
+        "rate": 36,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "category": "FRLS",
+        "uom": "NOS",
+        "qty": 250,
+        "rate": 56,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Nut.jpeg",
+      "proofDocObj": {
+        "name": "Nut.jpeg",
+        "size": "0.04 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:24:23.245Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "bomQty": 288,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "bomQty": 250,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:24:28.184Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 24368,
+    "gstAmount": 4386.24,
+    "cgstAmount": 2193.12,
+    "sgstAmount": 2193.12,
+    "grandTotal": 28754.239999999998
+  },
+  {
+    "id": "BOM-677",
+    "bomCode": "BOM-677",
+    "code": "BOM-677",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-30",
+    "customerName": "AK SMART AUTOMATIONS",
+    "companyName": "AK SMART AUTOMATIONS",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "VRMSPI26-271610 (2).pdf",
+      "size": "0.18 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-11T05:18:35.640Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:18:41.022Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "category": "FRLS",
+        "uom": "NOS",
+        "qty": 6000,
+        "rate": 50,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "category": "FRLS",
+        "uom": "NOS",
+        "qty": 5001,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "VRMSPI26-271610 (2).pdf",
+      "proofDocObj": {
+        "name": "VRMSPI26-271610 (2).pdf",
+        "size": "0.18 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-11T05:18:35.640Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "bomQty": 6000,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "bomQty": 5001,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:18:41.022Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 300000,
+    "gstAmount": 54000,
+    "cgstAmount": 27000,
+    "sgstAmount": 27000,
+    "grandTotal": 354000
+  },
+  {
+    "id": "BOM-676",
+    "bomCode": "BOM-676",
+    "code": "BOM-676",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "VRMS26-272742.pdf",
+      "size": "0.22 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-11T05:17:03.501Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:17:07.291Z",
+    "salesPerson": "Kalaiselvi T",
+    "salesPersonCode": "SE-VRM005",
+    "createdBy": "Kalaiselvi T",
+    "createdById": "SE-VRM005",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "VRMS26-272742.pdf",
+      "proofDocObj": {
+        "name": "VRMS26-272742.pdf",
+        "size": "0.22 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-11T05:17:03.501Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:17:07.291Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 10000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103805054_uupl",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "10000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 10000,
+    "gstAmount": 1800,
+    "cgstAmount": 900,
+    "sgstAmount": 900,
+    "grandTotal": 11800
+  },
+  {
+    "id": "BOM-675",
+    "bomCode": "BOM-675",
+    "code": "BOM-675",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "VRMS26-272742.pdf",
+      "size": "0.22 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-11T05:17:03.501Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:17:06.321Z",
+    "salesPerson": "Kalaiselvi T",
+    "salesPersonCode": "SE-VRM005",
+    "createdBy": "Kalaiselvi T",
+    "createdById": "SE-VRM005",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "VRMS26-272742.pdf",
+      "proofDocObj": {
+        "name": "VRMS26-272742.pdf",
+        "size": "0.22 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-11T05:17:03.501Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:17:06.321Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 10000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103805054_uupl",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "10000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 10000,
+    "gstAmount": 1800,
+    "cgstAmount": 900,
+    "sgstAmount": 900,
+    "grandTotal": 11800
+  },
+  {
+    "id": "BOM-674",
+    "bomCode": "BOM-674",
+    "code": "BOM-674",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-11",
+    "customerName": "jeho Solar",
+    "companyName": "jeho Solar",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "sanjaikumar3agmail.com, Chennai, Tamil Nadu, Pincode: 600011",
+    "deliveryAddressObj": {
+      "address": "sanjaikumar3agmail.com",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600011"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 5.35.29 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:14:16.334Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Payment While Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "Check",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:16:05.225Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "category": "RENEW (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 11825,
+        "gstRate": "5%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:16:05.225Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 425700,
+    "gstAmount": 21285,
+    "cgstAmount": 10642.5,
+    "sgstAmount": 10642.5,
+    "grandTotal": 446985
+  },
+  {
+    "id": "BOM-673",
+    "bomCode": "BOM-673",
+    "code": "BOM-673",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-11",
+    "customerName": "jeho Solar",
+    "companyName": "jeho Solar",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "sanjaikumar3agmail.com, Chennai, Tamil Nadu, Pincode: 600011",
+    "deliveryAddressObj": {
+      "address": "sanjaikumar3agmail.com",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600011"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 5.35.29 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:14:16.334Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Payment While Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "Check",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:16:04.899Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "category": "RENEW (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 11825,
+        "gstRate": "5%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:16:04.899Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 425700,
+    "gstAmount": 21285,
+    "cgstAmount": 10642.5,
+    "sgstAmount": 10642.5,
+    "grandTotal": 446985
+  },
+  {
+    "id": "BOM-671",
+    "bomCode": "BOM-671",
+    "code": "BOM-671",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-11",
+    "customerName": "jeho Solar",
+    "companyName": "jeho Solar",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "sanjaikumar3agmail.com, Chennai, Tamil Nadu, Pincode: 600011",
+    "deliveryAddressObj": {
+      "address": "sanjaikumar3agmail.com",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600011"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 5.35.29 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:14:16.334Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Payment While Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "Check",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:16:04.533Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "category": "RENEW (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 11825,
+        "gstRate": "5%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:16:04.533Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 425700,
+    "gstAmount": 21285,
+    "cgstAmount": 10642.5,
+    "sgstAmount": 10642.5,
+    "grandTotal": 446985
+  },
+  {
+    "id": "BOM-670",
+    "bomCode": "BOM-670",
+    "code": "BOM-670",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-11",
+    "customerName": "jeho Solar",
+    "companyName": "jeho Solar",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "sanjaikumar3agmail.com, Chennai, Tamil Nadu, Pincode: 600011",
+    "deliveryAddressObj": {
+      "address": "sanjaikumar3agmail.com",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600011"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "WhatsApp Image 2026-09-10 at 5.35.29 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:14:16.334Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Payment While Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "Check",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:16:04.306Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "category": "RENEW (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 11825,
+        "gstRate": "5%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "RENEW BIFACIAL DCR 550wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:16:04.306Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 425700,
+    "gstAmount": 21285,
+    "cgstAmount": 10642.5,
+    "sgstAmount": 10642.5,
+    "grandTotal": 446985
+  },
+  {
+    "id": "BOM-669",
+    "bomCode": "BOM-669",
+    "code": "BOM-669",
+    "date": "2026-09-09",
+    "deliveryDate": "2026-09-11",
+    "customerName": "Apex Infra Ltd",
+    "companyName": "Apex Infra Ltd",
+    "mobile": "+91 99400 11223",
+    "email": "priya@apexinfra.com",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A1 Transport",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-09 at 3.44.17 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-09T12:40:22.841Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Pending Sales Confirmation",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:16:03.605Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": false
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-09 at 3.44.17 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-09 at 3.44.17 PM.jpeg",
+        "size": "0.05 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-09T12:40:22.841Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-09T12:40:40.023Z",
+    "presetName": "hp_2_3_hp__500_x_1000_",
+    "presetKitPrice": null,
+    "presetSetCount": 1,
+    "presetGroups": [],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0
+  },
+  {
+    "id": "BOM-668",
+    "bomCode": "BOM-668",
+    "code": "BOM-668",
+    "date": "2026-09-09",
+    "deliveryDate": "2026-09-11",
+    "customerName": "Vikram Solar Pvt Ltd",
+    "companyName": "Vikram Solar Pvt Ltd",
+    "mobile": "+91 98765 43210",
+    "email": "rajesh@vikramsolar.com",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": null,
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-09T12:43:16.963Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 9,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "POLYCAB ONGRID 5KW Single Phase",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "ACDB (5-10 KW) With MCB AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DCDB (5-10 KW) With MCB, FUSE AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DC CABLE 6Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "DC CABLE 6Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "AC CABLE 6Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "AC CABLE 6Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EARTHING CABLE 6Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "CABLE TIE",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "CABLE TRAY",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": null,
+      "proofDocObj": null,
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "bomQty": 9,
+        "packed": false
+      },
+      {
+        "name": "POLYCAB ONGRID 5KW Single Phase",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "ACDB (5-10 KW) With MCB AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "DCDB (5-10 KW) With MCB, FUSE AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 6Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 6Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 6Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 6Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 6Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "CABLE TIE",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "CABLE TRAY",
+        "bomQty": 1,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-09T12:43:16.963Z",
+    "presetName": "preset_bos_kits__dcr_5_kw",
+    "presetKitPrice": 200000,
+    "presetSetCount": 1,
+    "presetGroups": [],
+    "subTotal": 200000,
+    "gstAmount": 36000,
+    "cgstAmount": 18000,
+    "sgstAmount": 18000,
+    "grandTotal": 236000,
+    "addressProofReuploadRequested": false
+  },
+  {
+    "id": "BOM-667",
+    "bomCode": "BOM-667",
+    "code": "BOM-667",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-11",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "7092996057",
+    "email": "arannamalaiyar@gmail.com",
+    "billingAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "billingAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddress": "8/1 Agathiyar Nagar, Chennai, Tamil Nadu, Pincode: 600069",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar Nagar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600069"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL ",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "550_Wp_Bifacial_Datasheet.pdf",
+      "size": "11.40 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-11T05:14:27.404Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:15:53.004Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "550_Wp_Bifacial_Datasheet.pdf",
+      "proofDocObj": {
+        "name": "550_Wp_Bifacial_Datasheet.pdf",
+        "size": "11.40 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-11T05:14:27.404Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:15:53.004Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 12000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103655618_3mgp",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "12000",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 12000,
+    "gstAmount": 2160,
+    "cgstAmount": 1080,
+    "sgstAmount": 1080,
+    "grandTotal": 14160
+  },
+  {
+    "id": "BOM-666",
+    "bomCode": "BOM-666",
+    "code": "BOM-666",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-30",
+    "customerName": "Jashsun",
+    "companyName": "Jashsun",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Bom_Carport.jpeg",
+      "size": "0.18 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:11:31.341Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:11:59.704Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "EARTH ROD 14mm",
+        "category": "COPPER BONDED",
+        "uom": "NOS",
+        "qty": 50000000,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Bom_Carport.jpeg",
+      "proofDocObj": {
+        "name": "Bom_Carport.jpeg",
+        "size": "0.18 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:11:31.341Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "EARTH ROD 14mm",
+        "bomQty": 50000000,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:11:59.704Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0
+  },
+  {
+    "id": "BOM-665",
+    "bomCode": "BOM-665",
+    "code": "BOM-665",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-23",
+    "customerName": "Vikram Solar Pvt Ltd (Suresh Kumar)",
+    "companyName": "Vikram Solar Pvt Ltd (Suresh Kumar)",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Nut.jpeg",
+      "size": "0.04 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:08:49.553Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:08:53.720Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "Universal Mid Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal End Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "locking clamp and square nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "EPDM 80*25",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Rivet",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal End Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 2e+26,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Nut.jpeg",
+      "proofDocObj": {
+        "name": "Nut.jpeg",
+        "size": "0.04 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:08:49.553Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Universal End Clamp",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "locking clamp and square nut",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EPDM 80*25",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Rivet",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Universal End Clamp",
+        "bomQty": 2e+26,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:08:53.720Z",
+    "presetName": "MINI RAIL 75MM NEW (1 Set)",
+    "presetKitPrice": null,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103265420_65a6",
+        "presetId": "preset_3_mini_rail_75mm_new",
+        "presetName": "MINI RAIL 75MM NEW",
+        "setCount": 1,
+        "kitPrice": "",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0
+  },
+  {
+    "id": "BOM-664",
+    "bomCode": "BOM-664",
+    "code": "BOM-664",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-23",
+    "customerName": "Adani Solar Technologies",
+    "companyName": "Adani Solar Technologies",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Bom_Carport.jpeg",
+      "size": "0.18 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:06:39.729Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:06:45.461Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Bom_Carport.jpeg",
+      "proofDocObj": {
+        "name": "Bom_Carport.jpeg",
+        "size": "0.18 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:06:39.729Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:06:45.462Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": null,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103192888_7ifp",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0,
+    "dispatchPackingMedia": {
+      "photos": [
+        {
+          "id": "pack_photo_1789103467689_vjrx",
+          "name": "Screenshot 2026-09-10 at 3.49.19 PM.png",
+          "size": "0.30 MB",
+          "uploadedAt": "10:41 am"
+        }
+      ],
+      "videos": []
+    },
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "c2": "Adani Solar Technologies",
+    "c3": "Vasanth Kumar s",
+    "c4": "100% Paid",
+    "packingProgressText": "0 of 14 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking"
+  },
+  {
+    "id": "BOM-663",
+    "bomCode": "BOM-663",
+    "code": "BOM-663",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-23",
+    "customerName": "Adani Solar Technologies",
+    "companyName": "Adani Solar Technologies",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "100% Paid",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Bom_Carport.jpeg",
+      "size": "0.18 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:06:39.729Z"
+    },
+    "paymentUpdated": true,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:06:44.068Z",
+    "salesPerson": "Vasanth Kumar s",
+    "salesPersonCode": "SE-VRM006",
+    "createdBy": "Vasanth Kumar s",
+    "createdById": "SE-VRM006",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": true,
+      "net30Uploaded": false,
+      "proofDoc": "Bom_Carport.jpeg",
+      "proofDocObj": {
+        "name": "Bom_Carport.jpeg",
+        "size": "0.18 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:06:39.729Z"
+      },
+      "paymentUpdated": true
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:06:44.069Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": null,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789103192888_7ifp",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 0,
+    "gstAmount": 0,
+    "cgstAmount": 0,
+    "sgstAmount": 0,
+    "grandTotal": 0,
+    "dispatchPackingMedia": {
+      "photos": [
+        {
+          "id": "pack_photo_1789103413044_3wan",
+          "name": "Screenshot 2026-09-10 at 3.49.19 PM.png",
+          "size": "0.30 MB",
+          "uploadedAt": "10:40 am"
+        }
+      ],
+      "videos": []
+    },
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "c2": "Adani Solar Technologies",
+    "c3": "Vasanth Kumar s",
+    "c4": "100% Paid",
+    "packingProgressText": "0 of 14 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking"
+  },
+  {
+    "id": "BOM-662",
+    "bomCode": "BOM-662",
+    "code": "BOM-662",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-19",
+    "customerName": "AK SMART AUTOMATIONS",
+    "companyName": "AK SMART AUTOMATIONS",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+      "size": "0.11 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:04:03.912Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:04:21.379Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "40mm mini rail",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 230,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+        "size": "0.11 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:04:03.912Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "40mm mini rail",
+        "bomQty": 20,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:04:21.379Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 211111,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789102994923_2wex",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "211111",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 215711,
+    "gstAmount": 38827.979999999996,
+    "cgstAmount": 19413.989999999998,
+    "sgstAmount": 19413.989999999998,
+    "grandTotal": 254538.97999999998,
+    "dispatchPackingMedia": {
+      "photos": [
+        {
+          "id": "pack_photo_1789103506172_58es",
+          "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+          "size": "0.91 MB",
+          "uploadedAt": "10:41 am"
+        }
+      ],
+      "videos": []
+    },
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "c2": "AK SMART AUTOMATIONS",
+    "c3": "MOHITH J V",
+    "c4": "Partial Payment",
+    "packingProgressText": "0 of 15 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking"
+  },
+  {
+    "id": "BOM-661",
+    "bomCode": "BOM-661",
+    "code": "BOM-661",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-19",
+    "customerName": "AK SMART AUTOMATIONS",
+    "companyName": "AK SMART AUTOMATIONS",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "VRL",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+      "size": "0.11 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T05:04:03.912Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T05:04:14.925Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "40mm mini rail",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 230,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-09 at 3.47.28 PM.jpeg",
+        "size": "0.11 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T05:04:03.912Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "40mm mini rail",
+        "bomQty": 20,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T05:04:14.926Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 211111,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789102994923_2wex",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": "211111",
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 215711,
+    "gstAmount": 38827.979999999996,
+    "cgstAmount": 19413.989999999998,
+    "sgstAmount": 19413.989999999998,
+    "grandTotal": 254538.97999999998
   }
 ]

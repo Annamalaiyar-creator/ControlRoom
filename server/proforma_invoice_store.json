@@ -1,5 +1,187 @@
 [
   {
+    "id": "PI-00008",
+    "piNo": "PI-00008",
+    "vendor": "VS AQUA",
+    "customerName": "VS AQUA",
+    "contactPerson": "",
+    "phone": "",
+    "email": "",
+    "gstNo": "",
+    "productName": "Solar Mounting Rails & Engineering Accessories",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "presetGroups": {},
+    "billingAddress": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "sameAsBilling": true,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "paymentTerms": "50% Advance + 50% Before Dispatch",
+    "creditDays": "",
+    "remarks": "Converted to BOM-681",
+    "unitValue": 47000,
+    "quantity": 94,
+    "subtotal": 47000,
+    "kitSubtotal": 47000,
+    "taxTotal": 8460,
+    "cgst": 4230,
+    "sgst": 4230,
+    "grandTotal": 55460,
+    "amount": "₹55,460",
+    "pdfName": "pi_document.pdf",
+    "signedPiDoc": null,
+    "piDate": "2026-09-11",
+    "expDate": "2026-10-11",
+    "status": "Converted to BOM",
+    "statusType": "converted",
+    "convertedToBom": true,
+    "sourceBomCode": "BOM-681",
+    "salesPerson": "MOHITH J V",
+    "salesperson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004"
+  },
+  {
     "piNo": "PI-00006",
     "vendor": "Tata Power Solar Systems Ltd",
     "customerName": "Tata Power Solar Systems Ltd",
