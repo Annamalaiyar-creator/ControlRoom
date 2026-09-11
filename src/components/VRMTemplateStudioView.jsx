@@ -147,7 +147,9 @@ const compressImageFile = (file, maxDim = 450, quality = 0.85) => {
 
 export default function VRMTemplateStudioView({ onBackToPI }) {
   // Active side menu category
-  const [activeMenu, setActiveMenu] = useState('branding'); // branding | stamp | signature | columns | addresses | banking | terms
+  const [activeMenu, setActiveMenu] = useState('branding'); // branding | labels | stamp | signature | columns | addresses | banking | terms
+  const [isDirectEditMode, setIsDirectEditMode] = useState(true);
+  const [previewPi, setPreviewPi] = useState(SAMPLE_PREVIEW_PI);
 
   // Load saved preferences or fall back to defaults
   const [settings, setSettings] = useState(() => {
@@ -314,13 +316,14 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   };
 
   const SIDE_MENU_ITEMS = [
-    { id: 'branding', label: 'Logo & Brand Colors', icon: Palette, desc: 'Logo, theme color & document title' },
+    { id: 'branding', label: 'Company & Branding', icon: Palette, desc: 'Name, address, GSTIN, CIN & logo' },
+    { id: 'labels', label: 'Document Labels', icon: FileText, desc: 'Document title, PO/PI labels & dates' },
+    { id: 'columns', label: 'Table Columns & Names', icon: Layers, desc: 'Show/hide & rename column headers' },
     { id: 'stamp', label: 'Company Stamp / Seal', icon: Stamp, desc: 'Upload rubber stamp or customize seal' },
-    { id: 'signature', label: 'Authorized Signature', icon: PenTool, desc: 'Upload handwritten signature & titles' },
-    { id: 'columns', label: 'Item Table Columns', icon: Layers, desc: 'HSN, UOM, specs & tax columns' },
+    { id: 'signature', label: 'Authorized Signature', icon: PenTool, desc: 'Upload signature & signatory title' },
     { id: 'addresses', label: 'Addresses & Dispatch', icon: Building2, desc: 'Ship To, transporter & sales exec' },
     { id: 'banking', label: 'Bank Account Details', icon: CreditCard, desc: 'Beneficiary, account no & IFSC' },
-    { id: 'terms', label: 'Terms & Conditions', icon: FileText, desc: 'Commercial policy & notes' }
+    { id: 'terms', label: 'Terms & Footer', icon: Sparkles, desc: 'Commercial policy, acceptance & notes' }
   ];
 
   return (
@@ -734,10 +737,137 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                   </div>
                 </div>
 
+                {/* Company Information Inputs */}
+                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Company Details (Header)</div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company Name</label>
+                    <input
+                      type="text"
+                      value={settings.companyName || ''}
+                      onChange={(e) => updateSettings({ companyName: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company Tagline / Subtitle</label>
+                    <input
+                      type="text"
+                      value={settings.companyTagline || ''}
+                      onChange={(e) => updateSettings({ companyTagline: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Address Line 1</label>
+                    <input
+                      type="text"
+                      value={settings.companyAddressLine1 || ''}
+                      onChange={(e) => updateSettings({ companyAddressLine1: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Address Line 2 (City, State, PIN)</label>
+                    <input
+                      type="text"
+                      value={settings.companyAddressLine2 || ''}
+                      onChange={(e) => updateSettings({ companyAddressLine2: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company GSTIN</label>
+                      <input
+                        type="text"
+                        value={settings.companyGstin || ''}
+                        onChange={(e) => updateSettings({ companyGstin: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company CIN</label>
+                      <input
+                        type="text"
+                        value={settings.companyCin || ''}
+                        onChange={(e) => updateSettings({ companyCin: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Phone / Support</label>
+                      <input
+                        type="text"
+                        value={settings.companyPhone || ''}
+                        onChange={(e) => updateSettings({ companyPhone: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Official Email</label>
+                      <input
+                        type="text"
+                        value={settings.companyEmail || ''}
+                        onChange={(e) => updateSettings({ companyEmail: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Website</label>
+                    <input
+                      type="text"
+                      value={settings.companyWebsite || ''}
+                      onChange={(e) => updateSettings({ companyWebsite: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Header Information Toggles */}
+                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Header Visibility Options</label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
+                    <span>Show GSTIN & CIN Registration</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.showCinGst}
+                      onChange={(e) => updateSettings({ showCinGst: e.target.checked })}
+                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+                    />
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
+                    <span>Show Factory Address & Contact Info</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.showContactInfo}
+                      onChange={(e) => updateSettings({ showContactInfo: e.target.checked })}
+                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* 2. DOCUMENT LABELS */}
+            {activeMenu === 'labels' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Document Title Selector */}
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
-                    Document Title
+                    Main Document Title
                   </label>
                   <input
                     type="text"
@@ -776,29 +906,91 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                   </div>
                 </div>
 
-                {/* Header Information Toggles */}
-                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Header Display Details</label>
+                {/* Customizable Field Labels */}
+                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Customize Field Labels</div>
 
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
-                    <span>Show GSTIN & CIN Registration</span>
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Document Number Label</label>
                     <input
-                      type="checkbox"
-                      checked={settings.showCinGst}
-                      onChange={(e) => updateSettings({ showCinGst: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+                      type="text"
+                      value={settings.docNoLabel || 'Document No:'}
+                      onChange={(e) => updateSettings({ docNoLabel: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
                     />
-                  </label>
+                  </div>
 
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
-                    <span>Show Factory Address & Contact Info</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Date Label</label>
+                      <input
+                        type="text"
+                        value={settings.dateLabel || 'Date:'}
+                        onChange={(e) => updateSettings({ dateLabel: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Valid Until Label</label>
+                      <input
+                        type="text"
+                        value={settings.validUntilLabel || 'Valid Until:'}
+                        onChange={(e) => updateSettings({ validUntilLabel: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Payment Terms Label</label>
                     <input
-                      type="checkbox"
-                      checked={settings.showContactInfo}
-                      onChange={(e) => updateSettings({ showContactInfo: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+                      type="text"
+                      value={settings.paymentTermsLabel || 'Payment Terms:'}
+                      onChange={(e) => updateSettings({ paymentTermsLabel: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
                     />
-                  </label>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Place Of Supply Label</label>
+                    <input
+                      type="text"
+                      value={settings.placeOfSupplyLabel || 'Place Of Supply:'}
+                      onChange={(e) => updateSettings({ placeOfSupplyLabel: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Sales Executive Label</label>
+                    <input
+                      type="text"
+                      value={settings.salesExecutiveLabel || 'Sales Executive:'}
+                      onChange={(e) => updateSettings({ salesExecutiveLabel: e.target.value })}
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Bill To Label</label>
+                      <input
+                        type="text"
+                        value={settings.billToLabel || 'Bill To / Buyer:'}
+                        onChange={(e) => updateSettings({ billToLabel: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Ship To Label</label>
+                      <input
+                        type="text"
+                        value={settings.shipToLabel || 'Ship To / Delivery Destination:'}
+                        onChange={(e) => updateSettings({ shipToLabel: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1148,6 +1340,116 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                     />
                   </label>
                 ))}
+
+                {/* Rename Column Headers */}
+                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Rename Column Headers</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>S.No Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderSno || '#'}
+                        onChange={(e) => updateSettings({ colHeaderSno: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Item / Description</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderDesc || 'Item & Specification'}
+                        onChange={(e) => updateSettings({ colHeaderDesc: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>HSN/SAC Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderHsn || 'HSN/SAC'}
+                        onChange={(e) => updateSettings({ colHeaderHsn: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Quantity Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderQty || 'Qty'}
+                        onChange={(e) => updateSettings({ colHeaderQty: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>UOM Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderUom || 'UOM'}
+                        onChange={(e) => updateSettings({ colHeaderUom: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Rate Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderRate || 'Rate (₹)'}
+                        onChange={(e) => updateSettings({ colHeaderRate: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Discount Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderDiscount || 'Disc%'}
+                        onChange={(e) => updateSettings({ colHeaderDiscount: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Taxable Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderTaxable || 'Taxable (₹)'}
+                        onChange={(e) => updateSettings({ colHeaderTaxable: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>GST% Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderGst || 'GST%'}
+                        onChange={(e) => updateSettings({ colHeaderGst: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Total Column</label>
+                      <input
+                        type="text"
+                        value={settings.colHeaderAmount || 'Total (₹)'}
+                        onChange={(e) => updateSettings({ colHeaderAmount: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1256,7 +1558,7 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               </div>
             )}
 
-            {/* 7. TERMS & CONDITIONS */}
+            {/* 7. TERMS & CONDITIONS AND FOOTER */}
             {activeMenu === 'terms' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
@@ -1270,25 +1572,39 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                 </label>
 
                 {settings.showTerms && (
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '6px' }}>
-                      Edit Terms (1 numbered item per line)
-                    </label>
-                    <textarea
-                      rows={8}
-                      value={settings.termsText}
-                      onChange={(e) => updateSettings({ termsText: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        fontSize: '11.5px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        lineHeight: '1.45',
-                        boxSizing: 'border-box',
-                        resize: 'vertical'
-                      }}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                        Terms Section Heading
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.termsHeading || 'Terms & Conditions:'}
+                        onChange={(e) => updateSettings({ termsHeading: e.target.value })}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                        Edit Terms Lines (1 numbered item per line)
+                      </label>
+                      <textarea
+                        rows={8}
+                        value={settings.termsText}
+                        onChange={(e) => updateSettings({ termsText: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '11.5px',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          lineHeight: '1.45',
+                          boxSizing: 'border-box',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1301,6 +1617,55 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                     style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
                   />
                 </label>
+
+                {/* Customer Acceptance Box Controls */}
+                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
+                    <span>Customer Acceptance & Sign Box</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.showCustomerAcceptance}
+                      onChange={(e) => updateSettings({ showCustomerAcceptance: e.target.checked })}
+                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+                    />
+                  </label>
+
+                  {settings.showCustomerAcceptance && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Box Heading</label>
+                        <input
+                          type="text"
+                          value={settings.customerAcceptanceHeading || 'Customer Acceptance & Signature'}
+                          onChange={(e) => updateSettings({ customerAcceptanceHeading: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Line Subtext</label>
+                        <input
+                          type="text"
+                          value={settings.customerAcceptanceSubtext || 'Authorised Signature & Stamp'}
+                          onChange={(e) => updateSettings({ customerAcceptanceSubtext: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Footer Notice */}
+                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Bottom Footer Note</label>
+                  <input
+                    type="text"
+                    value={settings.footerNote || ''}
+                    onChange={(e) => updateSettings({ footerNote: e.target.value })}
+                    placeholder="This is a Computer Generated Proforma Invoice..."
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
+                  />
+                  <span style={{ fontSize: '10px', color: '#94A3B8' }}>Appears centered at the bottom of the printed page.</span>
+                </div>
               </div>
             )}
 
@@ -1490,8 +1855,62 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                 >
                   100%
                 </button>
+
+                {/* DIRECT CLICK-TO-EDIT ON/OFF TOGGLE */}
+                <button
+                  onClick={() => setIsDirectEditMode(prev => !prev)}
+                  style={{
+                    backgroundColor: isDirectEditMode ? '#0E7490' : '#FFFFFF',
+                    color: isDirectEditMode ? '#FFFFFF' : '#475569',
+                    border: '1px solid ' + (isDirectEditMode ? '#0E7490' : '#CBD5E1'),
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: isDirectEditMode ? '0 2px 5px rgba(14,116,144,0.3)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Toggle in-place click-to-edit directly on the invoice sheet"
+                >
+                  <PenTool size={12} />
+                  <span>Click-to-Edit: {isDirectEditMode ? 'ON' : 'OFF'}</span>
+                </button>
               </div>
             </div>
+
+            {/* IN-PLACE CLICK-TO-EDIT NOTIFICATION BANNER */}
+            {isDirectEditMode && (
+              <div
+                className="no-print"
+                style={{
+                  backgroundColor: '#ECFEFF',
+                  border: '1px solid #A5F3FC',
+                  borderRadius: '8px',
+                  padding: '9px 16px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '11.5px',
+                  color: '#0E7490',
+                  fontWeight: '600'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={15} style={{ color: '#0E7490', flexShrink: 0 }} />
+                  <span>
+                    <strong>In-Place Direct Edit Active:</strong> Click directly on any text, company name, address, labels, item descriptions, rates, or bank details on the invoice sheet below to edit them!
+                  </span>
+                </div>
+                <span style={{ fontSize: '10px', backgroundColor: '#0E7490', color: '#FFFFFF', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>
+                  Live Editable
+                </span>
+              </div>
+            )}
 
             {/* LIVE PRINTABLE DOCUMENT SHEET WRAPPER */}
             <div
@@ -1507,9 +1926,12 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               }}
             >
               <VRMProformaInvoicePrintSheet
-                piData={SAMPLE_PREVIEW_PI}
+                piData={previewPi}
                 settings={settings}
                 id="studio-printable-sheet"
+                isEditable={isDirectEditMode}
+                onUpdateSetting={updateSettings}
+                onUpdatePiData={(up) => setPreviewPi(p => ({ ...p, ...up }))}
               />
             </div>
           </div>

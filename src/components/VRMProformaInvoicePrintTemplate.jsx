@@ -34,6 +34,15 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   showCinGst: true,
   showContactInfo: true,
 
+  // Company Address & Reg Details
+  companyAddressLine1: '1427, GNT Road, Nagappa Industrial Estate, Puzhal',
+  companyAddressLine2: 'Chennai, Tamil Nadu - 600066, India',
+  companyGstin: '33AAGCV4262N1ZZ',
+  companyCin: 'U28112TN2020PTC135489',
+  companyPhone: '+91 98847 20789',
+  companyEmail: 'sales@vrmstructures.com',
+  companyWebsite: 'www.vrmstructures.com',
+
   // Address & Meta Options
   showShipTo: true,
   showTransportDetails: true,
@@ -41,24 +50,49 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   showPaymentTerms: true,
   showPlaceOfSupply: true,
 
-  // Table Columns
+  // Custom Meta & Address Labels
+  docNoLabel: 'Document No:',
+  dateLabel: 'Date:',
+  validUntilLabel: 'Valid Until:',
+  paymentTermsLabel: 'Payment Terms:',
+  placeOfSupplyLabel: 'Place Of Supply:',
+  salesExecutiveLabel: 'Sales Executive:',
+  billToLabel: 'Bill To / Buyer:',
+  shipToLabel: 'Ship To / Delivery Destination:',
+
+  // Table Columns Visibility
   showHsn: true,
   showUom: true,
   showItemDescription: true,
   showGstCol: true,
   showDiscountCol: false,
 
+  // Table Column Header Renaming
+  colHeaderSno: '#',
+  colHeaderDesc: 'Item & Specification',
+  colHeaderHsn: 'HSN/SAC',
+  colHeaderQty: 'Qty',
+  colHeaderUom: 'UOM',
+  colHeaderRate: 'Rate (₹)',
+  colHeaderDiscount: 'Disc%',
+  colHeaderTaxable: 'Taxable (₹)',
+  colHeaderGst: 'GST%',
+  colHeaderAmount: 'Total (₹)',
+
   // Footer & Banking
   showTotalInWords: true,
   showBankDetails: true,
+  bankHeading: 'VRM Company Bank Details (NEFT / RTGS / IMPS)',
   bankBeneficiary: 'VRM Structures India Private Limited',
   bankName: 'HDFC Bank Ltd.',
   bankAccountNo: '50200031629272',
   bankIfsc: 'HDFC0000574',
   bankBranch: 'Kodambakkam, Chennai',
+  bankAccountType: 'Current Account',
 
   // Terms & Conditions
   showTerms: true,
+  termsHeading: 'Terms & Conditions:',
   termsText:
     '1. Validity: This Proforma Invoice is valid for 15 calendar days from the date of issue.\n2. Payment Terms: 100% advance along with confirmed Purchase Order.\n3. Delivery Schedule: Ex-works Puzhal Chennai, dispatch within 7-10 working days upon advance.\n4. Taxes & Duties: GST as applicable at the time of final tax invoicing and dispatch.\n5. Disputes subject to Chennai jurisdiction only.',
 
@@ -72,11 +106,14 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   // Signature Customization
   signatureMode: 'vector', // 'vector' | 'custom' | 'blank'
   customSignatureUrl: null, // Custom uploaded handwritten signature base64
+  forCompanyText: 'For VRM Structures India Pvt Ltd',
   signatoryTitle: 'Authorized Signatory',
   signatoryName: '',
 
-  // Customer Acceptance
+  // Customer Acceptance & Footer
   showCustomerAcceptance: false,
+  customerAcceptanceHeading: 'Customer Acceptance & Signature',
+  customerAcceptanceSubtext: 'Authorised Signature & Stamp',
   footerNote: 'This is a system-generated Proforma Invoice by Control Room ERP. Registered under VRM Structures India Pvt Ltd.'
 };
 
@@ -173,13 +210,67 @@ function formatDate(dateStr) {
 export function VRMProformaInvoicePrintSheet({
   piData,
   settings = DEFAULT_PI_TEMPLATE_SETTINGS,
-  id = 'printable-proforma-invoice'
+  id = 'printable-proforma-invoice',
+  isEditable = false,
+  onUpdateSetting,
+  onUpdatePiData
 }) {
   if (!piData) return null;
 
   const pi = piData;
   const cfg = { ...DEFAULT_PI_TEMPLATE_SETTINGS, ...settings };
   const accent = cfg.accentColor || '#0E7490';
+
+  // Inline Click-to-Edit Helper Component
+  const EditableText = ({
+    value,
+    fallback = '',
+    onSave,
+    style = {},
+    tag = 'span',
+    className = '',
+    multiline = false,
+    placeholder = 'Click to edit...'
+  }) => {
+    if (!isEditable || !onSave) {
+      const Tag = tag;
+      return <Tag style={style} className={className}>{value || fallback}</Tag>;
+    }
+
+    return (
+      <span
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => {
+          const text = e.currentTarget.innerText.trim();
+          if (text !== value) {
+            onSave(text);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !multiline) {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        title="Click to edit text directly"
+        style={{
+          ...style,
+          outline: 'none',
+          cursor: 'text',
+          borderBottom: '1px dashed ' + accent,
+          backgroundColor: 'rgba(14, 116, 144, 0.08)',
+          borderRadius: '3px',
+          padding: '1px 3px',
+          transition: 'all 0.15s ease',
+          display: style.display || (multiline ? 'block' : 'inline-block')
+        }}
+        className={`${className} editable-template-field`}
+      >
+        {value || fallback || placeholder}
+      </span>
+    );
+  };
 
   // Extract or synthesize items array
   const rawItems = Array.isArray(pi.items) && pi.items.length > 0 ? pi.items : [
@@ -323,6 +414,13 @@ export function VRMProformaInvoicePrintSheet({
               margin: 0 !important;
               border-radius: 0 !important;
             }
+            .editable-template-field {
+              border: none !important;
+              border-bottom: none !important;
+              background-color: transparent !important;
+              padding: 0 !important;
+              outline: none !important;
+            }
             @page {
               size: A4 portrait;
               margin: 10mm;
@@ -330,6 +428,16 @@ export function VRMProformaInvoicePrintSheet({
             .page-break {
               page-break-before: always;
             }
+          }
+          .editable-template-field:hover {
+            background-color: rgba(14, 116, 144, 0.18) !important;
+            outline: 1px dotted rgba(14, 116, 144, 0.6) !important;
+          }
+          .editable-template-field:focus {
+            background-color: #FEF08A !important;
+            border-bottom: 2px solid #CA8A04 !important;
+            color: #000000 !important;
+            outline: none !important;
           }
         `}
       </style>
@@ -363,11 +471,19 @@ export function VRMProformaInvoicePrintSheet({
                 )}
                 <div>
                   <div style={{ fontSize: '16.5px', fontWeight: '800', color: accent, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
-                    {cfg.companyName}
+                    <EditableText
+                      value={cfg.companyName}
+                      fallback="VRM Structures India Pvt Ltd"
+                      onSave={(v) => onUpdateSetting?.({ companyName: v })}
+                    />
                   </div>
                   {cfg.companyTagline && (
                     <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600' }}>
-                      {cfg.companyTagline}
+                      <EditableText
+                        value={cfg.companyTagline}
+                        fallback="Engineered Solar Mounting Structures & Solutions"
+                        onSave={(v) => onUpdateSetting?.({ companyTagline: v })}
+                      />
                     </div>
                   )}
                 </div>
@@ -375,15 +491,51 @@ export function VRMProformaInvoicePrintSheet({
 
               {cfg.showContactInfo && (
                 <div style={{ fontSize: '10.5px', color: '#334155', lineHeight: '1.45', marginTop: '4px' }}>
-                  <div>1427, GNT Road, Nagappa Industrial Estate, Puzhal,</div>
-                  <div>Chennai, Tamil Nadu - 600066, India</div>
+                  <div>
+                    <EditableText
+                      value={cfg.companyAddressLine1}
+                      fallback="1427, GNT Road, Nagappa Industrial Estate, Puzhal,"
+                      onSave={(v) => onUpdateSetting?.({ companyAddressLine1: v })}
+                    />
+                  </div>
+                  <div>
+                    <EditableText
+                      value={cfg.companyAddressLine2}
+                      fallback="Chennai, Tamil Nadu - 600066, India"
+                      onSave={(v) => onUpdateSetting?.({ companyAddressLine2: v })}
+                    />
+                  </div>
                   {cfg.showCinGst && (
                     <div style={{ marginTop: '3px' }}>
-                      <strong style={{ color: '#0F172A' }}>GSTIN:</strong> 33AAGCV4262N1ZZ &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>CIN:</strong> U28112TN2020PTC135489
+                      <strong style={{ color: '#0F172A' }}>GSTIN:</strong>{' '}
+                      <EditableText
+                        value={cfg.companyGstin}
+                        fallback="33AAGCV4262N1ZZ"
+                        onSave={(v) => onUpdateSetting?.({ companyGstin: v })}
+                        style={{ fontFamily: 'monospace', fontWeight: '700' }}
+                      />{' '}
+                      &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>CIN:</strong>{' '}
+                      <EditableText
+                        value={cfg.companyCin}
+                        fallback="U28112TN2020PTC135489"
+                        onSave={(v) => onUpdateSetting?.({ companyCin: v })}
+                        style={{ fontFamily: 'monospace', fontWeight: '700' }}
+                      />
                     </div>
                   )}
                   <div>
-                    <strong style={{ color: '#0F172A' }}>Phone:</strong> +91 98847 20789 &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>Email:</strong> sales@vrmstructures.com
+                    <strong style={{ color: '#0F172A' }}>Phone:</strong>{' '}
+                    <EditableText
+                      value={cfg.companyPhone}
+                      fallback="+91 98847 20789"
+                      onSave={(v) => onUpdateSetting?.({ companyPhone: v })}
+                    />{' '}
+                    &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>Email:</strong>{' '}
+                    <EditableText
+                      value={cfg.companyEmail}
+                      fallback="sales@vrmstructures.com"
+                      onSave={(v) => onUpdateSetting?.({ companyEmail: v })}
+                    />
                   </div>
                 </div>
               )}
@@ -403,39 +555,67 @@ export function VRMProformaInvoicePrintSheet({
                 textTransform: 'uppercase',
                 marginBottom: '10px'
               }}>
-                {cfg.documentTitle || 'PROFORMA INVOICE'}
+                <EditableText
+                  value={cfg.documentTitle}
+                  fallback="PROFORMA INVOICE"
+                  onSave={(v) => onUpdateSetting?.({ documentTitle: v })}
+                />
               </div>
 
               <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', marginTop: '4px' }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right', width: '50%' }}>Document No:</td>
-                    <td style={{ padding: '2px 6px', fontWeight: '800', color: accent, textAlign: 'right' }}>{pi.piNo || 'SPI-2025-001'}</td>
+                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right', width: '50%' }}>
+                      <EditableText value={cfg.docNoLabel} fallback="Document No:" onSave={(v) => onUpdateSetting?.({ docNoLabel: v })} />
+                    </td>
+                    <td style={{ padding: '2px 6px', fontWeight: '800', color: accent, textAlign: 'right' }}>
+                      <EditableText value={pi.piNo} fallback="SPI-2025-001" onSave={(v) => onUpdatePiData?.({ piNo: v })} />
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Date:</td>
-                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#0F172A', textAlign: 'right' }}>{formatDate(pi.piDate)}</td>
+                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
+                      <EditableText value={cfg.dateLabel} fallback="Date:" onSave={(v) => onUpdateSetting?.({ dateLabel: v })} />
+                    </td>
+                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#0F172A', textAlign: 'right' }}>
+                      <EditableText value={formatDate(pi.piDate)} fallback="Date" onSave={(v) => onUpdatePiData?.({ piDate: v })} />
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Valid Until:</td>
-                    <td style={{ padding: '2px 6px', fontWeight: '600', color: '#B91C1C', textAlign: 'right' }}>{formatDate(pi.expDate || pi.validUntilDate)}</td>
+                    <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
+                      <EditableText value={cfg.validUntilLabel} fallback="Valid Until:" onSave={(v) => onUpdateSetting?.({ validUntilLabel: v })} />
+                    </td>
+                    <td style={{ padding: '2px 6px', fontWeight: '600', color: '#B91C1C', textAlign: 'right' }}>
+                      <EditableText value={formatDate(pi.expDate || pi.validUntilDate)} fallback="Valid Date" onSave={(v) => onUpdatePiData?.({ expDate: v })} />
+                    </td>
                   </tr>
                   {cfg.showPaymentTerms && (
                     <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Payment Terms:</td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>{pi.paymentTerms || '50% Adv + 50% Before Dispatch'}</td>
+                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
+                        <EditableText value={cfg.paymentTermsLabel} fallback="Payment Terms:" onSave={(v) => onUpdateSetting?.({ paymentTermsLabel: v })} />
+                      </td>
+                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
+                        <EditableText value={pi.paymentTerms} fallback="50% Adv + 50% Before Dispatch" onSave={(v) => onUpdatePiData?.({ paymentTerms: v })} />
+                      </td>
                     </tr>
                   )}
                   {cfg.showPlaceOfSupply && (
                     <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Place Of Supply:</td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>{isTamilNadu ? 'Tamil Nadu (33)' : (bState ? `${bState}` : 'Other State')}</td>
+                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
+                        <EditableText value={cfg.placeOfSupplyLabel} fallback="Place Of Supply:" onSave={(v) => onUpdateSetting?.({ placeOfSupplyLabel: v })} />
+                      </td>
+                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
+                        <EditableText value={isTamilNadu ? 'Tamil Nadu (33)' : (bState ? `${bState}` : 'Other State')} fallback="Place of Supply" onSave={(v) => onUpdateSetting?.({ defaultPlaceOfSupply: v })} />
+                      </td>
                     </tr>
                   )}
                   {cfg.showSalesExecutive && (
                     <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Sales Executive:</td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>{pi.salesPerson || pi.salesperson || pi.createdBy || 'VRM Sales Team'}</td>
+                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
+                        <EditableText value={cfg.salesExecutiveLabel} fallback="Sales Executive:" onSave={(v) => onUpdateSetting?.({ salesExecutiveLabel: v })} />
+                      </td>
+                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
+                        <EditableText value={pi.salesPerson || pi.salesperson || pi.createdBy} fallback="VRM Sales Team" onSave={(v) => onUpdatePiData?.({ salesPerson: v })} />
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -454,20 +634,78 @@ export function VRMProformaInvoicePrintSheet({
           {/* BILL TO */}
           <div style={{ padding: '12px 18px', borderRight: cfg.showShipTo ? '1px solid #CBD5E1' : 'none' }}>
             <div style={{ fontSize: '11px', fontWeight: '800', color: accent, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-              Bill To / Buyer:
+              <EditableText
+                value={cfg.billToLabel}
+                fallback="Bill To / Buyer:"
+                onSave={(v) => onUpdateSetting?.({ billToLabel: v })}
+              />
             </div>
             <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '3px' }}>
-              {customerName}
+              <EditableText
+                value={customerName}
+                fallback="Customer / Buyer Company Name"
+                onSave={(v) => onUpdatePiData?.({ customerName: v, vendor: v, vendorName: v })}
+              />
             </div>
             <div style={{ fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>
-              <div>{bStreet}</div>
-              <div>{bCity}, {bState} - {bPincode}</div>
-              <div style={{ marginTop: '3px' }}>
-                <strong style={{ color: '#0F172A' }}>GSTIN:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{pi.gstNo || 'Unregistered'}</span>
+              <div>
+                <EditableText
+                  value={bStreet}
+                  fallback="Street Address"
+                  onSave={(v) => onUpdatePiData?.({ billingStreet: v, billingAddress: { ...(pi.billingAddress || {}), street: v } })}
+                />
               </div>
-              {pi.contactPerson && <div><strong style={{ color: '#0F172A' }}>Contact:</strong> {pi.contactPerson}</div>}
-              {pi.phone && <div><strong style={{ color: '#0F172A' }}>Phone:</strong> {pi.phone}</div>}
-              {pi.email && <div><strong style={{ color: '#0F172A' }}>Email:</strong> {pi.email}</div>}
+              <div>
+                <EditableText
+                  value={bCity}
+                  fallback="City"
+                  onSave={(v) => onUpdatePiData?.({ billingCity: v, billingAddress: { ...(pi.billingAddress || {}), city: v } })}
+                />{', '}
+                <EditableText
+                  value={bState}
+                  fallback="State"
+                  onSave={(v) => onUpdatePiData?.({ billingState: v, billingAddress: { ...(pi.billingAddress || {}), state: v } })}
+                />{' - '}
+                <EditableText
+                  value={bPincode}
+                  fallback="Pincode"
+                  onSave={(v) => onUpdatePiData?.({ billingPincode: v, billingAddress: { ...(pi.billingAddress || {}), pincode: v } })}
+                />
+              </div>
+              <div style={{ marginTop: '3px' }}>
+                <strong style={{ color: '#0F172A' }}>GSTIN:</strong>{' '}
+                <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>
+                  <EditableText
+                    value={pi.gstNo}
+                    fallback="Unregistered"
+                    onSave={(v) => onUpdatePiData?.({ gstNo: v })}
+                  />
+                </span>
+              </div>
+              <div>
+                <strong style={{ color: '#0F172A' }}>Contact:</strong>{' '}
+                <EditableText
+                  value={pi.contactPerson}
+                  fallback="Add Contact Person"
+                  onSave={(v) => onUpdatePiData?.({ contactPerson: v })}
+                />
+              </div>
+              <div>
+                <strong style={{ color: '#0F172A' }}>Phone:</strong>{' '}
+                <EditableText
+                  value={pi.phone}
+                  fallback="+91 98765 43210"
+                  onSave={(v) => onUpdatePiData?.({ phone: v })}
+                />
+              </div>
+              <div>
+                <strong style={{ color: '#0F172A' }}>Email:</strong>{' '}
+                <EditableText
+                  value={pi.email}
+                  fallback="buyer@example.com"
+                  onSave={(v) => onUpdatePiData?.({ email: v })}
+                />
+              </div>
             </div>
           </div>
 
@@ -475,21 +713,65 @@ export function VRMProformaInvoicePrintSheet({
           {cfg.showShipTo && (
             <div style={{ padding: '12px 18px' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: accent, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                Ship To / Delivery Destination:
+                <EditableText
+                  value={cfg.shipToLabel}
+                  fallback="Ship To / Delivery Destination:"
+                  onSave={(v) => onUpdateSetting?.({ shipToLabel: v })}
+                />
               </div>
               <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '3px' }}>
-                {customerName}
+                <EditableText
+                  value={pi.shippingName || customerName}
+                  fallback="Delivery Destination Name"
+                  onSave={(v) => onUpdatePiData?.({ shippingName: v })}
+                />
               </div>
               <div style={{ fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>
-                <div>{dStreet}</div>
-                <div>{dCity}, {dState} - {dPincode}</div>
+                <div>
+                  <EditableText
+                    value={dStreet}
+                    fallback="Site Delivery Address"
+                    onSave={(v) => onUpdatePiData?.({ deliveryStreet: v, deliveryAddress: { ...(pi.deliveryAddress || {}), street: v } })}
+                  />
+                </div>
+                <div>
+                  <EditableText
+                    value={dCity}
+                    fallback="Delivery City"
+                    onSave={(v) => onUpdatePiData?.({ deliveryCity: v, deliveryAddress: { ...(pi.deliveryAddress || {}), city: v } })}
+                  />{', '}
+                  <EditableText
+                    value={dState}
+                    fallback="Delivery State"
+                    onSave={(v) => onUpdatePiData?.({ deliveryState: v, deliveryAddress: { ...(pi.deliveryAddress || {}), state: v } })}
+                  />{' - '}
+                  <EditableText
+                    value={dPincode}
+                    fallback="Pincode"
+                    onSave={(v) => onUpdatePiData?.({ deliveryPincode: v, deliveryAddress: { ...(pi.deliveryAddress || {}), pincode: v } })}
+                  />
+                </div>
                 <div style={{ marginTop: '3px' }}>
                   <strong style={{ color: '#0F172A' }}>State Code:</strong> {isTamilNadu ? '33 (Tamil Nadu)' : (dState || '—')}
                 </div>
                 {cfg.showTransportDetails && (
                   <>
-                    {pi.transportMode && <div><strong style={{ color: '#0F172A' }}>Dispatch Mode:</strong> {pi.transportMode} {pi.transportScope ? `(${pi.transportScope})` : ''}</div>}
-                    {pi.vehicleNo && <div><strong style={{ color: '#0F172A' }}>Vehicle / LR No:</strong> {pi.vehicleNo}</div>}
+                    <div>
+                      <strong style={{ color: '#0F172A' }}>Dispatch Mode:</strong>{' '}
+                      <EditableText
+                        value={pi.transportMode}
+                        fallback="Road Transport"
+                        onSave={(v) => onUpdatePiData?.({ transportMode: v })}
+                      />
+                    </div>
+                    <div>
+                      <strong style={{ color: '#0F172A' }}>Vehicle / LR No:</strong>{' '}
+                      <EditableText
+                        value={pi.vehicleNo}
+                        fallback="TN-01-AB-1234"
+                        onSave={(v) => onUpdatePiData?.({ vehicleNo: v })}
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -502,16 +784,44 @@ export function VRMProformaInvoicePrintSheet({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
               <tr style={{ backgroundColor: accent, color: '#FFFFFF', fontWeight: '700', textAlign: 'center' }}>
-                <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '32px' }}>#</th>
-                <th style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Item & Specification</th>
-                {cfg.showHsn && <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '70px' }}>HSN/SAC</th>}
-                <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>Qty</th>
-                {cfg.showUom && <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '45px' }}>UOM</th>}
-                <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '80px' }}>Rate (₹)</th>
-                {cfg.showDiscountCol && <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>Disc%</th>}
-                <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '85px' }}>Taxable (₹)</th>
-                {cfg.showGstCol && <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>GST%</th>}
-                <th style={{ padding: '8px 10px', textAlign: 'right', width: '95px' }}>Total (₹)</th>
+                <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '32px' }}>
+                  <EditableText value={cfg.colHeaderSno} fallback="#" onSave={(v) => onUpdateSetting?.({ colHeaderSno: v })} />
+                </th>
+                <th style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>
+                  <EditableText value={cfg.colHeaderDesc} fallback="Item & Specification" onSave={(v) => onUpdateSetting?.({ colHeaderDesc: v })} />
+                </th>
+                {cfg.showHsn && (
+                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '70px' }}>
+                    <EditableText value={cfg.colHeaderHsn} fallback="HSN/SAC" onSave={(v) => onUpdateSetting?.({ colHeaderHsn: v })} />
+                  </th>
+                )}
+                <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
+                  <EditableText value={cfg.colHeaderQty} fallback="Qty" onSave={(v) => onUpdateSetting?.({ colHeaderQty: v })} />
+                </th>
+                {cfg.showUom && (
+                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '45px' }}>
+                    <EditableText value={cfg.colHeaderUom} fallback="UOM" onSave={(v) => onUpdateSetting?.({ colHeaderUom: v })} />
+                  </th>
+                )}
+                <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '80px' }}>
+                  <EditableText value={cfg.colHeaderRate} fallback="Rate (₹)" onSave={(v) => onUpdateSetting?.({ colHeaderRate: v })} />
+                </th>
+                {cfg.showDiscountCol && (
+                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
+                    <EditableText value={cfg.colHeaderDiscount} fallback="Disc%" onSave={(v) => onUpdateSetting?.({ colHeaderDiscount: v })} />
+                  </th>
+                )}
+                <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '85px' }}>
+                  <EditableText value={cfg.colHeaderTaxable} fallback="Taxable (₹)" onSave={(v) => onUpdateSetting?.({ colHeaderTaxable: v })} />
+                </th>
+                {cfg.showGstCol && (
+                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
+                    <EditableText value={cfg.colHeaderGst} fallback="GST%" onSave={(v) => onUpdateSetting?.({ colHeaderGst: v })} />
+                  </th>
+                )}
+                <th style={{ padding: '8px 10px', textAlign: 'right', width: '95px' }}>
+                  <EditableText value={cfg.colHeaderAmount} fallback="Total (₹)" onSave={(v) => onUpdateSetting?.({ colHeaderAmount: v })} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -529,33 +839,107 @@ export function VRMProformaInvoicePrintSheet({
                   </td>
                   <td style={{ padding: '10px 10px', borderRight: '1px solid #E2E8F0' }}>
                     <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '11.5px' }}>
-                      {it.name}
+                      <EditableText
+                        value={it.name}
+                        fallback="Item Name"
+                        onSave={(v) => {
+                          if (onUpdatePiData && pi.items) {
+                            const updated = [...pi.items];
+                            updated[idx] = { ...updated[idx], name: v, item_name: v };
+                            onUpdatePiData({ items: updated });
+                          }
+                        }}
+                      />
                     </div>
-                    {cfg.showItemDescription && it.description && (
+                    {cfg.showItemDescription && (
                       <div style={{ fontSize: '10px', color: '#475569', marginTop: '3px', whiteSpace: 'pre-line', lineHeight: '1.35' }}>
-                        {it.description}
+                        <EditableText
+                          value={it.description}
+                          fallback="Add item description..."
+                          multiline={true}
+                          onSave={(v) => {
+                            if (onUpdatePiData && pi.items) {
+                              const updated = [...pi.items];
+                              updated[idx] = { ...updated[idx], description: v };
+                              onUpdatePiData({ items: updated });
+                            }
+                          }}
+                        />
                       </div>
                     )}
                   </td>
                   {cfg.showHsn && (
                     <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontFamily: 'monospace', color: '#334155' }}>
-                      {it.hsn}
+                      <EditableText
+                        value={it.hsn}
+                        fallback="73089090"
+                        onSave={(v) => {
+                          if (onUpdatePiData && pi.items) {
+                            const updated = [...pi.items];
+                            updated[idx] = { ...updated[idx], hsn: v };
+                            onUpdatePiData({ items: updated });
+                          }
+                        }}
+                      />
                     </td>
                   )}
                   <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontWeight: '700', color: '#0F172A' }}>
-                    {it.qty}
+                    <EditableText
+                      value={String(it.qty)}
+                      fallback="1"
+                      onSave={(v) => {
+                        const num = parseFloat(v) || 1;
+                        if (onUpdatePiData && pi.items) {
+                          const updated = [...pi.items];
+                          updated[idx] = { ...updated[idx], qty: num, quantity: num };
+                          onUpdatePiData({ items: updated });
+                        }
+                      }}
+                    />
                   </td>
                   {cfg.showUom && (
                     <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#475569' }}>
-                      {it.uom}
+                      <EditableText
+                        value={it.uom}
+                        fallback="Nos"
+                        onSave={(v) => {
+                          if (onUpdatePiData && pi.items) {
+                            const updated = [...pi.items];
+                            updated[idx] = { ...updated[idx], uom: v, unit: v };
+                            onUpdatePiData({ items: updated });
+                          }
+                        }}
+                      />
                     </td>
                   )}
                   <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', color: '#0F172A' }}>
-                    {it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <EditableText
+                      value={String(it.rate)}
+                      fallback="0.00"
+                      onSave={(v) => {
+                        const num = parseFloat(v) || 0;
+                        if (onUpdatePiData && pi.items) {
+                          const updated = [...pi.items];
+                          updated[idx] = { ...updated[idx], rate: num, unitValue: num };
+                          onUpdatePiData({ items: updated });
+                        }
+                      }}
+                    />
                   </td>
                   {cfg.showDiscountCol && (
                     <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B' }}>
-                      {it.discPct ? `${it.discPct}%` : '—'}
+                      <EditableText
+                        value={it.discPct ? `${it.discPct}%` : '0%'}
+                        fallback="0%"
+                        onSave={(v) => {
+                          const num = parseFloat(v.replace('%', '')) || 0;
+                          if (onUpdatePiData && pi.items) {
+                            const updated = [...pi.items];
+                            updated[idx] = { ...updated[idx], discPct: num, discountPct: num };
+                            onUpdatePiData({ items: updated });
+                          }
+                        }}
+                      />
                     </td>
                   )}
                   <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>
@@ -563,7 +947,18 @@ export function VRMProformaInvoicePrintSheet({
                   </td>
                   {cfg.showGstCol && (
                     <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: accent, fontWeight: '600' }}>
-                      {it.gRate}%
+                      <EditableText
+                        value={`${it.gRate}%`}
+                        fallback="18%"
+                        onSave={(v) => {
+                          const num = parseFloat(v.replace('%', '')) || 18;
+                          if (onUpdatePiData && pi.items) {
+                            const updated = [...pi.items];
+                            updated[idx] = { ...updated[idx], gRate: num, gstRate: `${num}%` };
+                            onUpdatePiData({ items: updated });
+                          }
+                        }}
+                      />
                     </td>
                   )}
                   <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '700', color: accent }}>
@@ -592,29 +987,63 @@ export function VRMProformaInvoicePrintSheet({
             {cfg.showBankDetails && (
               <div style={{ border: '1px solid #CBD5E1', borderRadius: '4px', padding: '8px 12px', backgroundColor: '#F8FAFC', marginBottom: '12px' }}>
                 <div style={{ fontSize: '10.5px', fontWeight: '800', color: accent, textTransform: 'uppercase', marginBottom: '4px' }}>
-                  VRM Company Bank Details (NEFT / RTGS / IMPS)
+                  <EditableText
+                    value={cfg.bankHeading}
+                    fallback="VRM Company Bank Details (NEFT / RTGS / IMPS)"
+                    onSave={(v) => onUpdateSetting?.({ bankHeading: v })}
+                  />
                 </div>
                 <table style={{ width: '100%', fontSize: '10.5px', borderCollapse: 'collapse' }}>
                   <tbody>
                     <tr>
                       <td style={{ width: '90px', color: '#64748B', fontWeight: '600', padding: '1px 0' }}>Beneficiary:</td>
-                      <td style={{ fontWeight: '700', color: '#0F172A' }}>{cfg.bankBeneficiary}</td>
+                      <td style={{ fontWeight: '700', color: '#0F172A' }}>
+                        <EditableText
+                          value={cfg.bankBeneficiary}
+                          fallback="Beneficiary Name"
+                          onSave={(v) => onUpdateSetting?.({ bankBeneficiary: v })}
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td style={{ color: '#64748B', fontWeight: '600', padding: '1px 0' }}>Bank Name:</td>
-                      <td style={{ fontWeight: '600', color: '#0F172A' }}>{cfg.bankName}</td>
+                      <td style={{ fontWeight: '600', color: '#0F172A' }}>
+                        <EditableText
+                          value={cfg.bankName}
+                          fallback="Bank Name"
+                          onSave={(v) => onUpdateSetting?.({ bankName: v })}
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td style={{ color: '#64748B', fontWeight: '600', padding: '1px 0' }}>Account No:</td>
-                      <td style={{ fontWeight: '800', color: accent, fontFamily: 'monospace', fontSize: '11px' }}>{cfg.bankAccountNo}</td>
+                      <td style={{ fontWeight: '800', color: accent, fontFamily: 'monospace', fontSize: '11px' }}>
+                        <EditableText
+                          value={cfg.bankAccountNo}
+                          fallback="Account Number"
+                          onSave={(v) => onUpdateSetting?.({ bankAccountNo: v })}
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td style={{ color: '#64748B', fontWeight: '600', padding: '1px 0' }}>IFSC Code:</td>
-                      <td style={{ fontWeight: '700', color: '#0F172A', fontFamily: 'monospace' }}>{cfg.bankIfsc}</td>
+                      <td style={{ fontWeight: '700', color: '#0F172A', fontFamily: 'monospace' }}>
+                        <EditableText
+                          value={cfg.bankIfsc}
+                          fallback="IFSC Code"
+                          onSave={(v) => onUpdateSetting?.({ bankIfsc: v })}
+                        />
+                      </td>
                     </tr>
                     <tr>
                       <td style={{ color: '#64748B', fontWeight: '600', padding: '1px 0' }}>Branch:</td>
-                      <td style={{ color: '#0F172A' }}>{cfg.bankBranch}</td>
+                      <td style={{ color: '#0F172A' }}>
+                        <EditableText
+                          value={cfg.bankBranch}
+                          fallback="Branch Name"
+                          onSave={(v) => onUpdateSetting?.({ bankBranch: v })}
+                        />
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -622,14 +1051,33 @@ export function VRMProformaInvoicePrintSheet({
             )}
 
             {/* TERMS & CONDITIONS */}
-            {cfg.showTerms && termsLines.length > 0 && (
+            {cfg.showTerms && (
               <div style={{ fontSize: '10px', color: '#475569', lineHeight: '1.4' }}>
-                <div style={{ fontWeight: '700', color: '#0F172A', marginBottom: '2px' }}>Terms & Conditions:</div>
-                <ol style={{ margin: 0, paddingLeft: '14px' }}>
-                  {termsLines.map((line, lIdx) => (
-                    <li key={lIdx}>{line.replace(/^[0-9]+[.)]\s*/, '')}</li>
-                  ))}
-                </ol>
+                <div style={{ fontWeight: '700', color: '#0F172A', marginBottom: '2px' }}>
+                  <EditableText
+                    value={cfg.termsHeading}
+                    fallback="Terms & Conditions:"
+                    onSave={(v) => onUpdateSetting?.({ termsHeading: v })}
+                  />
+                </div>
+                {isEditable ? (
+                  <div style={{ marginTop: '3px', whiteSpace: 'pre-line' }}>
+                    <EditableText
+                      value={cfg.termsText}
+                      fallback="Enter terms and conditions (one per line)..."
+                      multiline={true}
+                      onSave={(v) => onUpdateSetting?.({ termsText: v })}
+                    />
+                  </div>
+                ) : (
+                  termsLines.length > 0 && (
+                    <ol style={{ margin: 0, paddingLeft: '14px' }}>
+                      {termsLines.map((line, lIdx) => (
+                        <li key={lIdx}>{line.replace(/^[0-9]+[.)]\s*/, '')}</li>
+                      ))}
+                    </ol>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -692,9 +1140,21 @@ export function VRMProformaInvoicePrintSheet({
                   flexDirection: 'column',
                   justifyContent: 'space-between'
                 }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '700' }}>Customer Acceptance & Signature</div>
+                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '700' }}>
+                    <EditableText
+                      value={cfg.customerAcceptanceHeading}
+                      fallback="Customer Acceptance & Signature"
+                      onSave={(v) => onUpdateSetting?.({ customerAcceptanceHeading: v })}
+                    />
+                  </div>
                   <div style={{ borderBottom: '1px solid #94A3B8', width: '80%', margin: '14px auto 4px auto' }} />
-                  <div style={{ fontSize: '9.5px', color: '#94A3B8' }}>Authorised Signature & Stamp</div>
+                  <div style={{ fontSize: '9.5px', color: '#94A3B8' }}>
+                    <EditableText
+                      value={cfg.customerAcceptanceSubtext}
+                      fallback="Authorised Signature & Stamp"
+                      onSave={(v) => onUpdateSetting?.({ customerAcceptanceSubtext: v })}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -712,7 +1172,14 @@ export function VRMProformaInvoicePrintSheet({
                   backgroundColor: '#FAFAFA'
                 }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#0F172A' }}>
-                    For {cfg.companyName}
+                    <EditableText
+                      value={cfg.forCompanyText ? `${cfg.forCompanyText} ${cfg.companyName}` : `For ${cfg.companyName}`}
+                      fallback={`For ${cfg.companyName}`}
+                      onSave={(v) => {
+                        const stripped = v.replace(/^For\s+/i, '');
+                        onUpdateSetting?.({ companyName: stripped });
+                      }}
+                    />
                   </div>
 
                   {/* STAMP & SIGNATURE MEDIA CONTAINER */}
@@ -737,12 +1204,29 @@ export function VRMProformaInvoicePrintSheet({
                         }}
                       />
                     ) : cfg.stampMode === 'vector' ? (
-                      <svg width="125" height="46" viewBox="0 0 125 46">
-                        <ellipse cx="62" cy="23" rx="54" ry="19" stroke={accent} strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
-                        <text x="62" y="19" textAnchor="middle" fill={accent} fontSize="6.5" fontWeight="bold">{cfg.stampText || 'VRM STRUCTURES INDIA'}</text>
-                        <text x="62" y="30" textAnchor="middle" fill={accent} fontSize="5.5">{cfg.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
-                        <path d="M 38 24 Q 60 14 90 22" stroke={accent} strokeWidth="1.5" fill="none" />
-                      </svg>
+                      <div style={{ textAlign: 'center' }}>
+                        <svg width="125" height="46" viewBox="0 0 125 46">
+                          <ellipse cx="62" cy="23" rx="54" ry="19" stroke={accent} strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
+                          <text x="62" y="19" textAnchor="middle" fill={accent} fontSize="6.5" fontWeight="bold">{cfg.stampText || 'VRM STRUCTURES INDIA'}</text>
+                          <text x="62" y="30" textAnchor="middle" fill={accent} fontSize="5.5">{cfg.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
+                          <path d="M 38 24 Q 60 14 90 22" stroke={accent} strokeWidth="1.5" fill="none" />
+                        </svg>
+                        {isEditable && (
+                          <div style={{ fontSize: '9px', marginTop: '2px' }}>
+                            <EditableText
+                              value={cfg.stampText}
+                              fallback="VRM STRUCTURES INDIA"
+                              onSave={(v) => onUpdateSetting?.({ stampText: v })}
+                            />
+                            {' - '}
+                            <EditableText
+                              value={cfg.stampLocation}
+                              fallback="CHENNAI - AUTHORIZED"
+                              onSave={(v) => onUpdateSetting?.({ stampLocation: v })}
+                            />
+                          </div>
+                        )}
+                      </div>
                     ) : null}
 
                     {/* SIGNATURE DISPLAY */}
@@ -767,13 +1251,19 @@ export function VRMProformaInvoicePrintSheet({
 
                   {/* SIGNATORY NAME & TITLE */}
                   <div>
-                    {cfg.signatoryName && (
-                      <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#0F172A', marginBottom: '1px' }}>
-                        {cfg.signatoryName}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#0F172A', marginBottom: '1px' }}>
+                      <EditableText
+                        value={cfg.signatoryName}
+                        fallback="Authorized Name"
+                        onSave={(v) => onUpdateSetting?.({ signatoryName: v })}
+                      />
+                    </div>
                     <div style={{ fontSize: '10px', fontWeight: '700', color: '#475569' }}>
-                      {cfg.signatoryTitle || 'Authorized Signatory'}
+                      <EditableText
+                        value={cfg.signatoryTitle}
+                        fallback="Authorized Signatory"
+                        onSave={(v) => onUpdateSetting?.({ signatoryTitle: v })}
+                      />
                     </div>
                   </div>
 
@@ -789,7 +1279,11 @@ export function VRMProformaInvoicePrintSheet({
       {/* FOOTER NOTICE */}
       {cfg.footerNote && (
         <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '9.5px', color: '#64748B' }}>
-          {cfg.footerNote}
+          <EditableText
+            value={cfg.footerNote}
+            fallback="This is a Computer Generated Proforma Invoice and does not require physical signature unless requested."
+            onSave={(v) => onUpdateSetting?.({ footerNote: v })}
+          />
         </div>
       )}
     </div>
