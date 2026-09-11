@@ -150,42 +150,77 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         }} />
       </div>
 
-      {/* ROW 1: SELECTED PERIOD PERFORMANCE CARDS */}
+      {/* ROW 1: SELECTED PERIOD PERFORMANCE CARDS (REFERENCE DESIGN) */}
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px', width: '100%' }}>
-          {/* Card: Conversion */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Conversion</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>41.4%</div>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Value based</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', width: '100%' }}>
+          {/* Card 1: Conversion */}
+          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Conversion</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>41.4%</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <ArrowUpRight size={13} strokeWidth={2.5} /> 4.2% vs Last Month
+              </span>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: '100%', boxSizing: 'border-box' }}>
+              Value based
+            </div>
           </div>
 
-          {/* Card 5: Proforma Invoice */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Proforma Invoice</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#2563EB' }}>₹ 82.0 L</div>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>18 proforma invoices</span>
+          {/* Card 2: Proforma Invoice */}
+          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Proforma Invoice</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 82.0 L</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <ArrowUpRight size={13} strokeWidth={2.5} /> 12.6% vs Last Month
+              </span>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: '100%', boxSizing: 'border-box' }}>
+              18 proforma invoices
+            </div>
           </div>
 
-          {/* Card 6: Invoiced */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Invoiced</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#EA580C' }}>₹ 68.5 L</div>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>16 invoices</span>
+          {/* Card 3: Invoiced */}
+          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoiced</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 68.5 L</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <ArrowUpRight size={13} strokeWidth={2.5} /> 14.8% vs Last Month
+              </span>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: '100%', boxSizing: 'border-box' }}>
+              16 invoices
+            </div>
           </div>
 
-          {/* Card 7: Collections */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Collections</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>₹ 54.2 L</div>
-            <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '600' }}>79.1% realised</span>
+          {/* Card 4: Collections */}
+          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Collections</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 54.2 L</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                79.1% realised
+              </span>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: '100%', boxSizing: 'border-box' }}>
+              This Month
+            </div>
           </div>
 
-          {/* Card 8: Calls Completed */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Calls Completed</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#8B5CF6' }}>186</div>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Out: 142 • In: 44</span>
+          {/* Card 5: Calls Completed */}
+          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Calls Completed</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>186</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <ArrowUpRight size={13} strokeWidth={2.5} /> 18 vs Last Month
+              </span>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: '100%', boxSizing: 'border-box' }}>
+              Out: 142 • In: 44
+            </div>
           </div>
         </div>
       </div>
