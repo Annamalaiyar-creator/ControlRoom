@@ -4,7 +4,7 @@ import {
   FileText, Calendar, Filter, ChevronDown, ArrowUpRight, ArrowDownRight,
   Clock, ShieldAlert, Sparkles, RefreshCw, Layers, DollarSign, ChevronRight,
   ChevronLeft, Edit3, Trash2, X, MoreHorizontal, ExternalLink, ArrowRight,
-  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart, Tag, ArrowUpDown
+  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart, Tag
 } from 'lucide-react';
 
 export default function SalesExecutiveDashboardView({ userRole = 'Sales Executive', onNavigateTab }) {
@@ -81,56 +81,16 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
     { name: 'Accessories', actual: 2.5, target: 2.0, actualStr: '₹ 2.5L', targetStr: '₹ 2.0L' }
   ];
 
-  // Trend data: Jan - Sep matching reference
-  const [selectedTrendMonth, setSelectedTrendMonth] = useState('Sep');
+  // Trend data: Apr - Oct (Actual vs Target)
   const [hoveredTrendMonth, setHoveredTrendMonth] = useState(null);
-  const trendMonths = [
-    { month: 'Jan', val: 32, valStr: '₹ 32.0 L', count: 18, pct: 0.38 },
-    { month: 'Feb', val: 38, valStr: '₹ 38.0 L', count: 21, pct: 0.45 },
-    { month: 'Mar', val: 54, valStr: '₹ 54.0 L', count: 26, pct: 0.65 },
-    { month: 'Apr', val: 68, valStr: '₹ 68.0 L', count: 32, pct: 0.82 },
-    { month: 'May', val: 72, valStr: '₹ 72.0 L', count: 35, pct: 0.86 },
-    { month: 'Jun', val: 62, valStr: '₹ 62.0 L', count: 29, pct: 0.74 },
-    { month: 'Jul', val: 76, valStr: '₹ 76.0 L', count: 38, pct: 0.92 },
-    { month: 'Aug', val: 71, valStr: '₹ 71.0 L', count: 34, pct: 0.85 },
-    { month: 'Sep', val: 82, valStr: '₹ 82.0 L', count: 42, pct: 1.0 }
-  ];
-
-  // Receivable Ageing Summary dataset matching Image 2
-  const ageingData = [
-    { range: '0-15 Days', val: '₹3.415Cr', share: '89.0%', count: 138, color: '#16A34A' },
-    { range: '16-30 Days', val: '₹0.285Cr', share: '7.4%', count: 12, color: '#65A30D' },
-    { range: '31-45 Days', val: '₹0.095Cr', share: '2.5%', count: 6, color: '#CA8A04' },
-    { range: '46-60 Days', val: '₹0.032Cr', share: '0.8%', count: 3, color: '#EA580C' },
-    { range: '>60 Days Overdue', val: '₹0.013Cr', share: '0.3%', count: 1, color: '#DC2626' }
-  ];
-
-  // Recently Issued Invoices matching Image 2
-  const recentlyIssuedInvoices = [
-    { no: 'INV-2026-142', client: 'SunEdison Energy Ltd', amount: '₹ 24.50 L', status: 'Paid' },
-    { no: 'INV-2026-141', client: 'Tata Power Solar', amount: '₹ 18.20 L', status: 'Paid' },
-    { no: 'INV-2026-140', client: 'Adani Green Energy', amount: '₹ 34.80 L', status: 'Paid' },
-    { no: 'INV-2026-139', client: 'Sterling & Wilson', amount: '₹ 12.40 L', status: 'Pending' },
-    { no: 'INV-2026-138', client: 'Waaree Energies', amount: '₹ 15.60 L', status: 'Overdue' }
-  ];
-
-  // Overdue Payment Invoices matching Image 2
-  const overduePaymentInvoices = [
-    { no: 'INV-2026-118', customer: 'Waaree Energies', amount: '₹ 15.60 L', overdueDays: '12 Days Overdue' },
-    { no: 'INV-2026-105', customer: 'Bright Energy EPC', amount: '₹ 8.40 L', overdueDays: '9 Days Overdue' },
-    { no: 'INV-2026-094', customer: 'Voltix Solutions', amount: '₹ 10.20 L', overdueDays: '7 Days Overdue' },
-    { no: 'INV-2026-081', customer: 'Green Infra Ltd', amount: '₹ 5.10 L', overdueDays: '4 Days Overdue' },
-    { no: 'INV-2026-077', customer: 'SST Solar Infra', amount: '₹ 3.20 L', overdueDays: '2 Days Overdue' }
-  ];
-
-  // Today's Snapshot dataset matching Image 2
-  const todaySnapshotData = [
-    { label: 'Invoices Raised', value: '18', color: '#2563EB' },
-    { label: 'Invoiced Value', value: '₹ 42.6 L', color: '#0F172A' },
-    { label: 'E-Way Generated', value: '18', color: '#16A34A' },
-    { label: 'Payments Recd.', value: '12', color: '#0E7490' },
-    { label: 'Overdue Invoices', value: '5', color: '#DC2626' },
-    { label: 'Zoho Sync', value: '100%', color: '#16A34A' }
+  const trendData = [
+    { month: 'Apr', actual: 42, target: 45 },
+    { month: 'May', actual: 48, target: 49 },
+    { month: 'Jun', actual: 55, target: 54 },
+    { month: 'Jul', actual: 61, target: 60 },
+    { month: 'Aug', actual: 66, target: 65 },
+    { month: 'Sep', actual: 70, target: 70 },
+    { month: 'Oct', actual: 72, target: 75 }
   ];
 
   // Pagination for follow-up
@@ -190,428 +150,542 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         }} />
       </div>
 
-      {/* ROW 1: 5 PERFORMANCE KPI CARDS (MATCHING REFERENCE DESIGN) */}
+      {/* ROW 1: SELECTED PERIOD PERFORMANCE CARDS */}
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', width: '100%' }}>
-          {/* Card 1: Conversion */}
-          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Conversion Rate</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>41.4%</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                <ArrowUpRight size={13} /> 4.2% vs Last Month
-              </span>
-            </div>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: 'fit-content' }}>
-              Value based
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px', width: '100%' }}>
+          {/* Card: Conversion */}
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Conversion</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>41.4%</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Value based</span>
           </div>
 
-          {/* Card 2: Proforma Invoice */}
-          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Proforma Invoices</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 82.0 L</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                <ArrowUpRight size={13} /> 12.6% vs Last Month
-              </span>
-            </div>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: 'fit-content' }}>
-              18 proforma invoices
-            </div>
+          {/* Card 5: Proforma Invoice */}
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Proforma Invoice</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#2563EB' }}>₹ 82.0 L</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>18 proforma invoices</span>
           </div>
 
-          {/* Card 3: Invoiced */}
-          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoiced Value</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 68.5 L</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                <ArrowUpRight size={13} /> 14.8% vs Last Month
-              </span>
-            </div>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: 'fit-content' }}>
-              16 invoices
-            </div>
+          {/* Card 6: Invoiced */}
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Invoiced</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#EA580C' }}>₹ 68.5 L</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>16 invoices</span>
           </div>
 
-          {/* Card 4: Collections */}
-          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Collections</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>₹ 54.2 L</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                79.1% realised
-              </span>
-            </div>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: 'fit-content' }}>
-              This Month
-            </div>
+          {/* Card 7: Collections */}
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Collections</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>₹ 54.2 L</div>
+            <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '600' }}>79.1% realised</span>
           </div>
 
-          {/* Card 5: Calls Completed */}
-          <div className="section-card" style={{ padding: '14px 16px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Calls Completed</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A' }}>186</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                <ArrowUpRight size={13} /> 18 vs Last Month
-              </span>
-            </div>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#64748B', fontWeight: '600', width: 'fit-content' }}>
-              Out: 142 • In: 44
-            </div>
+          {/* Card 8: Calls Completed */}
+          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Calls Completed</span>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#8B5CF6' }}>186</div>
+            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>Out: 142 • In: 44</span>
           </div>
         </div>
       </div>
 
-      {/* ROW 2: MY SALES TREND & RECEIVABLE AGEING SUMMARY (EXACT REFERENCE DESIGN) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px', width: '100%', alignItems: 'stretch' }}>
-        {/* Panel 1: MY SALES TREND */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', minWidth: 0, boxSizing: 'border-box', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)', height: '100%', justifyContent: 'space-between' }}>
+      {/* ROW 2: MONTH TARGET RUN RATE & SALES FUNNEL */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '12px', width: '100%', alignItems: 'stretch' }}>
+        {/* Card A: Target Progress & Run Rate */}
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                MY SALES TREND
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <select 
-                  value={selectedTrendMonth}
-                  onChange={(e) => setSelectedTrendMonth(e.target.value)}
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    color: '#475569',
-                    backgroundColor: '#F8FAFC',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    padding: '3px 8px',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="Jan">Jan</option>
-                  <option value="Feb">Feb</option>
-                  <option value="Mar">Mar</option>
-                  <option value="Apr">Apr</option>
-                  <option value="May">May</option>
-                  <option value="Jun">Jun</option>
-                  <option value="Jul">Jul</option>
-                  <option value="Aug">Aug</option>
-                  <option value="Sep">Sep</option>
-                </select>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+              Month Target Progress and Required Run Rate
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', textAlign: 'center', marginBottom: '10px' }}>
+              <div style={{ backgroundColor: '#F8FAFC', padding: '8px 6px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '600', display: 'block' }}>Monthly Target</span>
+                <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '900' }}>₹ 75.0 L</strong>
+              </div>
+              <div style={{ backgroundColor: '#F0FDF4', padding: '8px 6px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+                <span style={{ fontSize: '10.5px', color: '#166534', fontWeight: '600', display: 'block' }}>Achieved</span>
+                <strong style={{ fontSize: '16px', color: '#16A34A', fontWeight: '900' }}>₹ 72.0 L</strong>
+              </div>
+              <div style={{ backgroundColor: '#FFFBEB', padding: '8px 6px', borderRadius: '8px', border: '1px solid #FDE68A' }}>
+                <span style={{ fontSize: '10.5px', color: '#92400E', fontWeight: '600', display: 'block' }}>Balance</span>
+                <strong style={{ fontSize: '16px', color: '#D97706', fontWeight: '900' }}>₹ 3.0 L</strong>
               </div>
             </div>
 
-            {/* Chart Area with Y-Axis, Horizontal Gridlines, Stadium Rounded Bars */}
-            <div style={{ display: 'flex', position: 'relative', marginTop: '10px' }}>
-              {/* Y-Axis Labels */}
+            {/* Visual Progress Bar */}
+            <div style={{ width: '100%', height: '20px', backgroundColor: '#E2E8F0', borderRadius: '10px', overflow: 'hidden', position: 'relative' }}>
               <div style={{
+                width: '96%',
+                height: '100%',
+                backgroundColor: '#16A34A',
+                borderRadius: '10px',
                 display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                paddingRight: '12px',
-                fontSize: '10px',
-                fontWeight: '600',
-                color: '#9CA3AF',
-                height: '160px',
-                userSelect: 'none',
-                textAlign: 'right',
-                minWidth: '32px'
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                fontSize: '10.5px',
+                fontWeight: '800',
+                letterSpacing: '0.5px'
               }}>
-                <span>80 L</span>
-                <span>60 L</span>
-                <span>40 L</span>
-                <span>20 L</span>
-                <span>0 L</span>
+                96% achieved
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px', color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={14} style={{ color: '#0E7490' }} />
+            <span>Required daily sales: <strong style={{ color: '#0E7490' }}>₹ 1.0 L</strong> for the remaining 3 working days</span>
+          </div>
+        </div>
+
+        {/* Card B: 3D Layered Sales Funnel matching User Reference */}
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                My Sales Funnel — This Month
+              </div>
+              <span style={{ fontSize: '10.5px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', padding: '2px 8px', borderRadius: '12px' }}>
+                Conversion: 44.4%
+              </span>
+            </div>
+
+            {/* Clean Flat 2D Sales Funnel matching Control Room Design System */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 0' }}>
+              {[
+                {
+                  label: 'OFFERS',
+                  count: '36 Deals',
+                  value: '₹ 1.74 Cr',
+                  pct: '100%',
+                  bgColor: '#EDE9FE',
+                  barColor: '#8B5CF6',
+                  textColor: '#5B21B6',
+                  width: '100%'
+                },
+                {
+                  label: 'QUALIFIED',
+                  count: '25 Deals',
+                  value: '₹ 1.24 Cr',
+                  pct: '69.4%',
+                  bgColor: '#FCE7F3',
+                  barColor: '#EC4899',
+                  textColor: '#9D174D',
+                  width: '88%'
+                },
+                {
+                  label: 'PROFORMA INVOICES',
+                  count: '18 Deals',
+                  value: '₹ 82.0 L',
+                  pct: '50.0%',
+                  bgColor: '#E0F2FE',
+                  barColor: '#0284C7',
+                  textColor: '#0369A1',
+                  width: '74%'
+                },
+                {
+                  label: 'INVOICED',
+                  count: '16 Deals',
+                  value: '₹ 68.5 L',
+                  pct: '44.4%',
+                  bgColor: '#DCFCE7',
+                  barColor: '#16A34A',
+                  textColor: '#15803D',
+                  width: '60%'
+                }
+              ].map((tier, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                  <div
+                    style={{
+                      width: tier.width,
+                      backgroundColor: tier.barColor,
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.01)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px' }}>
+                        {tier.label}
+                      </span>
+                      <span style={{ fontSize: '10.5px', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '10px' }}>
+                        {tier.count}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>
+                        {tier.value}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{
+            marginTop: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 12px',
+            backgroundColor: '#F8FAFC',
+            borderRadius: '8px',
+            border: '1px solid #E2E8F0',
+            fontSize: '11px',
+            color: '#334155',
+            flexWrap: 'wrap',
+            gap: '6px'
+          }}>
+            <span>Offer-to-Invoice conversion: <strong style={{ color: '#0E7490' }}>44.4%</strong></span>
+            <span>•</span>
+            <span>Average invoice value: <strong style={{ color: '#0E7490' }}>₹ 4.28 L</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 3: SALES TREND, PRODUCT PERFORMANCE, TOP 10 CUSTOMERS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', width: '100%', alignItems: 'stretch' }}>
+        {/* Card A: Actual vs Target Trend Chart */}
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              MY SALES TREND
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#0284C7', fontSize: '11px', fontWeight: '700' }}>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#0284C7', borderRadius: '2px' }}></span> Actual sales
+              </span>
+            </div>
+          </div>
+
+          {/* Chart Canvas with Y-Axis, Rounded Stadium Bars, and Hover-only Tooltip */}
+          <div style={{ display: 'flex', position: 'relative' }}>
+            {/* Y-Axis Labels (0, 20L, 40L, 60L, 80L) */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              paddingRight: '10px',
+              fontSize: '10px',
+              fontWeight: '600',
+              color: '#94A3B8',
+              height: '160px',
+              userSelect: 'none',
+              textAlign: 'right',
+              minWidth: '28px'
+            }}>
+              <span>80 L</span>
+              <span>60 L</span>
+              <span>40 L</span>
+              <span>20 L</span>
+              <span>0 L</span>
+            </div>
+
+            {/* Bars Area with Background Dashed Gridlines */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              {/* Horizontal Gridlines */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} style={{ width: '100%', borderBottom: '1px dashed #E2E8F0' }}></div>
+                ))}
               </div>
 
-              {/* Bars Canvas with Dashed Lines */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                {/* Horizontal Dashed Gridlines */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} style={{ width: '100%', borderBottom: '1px dashed #E2E8F0' }}></div>
-                  ))}
-                </div>
+              {/* Bar Columns Container */}
+              <div style={{ height: '160px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', position: 'relative', zIndex: 4, padding: '0 4px' }}>
+                {trendData.map((d) => {
+                  const heightPct = (d.actual / 80) * 100;
+                  const isHovered = hoveredTrendMonth === d.month;
 
-                {/* Bars */}
-                <div style={{ height: '160px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', position: 'relative', zIndex: 4, padding: '0 4px' }}>
-                  {trendMonths.map((d, idx) => {
-                    const isSelected = d.month === selectedTrendMonth;
-                    const isHovered = hoveredTrendMonth === d.month;
-                    const barHeightPct = Math.min(Math.max((d.val / 85) * 100, 15), 100);
-
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => setSelectedTrendMonth(d.month)}
-                        onMouseEnter={() => setHoveredTrendMonth(d.month)}
-                        onMouseLeave={() => setHoveredTrendMonth(null)}
-                        style={{
+                  return (
+                    <div
+                      key={d.month}
+                      onMouseEnter={() => setHoveredTrendMonth(d.month)}
+                      onMouseLeave={() => setHoveredTrendMonth(null)}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        height: '100%',
+                        justifyContent: 'flex-end',
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {/* Tooltip visible ONLY on hover */}
+                      {isHovered && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: `${heightPct + 10}%`,
+                          zIndex: 20,
+                          backgroundColor: '#0F172A',
+                          color: '#FFFFFF',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.3)',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'flex-end',
-                          height: '100%',
-                          flex: 1,
-                          cursor: 'pointer',
-                          position: 'relative'
-                        }}
-                      >
-                        {/* Tooltip on Hover */}
-                        {isHovered && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: '-36px',
-                              backgroundColor: '#0F172A',
-                              color: '#FFFFFF',
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '10px',
-                              fontWeight: '700',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
-                              pointerEvents: 'none',
-                              zIndex: 10,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '1px'
-                            }}
-                          >
-                            <span>{d.valStr}</span>
-                            <span style={{ fontSize: '8.5px', color: '#94A3B8', fontWeight: '600' }}>
-                              {d.count} Sales Deals
-                            </span>
-                            <div 
-                              style={{
-                                position: 'absolute',
-                                bottom: '-4px',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                width: 0,
-                                height: 0,
-                                borderLeft: '4px solid transparent',
-                                borderRight: '4px solid transparent',
-                                borderTop: '4px solid #0F172A'
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {/* Stadium Rounded Bar */}
-                        <div
-                          style={{
-                            width: '100%',
-                            maxWidth: '24px',
-                            height: `${barHeightPct}%`,
-                            backgroundColor: isHovered ? '#0284C7' : isSelected ? '#0070BA' : '#008CDD',
-                            borderRadius: '8px',
-                            transition: 'all 0.2s ease',
-                            transform: isHovered ? 'scaleY(1.04)' : 'scaleY(1)',
-                            transformOrigin: 'bottom',
-                            opacity: isHovered ? 1 : isSelected ? 0.95 : 0.85,
-                            boxShadow: isHovered ? '0 4px 12px rgba(2, 132, 199, 0.4)' : 'none'
-                          }}
-                        />
-
-                        {/* X-Axis Month Label */}
-                        <span 
-                          style={{ 
+                          fontSize: '11px',
+                          fontWeight: '700'
+                        }}>
+                          <span style={{ color: '#FFFFFF' }}>₹ {d.actual} L</span>
+                          {/* Tooltip triangle beak */}
+                          <div style={{
                             position: 'absolute',
-                            bottom: '-22px',
-                            fontSize: '10.5px', 
-                            color: isHovered ? '#0284C7' : isSelected ? '#0070BA' : '#9CA3AF', 
-                            fontWeight: isHovered || isSelected ? '800' : '600'
-                          }}
-                        >
-                          {d.month}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                            bottom: '-4px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 0,
+                            height: 0,
+                            borderLeft: '4px solid transparent',
+                            borderRight: '4px solid transparent',
+                            borderTop: '4px solid #0F172A'
+                          }} />
+                        </div>
+                      )}
 
-                {/* Bottom Horizontal Accent Line */}
-                <div style={{ height: '3px', backgroundColor: '#EBF2F7', borderRadius: '3px', width: '100%', marginTop: '2px' }} />
+                      {/* Smooth Stadium-Rounded Bar */}
+                      <div
+                        style={{
+                          width: '28px',
+                          maxWidth: '75%',
+                          height: `${heightPct}%`,
+                          backgroundColor: isHovered ? '#0284C7' : '#0284C7',
+                          backgroundImage: isHovered
+                            ? 'linear-gradient(180deg, #38BDF8 0%, #0284C7 100%)'
+                            : 'linear-gradient(180deg, #0284C7 0%, #0369A1 100%)',
+                          borderRadius: '14px',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isHovered
+                            ? '0 6px 14px rgba(2, 132, 199, 0.4)'
+                            : '0 1px 3px rgba(0,0,0,0.06)',
+                          transform: isHovered ? 'translateY(-2px)' : 'translateY(0)'
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Baseline */}
+              <div style={{ width: '100%', height: '2px', backgroundColor: '#E2E8F0', marginTop: '4px' }}></div>
+
+              {/* Month X-Axis Labels */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', paddingLeft: '4px', paddingRight: '4px', fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
+                {trendData.map(d => {
+                  const isHovered = hoveredTrendMonth === d.month;
+                  return (
+                    <span
+                      key={d.month}
+                      onMouseEnter={() => setHoveredTrendMonth(d.month)}
+                      onMouseLeave={() => setHoveredTrendMonth(null)}
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        color: isHovered ? '#0284C7' : '#64748B',
+                        fontWeight: isHovered ? '800' : '600',
+                        transition: 'color 0.2s ease'
+                      }}
+                    >
+                      {d.month}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Panel 2: RECEIVABLE AGEING SUMMARY ("that table") */}
-        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', minWidth: 0, boxSizing: 'border-box', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)', height: '100%', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                RECEIVABLE AGEING SUMMARY
-              </span>
+        {/* Card B: Product Sale Comparison (matching user reference design) */}
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', position: 'relative', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          {/* Header without icon */}
+          <div style={{ marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              PRODUCT SALE COMPARISON
+            </span>
+          </div>
+
+          {/* Background vertical subtle gridlines */}
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} style={{ height: '100%', borderRight: '1px dashed #F1F5F9' }}></div>
+              ))}
             </div>
-            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
-              <thead>
-                <tr style={{ color: '#64748B', textAlign: 'left' }}>
-                  <th style={{ padding: '6px 4px 6px 0', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', fontWeight: '700' }}>Ageing</th>
-                  <th style={{ padding: '6px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', fontWeight: '700', textAlign: 'right' }}>Invoiced</th>
-                  <th style={{ padding: '6px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', fontWeight: '700', textAlign: 'right' }}>% Share</th>
-                  <th style={{ padding: '6px 0 6px 4px', borderBottom: '1px solid #E2E8F0', fontSize: '10.5px', fontWeight: '700', textAlign: 'right' }}>Invoices</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ageingData.map((a, idx) => (
-                  <tr key={idx} style={{ color: '#1E293B' }}>
-                    <td style={{ padding: '6px 4px 6px 0', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', fontWeight: '600' }}>
-                      <span style={{ width: '7px', height: '7px', backgroundColor: a.color, borderRadius: '50%', flexShrink: 0 }}></span>
-                      {a.range}
-                    </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: '600' }}>{a.val}</td>
-                    <td style={{ padding: '6px 4px', textAlign: 'right', color: '#64748B' }}>{a.share}</td>
-                    <td style={{ padding: '6px 0 6px 4px', textAlign: 'right', fontWeight: '600' }}>{a.count}</td>
-                  </tr>
-                ))}
-                <tr style={{ fontWeight: '800', color: '#1E3A8A' }}>
-                  <td style={{ padding: '8px 4px 4px 0', borderTop: '2px solid #E2E8F0' }}>Total</td>
-                  <td style={{ padding: '8px 4px 4px 4px', borderTop: '2px solid #E2E8F0', textAlign: 'right' }}>₹3.84Cr</td>
-                  <td style={{ padding: '8px 4px 4px 4px', borderTop: '2px solid #E2E8F0', textAlign: 'right' }}>100%</td>
-                  <td style={{ padding: '8px 0 4px 4px', borderTop: '2px solid #E2E8F0', textAlign: 'right' }}>160</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
-      {/* ROW 3: RECENTLY ISSUED INVOICES & OVERDUE PAYMENT INVOICES (MATCHING REFERENCE DESIGN) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '14px', width: '100%', alignItems: 'stretch' }}>
-        {/* Left Table: RECENTLY ISSUED INVOICES */}
-        <div className="section-card" style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                RECENTLY ISSUED INVOICES
-              </span>
-              <span style={{ fontSize: '9.5px', color: '#059669', fontWeight: '800', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '6px' }}>ZOHO SYNC</span>
-            </div>
-          </div>
+            {/* SVG Pattern Definition for striped/hatched bars */}
+            <svg width="0" height="0" style={{ position: 'absolute' }}>
+              <defs>
+                <pattern id="diagonalHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="#94A3B8" strokeWidth="2.5" strokeOpacity="0.55" />
+                </pattern>
+              </defs>
+            </svg>
 
-          <div style={{ border: '1px solid #F1F5F9', borderRadius: '12px', overflowX: 'auto', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      Invoice No. <ArrowUpDown style={{ width: '12px', height: '12px', color: '#94A3B8' }} />
-                    </div>
-                  </th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Customer / Client</th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Amount</th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentlyIssuedInvoices.map((r, idx) => (
-                  <tr key={idx} style={{ borderBottom: idx === recentlyIssuedInvoices.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>{r.no}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0F172A' }}>{r.client}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0F172A' }}>{r.amount}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        backgroundColor: r.status === 'Paid' ? '#DCFCE7' : r.status === 'Pending' ? '#FEF3C7' : '#FEE2E2',
-                        color: r.status === 'Paid' ? '#166534' : r.status === 'Pending' ? '#92400E' : '#991B1B',
-                        border: `1px solid ${r.status === 'Paid' ? '#BBF7D0' : r.status === 'Pending' ? '#FDE68A' : '#FECACA'}`
-                      }}>
-                        {r.status === 'Paid' && <Check size={12} />}
-                        {r.status === 'Pending' && <AlertCircle size={12} />}
-                        {r.status === 'Overdue' && <X size={12} />}
-                        {r.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            {/* List of Products */}
+            {productPerformance.map((p, idx) => {
+              const maxVal = 35.0;
+              const pct = (p.actual / maxVal) * 100;
+              const isTop = idx === 0;
 
-        {/* Right Table: OVERDUE PAYMENT INVOICES */}
-        <div className="section-card" style={{ backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                OVERDUE PAYMENT INVOICES
-              </span>
-              <span style={{ fontSize: '9.5px', color: '#DC2626', fontWeight: '800', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', padding: '2px 8px', borderRadius: '6px' }}>ATTENTION</span>
-            </div>
-          </div>
+              return (
+                <div key={idx} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {/* Title & Sales Value */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#1E293B' }}>
+                      {p.name}
+                    </span>
+                    <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#94A3B8' }}>
+                      {p.actualStr}
+                    </span>
+                  </div>
 
-          <div style={{ border: '1px solid #F1F5F9', borderRadius: '12px', overflowX: 'auto', backgroundColor: '#FFFFFF' }}>
-            <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      Invoice No. <ArrowUpDown style={{ width: '12px', height: '12px', color: '#94A3B8' }} />
-                    </div>
-                  </th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Customer</th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Amount</th>
-                  <th style={{ padding: '10px 14px', color: '#64748B', fontWeight: '700', fontSize: '11px' }}>Overdue Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overduePaymentInvoices.map((o, idx) => (
-                  <tr key={idx} style={{ borderBottom: idx === overduePaymentInvoices.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>{o.no}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0F172A' }}>{o.customer}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#0F172A' }}>{o.amount}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span
+                  {/* Horizontal Bar */}
+                  <div style={{ width: '100%', height: '8px', position: 'relative' }}>
+                    {isTop ? (
+                      /* Top item: Same Vibrant Blue Gradient Bar as MY SALES TREND */
+                      <div
                         style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          backgroundColor: '#FEF2F2',
-                          color: '#DC2626',
-                          border: '1px solid #FEE2E2',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          lineHeight: 1.2
+                          width: `${pct}%`,
+                          height: '8px',
+                          borderRadius: '4px',
+                          background: 'linear-gradient(90deg, #38BDF8 0%, #0284C7 60%, #0369A1 100%)',
+                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                          transition: 'width 0.3s ease'
                         }}
-                      >
-                        <Clock style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                        <span>{o.overdueDays}</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      />
+                    ) : (
+                      /* Other items: Diagonal Patterned Hatched Bar */
+                      <svg width={`${pct}%`} height="8" style={{ display: 'block', overflow: 'hidden', borderRadius: '4px' }}>
+                        <rect
+                          width="100%"
+                          height="8"
+                          rx="4"
+                          ry="4"
+                          fill="url(#diagonalHatch)"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
 
-      {/* ROW 4: TODAY'S SNAPSHOT (MATCHING REFERENCE DESIGN) */}
-      <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TODAY'S SNAPSHOT</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-          {todaySnapshotData.map((s, idx) => (
-            <div key={idx} style={{ padding: '12px 10px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '74px', boxSizing: 'border-box' }}>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', textAlign: 'center', lineHeight: '1.2' }}>{s.label}</span>
-              <strong style={{ fontSize: '18px', color: s.color, fontWeight: '900', lineHeight: '1', marginTop: '6px' }}>{s.value}</strong>
-            </div>
-          ))}
+        {/* Card C: Top 10 Customers Month Sales Contribution (Styled like PO Ageing Summary table) */}
+        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          {/* Card Title */}
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
+            TOP 10 CUSTOMERS — MONTH SALES
+          </div>
+
+          {/* Table Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.4fr 1fr 1fr',
+            paddingBottom: '8px',
+            borderBottom: '1px solid #E2E8F0',
+            fontSize: '10.5px',
+            fontWeight: '700',
+            color: '#64748B',
+            textTransform: 'none'
+          }}>
+            <div>Customer</div>
+            <div style={{ textAlign: 'right' }}>Sales Value</div>
+            <div style={{ textAlign: 'right' }}>% Share</div>
+          </div>
+
+          {/* Table Rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '205px', overflowY: 'auto' }}>
+            {topCustomers.map((c, idx) => {
+              // Color gradient pills matching the reference screenshot indicator dots
+              const dotColors = [
+                '#10B981', // green
+                '#22C55E', // lime green
+                '#84CC16', // light olive
+                '#EAB308', // amber
+                '#F59E0B', // amber-orange
+                '#F97316', // orange
+                '#EF4444', // red
+                '#EC4899', // pink
+                '#8B5CF6', // violet
+                '#6366F1'  // indigo
+              ];
+              const dotColor = dotColors[idx] || '#64748B';
+
+              return (
+                <div
+                  key={c.rank}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 1fr 1fr',
+                    alignItems: 'center',
+                    padding: '8px 0',
+                    borderBottom: '1px solid #F8FAFC',
+                    fontSize: '11.5px',
+                    lineHeight: '1.3'
+                  }}
+                >
+                  {/* Customer with Dot Indicator */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, paddingRight: '4px' }}>
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: dotColor,
+                      flexShrink: 0
+                    }} />
+                    <span style={{ fontWeight: '600', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.name}
+                    </span>
+                  </div>
+
+                  {/* Value */}
+                  <div style={{ textAlign: 'right', fontWeight: '600', color: '#1E293B' }}>
+                    {c.value}
+                  </div>
+
+                  {/* % Share */}
+                  <div style={{ textAlign: 'right', fontWeight: '500', color: '#64748B' }}>
+                    {c.share}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Summary Total Row matching reference */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.4fr 1fr 1fr',
+            alignItems: 'center',
+            paddingTop: '10px',
+            marginTop: '8px',
+            borderTop: '2px solid #0F172A',
+            fontSize: '12px',
+            fontWeight: '800',
+            color: '#0F172A'
+          }}>
+            <div>Total (Top 10)</div>
+            <div style={{ textAlign: 'right', color: '#0284C7' }}>₹ 59.8 L</div>
+            <div style={{ textAlign: 'right', color: '#0F172A' }}>83.1%</div>
+          </div>
         </div>
       </div>
 
