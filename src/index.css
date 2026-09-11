@@ -380,6 +380,11 @@ button {
   min-width: 0;
 }
 
+.content-pane.templates-view-pane {
+  padding: 8px 12px;
+  overflow-x: hidden;
+}
+
 /* Global Select Alignment & Dropdown Styling */
 select {
   appearance: none;

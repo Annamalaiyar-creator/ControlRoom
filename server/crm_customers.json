@@ -281,7 +281,7 @@
     "creditLimit": 5000000,
     "creditDays": 30,
     "paymentTerms": "Net 30 Days",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "source": "Website",
     "primaryContact": {
       "name": "Rajesh Kannan",
@@ -290,7 +290,33 @@
       "whatsapp": "+91 98765 43210",
       "email": "rajesh@vikramsolar.com"
     },
-    "createdAt": "2026-05-10T10:00:00.000Z"
+    "createdAt": "2026-09-11T06:15:02.496Z",
+    "customerName": "Vikram Solar Pvt Ltd",
+    "dispatchAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+    "dispatchCity": "Chennai",
+    "dispatchState": "Tamil Nadu",
+    "dispatchPincode": "600066",
+    "sameAsBilling": true,
+    "code": "Vikram Solar Pvt Ltd",
+    "c2": "Vikram Solar Pvt Ltd",
+    "c3": "Rajesh Kannan",
+    "c4": "+91 98765 43210",
+    "c5": "rajesh@vikramsolar.com",
+    "c6": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+    "billingAddressObj": {
+      "address": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600066"
+    },
+    "c7": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+    "deliveryAddressObj": {
+      "address": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600066"
+    },
+    "status": "ACTIVE"
   },
   {
     "id": "CUST-VRM-102",
@@ -316,7 +342,33 @@
       "whatsapp": "+91 98450 12345",
       "email": "karthik.raja@tatapower.com"
     },
-    "createdAt": "2026-06-01T09:30:00.000Z"
+    "createdAt": "2026-09-11T06:15:02.669Z",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "dispatchAddress": "Corporate Park, Phase 2, Whitefield",
+    "dispatchCity": "Bengaluru",
+    "dispatchState": "Karnataka",
+    "dispatchPincode": "560066",
+    "sameAsBilling": true,
+    "code": "Tata Power Solar Systems Ltd",
+    "c2": "Tata Power Solar Systems Ltd",
+    "c3": "Karthik Raja",
+    "c4": "+91 98450 12345",
+    "c5": "karthik.raja@tatapower.com",
+    "c6": "Corporate Park, Phase 2, Whitefield",
+    "billingAddressObj": {
+      "address": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "c7": "Corporate Park, Phase 2, Whitefield",
+    "deliveryAddressObj": {
+      "address": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "status": "ACTIVE"
   },
   {
     "id": "CUST-VRM-103",
@@ -333,7 +385,7 @@
     "creditLimit": 3000000,
     "creditDays": 15,
     "paymentTerms": "100% Advance",
-    "assignedSalesperson": "Saravanan",
+    "assignedSalesperson": "Mohith JV",
     "source": "WhatsApp",
     "primaryContact": {
       "name": "Dharmesh Patel",
@@ -342,7 +394,33 @@
       "whatsapp": "+91 97234 56789",
       "email": "dharmesh.p@waaree.com"
     },
-    "createdAt": "2026-07-15T11:15:00.000Z"
+    "createdAt": "2026-09-11T06:15:02.802Z",
+    "customerName": "Waaree Energies Ltd",
+    "dispatchAddress": "Plot 48, GIDC Industrial Estate, Sachin",
+    "dispatchCity": "Surat",
+    "dispatchState": "Gujarat",
+    "dispatchPincode": "394230",
+    "sameAsBilling": true,
+    "code": "Waaree Energies Ltd",
+    "c2": "Waaree Energies Ltd",
+    "c3": "Dharmesh Patel",
+    "c4": "+91 97234 56789",
+    "c5": "dharmesh.p@waaree.com",
+    "c6": "Plot 48, GIDC Industrial Estate, Sachin",
+    "billingAddressObj": {
+      "address": "Plot 48, GIDC Industrial Estate, Sachin",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "394230"
+    },
+    "c7": "Plot 48, GIDC Industrial Estate, Sachin",
+    "deliveryAddressObj": {
+      "address": "Plot 48, GIDC Industrial Estate, Sachin",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "394230"
+    },
+    "status": "ACTIVE"
   },
   {
     "id": "AK SMART",

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Printer,
   Download,
@@ -17,7 +17,13 @@ import {
   ArrowLeft,
   FileText,
   Sparkles,
-  Check
+  Check,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Sliders
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -156,11 +162,41 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
 
   const [saveToast, setSaveToast] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(0.85);
+  const [fitToWidth, setFitToWidth] = useState(true);
+  const previewContainerRef = useRef(null);
 
   // File upload refs
   const logoInputRef = useRef(null);
   const stampInputRef = useRef(null);
   const signatureInputRef = useRef(null);
+
+  // Auto-scale preview sheet dynamically based on available container width
+  useEffect(() => {
+    if (!previewContainerRef.current) return;
+    const calculateOptimalZoom = () => {
+      if (!fitToWidth || !previewContainerRef.current) return;
+      const containerWidth = previewContainerRef.current.clientWidth - 48;
+      if (containerWidth > 0 && containerWidth < 880) {
+        const calculated = Math.min(1, Math.max(0.55, containerWidth / 870));
+        setZoomLevel(Math.round(calculated * 100) / 100);
+      } else {
+        setZoomLevel(1);
+      }
+    };
+
+    calculateOptimalZoom();
+    const observer = new ResizeObserver(() => {
+      calculateOptimalZoom();
+    });
+    observer.observe(previewContainerRef.current);
+    window.addEventListener('resize', calculateOptimalZoom);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', calculateOptimalZoom);
+    };
+  }, [fitToWidth, isMenuCollapsed]);
 
   const updateSettings = (updates) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -191,6 +227,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
 
   const handleDownloadPdf = async () => {
     setIsExporting(true);
+    const prevZoom = zoomLevel;
+    setZoomLevel(1);
     try {
       const sheetEl = document.getElementById('studio-printable-sheet');
       if (!sheetEl) {
@@ -226,11 +264,11 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Custom_Template_Sample.pdf`);
+      pdf.save(`VRM_Proforma_Invoice_Template_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (err) {
-      console.error('PDF export failed:', err);
-      window.print();
+      alert('Failed to generate PDF: ' + err.message);
     } finally {
+      setZoomLevel(prevZoom);
       setIsExporting(false);
     }
   };
@@ -286,7 +324,7 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '100vh', backgroundColor: '#F1F5F9' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '850px', width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', backgroundColor: '#F1F5F9' }}>
 
       {/* TOP STUDIO HEADER BAR */}
       <div
@@ -294,15 +332,17 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         style={{
           backgroundColor: '#0F172A',
           color: '#FFFFFF',
-          padding: '14px 24px',
+          padding: '12px 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           boxShadow: '0 4px 12px rgba(15,23,42,0.25)',
-          zIndex: 20
+          zIndex: 20,
+          flexWrap: 'wrap',
+          gap: '12px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {onBackToPI && (
             <button
               onClick={onBackToPI}
@@ -339,6 +379,28 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               }}>
                 Live Customizer
               </span>
+              <button
+                onClick={() => setIsMenuCollapsed(prev => !prev)}
+                title={isMenuCollapsed ? 'Show Customization Controls' : 'Hide Customization Controls'}
+                style={{
+                  backgroundColor: isMenuCollapsed ? '#0E7490' : '#1E293B',
+                  color: '#FFFFFF',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  marginLeft: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {isMenuCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
+                <span>{isMenuCollapsed ? 'Show Controls' : 'Hide Controls'}</span>
+              </button>
             </div>
             <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
               Changes apply across all Proforma Invoices, Quotations, and Print documents
@@ -446,20 +508,25 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
       </div>
 
       {/* MAIN TWO-COLUMN STUDIO WORKSPACE */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, minWidth: 0, width: '100%', overflow: 'hidden' }}>
 
         {/* ==================== LEFT COLUMN: SEPARATE SIDE MENU ==================== */}
         <div
           className="no-print"
           style={{
-            width: '420px',
+            width: isMenuCollapsed ? '0px' : '330px',
+            minWidth: isMenuCollapsed ? '0px' : '330px',
+            maxWidth: isMenuCollapsed ? '0px' : '330px',
+            flexShrink: 0,
             backgroundColor: '#FFFFFF',
-            borderRight: '1px solid #CBD5E1',
-            display: 'flex',
+            borderRight: isMenuCollapsed ? 'none' : '1px solid #CBD5E1',
+            display: isMenuCollapsed ? 'none' : 'flex',
             flexDirection: 'column',
-            overflowY: 'auto',
-            boxShadow: '4px 0 16px rgba(0,0,0,0.03)',
-            zIndex: 10
+            overflowY: isMenuCollapsed ? 'hidden' : 'auto',
+            overflowX: 'hidden',
+            boxShadow: isMenuCollapsed ? 'none' : '4px 0 16px rgba(0,0,0,0.03)',
+            zIndex: 10,
+            transition: 'width 0.2s ease'
           }}
         >
           {/* SIDE MENU TABS STRIP */}
@@ -1285,37 +1352,166 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         </div>
 
         {/* ==================== RIGHT COLUMN: LIVE INTERACTIVE A4 SHEET ==================== */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '30px 24px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-          <div style={{ width: '100%', maxWidth: '850px' }}>
-            {/* Live Sheet Banner Info */}
+        <div
+          ref={previewContainerRef}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflowX: 'auto',
+            overflowY: 'auto',
+            padding: '20px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            backgroundColor: '#F1F5F9'
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: '870px', minWidth: 0 }}>
+            {/* Live Sheet Banner Info with Zoom & Screen Fit Controls */}
             <div
               className="no-print"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #CBD5E1',
                 borderRadius: '8px',
-                padding: '8px 16px',
+                padding: '8px 14px',
                 marginBottom: '16px',
                 fontSize: '11.5px',
-                color: '#64748B'
+                color: '#64748B',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
-                <Sparkles size={14} style={{ color: settings.accentColor || '#0E7490' }} />
-                Interactive Preview — Updates live as you change settings on the left side menu
-              </span>
-              <span style={{ fontWeight: '700', color: '#0F172A' }}>A4 Portrait Standard</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isMenuCollapsed && (
+                  <button
+                    onClick={() => setIsMenuCollapsed(false)}
+                    style={{
+                      backgroundColor: '#0E7490',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Sliders size={12} /> Open Customizer
+                  </button>
+                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: '#334155' }}>
+                  <Sparkles size={14} style={{ color: settings.accentColor || '#0E7490' }} />
+                  Live A4 Interactive Preview
+                </span>
+              </div>
+
+              {/* Zoom & Screen-Fit Toolbar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: '6px', padding: '2px', border: '1px solid #E2E8F0' }}>
+                  <button
+                    onClick={() => {
+                      setFitToWidth(false);
+                      setZoomLevel(z => Math.max(0.5, Math.round((z - 0.05) * 100) / 100));
+                    }}
+                    title="Zoom Out"
+                    style={{ backgroundColor: 'transparent', border: 'none', padding: '3px 7px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ZoomOut size={13} />
+                  </button>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#0F172A', minWidth: '40px', textAlign: 'center', userSelect: 'none' }}>
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    onClick={() => {
+                      setFitToWidth(false);
+                      setZoomLevel(z => Math.min(1.4, Math.round((z + 0.05) * 100) / 100));
+                    }}
+                    title="Zoom In"
+                    style={{ backgroundColor: 'transparent', border: 'none', padding: '3px 7px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ZoomIn size={13} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setFitToWidth(true);
+                    if (previewContainerRef.current) {
+                      const containerWidth = previewContainerRef.current.clientWidth - 48;
+                      if (containerWidth > 0 && containerWidth < 880) {
+                        setZoomLevel(Math.round(Math.min(1, Math.max(0.55, containerWidth / 870)) * 100) / 100);
+                      } else {
+                        setZoomLevel(1);
+                      }
+                    }
+                  }}
+                  style={{
+                    backgroundColor: fitToWidth ? '#0E7490' : '#F1F5F9',
+                    color: fitToWidth ? '#FFFFFF' : '#475569',
+                    border: '1px solid ' + (fitToWidth ? '#0E7490' : '#CBD5E1'),
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Automatically scale to fit inside screen"
+                >
+                  <Maximize2 size={12} /> Fit Screen
+                </button>
+
+                <button
+                  onClick={() => {
+                    setFitToWidth(false);
+                    setZoomLevel(1);
+                  }}
+                  style={{
+                    backgroundColor: (!fitToWidth && zoomLevel === 1) ? '#0F172A' : '#F1F5F9',
+                    color: (!fitToWidth && zoomLevel === 1) ? '#FFFFFF' : '#475569',
+                    border: '1px solid ' + ((!fitToWidth && zoomLevel === 1) ? '#0F172A' : '#CBD5E1'),
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                  title="100% native scale"
+                >
+                  100%
+                </button>
+              </div>
             </div>
 
-            {/* LIVE PRINTABLE DOCUMENT SHEET */}
-            <VRMProformaInvoicePrintSheet
-              piData={SAMPLE_PREVIEW_PI}
-              settings={settings}
-              id="studio-printable-sheet"
-            />
+            {/* LIVE PRINTABLE DOCUMENT SHEET WRAPPER */}
+            <div
+              style={{
+                zoom: zoomLevel,
+                transformOrigin: 'top center',
+                width: '100%',
+                maxWidth: '850px',
+                margin: '0 auto',
+                transition: 'zoom 0.15s ease',
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            >
+              <VRMProformaInvoicePrintSheet
+                piData={SAMPLE_PREVIEW_PI}
+                settings={settings}
+                id="studio-printable-sheet"
+              />
+            </div>
           </div>
         </div>
 

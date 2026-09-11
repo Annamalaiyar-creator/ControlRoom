@@ -336,7 +336,7 @@ function App() {
         />
 
         {/* Scrollable Center Content Pane */}
-        <div className="content-pane procurement-layout">
+        <div className={`content-pane procurement-layout ${(activeTab === 'Templates' || activeTab === 'Templetes' || activeTab === 'Print Templates' || activeTab === 'Template Studio' || activeTab === 'Template Customizer') ? 'templates-view-pane' : ''}`}>
           {(activeTab === 'Dashboard' || activeTab === 'Production Dashboard' || activeTab === 'Dispatch Dashboard' || activeTab === 'Supervisor Dashboard' || activeTab === 'Operator Workspace' || activeTab === 'Floor Employee') && (userRole.includes('Production') || userRole === 'Dispatch Head' || userRole === 'Floor Employee' || userRole === 'Machine Operator' || userRole === 'Production Head') ? (
             <ProductionAdminView activeTab={activeTab} userRole={userRole} />
           ) : (activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
