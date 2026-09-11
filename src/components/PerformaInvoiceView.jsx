@@ -831,6 +831,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const handleStartEdit = (pi, idx) => {
     setEditIdx(idx);
     setPiNumber(pi.piNo || '');
+    if (pi.piDate) setPiDate(pi.piDate);
     setVendorName(pi.vendor || pi.customerName || '');
     setContactPerson(pi.contactPerson || '');
     setPhone(pi.phone || '');
@@ -1761,13 +1762,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    PI Date <span style={{ color: '#EF4444' }}>*</span>
+                    PI Date
                   </label>
                   <input
                     type="date"
+                    readOnly
+                    disabled
                     value={piDate}
-                    onChange={(e) => setPiDate(e.target.value)}
-                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: '1px solid #E2E8F0',
+                      padding: '0 14px',
+                      fontSize: '13px',
+                      color: '#475569',
+                      backgroundColor: '#F8FAFC',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      cursor: 'not-allowed'
+                    }}
                   />
                 </div>
 
