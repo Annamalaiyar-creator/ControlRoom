@@ -1026,42 +1026,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button
-                  type="button"
-                  onClick={() => {
-                    if (onNavigateTab) {
-                      onNavigateTab('Print Templates');
-                    }
-                  }}
-                  title="Customize PDF and Print Templates with separate customization side menu (Logo, Stamp, Signature, Columns, Layout)"
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1.5px solid #0E7490',
-                    color: '#0E7490',
-                    height: '40px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '0 18px',
-                    borderRadius: '50px',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(14, 116, 144, 0.1)',
-                    transition: 'all 0.2s ease-in-out',
-                    flexShrink: 0
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ECFEFF';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  }}
-                >
-                  <Palette style={{ width: '15px', height: '15px', color: '#0E7490' }} />
-                  <span>Customize Template</span>
-                </button>
-
-                <button
                   onClick={() => {
                     resetForm();
                     setEditIdx(null);
