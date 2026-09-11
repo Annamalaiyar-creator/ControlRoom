@@ -212,7 +212,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'BOM Orders', icon: GitBranch },
             { label: 'Proforma Invoice', icon: Receipt },
-            { label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' },
             { label: 'Stock Status', icon: Warehouse }
           ]
         },
@@ -319,12 +318,14 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
     if (sysSection) {
       if (!hasTemplates) sysSection.items.unshift({ label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' });
     } else {
+      const sysItems = [];
+      if (!hasTemplates) {
+        sysItems.push({ label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' });
+      }
+      sysItems.push({ label: 'Zoho Integration', icon: GitBranch });
       sections.push({
         category: 'SYSTEM & CONFIG',
-        items: [
-          { label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' },
-          { label: 'Zoho Integration', icon: GitBranch }
-        ]
+        items: sysItems
       });
     }
 
