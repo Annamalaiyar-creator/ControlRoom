@@ -432,6 +432,19 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   const [undoToast, setUndoToast] = useState(null); // { message: string, key: string, label: string }
   const undoTimeoutRef = useRef(null);
 
+  // Live editable datasets for template categories
+  const [datasets, setDatasets] = useState(SAMPLE_DATASETS);
+
+  const handleUpdatePiData = (patch) => {
+    setDatasets(prev => ({
+      ...prev,
+      [activeCategory]: {
+        ...(prev[activeCategory] || SAMPLE_DATASETS.pi),
+        ...patch
+      }
+    }));
+  };
+
   // Save Toast
   const [saveNotice, setSaveNotice] = useState(null);
 
@@ -585,7 +598,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        ignoreElements: (element) => element.classList?.contains('no-print')
       });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
@@ -966,7 +980,7 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   // ==========================================
   // VIEW 2: TEMPLATE LIVE CUSTOMIZER / EDITOR
   // ==========================================
-  const activeDataset = SAMPLE_DATASETS[activeCategory] || SAMPLE_DATASETS.pi;
+  const activeDataset = datasets[activeCategory] || SAMPLE_DATASETS.pi;
   const activeAccent = currentSettings.accentColor || '#0E7490';
 
   return (
@@ -1789,8 +1803,10 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               id="studio-printable-sheet"
               piData={activeDataset}
               settings={currentSettings}
-              isEditable={false} // Clean mode: ZERO dotted boxes on text!
+              isEditable={true}
               onUpdateSetting={updateSetting}
+              onUpdatePiData={handleUpdatePiData}
+              onElementRemoved={handleElementRemoved}
             />
           </div>
         </div>

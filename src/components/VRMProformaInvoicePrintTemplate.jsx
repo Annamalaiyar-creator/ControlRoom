@@ -16,7 +16,8 @@ import {
   Image,
   Trash2,
   PenTool,
-  Stamp
+  Stamp,
+  Undo2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -244,7 +245,8 @@ export function VRMProformaInvoicePrintSheet({
   id = 'printable-proforma-invoice',
   isEditable = false,
   onUpdateSetting,
-  onUpdatePiData
+  onUpdatePiData,
+  onElementRemoved
 }) {
   if (!piData) return null;
 
@@ -258,6 +260,7 @@ export function VRMProformaInvoicePrintSheet({
     fallback = '',
     onSave,
     onRemove,
+    removeLabel,
     style = {},
     tag = 'span',
     className = '',
@@ -302,41 +305,18 @@ export function VRMProformaInvoicePrintSheet({
             outline: 'none',
             border: 'none',
             backgroundColor: 'transparent',
-            borderRadius: '0',
-            padding: 0,
+            borderRadius: '3px',
+            padding: '1px 3px',
             transition: 'all 0.15s ease',
-            display: multiline ? 'block' : 'inline-block'
+            display: multiline ? 'block' : 'inline-block',
+            cursor: 'text'
           }}
           className={`${className} editable-template-field`}
+          title="Click to edit text"
         >
           {value || fallback || placeholder}
         </span>
-      </span>
-    );
-  };
-
-  // Section / Block Container with hover-remove button
-  const RemovableBlock = ({
-    visible = true,
-    onRemove,
-    title = 'Section',
-    children,
-    style = {}
-  }) => {
-    const [isHovered, setIsHovered] = useState(false);
-    if (!visible) return null;
-    if (!isEditable || !onRemove) {
-      return <div style={style}>{children}</div>;
-    }
-
-    return (
-      <div
-        style={{ ...style, position: 'relative' }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {children}
-        {isHovered && (
+        {onRemove && (
           <button
             type="button"
             className="no-print"
@@ -345,30 +325,257 @@ export function VRMProformaInvoicePrintSheet({
               e.preventDefault();
               onRemove();
             }}
-            title={`Remove ${title}`}
+            title={`Remove ${removeLabel || 'element'} from print/PDF`}
             style={{
+              opacity: isHovered ? 1 : 0,
+              visibility: isHovered ? 'visible' : 'hidden',
+              transition: 'opacity 0.15s ease',
               position: 'absolute',
-              top: '4px',
-              right: '6px',
-              backgroundColor: '#FEE2E2',
-              color: '#DC2626',
-              border: '1px solid #FCA5A5',
-              borderRadius: '6px',
-              fontSize: '10px',
-              fontWeight: '800',
-              padding: '2px 7px',
-              cursor: 'pointer',
-              zIndex: 30,
-              display: 'flex',
+              top: '-6px',
+              right: '-8px',
+              backgroundColor: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '50%',
+              width: '15px',
+              height: '15px',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '3px',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              justifyContent: 'center',
+              fontSize: '9px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              padding: 0,
+              lineHeight: 1,
+              zIndex: 10,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
             }}
           >
-            ✕ Remove
+            ✕
           </button>
         )}
+      </span>
+    );
+  };
+
+  // Section / Block Container with hover-remove button
+  const RemovableBlock = ({
+    visible = true,
+    settingKey,
+    title = 'Section',
+    onRemove,
+    children,
+    style = {}
+  }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    if (!visible) return null;
+    if (!isEditable || (!onRemove && !settingKey)) {
+      return <div style={style}>{children}</div>;
+    }
+
+    const handleRemove = () => {
+      if (onRemove) {
+        onRemove();
+      } else if (settingKey) {
+        onUpdateSetting?.({ [settingKey]: false });
+        onElementRemoved?.(settingKey, title);
+      }
+    };
+
+    return (
+      <div
+        style={{ ...style, position: 'relative' }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {children}
+        <button
+          type="button"
+          className="no-print"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            handleRemove();
+          }}
+          title={`Remove ${title} from print/PDF`}
+          style={{
+            opacity: isHovered ? 1 : 0,
+            visibility: isHovered ? 'visible' : 'hidden',
+            transition: 'opacity 0.15s ease',
+            position: 'absolute',
+            top: '2px',
+            right: '2px',
+            backgroundColor: '#FEE2E2',
+            color: '#DC2626',
+            border: '1px solid #FCA5A5',
+            borderRadius: '6px',
+            fontSize: '10px',
+            fontWeight: '800',
+            padding: '2px 7px',
+            cursor: 'pointer',
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+          }}
+        >
+          ✕ Remove
+        </button>
       </div>
+    );
+  };
+
+  // Dedicated Header Metadata Row with hover delete and editable label/value
+  const RemovableMetaRow = ({
+    visible = true,
+    settingKey,
+    label,
+    itemLabel,
+    valueText,
+    fallbackValue,
+    valueColor,
+    onSaveLabel,
+    onSaveValue
+  }) => {
+    const [hovered, setHovered] = useState(false);
+    if (!visible) return null;
+
+    return (
+      <tr
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ position: 'relative' }}
+      >
+        <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right', width: '50%' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+            {isEditable && (
+              <button
+                type="button"
+                className="no-print"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onUpdateSetting?.({ [settingKey]: false });
+                  onElementRemoved?.(settingKey, itemLabel || label);
+                }}
+                title={`Remove ${itemLabel || label} from print/PDF`}
+                style={{
+                  opacity: hovered ? 1 : 0,
+                  visibility: hovered ? 'visible' : 'hidden',
+                  transition: 'opacity 0.15s ease',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '15px',
+                  height: '15px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '9px',
+                  cursor: 'pointer',
+                  padding: 0,
+                  lineHeight: 1
+                }}
+              >
+                ✕
+              </button>
+            )}
+            <EditableText
+              value={label}
+              fallback={label}
+              onSave={onSaveLabel}
+            />
+          </div>
+        </td>
+        <td style={{ padding: '2px 6px', fontWeight: valueColor ? '800' : '700', color: valueColor || '#0F172A', textAlign: 'right' }}>
+          <EditableText
+            value={valueText}
+            fallback={fallbackValue}
+            onSave={onSaveValue}
+          />
+        </td>
+      </tr>
+    );
+  };
+
+  // Dedicated Table Header Cell with hover ✕ button to remove column without touching items
+  const RemovableTableHeaderCell = ({
+    title,
+    settingKey,
+    label,
+    align = 'center',
+    width,
+    canRemove = true,
+    onSaveTitle
+  }) => {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+      <th
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: 'relative',
+          padding: align === 'left' ? '8px 10px' : (align === 'right' ? '8px 8px' : '8px 6px'),
+          borderRight: '1px solid rgba(255,255,255,0.2)',
+          width: width,
+          textAlign: align,
+          color: '#FFFFFF',
+          fontWeight: '700'
+        }}
+      >
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: align === 'right' ? 'flex-end' : (align === 'left' ? 'flex-start' : 'center'),
+          gap: '4px',
+          width: align === 'right' ? '100%' : 'auto'
+        }}>
+          <EditableText
+            value={title}
+            fallback={label}
+            onSave={onSaveTitle}
+            style={{ color: '#FFFFFF', fontWeight: '700' }}
+          />
+          {isEditable && canRemove && (
+            <button
+              type="button"
+              className="no-print"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onUpdateSetting?.({ [settingKey]: false });
+                onElementRemoved?.(settingKey, label);
+              }}
+              title={`Remove ${label} from print/PDF`}
+              style={{
+                opacity: hovered ? 1 : 0,
+                visibility: hovered ? 'visible' : 'hidden',
+                transition: 'opacity 0.15s ease',
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '50%',
+                width: '16px',
+                height: '16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                padding: 0,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                flexShrink: 0
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </th>
     );
   };
 
@@ -496,19 +703,23 @@ export function VRMProformaInvoicePrintSheet({
     { key: 'showPlaceOfSupply', label: 'Place of Supply' },
     { key: 'showSalesExecutive', label: 'Sales Executive' },
     { key: 'showBillTo', label: 'Bill To Block' },
+    { key: 'showBuyerAddress', label: 'Buyer Address' },
     { key: 'showBuyerGstin', label: 'Buyer GSTIN' },
     { key: 'showBuyerContact', label: 'Buyer Contact' },
     { key: 'showBuyerPhone', label: 'Buyer Phone' },
     { key: 'showBuyerEmail', label: 'Buyer Email' },
     { key: 'showShipTo', label: 'Ship To Block' },
     { key: 'showTransportDetails', label: 'Transport / LR Details' },
-    { key: 'showHsn', label: 'HSN Column' },
+    { key: 'showSnoCol', label: 'S.No Column' },
+    { key: 'showHsn', label: 'HSN/SAC Column' },
     { key: 'showQty', label: 'Qty Column' },
     { key: 'showUom', label: 'UOM Column' },
-    { key: 'showRateCol', label: 'Rate Column' },
+    { key: 'showRateCol', label: 'Rate (₹) Column' },
     { key: 'showDiscountCol', label: 'Discount Column' },
     { key: 'showTaxableCol', label: 'Taxable Column' },
     { key: 'showGstCol', label: 'GST Column' },
+    { key: 'showTotalCol', label: 'Total (₹) Column' },
+    { key: 'showItemDescription', label: 'Item Description' },
     { key: 'showTotalInWords', label: 'Amount In Words' },
     { key: 'showBankDetails', label: 'Bank Details Box' },
     { key: 'showTerms', label: 'Terms & Conditions' },
@@ -569,15 +780,20 @@ export function VRMProformaInvoicePrintSheet({
               page-break-before: always;
             }
           }
+          .editable-template-field {
+            cursor: text;
+            transition: background-color 0.15s ease, outline 0.15s ease;
+          }
           .editable-template-field:hover {
-            background-color: rgba(14, 116, 144, 0.18) !important;
-            outline: 1px dotted rgba(14, 116, 144, 0.6) !important;
+            background-color: rgba(14, 116, 144, 0.08) !important;
+            border-radius: 3px !important;
+            outline: 1px dashed rgba(14, 116, 144, 0.35) !important;
           }
           .editable-template-field:focus {
-            background-color: #FEF08A !important;
-            border-bottom: 2px solid #CA8A04 !important;
-            color: #000000 !important;
-            outline: none !important;
+            background-color: #F0FDFA !important;
+            outline: 1.5px solid #0E7490 !important;
+            border-radius: 3px !important;
+            color: #0F172A !important;
           }
         `}
       </style>
@@ -667,8 +883,8 @@ export function VRMProformaInvoicePrintSheet({
                 {cfg.showLogo && (
                   <RemovableBlock
                     visible={cfg.showLogo}
+                    settingKey="showLogo"
                     title="Company Logo"
-                    onRemove={() => onUpdateSetting?.({ showLogo: false })}
                   >
                     <img
                       src={cfg.customLogoUrl || '/vrm_logo.png'}
@@ -696,7 +912,11 @@ export function VRMProformaInvoicePrintSheet({
                         value={cfg.companyName}
                         fallback="VRM Structures India Pvt Ltd"
                         onSave={(v) => onUpdateSetting?.({ companyName: v })}
-                        onRemove={() => onUpdateSetting?.({ showCompanyName: false })}
+                        onRemove={() => {
+                          onUpdateSetting?.({ showCompanyName: false });
+                          onElementRemoved?.('showCompanyName', 'Company Name');
+                        }}
+                        removeLabel="Company Name"
                       />
                     </div>
                   )}
@@ -706,7 +926,11 @@ export function VRMProformaInvoicePrintSheet({
                         value={cfg.companyTagline}
                         fallback="Engineered Solar Mounting Structures & Solutions"
                         onSave={(v) => onUpdateSetting?.({ companyTagline: v })}
-                        onRemove={() => onUpdateSetting?.({ showCompanyTagline: false })}
+                        onRemove={() => {
+                          onUpdateSetting?.({ showCompanyTagline: false });
+                          onElementRemoved?.('showCompanyTagline', 'Company Tagline');
+                        }}
+                        removeLabel="Company Tagline"
                       />
                     </div>
                   )}
@@ -716,13 +940,16 @@ export function VRMProformaInvoicePrintSheet({
               {cfg.showContactInfo && (
                 <div style={{ fontSize: '10.5px', color: '#334155', lineHeight: '1.45', marginTop: '4px' }}>
                   {cfg.showCompanyAddress !== false && (
-                    <>
+                    <RemovableBlock
+                      visible={cfg.showCompanyAddress !== false}
+                      settingKey="showCompanyAddress"
+                      title="Company Address"
+                    >
                       <div>
                         <EditableText
                           value={cfg.companyAddressLine1}
-                          fallback="1427, GNT Road, Nagappa Industrial Estate, Puzhal,"
+                          fallback="1427, GNT Road, Nagappa Industrial Estate, Puzhal"
                           onSave={(v) => onUpdateSetting?.({ companyAddressLine1: v })}
-                          onRemove={() => onUpdateSetting?.({ showCompanyAddress: false })}
                         />
                       </div>
                       <div>
@@ -730,19 +957,22 @@ export function VRMProformaInvoicePrintSheet({
                           value={cfg.companyAddressLine2}
                           fallback="Chennai, Tamil Nadu - 600066, India"
                           onSave={(v) => onUpdateSetting?.({ companyAddressLine2: v })}
-                          onRemove={() => onUpdateSetting?.({ showCompanyAddress: false })}
                         />
                       </div>
-                    </>
+                    </RemovableBlock>
                   )}
                   {cfg.showCinGst && (
-                    <div style={{ marginTop: '3px' }}>
+                    <RemovableBlock
+                      visible={cfg.showCinGst}
+                      settingKey="showCinGst"
+                      title="Company GSTIN & CIN"
+                      style={{ marginTop: '3px' }}
+                    >
                       <strong style={{ color: '#0F172A' }}>GSTIN:</strong>{' '}
                       <EditableText
                         value={cfg.companyGstin}
                         fallback="33AAGCV4262N1ZZ"
                         onSave={(v) => onUpdateSetting?.({ companyGstin: v })}
-                        onRemove={() => onUpdateSetting?.({ showCinGst: false })}
                         style={{ fontFamily: 'monospace', fontWeight: '700' }}
                       />{' '}
                       &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>CIN:</strong>{' '}
@@ -750,39 +980,43 @@ export function VRMProformaInvoicePrintSheet({
                         value={cfg.companyCin}
                         fallback="U28112TN2020PTC135489"
                         onSave={(v) => onUpdateSetting?.({ companyCin: v })}
-                        onRemove={() => onUpdateSetting?.({ showCinGst: false })}
                         style={{ fontFamily: 'monospace', fontWeight: '700' }}
                       />
-                    </div>
+                    </RemovableBlock>
                   )}
                   {cfg.showCompanyPhoneEmail !== false && (
-                    <div>
+                    <RemovableBlock
+                      visible={cfg.showCompanyPhoneEmail !== false}
+                      settingKey="showCompanyPhoneEmail"
+                      title="Company Phone & Email"
+                    >
                       <strong style={{ color: '#0F172A' }}>Phone:</strong>{' '}
                       <EditableText
                         value={cfg.companyPhone}
                         fallback="+91 98847 20789"
                         onSave={(v) => onUpdateSetting?.({ companyPhone: v })}
-                        onRemove={() => onUpdateSetting?.({ showCompanyPhoneEmail: false })}
                       />{' '}
                       &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>Email:</strong>{' '}
                       <EditableText
                         value={cfg.companyEmail}
                         fallback="sales@vrmstructures.com"
                         onSave={(v) => onUpdateSetting?.({ companyEmail: v })}
-                        onRemove={() => onUpdateSetting?.({ showCompanyPhoneEmail: false })}
                       />
-                    </div>
+                    </RemovableBlock>
                   )}
                   {cfg.showCompanyWebsite && (
-                    <div>
+                    <RemovableBlock
+                      visible={cfg.showCompanyWebsite}
+                      settingKey="showCompanyWebsite"
+                      title="Company Website"
+                    >
                       <strong style={{ color: '#0F172A' }}>Website:</strong>{' '}
                       <EditableText
                         value={cfg.companyWebsite}
                         fallback="www.vrmstructures.com"
                         onSave={(v) => onUpdateSetting?.({ companyWebsite: v })}
-                        onRemove={() => onUpdateSetting?.({ showCompanyWebsite: false })}
                       />
-                    </div>
+                    </RemovableBlock>
                   )}
                 </div>
               )}
@@ -791,88 +1025,118 @@ export function VRMProformaInvoicePrintSheet({
             {/* RIGHT: DOCUMENT TITLE & ESSENTIAL METADATA */}
             <div style={{ flex: '1 1 45%', textAlign: 'right' }}>
               {cfg.showDocumentTitle !== false && (
-                <div style={{
-                  display: 'inline-block',
-                  backgroundColor: accent,
-                  color: '#FFFFFF',
-                  padding: '6px 16px',
-                  borderRadius: '6px',
-                  fontSize: '15px',
-                  fontWeight: '800',
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  marginBottom: '10px'
-                }}>
-                  <EditableText
-                    value={cfg.documentTitle}
-                    fallback="PROFORMA INVOICE"
-                    onSave={(v) => onUpdateSetting?.({ documentTitle: v })}
-                    onRemove={() => onUpdateSetting?.({ showDocumentTitle: false })}
-                  />
+                <div style={{ display: 'inline-block', marginBottom: '10px' }}>
+                  <RemovableBlock
+                    visible={cfg.showDocumentTitle !== false}
+                    settingKey="showDocumentTitle"
+                    title="Document Title"
+                  >
+                    <div style={{
+                      display: 'inline-block',
+                      backgroundColor: accent,
+                      color: '#FFFFFF',
+                      padding: '6px 16px',
+                      borderRadius: '6px',
+                      fontSize: '15px',
+                      fontWeight: '800',
+                      letterSpacing: '1px',
+                      textTransform: 'uppercase'
+                    }}>
+                      <EditableText
+                        value={cfg.documentTitle}
+                        fallback="PROFORMA INVOICE"
+                        onSave={(v) => onUpdateSetting?.({ documentTitle: v })}
+                        style={{ color: '#FFFFFF' }}
+                      />
+                    </div>
+                  </RemovableBlock>
                 </div>
               )}
 
               <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', marginTop: '4px' }}>
                 <tbody>
                   {cfg.showDocNo !== false && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right', width: '50%' }}>
-                        <EditableText value={cfg.docNoLabel} fallback="Document No:" onSave={(v) => onUpdateSetting?.({ docNoLabel: v })} onRemove={() => onUpdateSetting?.({ showDocNo: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '800', color: accent, textAlign: 'right' }}>
-                        <EditableText value={pi.piNo} fallback="SPI-2025-001" onSave={(v) => onUpdatePiData?.({ piNo: v })} />
-                      </td>
-                    </tr>
+                    <RemovableMetaRow
+                      visible={cfg.showDocNo !== false}
+                      settingKey="showDocNo"
+                      label={cfg.docNoLabel || "Document No:"}
+                      itemLabel="Document No"
+                      valueText={pi.piNo || "SPI-2025-101"}
+                      fallbackValue="SPI-2025-101"
+                      valueColor={accent}
+                      onSaveLabel={(v) => onUpdateSetting?.({ docNoLabel: v })}
+                      onSaveValue={(v) => {
+                        onUpdatePiData?.({ piNo: v });
+                        onUpdateSetting?.({ defaultDocNo: v });
+                      }}
+                    />
                   )}
                   {cfg.showDate !== false && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
-                        <EditableText value={cfg.dateLabel} fallback="Date:" onSave={(v) => onUpdateSetting?.({ dateLabel: v })} onRemove={() => onUpdateSetting?.({ showDate: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#0F172A', textAlign: 'right' }}>
-                        <EditableText value={formatDate(pi.piDate)} fallback="Date" onSave={(v) => onUpdatePiData?.({ piDate: v })} />
-                      </td>
-                    </tr>
+                    <RemovableMetaRow
+                      visible={cfg.showDate !== false}
+                      settingKey="showDate"
+                      label={cfg.dateLabel || "Date:"}
+                      itemLabel="Date"
+                      valueText={formatDate(pi.piDate)}
+                      fallbackValue="Date"
+                      onSaveLabel={(v) => onUpdateSetting?.({ dateLabel: v })}
+                      onSaveValue={(v) => onUpdatePiData?.({ piDate: v })}
+                    />
                   )}
                   {cfg.showValidUntil !== false && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
-                        <EditableText value={cfg.validUntilLabel} fallback="Valid Until:" onSave={(v) => onUpdateSetting?.({ validUntilLabel: v })} onRemove={() => onUpdateSetting?.({ showValidUntil: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#B91C1C', textAlign: 'right' }}>
-                        <EditableText value={formatDate(pi.expDate || pi.validUntilDate)} fallback="Valid Date" onSave={(v) => onUpdatePiData?.({ expDate: v })} />
-                      </td>
-                    </tr>
-                  )}
-                  {cfg.showPaymentTerms && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
-                        <EditableText value={cfg.paymentTermsLabel} fallback="Payment Terms:" onSave={(v) => onUpdateSetting?.({ paymentTermsLabel: v })} onRemove={() => onUpdateSetting?.({ showPaymentTerms: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
-                        <EditableText value={pi.paymentTerms} fallback="50% Adv + 50% Before Dispatch" onSave={(v) => onUpdatePiData?.({ paymentTerms: v })} />
-                      </td>
-                    </tr>
+                    <RemovableMetaRow
+                      visible={cfg.showValidUntil !== false}
+                      settingKey="showValidUntil"
+                      label={cfg.validUntilLabel || "Valid Until:"}
+                      itemLabel="Valid Until"
+                      valueText={formatDate(pi.expDate || pi.validUntilDate)}
+                      fallbackValue="11 Oct 2026"
+                      valueColor="#B91C1C"
+                      onSaveLabel={(v) => onUpdateSetting?.({ validUntilLabel: v })}
+                      onSaveValue={(v) => onUpdatePiData?.({ expDate: v })}
+                    />
                   )}
                   {cfg.showPlaceOfSupply && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
-                        <EditableText value={cfg.placeOfSupplyLabel} fallback="Place Of Supply:" onSave={(v) => onUpdateSetting?.({ placeOfSupplyLabel: v })} onRemove={() => onUpdateSetting?.({ showPlaceOfSupply: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
-                        <EditableText value={isTamilNadu ? 'Tamil Nadu (33)' : (bState ? `${bState}` : 'Other State')} fallback="Place of Supply" onSave={(v) => onUpdateSetting?.({ defaultPlaceOfSupply: v })} />
-                      </td>
-                    </tr>
+                    <RemovableMetaRow
+                      visible={cfg.showPlaceOfSupply}
+                      settingKey="showPlaceOfSupply"
+                      label={cfg.placeOfSupplyLabel || "Place Of Supply:"}
+                      itemLabel="Place Of Supply"
+                      valueText={pi.placeOfSupply || (isTamilNadu ? 'Tamil Nadu (33)' : (bState ? `${bState}` : 'Tamil Nadu (33)'))}
+                      fallbackValue="Tamil Nadu (33)"
+                      onSaveLabel={(v) => onUpdateSetting?.({ placeOfSupplyLabel: v })}
+                      onSaveValue={(v) => {
+                        onUpdatePiData?.({ placeOfSupply: v });
+                        onUpdateSetting?.({ defaultPlaceOfSupply: v });
+                      }}
+                    />
                   )}
                   {cfg.showSalesExecutive && (
-                    <tr>
-                      <td style={{ padding: '2px 6px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>
-                        <EditableText value={cfg.salesExecutiveLabel} fallback="Sales Executive:" onSave={(v) => onUpdateSetting?.({ salesExecutiveLabel: v })} onRemove={() => onUpdateSetting?.({ showSalesExecutive: false })} />
-                      </td>
-                      <td style={{ padding: '2px 6px', fontWeight: '600', color: '#0F172A', textAlign: 'right' }}>
-                        <EditableText value={pi.salesPerson || pi.salesperson || pi.createdBy} fallback="VRM Sales Team" onSave={(v) => onUpdatePiData?.({ salesPerson: v })} />
-                      </td>
-                    </tr>
+                    <RemovableMetaRow
+                      visible={cfg.showSalesExecutive}
+                      settingKey="showSalesExecutive"
+                      label={cfg.salesExecutiveLabel || "Sales Executive:"}
+                      itemLabel="Sales Executive"
+                      valueText={pi.salesPerson || pi.salesperson || pi.createdBy || 'ManojRaj (VRM Sales)'}
+                      fallbackValue="ManojRaj (VRM Sales)"
+                      onSaveLabel={(v) => onUpdateSetting?.({ salesExecutiveLabel: v })}
+                      onSaveValue={(v) => {
+                        onUpdatePiData?.({ salesPerson: v });
+                        onUpdateSetting?.({ defaultSalesPerson: v });
+                      }}
+                    />
+                  )}
+                  {cfg.showPaymentTerms && (
+                    <RemovableMetaRow
+                      visible={cfg.showPaymentTerms}
+                      settingKey="showPaymentTerms"
+                      label={cfg.paymentTermsLabel || "Payment Terms:"}
+                      itemLabel="Payment Terms"
+                      valueText={pi.paymentTerms || "50% Adv + 50% Before Dispatch"}
+                      fallbackValue="50% Adv + 50% Before Dispatch"
+                      onSaveLabel={(v) => onUpdateSetting?.({ paymentTermsLabel: v })}
+                      onSaveValue={(v) => onUpdatePiData?.({ paymentTerms: v })}
+                    />
                   )}
                 </tbody>
               </table>
@@ -1083,106 +1347,101 @@ export function VRMProformaInvoicePrintSheet({
             <thead>
               <tr style={{ backgroundColor: accent, color: '#FFFFFF', fontWeight: '700', textAlign: 'center' }}>
                 {cfg.showSnoCol !== false && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '32px' }}>
-                    <EditableText
-                      value={cfg.colHeaderSno}
-                      fallback="#"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderSno: v })}
-                      onRemove={() => onUpdateSetting?.({ showSnoCol: false })}
-                    />
-                  </th>
-                )}
-                <th style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>
-                  <EditableText
-                    value={cfg.colHeaderDesc}
-                    fallback="Item & Specification"
-                    onSave={(v) => onUpdateSetting?.({ colHeaderDesc: v })}
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderSno}
+                    settingKey="showSnoCol"
+                    label="S.No (#) Column"
+                    width="34px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderSno: v })}
                   />
-                </th>
+                )}
+                <RemovableTableHeaderCell
+                  title={cfg.colHeaderDesc}
+                  label="Item & Specification"
+                  align="left"
+                  canRemove={false}
+                  onSaveTitle={(v) => onUpdateSetting?.({ colHeaderDesc: v })}
+                />
                 {cfg.showHsn && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '70px' }}>
-                    <EditableText
-                      value={cfg.colHeaderHsn}
-                      fallback="HSN/SAC"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderHsn: v })}
-                      onRemove={() => onUpdateSetting?.({ showHsn: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderHsn}
+                    settingKey="showHsn"
+                    label="HSN/SAC Column"
+                    width="75px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderHsn: v })}
+                  />
                 )}
                 {cfg.showQty !== false && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
-                    <EditableText
-                      value={cfg.colHeaderQty}
-                      fallback="Qty"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderQty: v })}
-                      onRemove={() => onUpdateSetting?.({ showQty: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderQty}
+                    settingKey="showQty"
+                    label="Qty Column"
+                    width="55px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderQty: v })}
+                  />
                 )}
                 {cfg.showUom && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '45px' }}>
-                    <EditableText
-                      value={cfg.colHeaderUom}
-                      fallback="UOM"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderUom: v })}
-                      onRemove={() => onUpdateSetting?.({ showUom: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderUom}
+                    settingKey="showUom"
+                    label="UOM Column"
+                    width="50px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderUom: v })}
+                  />
                 )}
                 {cfg.showRateCol !== false && (
-                  <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '80px' }}>
-                    <EditableText
-                      value={cfg.colHeaderRate}
-                      fallback="Rate (₹)"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderRate: v })}
-                      onRemove={() => onUpdateSetting?.({ showRateCol: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderRate}
+                    settingKey="showRateCol"
+                    label="Rate (₹) Column"
+                    width="85px"
+                    align="right"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderRate: v })}
+                  />
                 )}
                 {cfg.showDiscountCol && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
-                    <EditableText
-                      value={cfg.colHeaderDiscount}
-                      fallback="Disc%"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderDiscount: v })}
-                      onRemove={() => onUpdateSetting?.({ showDiscountCol: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderDiscount}
+                    settingKey="showDiscountCol"
+                    label="Disc% Column"
+                    width="55px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderDiscount: v })}
+                  />
                 )}
                 {cfg.showTaxableCol !== false && (
-                  <th style={{ padding: '8px 8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'right', width: '85px' }}>
-                    <EditableText
-                      value={cfg.colHeaderTaxable}
-                      fallback="Taxable (₹)"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderTaxable: v })}
-                      onRemove={() => onUpdateSetting?.({ showTaxableCol: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderTaxable}
+                    settingKey="showTaxableCol"
+                    label="Taxable (₹) Column"
+                    width="85px"
+                    align="right"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderTaxable: v })}
+                  />
                 )}
                 {cfg.showGstCol && (
-                  <th style={{ padding: '8px 6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px' }}>
-                    <EditableText
-                      value={cfg.colHeaderGst}
-                      fallback="GST%"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderGst: v })}
-                      onRemove={() => onUpdateSetting?.({ showGstCol: false })}
-                    />
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderGst}
+                    settingKey="showGstCol"
+                    label="GST% Column"
+                    width="55px"
+                    align="center"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderGst: v })}
+                  />
                 )}
                 {cfg.showTotalCol !== false && (
-                  <th style={{ padding: '8px 10px', textAlign: 'right', width: '95px' }}>
-                    <EditableText
-                      value={cfg.colHeaderAmount}
-                      fallback="Total (₹)"
-                      onSave={(v) => onUpdateSetting?.({ colHeaderAmount: v })}
-                      onRemove={() => onUpdateSetting?.({ showTotalCol: false })}
-                    />
-                  </th>
-                )}
-                {isEditable && (
-                  <th className="no-print" style={{ width: '28px', padding: '8px 4px', textAlign: 'center' }}>
-                    <span style={{ fontSize: '10px', opacity: 0.8 }}>Act</span>
-                  </th>
+                  <RemovableTableHeaderCell
+                    title={cfg.colHeaderAmount}
+                    settingKey="showTotalCol"
+                    label="Total (₹) Column"
+                    width="95px"
+                    align="right"
+                    onSaveTitle={(v) => onUpdateSetting?.({ colHeaderAmount: v })}
+                  />
                 )}
               </tr>
             </thead>
@@ -1228,7 +1487,11 @@ export function VRMProformaInvoicePrintSheet({
                               onUpdatePiData({ items: updated });
                             }
                           }}
-                          onRemove={() => onUpdateSetting?.({ showItemDescription: false })}
+                          onRemove={() => {
+                            onUpdateSetting?.({ showItemDescription: false });
+                            onElementRemoved?.('showItemDescription', 'Item Description');
+                          }}
+                          removeLabel="Item Description"
                         />
                       </div>
                     )}
@@ -1337,91 +1600,10 @@ export function VRMProformaInvoicePrintSheet({
                       {it.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   )}
-                  {isEditable && (
-                    <td className="no-print" style={{ padding: '8px 2px', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        title="Remove this item row"
-                        onClick={() => {
-                          if (onUpdatePiData && pi.items) {
-                            const updated = pi.items.filter((_, i) => i !== idx);
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#EF4444',
-                          cursor: 'pointer',
-                          fontSize: '15px',
-                          fontWeight: '800',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          lineHeight: 1
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        ×
-                      </button>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
           </table>
-          {isEditable && (
-            <div
-              className="no-print"
-              style={{
-                padding: '8px 14px',
-                backgroundColor: '#F8FAFC',
-                borderTop: '1px dashed #CBD5E1',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (onUpdatePiData) {
-                    const cur = pi.items || [];
-                    const newItem = {
-                      sNo: cur.length + 1,
-                      name: 'New Custom Item',
-                      description: 'Item technical specification details',
-                      hsn: '73089090',
-                      qty: 1,
-                      uom: 'Nos',
-                      rate: 1000,
-                      discountPct: 0,
-                      gstRate: '18%'
-                    };
-                    onUpdatePiData({ items: [...cur, newItem] });
-                  }
-                }}
-                style={{
-                  backgroundColor: accent,
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 12px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                + Add Line Item
-              </button>
-              <span style={{ fontSize: '10px', color: '#64748B' }}>
-                Hover any column or row to edit text or remove with ×
-              </span>
-            </div>
-          )}
         </div>
 
         {/* 4. TOTAL IN WORDS & CALCULATION SUMMARY */}
@@ -1431,8 +1613,8 @@ export function VRMProformaInvoicePrintSheet({
             {cfg.showTotalInWords && (
               <RemovableBlock
                 visible={cfg.showTotalInWords}
+                settingKey="showTotalInWords"
                 title="Amount Chargeable In Words"
-                onRemove={() => onUpdateSetting?.({ showTotalInWords: false })}
                 style={{ marginBottom: '12px' }}
               >
                 <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Amount Chargeable (in words):</div>
@@ -1446,8 +1628,8 @@ export function VRMProformaInvoicePrintSheet({
             {cfg.showBankDetails && (
               <RemovableBlock
                 visible={cfg.showBankDetails}
+                settingKey="showBankDetails"
                 title="Bank Details Box"
-                onRemove={() => onUpdateSetting?.({ showBankDetails: false })}
                 style={{ border: '1px solid #CBD5E1', borderRadius: '4px', padding: '8px 12px', backgroundColor: '#F8FAFC', marginBottom: '12px' }}
               >
                 <div style={{ fontSize: '10.5px', fontWeight: '800', color: accent, textTransform: 'uppercase', marginBottom: '4px' }}>
@@ -1455,7 +1637,11 @@ export function VRMProformaInvoicePrintSheet({
                     value={cfg.bankHeading}
                     fallback="VRM Company Bank Details (NEFT / RTGS / IMPS)"
                     onSave={(v) => onUpdateSetting?.({ bankHeading: v })}
-                    onRemove={() => onUpdateSetting?.({ showBankDetails: false })}
+                    onRemove={() => {
+                      onUpdateSetting?.({ showBankDetails: false });
+                      onElementRemoved?.('showBankDetails', 'Bank Details Box');
+                    }}
+                    removeLabel="Bank Details"
                   />
                 </div>
                 <table style={{ width: '100%', fontSize: '10.5px', borderCollapse: 'collapse' }}>
@@ -1468,7 +1654,11 @@ export function VRMProformaInvoicePrintSheet({
                             value={cfg.bankBeneficiary}
                             fallback="Beneficiary Name"
                             onSave={(v) => onUpdateSetting?.({ bankBeneficiary: v })}
-                            onRemove={() => onUpdateSetting?.({ showBankBeneficiary: false })}
+                            onRemove={() => {
+                              onUpdateSetting?.({ showBankBeneficiary: false });
+                              onElementRemoved?.('showBankBeneficiary', 'Bank Beneficiary');
+                            }}
+                            removeLabel="Bank Beneficiary"
                           />
                         </td>
                       </tr>
@@ -1481,7 +1671,11 @@ export function VRMProformaInvoicePrintSheet({
                             value={cfg.bankName}
                             fallback="Bank Name"
                             onSave={(v) => onUpdateSetting?.({ bankName: v })}
-                            onRemove={() => onUpdateSetting?.({ showBankName: false })}
+                            onRemove={() => {
+                              onUpdateSetting?.({ showBankName: false });
+                              onElementRemoved?.('showBankName', 'Bank Name');
+                            }}
+                            removeLabel="Bank Name"
                           />
                         </td>
                       </tr>
@@ -1494,7 +1688,11 @@ export function VRMProformaInvoicePrintSheet({
                             value={cfg.bankAccountNo}
                             fallback="Account Number"
                             onSave={(v) => onUpdateSetting?.({ bankAccountNo: v })}
-                            onRemove={() => onUpdateSetting?.({ showBankAccountNo: false })}
+                            onRemove={() => {
+                              onUpdateSetting?.({ showBankAccountNo: false });
+                              onElementRemoved?.('showBankAccountNo', 'Account Number');
+                            }}
+                            removeLabel="Account Number"
                           />
                         </td>
                       </tr>
@@ -1507,7 +1705,11 @@ export function VRMProformaInvoicePrintSheet({
                             value={cfg.bankIfsc}
                             fallback="IFSC Code"
                             onSave={(v) => onUpdateSetting?.({ bankIfsc: v })}
-                            onRemove={() => onUpdateSetting?.({ showBankIfsc: false })}
+                            onRemove={() => {
+                              onUpdateSetting?.({ showBankIfsc: false });
+                              onElementRemoved?.('showBankIfsc', 'IFSC Code');
+                            }}
+                            removeLabel="IFSC Code"
                           />
                         </td>
                       </tr>
@@ -1520,7 +1722,11 @@ export function VRMProformaInvoicePrintSheet({
                             value={cfg.bankBranch}
                             fallback="Branch Name"
                             onSave={(v) => onUpdateSetting?.({ bankBranch: v })}
-                            onRemove={() => onUpdateSetting?.({ showBankBranch: false })}
+                            onRemove={() => {
+                              onUpdateSetting?.({ showBankBranch: false });
+                              onElementRemoved?.('showBankBranch', 'Bank Branch');
+                            }}
+                            removeLabel="Branch"
                           />
                         </td>
                       </tr>
@@ -1534,8 +1740,8 @@ export function VRMProformaInvoicePrintSheet({
             {cfg.showTerms && (
               <RemovableBlock
                 visible={cfg.showTerms}
+                settingKey="showTerms"
                 title="Terms & Conditions"
-                onRemove={() => onUpdateSetting?.({ showTerms: false })}
                 style={{ fontSize: '10px', color: '#475569', lineHeight: '1.4' }}
               >
                 <div style={{ fontWeight: '700', color: '#0F172A', marginBottom: '2px' }}>
@@ -1543,7 +1749,11 @@ export function VRMProformaInvoicePrintSheet({
                     value={cfg.termsHeading}
                     fallback="Terms & Conditions:"
                     onSave={(v) => onUpdateSetting?.({ termsHeading: v })}
-                    onRemove={() => onUpdateSetting?.({ showTerms: false })}
+                    onRemove={() => {
+                      onUpdateSetting?.({ showTerms: false });
+                      onElementRemoved?.('showTerms', 'Terms & Conditions');
+                    }}
+                    removeLabel="Terms Heading"
                   />
                 </div>
                 {isEditable ? (
@@ -1619,8 +1829,8 @@ export function VRMProformaInvoicePrintSheet({
               {cfg.showCustomerAcceptance && (
                 <RemovableBlock
                   visible={cfg.showCustomerAcceptance}
+                  settingKey="showCustomerAcceptance"
                   title="Customer Acceptance Box"
-                  onRemove={() => onUpdateSetting?.({ showCustomerAcceptance: false })}
                   style={{
                     padding: '12px 14px',
                     borderBottom: '1px dashed #CBD5E1',
@@ -1636,7 +1846,11 @@ export function VRMProformaInvoicePrintSheet({
                       value={cfg.customerAcceptanceHeading}
                       fallback="Customer Acceptance & Signature"
                       onSave={(v) => onUpdateSetting?.({ customerAcceptanceHeading: v })}
-                      onRemove={() => onUpdateSetting?.({ showCustomerAcceptance: false })}
+                      onRemove={() => {
+                        onUpdateSetting?.({ showCustomerAcceptance: false });
+                        onElementRemoved?.('showCustomerAcceptance', 'Customer Acceptance');
+                      }}
+                      removeLabel="Customer Acceptance"
                     />
                   </div>
                   <div style={{ borderBottom: '1px solid #94A3B8', width: '80%', margin: '14px auto 4px auto' }} />
@@ -1654,8 +1868,8 @@ export function VRMProformaInvoicePrintSheet({
               {cfg.showSignatoryStamp && (
                 <RemovableBlock
                   visible={cfg.showSignatoryStamp}
+                  settingKey="showSignatoryStamp"
                   title="Signatory & Stamp"
-                  onRemove={() => onUpdateSetting?.({ showSignatoryStamp: false })}
                   style={{
                     flex: 1,
                     padding: '12px 14px',
@@ -1782,15 +1996,19 @@ export function VRMProformaInvoicePrintSheet({
       {cfg.showFooterNote !== false && cfg.footerNote && (
         <RemovableBlock
           visible={cfg.showFooterNote !== false}
+          settingKey="showFooterNote"
           title="Footer Note"
-          onRemove={() => onUpdateSetting?.({ showFooterNote: false })}
           style={{ marginTop: '10px', textAlign: 'center', fontSize: '9.5px', color: '#64748B' }}
         >
           <EditableText
             value={cfg.footerNote}
             fallback="This is a Computer Generated Proforma Invoice and does not require physical signature unless requested."
             onSave={(v) => onUpdateSetting?.({ footerNote: v })}
-            onRemove={() => onUpdateSetting?.({ showFooterNote: false })}
+            onRemove={() => {
+              onUpdateSetting?.({ showFooterNote: false });
+              onElementRemoved?.('showFooterNote', 'Footer Note');
+            }}
+            removeLabel="Footer Note"
           />
         </RemovableBlock>
       )}
@@ -2761,6 +2979,9 @@ function TemplateCustomizerDrawer({
 export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
   const [isExporting, setIsExporting] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [currentPiData, setCurrentPiData] = useState(piData);
+  const [undoToast, setUndoToast] = useState(null);
+  const undoTimeoutRef = useRef(null);
 
   // Load saved preferences or fall back to defaults
   const [templateSettings, setTemplateSettings] = useState(() => {
@@ -2777,6 +2998,19 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
 
   const handleUpdateSettings = (updates) => {
     setTemplateSettings(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleElementRemoved = (key, label) => {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setUndoToast({ key, label, message: `Removed "${label}"` });
+    undoTimeoutRef.current = setTimeout(() => setUndoToast(null), 8000);
+  };
+
+  const handleUndo = () => {
+    if (undoToast && undoToast.key) {
+      handleUpdateSettings({ [undoToast.key]: true });
+      setUndoToast(null);
+    }
   };
 
   const handleSaveAsDefault = () => {
@@ -2814,7 +3048,8 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        ignoreElements: (element) => element.classList?.contains('no-print')
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -2999,9 +3234,13 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         {/* LIVE PRINTABLE DOCUMENT SHEET */}
         <div style={{ flex: 1, minWidth: '0' }}>
           <VRMProformaInvoicePrintSheet
-            piData={piData}
+            piData={currentPiData}
             settings={templateSettings}
             id="printable-proforma-invoice"
+            isEditable={true}
+            onUpdateSetting={handleUpdateSettings}
+            onUpdatePiData={(patch) => setCurrentPiData(prev => ({ ...prev, ...patch }))}
+            onElementRemoved={handleElementRemoved}
           />
         </div>
 
@@ -3016,6 +3255,50 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
           />
         )}
       </div>
+
+      {/* FLOATING UNDO TOAST */}
+      {undoToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          padding: '10px 20px',
+          borderRadius: '30px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          zIndex: 100000,
+          border: '1px solid rgba(255,255,255,0.15)'
+        }}>
+          <span style={{ fontSize: '12.5px', fontWeight: '600' }}>
+            {undoToast.message}
+          </span>
+          <button
+            type="button"
+            onClick={handleUndo}
+            style={{
+              backgroundColor: '#ECFEFF',
+              color: '#0E7490',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '4px 12px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Undo2 size={13} />
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }
