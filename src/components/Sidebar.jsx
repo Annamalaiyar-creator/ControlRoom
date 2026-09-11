@@ -63,7 +63,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
         { label: 'Dashboard', icon: LayoutDashboard },
         { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
         { label: 'Proforma Invoice', icon: Receipt },
-        { label: 'Print Templates', icon: Palette, badge: 'Studio' },
         { label: 'Items Directory', icon: Boxes },
         { label: 'Raw Material Directory', icon: Layers },
         { label: 'Inventory Stores', icon: Warehouse }
@@ -181,7 +180,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
             { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart, badge: realAccountsAwaitingPOCount > 0 ? String(realAccountsAwaitingPOCount) : undefined },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
-            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Payments', icon: Wallet }
           ]
         },
@@ -212,7 +210,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'BOM Orders', icon: GitBranch },
             { label: 'Proforma Invoice', icon: Receipt },
-            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Stock Status', icon: Warehouse }
           ]
         },
@@ -297,7 +294,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
               badge: realPendingPOCount > 0 ? String(realPendingPOCount) : undefined 
             },
             { label: 'Proforma Invoice', icon: FileText },
-            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Preset Management', icon: Layers }
           ]
         },
@@ -314,16 +310,16 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       sections = [...procurementSections];
     }
 
-    // Always ensure Zoho Integration & Print Templates are accessible
-    const hasPrintTemplates = sections.some(s => s.items && s.items.some(i => i.label === 'Print Templates'));
+    // Always ensure Zoho Integration & Templates are accessible under SYSTEM & CONFIG
+    const hasTemplates = sections.some(s => s.items && s.items.some(i => i.label === 'Templates' || i.label === 'Print Templates' || i.targetTab === 'Templates'));
     const sysSection = sections.find(s => s.category === 'SYSTEM & CONFIG');
     if (sysSection) {
-      if (!hasPrintTemplates) sysSection.items.unshift({ label: 'Print Templates', icon: Palette, badge: 'Studio' });
+      if (!hasTemplates) sysSection.items.unshift({ label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' });
     } else {
       sections.push({
         category: 'SYSTEM & CONFIG',
         items: [
-          { label: 'Print Templates', icon: Palette, badge: 'Studio' },
+          { label: 'Templates', targetTab: 'Templates', icon: Palette, badge: 'Studio' },
           { label: 'Zoho Integration', icon: GitBranch }
         ]
       });
@@ -335,7 +331,9 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
   const sections = getSectionsForRole(userRole);
 
   const normalizeTab = (tab) => {
-    return tab === 'Performa Invoice' ? 'Proforma Invoice' : tab;
+    if (tab === 'Performa Invoice') return 'Proforma Invoice';
+    if (tab === 'Print Templates' || tab === 'Template Studio' || tab === 'Template Customizer' || tab === 'Templetes') return 'Templates';
+    return tab;
   };
 
   const getBadgeStyle = (label) => {

@@ -348,7 +348,7 @@ function App() {
                 handleTabChange('Sales BOM');
               }} 
             />
-          ) : (activeTab === 'Print Templates' || activeTab === 'Template Studio' || activeTab === 'Template Customizer') ? (
+          ) : (activeTab === 'Templates' || activeTab === 'Templetes' || activeTab === 'Print Templates' || activeTab === 'Template Studio' || activeTab === 'Template Customizer') ? (
             <VRMTemplateStudioView onBackToPI={() => handleTabChange('Proforma Invoice')} />
           ) : activeTab === 'Purchase Orders' ? (
             <PurchaseOrdersView 
