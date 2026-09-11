@@ -200,6 +200,7 @@ export default function BomOrdersView(props) {
   const [bomSubmitStage, setBomSubmitStage] = useState(''); // 'validating' | 'assigning' | 'reserving' | 'saving' | 'completed'
   const [bomSubmitAssignedCode, setBomSubmitAssignedCode] = useState('');
   const isSubmittingBomRef = useRef(false);
+  const [newBomSourcePiNo, setNewBomSourcePiNo] = useState('');
 
   // Comprehensive BOM Form Validation Helper
   const validateBomForm = (isDraft = false) => {
@@ -826,6 +827,9 @@ export default function BomOrdersView(props) {
           gstRate: it.gstRate || '18%'
         })));
       }
+      if (pendingPi.sourcePiNo || pendingPi.piNo) {
+        setNewBomSourcePiNo(pendingPi.sourcePiNo || pendingPi.piNo);
+      }
       if (typeof onClearConvertingPiData === 'function') onClearConvertingPiData();
     };
 
@@ -856,23 +860,20 @@ export default function BomOrdersView(props) {
     };
   }, [convertingPiData]);
 
-  // Open Create BOM form handler
+  // Direct Create BOM disabled per workflow policy (BOM MUST originate from an issued Proforma Invoice)
   const handleOpenCreateBom = async () => {
-    setNewBomSalesPerson(getEffectiveSalesPerson());
-    setNewBomProductName('');
-    setBomMaterialsList([]);
-    setNewBomPaymentProofDoc(null);
-    setNewBomDeliveryProofDoc(null);
-    setNewBomRemarks('');
-    setSameAsBilling(false);
-    setNewBomDeliveryStreet('');
-    setNewBomDeliveryCity('');
-    setNewBomDeliveryState('');
-    setNewBomDeliveryPincode('');
-    // Do not consume or reserve BOM numbers ahead of time.
-    // Sequential number will be assigned atomically at the exact moment of creation/submission.
-    setNewBomCode('');
-    setShowBOMForm(true);
+    showCustomAlert({
+      title: '⚠️ Proforma Invoice Required',
+      message: 'Per company workflow policy, a BOM cannot be created directly from scratch. Please create or open an issued Proforma Invoice (PI) first, then click "Convert to BOM".',
+      type: 'warning'
+    });
+    if (typeof props.onChangeTab === 'function') {
+      props.onChangeTab('Proforma Invoice');
+    } else if (typeof props.onNavigateTab === 'function') {
+      props.onNavigateTab('Proforma Invoice');
+    } else {
+      window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { detail: 'Proforma Invoice' }));
+    }
   };
 
   // Row selection handler
@@ -1594,11 +1595,31 @@ export default function BomOrdersView(props) {
               <ShoppingCart style={{ width: '24px', height: '24px', color: '#FFFFFF' }} />
             </div>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
-                Create Sales Bill of Materials (BOM)
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.3px' }}>
+                  Create Sales Bill of Materials (BOM)
+                </h1>
+                {newBomSourcePiNo && (
+                  <span style={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255,255,255,0.4)',
+                    padding: '3px 12px',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <FileText size={12} /> Converted from PI: {newBomSourcePiNo}
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: '13px', color: '#CFFAFE', margin: '4px 0 0 0' }}>
-                Configure customer order, specify delivery destination, upload document proofs, & compile BOM preset items
+                {newBomSourcePiNo
+                  ? `Imported from Proforma Invoice (${newBomSourcePiNo}). Verify order details & forward to Dispatch.`
+                  : 'Configure customer order, specify delivery destination, upload document proofs, & compile BOM preset items'}
               </p>
             </div>
           </div>
@@ -3124,6 +3145,7 @@ export default function BomOrdersView(props) {
                       setNewBomTransporterName('');
                       setNewBomVehicleNo('');
                       setNewBomTransportScope('VRM Structures');
+                      setNewBomSourcePiNo('');
                     } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
                       // MULTI-CLICK MUTEX GUARD: Drop any secondary clicks while submitting
                       if (isSubmittingBomRef.current) {
@@ -3186,6 +3208,7 @@ export default function BomOrdersView(props) {
                           id: finalCode,
                           bomCode: finalCode,
                           code: finalCode,
+                          sourcePiNo: newBomSourcePiNo || null,
                           date: new Date().toISOString().split('T')[0],
                           deliveryDate: newBomDeliveryDate || null,
                           customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
@@ -3379,6 +3402,7 @@ export default function BomOrdersView(props) {
                         setPresetSetCount(1);
                         setPresetGroups({});
                         setNewBomCode('');
+                        setNewBomSourcePiNo('');
                       } catch (err) {
                         console.error('BOM creation error:', err);
                         alert('Error creating BOM: ' + (err.message || 'Please check your connection and try again.'));
@@ -4609,37 +4633,37 @@ export default function BomOrdersView(props) {
         </div>
         {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
           <button
-            onClick={handleOpenCreateBom}
+            onClick={() => {
+              if (typeof props.onChangeTab === 'function') {
+                props.onChangeTab('Proforma Invoice');
+              } else if (typeof props.onNavigateTab === 'function') {
+                props.onNavigateTab('Proforma Invoice');
+              } else {
+                window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { detail: 'Proforma Invoice' }));
+              }
+            }}
             style={{
-              backgroundColor: '#0E7490',
-              border: 'none',
-              color: '#FFFFFF',
+              backgroundColor: '#FFFFFF',
+              border: '1.5px solid #0E7490',
+              color: '#0E7490',
               height: '40px',
-              padding: '0 6px 0 20px',
+              padding: '0 18px',
               borderRadius: '50px',
               fontSize: '13px',
               fontWeight: '700',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
+              gap: '8px',
               cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)',
+              boxShadow: '0 1px 3px rgba(14, 116, 144, 0.1)',
               transition: 'all 0.2s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFEFF'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+            title="BOMs must originate from an issued Proforma Invoice. Click to view and convert Proforma Invoices."
           >
-            <span>{pageConfig.actionText}</span>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              backgroundColor: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#0E7490'
-            }}>
-              <Plus size={16} strokeWidth={3} />
-            </div>
+            <FileText size={15} color="#0E7490" />
+            <span>Convert from Proforma Invoice →</span>
           </button>
         )}
       </div>
