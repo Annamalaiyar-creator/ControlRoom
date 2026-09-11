@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 import { fetchLiveActiveSessions, revokeSession, revokeAllOtherSessions } from '../services/sessionService';
+import ZohoIntegrationView from './ZohoIntegrationView';
 
-export default function DeveloperPortalView({ userRole, onSignOut, showCustomAlert }) {
+export default function DeveloperPortalView({ userRole, onSignOut, showCustomAlert, onSwitchToErp }) {
   // Sidebar Collapse state
   const [isDevSidebarCollapsed, setIsDevSidebarCollapsed] = useState(false);
 
@@ -577,6 +578,16 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
 
           {/* Quick Actions & Profile */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {onSwitchToErp && (
+              <button
+                onClick={onSwitchToErp}
+                style={{ backgroundColor: '#0284C7', border: '1px solid #38BDF8', color: '#FFFFFF', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 0 12px rgba(14,165,233,0.3)' }}
+                title="Open Control Room ERP View"
+              >
+                <ExternalLink style={{ width: '13px', height: '13px' }} /> Launch Control Room ERP ↗
+              </button>
+            )}
+
             <button
               onClick={handleCheckHealthAgain}
               disabled={isCheckingHealth}
@@ -1385,8 +1396,15 @@ export default function DeveloperPortalView({ userRole, onSignOut, showCustomAle
             </div>
           )}
 
+          {/* THIRD PARTY & WHATSAPP / META INTEGRATIONS VIEW */}
+          {(activeDevTab === 'ThirdPartyIntegrations' || activeDevTab === 'WhatsAppIntegration') && (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '24px', border: '1px solid #CBD5E1', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+              <ZohoIntegrationView userRole={userRole} />
+            </div>
+          )}
+
           {/* OTHER TABS GENERIC PLACEHOLDER */}
-          {!['Dashboard', 'Environments', 'ErrorLogs', 'BackgroundJobs', 'BackupRestore', 'Rollback', 'FeatureFlags', 'ActiveSessions', 'UserManagement', 'ActivityLogs'].includes(activeDevTab) && (
+          {!['Dashboard', 'Environments', 'ErrorLogs', 'BackgroundJobs', 'BackupRestore', 'Rollback', 'FeatureFlags', 'ActiveSessions', 'UserManagement', 'ActivityLogs', 'ThirdPartyIntegrations', 'WhatsAppIntegration'].includes(activeDevTab) && (
             <div style={{ backgroundColor: '#1E293B', padding: '40px', borderRadius: '10px', border: '1px solid #334155', textAlign: 'center' }}>
               <Code style={{ width: '40px', height: '40px', color: '#38BDF8', marginBottom: '12px' }} />
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#F8FAFC' }}>{activeDevTab} Module Active</h3>

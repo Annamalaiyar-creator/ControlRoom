@@ -157,6 +157,11 @@ function App() {
     return localStorage.getItem('controlroom_active_tab') || 'Dashboard';
   });
 
+  // Technical Administrator view mode ('console' or 'erp')
+  const [devViewMode, setDevViewMode] = useState(() => {
+    return localStorage.getItem('controlroom_dev_view_mode') || 'console';
+  });
+
   // Ensure legacy stores are cleaned, but preserve authoritative stores
   useEffect(() => {
     try {
@@ -274,13 +279,17 @@ function App() {
   // Developer / Technical Admin Portal Dedicated Fullscreen Console
   const isDevRole = userRole === 'Technical Administrator' || userRole === 'Developer' || (userRole || '').startsWith('TA') || activeTab === 'Developer Console' || activeTab === 'Developer Portal';
   
-  if (isDevRole) {
+  if (isDevRole && devViewMode === 'console') {
     return (
       <>
         <DeveloperPortalView 
           userRole={userRole} 
           onSignOut={handleSignOut} 
           showCustomAlert={showCustomAlert} 
+          onSwitchToErp={() => {
+            setDevViewMode('erp');
+            localStorage.setItem('controlroom_dev_view_mode', 'erp');
+          }}
         />
         {toastAlert && (
           <NotificationToast 
@@ -325,6 +334,48 @@ function App() {
 
       {/* Main View Wrapper */}
       <main className="main-wrapper">
+        {/* Technical Administrator ERP Mode Banner */}
+        {isDevRole && (
+          <div style={{
+            backgroundColor: '#0F172A',
+            color: '#38BDF8',
+            padding: '8px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '12px',
+            fontWeight: '800',
+            borderBottom: '1px solid #1E293B',
+            zIndex: 999
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38BDF8', boxShadow: '0 0 8px #38BDF8' }} />
+              <span>Technical Administrator Session — Control Room ERP Active (TA Integration Permissions Live)</span>
+            </div>
+            <button
+              onClick={() => {
+                setDevViewMode('console');
+                localStorage.setItem('controlroom_dev_view_mode', 'console');
+              }}
+              style={{
+                backgroundColor: '#0284C7',
+                border: 'none',
+                color: '#FFFFFF',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              « Return to Dev Console
+            </button>
+          </div>
+        )}
+
         {/* Top Header Card */}
         <Header 
           activeTab={activeTab} 
@@ -360,7 +411,7 @@ function App() {
               onNavigateTab={handleTabChange}
             />
           ) : activeTab === 'Zoho Integration' ? (
-            <ZohoIntegrationView />
+            <ZohoIntegrationView userRole={userRole} />
           ) : activeTab === 'Material Calculation Engine' ? (
             <MaterialCalculationEngine onBack={() => handleTabChange('BOM')} />
           ) : (activeTab === 'Inventory Stock Conversion' || activeTab === 'Enter Coil Purchase (in Ton)' || activeTab === 'Inventory - (Auto Conversion)') ? (

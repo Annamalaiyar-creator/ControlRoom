@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   RefreshCw, ExternalLink, CheckCircle2, AlertCircle, 
-  ShieldCheck, ArrowLeftRight, Search, Check, Sparkles, Sliders
+  ShieldCheck, ArrowLeftRight, Search, Check, Sparkles, Sliders,
+  Lock, Plus, Trash2, Shield, Info, Globe, MessageSquare, CreditCard,
+  Zap, Bot, Key, Link2, AlertTriangle, X
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { getSafeZohoItems, getSafeZohoVendors, getSafeZohoPOs } from '../services/zohoSafeSync';
@@ -11,11 +13,17 @@ const DEFAULT_ACTIVE_REFRESH_TOKEN = '1000.69cd7dbd3da3ab8f107f8addf5e9e04c.87b4
 const DEFAULT_ACTIVE_CLIENT_ID = '1000.9U5BAN338075M5HBI3U8K1VBNKUU8K';
 const DEFAULT_ACTIVE_CLIENT_SECRET = 'e82079a5165e3b2e75fdc602f3e08fd38489d75f13';
 
-export default function ZohoIntegrationView() {
+export default function ZohoIntegrationView({ userRole = '' }) {
+  // Role Access Verification
+  const effectiveRole = userRole || localStorage.getItem('controlroom_user_role') || '';
+  const isCeoRole = effectiveRole === 'CEO' || effectiveRole === 'Managing Director' || effectiveRole === 'MD' || effectiveRole.toLowerCase().includes('ceo');
+  const isTaRole = effectiveRole === 'Technical Administrator' || effectiveRole === 'Technical Admin' || effectiveRole === 'Developer' || effectiveRole.startsWith('TA') || effectiveRole.toLowerCase().includes('technical admin');
+
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncTime, setSyncTime] = useState(null);
   const [syncMessage, setSyncMessage] = useState('');
+  const [permissionAlert, setPermissionAlert] = useState(null);
   const [orgId, setOrgId] = useState(DEFAULT_ACTIVE_ORG_ID);
   const [apiToken, setApiToken] = useState(DEFAULT_ACTIVE_REFRESH_TOKEN);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,18 +41,28 @@ export default function ZohoIntegrationView() {
     orgId: DEFAULT_ACTIVE_ORG_ID
   });
 
-  // Connection toggles state for all integrations catalog
-  const [integrationsState, setIntegrationsState] = useState({
-    zoho: true,
-    mailchimp: true,
-    square: true,
-    brave: true,
-    zapier: true,
-    linear: true,
-    framer: true,
-    chatgpt: true,
-    webflow: true,
-    stripe: true
+  // Connection toggles state for all integrations
+  const [integrationsState, setIntegrationsState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_integrations_state');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      zoho: true,
+      meta_whatsapp: true,
+      stripe: true,
+      zapier: true,
+      chatgpt: true
+    };
+  });
+
+  // Custom integrations dynamically added by Technical Administrator (TA)
+  const [customApps, setCustomApps] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_custom_integrations');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [];
   });
 
   const [showConfigForm, setShowConfigForm] = useState(false);
@@ -55,6 +73,23 @@ export default function ZohoIntegrationView() {
   const [saveStatusMsg, setSaveStatusMsg] = useState('');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [activeConfigureApp, setActiveConfigureApp] = useState(null);
+  const [showAddAppModal, setShowAddAppModal] = useState(false);
+  const [newAppForm, setNewAppForm] = useState({
+    name: '',
+    category: 'Custom API',
+    desc: '',
+    apiKey: '',
+    webhookUrl: '',
+    docLink: ''
+  });
+
+  // Save integrations state
+  const persistIntegrationsState = (newState) => {
+    setIntegrationsState(newState);
+    try {
+      localStorage.setItem('controlroom_integrations_state', JSON.stringify(newState));
+    } catch (_) {}
+  };
 
   // Fetch current connection status and live counts
   const checkStatusAndCounts = async () => {
@@ -71,7 +106,11 @@ export default function ZohoIntegrationView() {
           if (parsed.clientSecret) setFormClientSecret(parsed.clientSecret);
           if (parsed.connected !== undefined) {
             setStatus(prev => ({ ...prev, connected: parsed.connected, orgId: parsed.orgId || prev.orgId }));
-            setIntegrationsState(prev => ({ ...prev, zoho: parsed.connected }));
+            setIntegrationsState(prev => {
+              const updated = { ...prev, zoho: parsed.connected };
+              localStorage.setItem('controlroom_integrations_state', JSON.stringify(updated));
+              return updated;
+            });
           }
         } catch (_) {}
       }
@@ -98,7 +137,11 @@ export default function ZohoIntegrationView() {
           if (parsedCloud.clientSecret) setFormClientSecret(parsedCloud.clientSecret);
           if (parsedCloud.connected !== undefined) {
             setStatus(prev => ({ ...prev, connected: parsedCloud.connected, orgId: parsedCloud.orgId || prev.orgId }));
-            setIntegrationsState(prev => ({ ...prev, zoho: parsedCloud.connected }));
+            setIntegrationsState(prev => {
+              const updated = { ...prev, zoho: parsedCloud.connected };
+              localStorage.setItem('controlroom_integrations_state', JSON.stringify(updated));
+              return updated;
+            });
           }
         }
       } catch (sbErr) {
@@ -115,7 +158,7 @@ export default function ZohoIntegrationView() {
       let vCount = Array.isArray(safeVendors) ? safeVendors.length : 0;
       let pCount = Array.isArray(safePOs) ? safePOs.length : 0;
 
-      // 2. Query backend API if available
+      // Query backend API if available
       const [statusRes, itemsRes, vendorsRes, poRes] = await Promise.all([
         fetch('/api/zoho/status').catch(() => null),
         fetch('/api/zoho/items').catch(() => null),
@@ -173,7 +216,28 @@ export default function ZohoIntegrationView() {
     }
   };
 
+  // RBAC Action Handlers
+  const handleZohoConfigureClick = () => {
+    if (!isCeoRole) {
+      setPermissionAlert({
+        title: 'CEO Authorization Required',
+        message: 'Only the Chief Executive Officer (CEO) has permissions to view credentials or configure the Zoho Books organization connection.',
+        roleRequired: 'CEO'
+      });
+      return;
+    }
+    setShowConfigForm(true);
+  };
+
   const handleDisconnect = () => {
+    if (!isCeoRole) {
+      setPermissionAlert({
+        title: 'CEO Authorization Required',
+        message: 'Only the CEO is authorized to disconnect or deactivate the Zoho Books integration.',
+        roleRequired: 'CEO'
+      });
+      return;
+    }
     setShowDisconnectConfirm(true);
   };
 
@@ -205,7 +269,7 @@ export default function ZohoIntegrationView() {
       }, { onConflict: 'employee' });
 
       setStatus({ connected: false, organizationName: null });
-      setIntegrationsState(prev => ({ ...prev, zoho: false }));
+      persistIntegrationsState({ ...integrationsState, zoho: false });
     } catch (e) {
       console.error(e);
     } finally {
@@ -215,6 +279,10 @@ export default function ZohoIntegrationView() {
 
   const handleSaveAccount = async (e) => {
     if (e) e.preventDefault();
+    if (!isCeoRole) {
+      alert('Unauthorized: Only CEO can modify Zoho configuration.');
+      return;
+    }
     if (!formOrgId || !formRefreshToken) {
       alert('Please enter at least the Organization ID and Refresh Token.');
       return;
@@ -237,10 +305,8 @@ export default function ZohoIntegrationView() {
       updated_at: new Date().toISOString()
     };
 
-    // 1. Save locally to localStorage so it is never lost on refresh
     localStorage.setItem('zoho_config', JSON.stringify(payload));
 
-    // 2. Persist to Supabase leaves table (so all devices and browser tabs share credentials)
     try {
       const { data: existing } = await supabase
         .from('leaves')
@@ -274,18 +340,14 @@ export default function ZohoIntegrationView() {
       console.warn('Saved locally; Supabase sync note:', sbErr);
     }
 
-    // 3. Attempt POST to /api/zoho/credentials if Express backend is running (optional in Plesk static setup)
     try {
       await fetch('/api/zoho/credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       }).catch(() => null);
-    } catch (_) {
-      // Ignored if IIS static hosting doesn't run Express
-    }
+    } catch (_) {}
 
-    // 4. Update UI state to Connected
     setOrgId(targetOrgId);
     setApiToken(targetRefreshToken);
     setStatus({
@@ -293,7 +355,7 @@ export default function ZohoIntegrationView() {
       organizationName: 'ARMS AI',
       orgId: targetOrgId
     });
-    setIntegrationsState(prev => ({ ...prev, zoho: true }));
+    persistIntegrationsState({ ...integrationsState, zoho: true });
     setSaveStatusMsg('✓ Zoho Account saved and connected successfully!');
 
     setTimeout(() => {
@@ -304,18 +366,129 @@ export default function ZohoIntegrationView() {
     setLoading(false);
   };
 
-  const toggleIntegration = (id) => {
-    setIntegrationsState(prev => {
-      const nextVal = !prev[id];
-      if (id === 'zoho' && !nextVal) {
-        handleDisconnect();
-      }
-      return { ...prev, [id]: nextVal };
-    });
+  const handleThirdPartyConfigureClick = (app) => {
+    if (!isTaRole) {
+      setPermissionAlert({
+        title: 'Technical Administrator (TA) Required',
+        message: `Only the Technical Administrator (TA) is authorized to configure API credentials, webhook endpoints, or settings for ${app.name}.`,
+        roleRequired: 'TA'
+      });
+      return;
+    }
+    setActiveConfigureApp(app);
   };
 
-  // Catalog containing only Zoho Books
-  const catalog = [
+  const handleToggle = (app) => {
+    if (app.isZoho) {
+      if (!isCeoRole) {
+        setPermissionAlert({
+          title: 'CEO Authorization Required',
+          message: 'Only the CEO can activate, deactivate, or toggle Zoho Books integration.',
+          roleRequired: 'CEO'
+        });
+        return;
+      }
+      const nextVal = !integrationsState.zoho;
+      if (!nextVal) {
+        handleDisconnect();
+      } else {
+        persistIntegrationsState({ ...integrationsState, zoho: true });
+        setStatus(prev => ({ ...prev, connected: true }));
+      }
+    } else {
+      if (!isTaRole) {
+        setPermissionAlert({
+          title: 'Technical Administrator (TA) Required',
+          message: `Only the Technical Administrator (TA) can activate, deactivate, or toggle third-party integrations (${app.name}).`,
+          roleRequired: 'TA'
+        });
+        return;
+      }
+      const nextVal = !integrationsState[app.id];
+      persistIntegrationsState({ ...integrationsState, [app.id]: nextVal });
+    }
+  };
+
+  const handleAddNewAppClick = () => {
+    if (!isTaRole) {
+      setPermissionAlert({
+        title: 'Technical Administrator (TA) Required',
+        message: 'Only the Technical Administrator (TA) can register and add new third-party integrations or APIs to Control Room.',
+        roleRequired: 'TA'
+      });
+      return;
+    }
+    setShowAddAppModal(true);
+  };
+
+  const handleSaveNewApp = (e) => {
+    e.preventDefault();
+    if (!isTaRole) return;
+    if (!newAppForm.name.trim()) return;
+
+    const newId = 'custom_' + Date.now();
+    const newApp = {
+      id: newId,
+      name: newAppForm.name.trim(),
+      category: newAppForm.category,
+      desc: newAppForm.desc.trim() || 'Custom API webhook integration managed by Technical Administrator.',
+      apiKey: newAppForm.apiKey,
+      webhookUrl: newAppForm.webhookUrl,
+      docLink: newAppForm.docLink || '#',
+      isCustom: true,
+      isZoho: false,
+      accessRole: 'TA'
+    };
+
+    const updated = [...customApps, newApp];
+    setCustomApps(updated);
+    try {
+      localStorage.setItem('controlroom_custom_integrations', JSON.stringify(updated));
+    } catch (_) {}
+
+    persistIntegrationsState({ ...integrationsState, [newId]: true });
+    setShowAddAppModal(false);
+    setNewAppForm({
+      name: '',
+      category: 'Custom API',
+      desc: '',
+      apiKey: '',
+      webhookUrl: '',
+      docLink: ''
+    });
+    setSyncMessage(`✓ Added integration for ${newApp.name}. Live platform-wide.`);
+    setTimeout(() => setSyncMessage(''), 4000);
+  };
+
+  const handleRemoveIntegration = (appId, appName) => {
+    if (!isTaRole) {
+      setPermissionAlert({
+        title: 'Technical Administrator (TA) Required',
+        message: 'Only the Technical Administrator (TA) can remove third-party integrations.',
+        roleRequired: 'TA'
+      });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to remove ${appName}? This will revoke access across the entire organization.`)) {
+      return;
+    }
+
+    const updated = customApps.filter(a => a.id !== appId);
+    setCustomApps(updated);
+    try {
+      localStorage.setItem('controlroom_custom_integrations', JSON.stringify(updated));
+    } catch (_) {}
+
+    const updatedState = { ...integrationsState };
+    delete updatedState[appId];
+    persistIntegrationsState(updatedState);
+    setSyncMessage(`Removed integration ${appName}.`);
+    setTimeout(() => setSyncMessage(''), 3000);
+  };
+
+  // Master Catalog with Role-Based Separation
+  const defaultCatalog = [
     {
       id: 'zoho',
       name: 'Zoho Books',
@@ -323,42 +496,116 @@ export default function ZohoIntegrationView() {
       desc: 'Real-time 2-way sync for Purchase Orders, Invoices, Items Catalog, and Vendor Records.',
       link: 'https://books.zoho.in',
       isZoho: true,
-      logoBg: '#FFFBEB',
-      logoBorder: '#FDE68A',
+      accessRole: 'CEO',
       icon: (
-        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#FFE01B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#0F172A', fontSize: '18px' }}>
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#FFE01B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: '#0F172A', fontSize: '20px', boxShadow: '0 2px 6px rgba(234,179,8,0.3)' }}>
           Z
+        </div>
+      )
+    },
+    {
+      id: 'meta_whatsapp',
+      name: 'Meta Business (WhatsApp & Instagram)',
+      category: 'Social & Customer Messaging',
+      desc: 'Official Meta Cloud API for WhatsApp Order Updates, Dispatch Delivery Tracking & Instagram Direct Inquiry routing.',
+      link: 'https://business.facebook.com',
+      isZoho: false,
+      accessRole: 'TA',
+      icon: (
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', background: 'linear-gradient(135deg, #25D366 0%, #0084FF 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(37,211,102,0.3)' }}>
+          <MessageSquare size={22} />
+        </div>
+      )
+    },
+    {
+      id: 'stripe',
+      name: 'Stripe Payments',
+      category: 'Payment Gateway',
+      desc: 'Automated payment link generation, instant customer proforma checkout & live bank reconciliation.',
+      link: 'https://stripe.com',
+      isZoho: false,
+      accessRole: 'TA',
+      icon: (
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#635BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: '900', fontSize: '18px', boxShadow: '0 2px 8px rgba(99,91,255,0.3)' }}>
+          <CreditCard size={20} />
+        </div>
+      )
+    },
+    {
+      id: 'zapier',
+      name: 'Zapier Automations',
+      category: 'Workflow Automation',
+      desc: 'Multi-app webhooks connecting Control Room triggers with Google Sheets, Slack, and email notifications.',
+      link: 'https://zapier.com',
+      isZoho: false,
+      accessRole: 'TA',
+      icon: (
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#FF4F00', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: '900', boxShadow: '0 2px 8px rgba(255,79,0,0.3)' }}>
+          <Zap size={22} />
+        </div>
+      )
+    },
+    {
+      id: 'chatgpt',
+      name: 'OpenAI / ChatGPT',
+      category: 'AI Assistant & NLP',
+      desc: 'Smart BOM parsing from supplier PDFs, automated quotation analysis & predictive material costing.',
+      link: 'https://openai.com',
+      isZoho: false,
+      accessRole: 'TA',
+      icon: (
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#10A37F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(16,163,127,0.3)' }}>
+          <Bot size={22} />
         </div>
       )
     }
   ];
 
-  const filteredCatalog = catalog.filter(item => {
+  // Merge default catalog with custom integrations added by TA
+  const fullCatalog = [
+    ...defaultCatalog,
+    ...customApps.map(c => ({
+      ...c,
+      icon: (
+        <div style={{ width: '100%', height: '100%', borderRadius: '12px', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
+          <Globe size={20} />
+        </div>
+      )
+    }))
+  ];
+
+  const filteredCatalog = fullCatalog.filter(item => {
     const matchesSearch = !searchQuery ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.desc.toLowerCase().includes(searchQuery.toLowerCase());
+      item.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCat = selectedCategory === 'All' || item.category.includes(selectedCategory);
     return matchesSearch && matchesCat;
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', minWidth: 0, boxSizing: 'border-box', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%', minWidth: 0, boxSizing: 'border-box', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* HEADER ROW WITH TITLE & SEARCH / FILTER CONTROLS */}
+      {/* HEADER ROW WITH TITLE, SEARCH & TA ADD BUTTON */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', margin: 0, color: '#0F172A' }}>
-            Integrations & App Hub
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0, color: '#0F172A', letterSpacing: '-0.5px' }}>
+              Integrations & App Hub
+            </h2>
+            <span style={{ fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '12px', backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>
+              Shared Organization-Wide
+            </span>
+          </div>
           <span style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
-            Connect your software tools, accounting platforms, AI assistants, and payment gateways.
+            Central hub for enterprise ERP, messaging APIs, payment gateways, and automated webhook workflows.
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {/* Search bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '0 12px', height: '40px', backgroundColor: '#FFFFFF', width: '280px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '0 12px', height: '40px', backgroundColor: '#FFFFFF', width: '240px' }}>
             <Search style={{ width: '16px', height: '16px', color: '#64748B' }} />
             <input
               type="text"
@@ -368,6 +615,133 @@ export default function ZohoIntegrationView() {
               style={{ border: 'none', background: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#1E293B' }}
             />
           </div>
+
+          {/* Sync All button for Zoho */}
+          <button
+            onClick={handleSyncAll}
+            disabled={syncing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              borderRadius: '10px',
+              padding: '0 14px',
+              height: '40px',
+              fontSize: '13px',
+              fontWeight: '700',
+              color: '#334155',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+            }}
+          >
+            <RefreshCw style={{ width: '14px', height: '14px', animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+            {syncing ? 'Syncing...' : 'Sync Live'}
+          </button>
+
+          {/* Add New Integration Button - Accessible to TA */}
+          <button
+            onClick={handleAddNewAppClick}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: isTaRole ? '#0284C7' : '#94A3B8',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '0 16px',
+              height: '40px',
+              fontSize: '13px',
+              fontWeight: '800',
+              color: '#FFFFFF',
+              cursor: isTaRole ? 'pointer' : 'not-allowed',
+              boxShadow: isTaRole ? '0 2px 8px rgba(2,132,199,0.3)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+            title={isTaRole ? "Add new integration (TA Access)" : "TA Login required to add new integrations"}
+          >
+            {isTaRole ? <Plus size={16} /> : <Lock size={14} />}
+            + Add Integration
+          </button>
+        </div>
+      </div>
+
+      {/* RBAC GOVERNANCE POLICY BANNER */}
+      <div style={{
+        backgroundColor: '#F8FAFC',
+        border: '1px solid #E2E8F0',
+        borderRadius: '14px',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '14px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            backgroundColor: '#EEF2FF',
+            color: '#4F46E5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Shield size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Security Governance & Role Separation Enforced</span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+              • <strong style={{ color: '#0F172A' }}>Zoho Books</strong> configuration & disconnect access is restricted strictly to the <strong style={{ color: '#D97706' }}>CEO Login</strong>.
+              <br />
+              • <strong style={{ color: '#0F172A' }}>Meta (WhatsApp / Instagram) & Other APIs</strong> are governed strictly by the <strong style={{ color: '#0284C7' }}>Technical Administrator (TA)</strong>.
+              <br />
+              • All active integrations operate smoothly in the background for all employees across the entire website.
+            </div>
+          </div>
+        </div>
+
+        {/* Current User Session Role Indicator */}
+        <div style={{
+          backgroundColor: isCeoRole ? '#FEF3C7' : isTaRole ? '#E0F2FE' : '#F1F5F9',
+          border: `1px solid ${isCeoRole ? '#FDE68A' : isTaRole ? '#BAE6FD' : '#CBD5E1'}`,
+          borderRadius: '10px',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          {isCeoRole ? (
+            <>
+              <span style={{ fontSize: '14px' }}>👑</span>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '900', color: '#92400E', textTransform: 'uppercase' }}>Current Session</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#78350F' }}>CEO (Master Access to Zoho)</div>
+              </div>
+            </>
+          ) : isTaRole ? (
+            <>
+              <span style={{ fontSize: '14px' }}>🛠️</span>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '900', color: '#0369A1', textTransform: 'uppercase' }}>Current Session</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#075985' }}>Technical Admin (TA Full API Access)</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Lock size={15} style={{ color: '#64748B' }} />
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Current Session</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>{effectiveRole || 'Standard Employee'} (Protected Read-Only)</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -378,13 +752,18 @@ export default function ZohoIntegrationView() {
         </div>
       )}
 
-      {/* CONNECT ZOHO CREDENTIALS FORM DRAWER / MODAL */}
-      {showConfigForm && (
-        <div className="section-card" style={{ padding: '24px', backgroundColor: '#FAFAFA', border: '2px solid #6366F1', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* CONNECT ZOHO CREDENTIALS FORM DRAWER / MODAL (CEO EXCLUSIVE) */}
+      {showConfigForm && isCeoRole && (
+        <div className="section-card" style={{ padding: '24px', backgroundColor: '#FFFBEB', border: '2px solid #F59E0B', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <strong style={{ fontSize: '16px', color: '#0F172A' }}>Configure Zoho Books API Connection</strong>
-              <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>Enter your Zoho Books Organization ID and OAuth Refresh Token to connect.</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>👑</span>
+              <div>
+                <strong style={{ fontSize: '16px', color: '#0F172A' }}>Configure Zoho Books API Connection (CEO Exclusive)</strong>
+                <span style={{ fontSize: '12px', color: '#92400E', display: 'block', marginTop: '2px' }}>
+                  Enter your Zoho Books Organization ID and OAuth Refresh Token. Changes take effect across all organization users.
+                </span>
+              </div>
             </div>
             <button 
               onClick={() => setShowConfigForm(false)}
@@ -466,24 +845,25 @@ export default function ZohoIntegrationView() {
               <button 
                 type="submit" 
                 disabled={loading}
-                style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#6366F1', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#D97706', color: '#FFFFFF', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(217,119,6,0.3)' }}
               >
-                {loading ? 'Connecting...' : 'Save & Connect Account'}
+                {loading ? 'Connecting...' : 'Save & Connect (CEO)'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* 3-COLUMN GRID CATALOG MATCHING EXACT USER SCREENSHOT */}
+      {/* 3-COLUMN GRID CATALOG WITH ROLE-BASED ACCESS CONTROL */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
         gap: '20px',
         width: '100%'
       }}>
         {filteredCatalog.map(app => {
           const isConnected = Boolean(integrationsState[app.id]);
+          const canUserConfigure = app.isZoho ? isCeoRole : isTaRole;
 
           return (
             <div
@@ -491,44 +871,111 @@ export default function ZohoIntegrationView() {
               style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: '16px',
-                border: '1px solid #E2E8F0',
+                border: isConnected ? '1px solid #E2E8F0' : '1px solid #F1F5F9',
                 padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                boxShadow: isConnected ? '0 2px 8px rgba(0, 0, 0, 0.04)' : '0 1px 3px rgba(0, 0, 0, 0.02)',
                 transition: 'all 0.2s ease',
                 position: 'relative'
               }}
             >
               <div>
-                {/* Header Row: App Logo & External Link Icon */}
+                {/* Header Row: App Logo, Access Badge & External Link */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ width: '46px', height: '46px', flexShrink: 0 }}>
                     {app.icon}
                   </div>
 
-                  <a
-                    href={app.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: '#94A3B8', padding: '4px', borderRadius: '6px', transition: 'color 0.15s ease' }}
-                    title={`Open ${app.name} Portal`}
-                  >
-                    <ExternalLink style={{ width: '16px', height: '16px' }} />
-                  </a>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Role Access Indicator Pill */}
+                    {app.isZoho ? (
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: isCeoRole ? '#FEF3C7' : '#F1F5F9',
+                        color: isCeoRole ? '#B45309' : '#64748B',
+                        border: `1px solid ${isCeoRole ? '#FDE68A' : '#E2E8F0'}`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {isCeoRole ? '👑 CEO Admin' : <><Lock size={11} /> CEO Only</>}
+                      </span>
+                    ) : (
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: isTaRole ? '#E0F2FE' : '#F1F5F9',
+                        color: isTaRole ? '#0369A1' : '#64748B',
+                        border: `1px solid ${isTaRole ? '#BAE6FD' : '#E2E8F0'}`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {isTaRole ? '🛠️ TA Admin' : <><Lock size={11} /> TA Only</>}
+                      </span>
+                    )}
+
+                    {app.link && (
+                      <a
+                        href={app.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#94A3B8', padding: '4px', borderRadius: '6px', transition: 'color 0.15s ease' }}
+                        title={`Open ${app.name} Portal`}
+                      >
+                        <ExternalLink style={{ width: '15px', height: '15px' }} />
+                      </a>
+                    )}
+
+                    {/* Delete / Remove Custom App (TA Only) */}
+                    {app.isCustom && isTaRole && (
+                      <button
+                        onClick={() => handleRemoveIntegration(app.id, app.name)}
+                        style={{ border: 'none', background: 'none', color: '#EF4444', padding: '4px', cursor: 'pointer' }}
+                        title="Remove integration (TA Only)"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* App Name & Description */}
-                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: '14px 0 6px 0' }}>
-                  {app.name}
-                </h3>
-                <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: '1.5', minHeight: '40px' }}>
+                {/* App Name & Category */}
+                <div style={{ marginTop: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {app.category}
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', margin: '3px 0 6px 0' }}>
+                    {app.name}
+                  </h3>
+                </div>
+
+                <p style={{ fontSize: '12.5px', color: '#64748B', margin: 0, lineHeight: '1.5', minHeight: '40px' }}>
                   {app.desc}
                 </p>
+
+                {/* Live Platform-Wide Status Badge */}
+                <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: isConnected ? '#10B981' : '#94A3B8'
+                  }} />
+                  <span style={{ fontSize: '11.5px', fontWeight: '700', color: isConnected ? '#059669' : '#64748B' }}>
+                    {isConnected ? 'Active Across Whole Website' : 'Deactivated / Offline'}
+                  </span>
+                </div>
               </div>
 
-              {/* Bottom Card Footer Row matching exact screenshot */}
+              {/* Bottom Card Footer Row */}
               <div style={{
                 borderTop: '1px solid #F1F5F9',
                 paddingTop: '14px',
@@ -537,48 +984,57 @@ export default function ZohoIntegrationView() {
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                {/* Left Action: Configure Button */}
+                {/* Left Action: Configure Button with RBAC Protection */}
                 <button
                   onClick={() => {
                     if (app.isZoho) {
-                      setShowConfigForm(true);
+                      handleZohoConfigureClick();
                     } else {
-                      setActiveConfigureApp(app);
+                      handleThirdPartyConfigureClick(app);
                     }
                   }}
                   style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    color: '#334155',
+                    backgroundColor: canUserConfigure ? '#FFFFFF' : '#F8FAFC',
+                    border: `1px solid ${canUserConfigure ? '#CBD5E1' : '#E2E8F0'}`,
+                    color: canUserConfigure ? '#1E293B' : '#94A3B8',
                     borderRadius: '8px',
                     padding: '6px 14px',
                     fontSize: '12px',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: canUserConfigure ? 'pointer' : 'not-allowed',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    boxShadow: canUserConfigure ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                     transition: 'all 0.15s ease'
                   }}
+                  title={canUserConfigure ? `Configure ${app.name}` : `Restricted: ${app.isZoho ? 'CEO Only' : 'TA Only'}`}
                 >
-                  <ArrowLeftRight style={{ width: '13px', height: '13px', color: '#64748B' }} />
-                  Configure
+                  {canUserConfigure ? (
+                    <ArrowLeftRight style={{ width: '13px', height: '13px', color: '#64748B' }} />
+                  ) : (
+                    <Lock style={{ width: '12px', height: '12px', color: '#94A3B8' }} />
+                  )}
+                  {canUserConfigure ? 'Configure' : 'Locked'}
                 </button>
 
-                {/* Right Action: Modern Toggle Switch matching exact purple toggle in screenshot */}
+                {/* Right Action: Modern Toggle Switch with RBAC Protection */}
                 <div
-                  onClick={() => toggleIntegration(app.id)}
+                  onClick={() => handleToggle(app)}
                   style={{
                     width: '42px',
                     height: '24px',
                     borderRadius: '12px',
-                    backgroundColor: isConnected ? '#6366F1' : '#CBD5E1',
-                    cursor: 'pointer',
+                    backgroundColor: !canUserConfigure 
+                      ? (isConnected ? '#93C5FD' : '#E2E8F0') 
+                      : (isConnected ? '#0284C7' : '#CBD5E1'),
+                    cursor: canUserConfigure ? 'pointer' : 'not-allowed',
                     transition: 'all 0.2s ease',
                     position: 'relative',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    opacity: canUserConfigure ? 1 : 0.8
                   }}
+                  title={canUserConfigure ? `Toggle ${app.name}` : `Restricted: ${app.isZoho ? 'CEO Only' : 'TA Only'}`}
                 >
                   <div style={{
                     width: '18px',
@@ -589,8 +1045,15 @@ export default function ZohoIntegrationView() {
                     top: '3px',
                     left: isConnected ? '21px' : '3px',
                     transition: 'all 0.2s ease',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                  }} />
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {!canUserConfigure && (
+                      <Lock size={9} style={{ color: '#94A3B8' }} />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -598,8 +1061,8 @@ export default function ZohoIntegrationView() {
         })}
       </div>
 
-      {/* DISCONNECT CONFIRM MODAL FOR ZOHO */}
-      {showDisconnectConfirm && (
+      {/* DISCONNECT CONFIRM MODAL FOR ZOHO (CEO ONLY) */}
+      {showDisconnectConfirm && isCeoRole && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '440px', maxWidth: '90%', overflow: 'hidden' }}>
             <div style={{ padding: '20px 24px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FEE2E2', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -607,50 +1070,205 @@ export default function ZohoIntegrationView() {
                 <AlertCircle size={20} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#991B1B' }}>Disconnect Integration</h4>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#B91C1C' }}>Are you sure you want to proceed?</p>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#991B1B' }}>Disconnect Zoho Books (CEO Action)</h4>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#B91C1C' }}>Are you sure you want to disconnect?</p>
               </div>
             </div>
             <div style={{ padding: '20px 24px', fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
-              Disconnecting Zoho Books will pause real-time background sync. You can re-authenticate anytime.
+              Disconnecting Zoho Books will pause real-time background sync for Purchase Orders, Invoices, and Items across the entire platform. Only the CEO can re-connect.
             </div>
             <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button onClick={() => setShowDisconnectConfirm(false)} style={{ border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#475569', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={executeDisconnect} style={{ border: 'none', backgroundColor: '#DC2626', color: '#FFFFFF', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Confirm Disconnect</button>
+              <button onClick={executeDisconnect} style={{ border: 'none', backgroundColor: '#DC2626', color: '#FFFFFF', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Confirm Disconnect</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* OTHER APP CONFIG MODAL */}
-      {activeConfigureApp && (
+      {/* OTHER APP CONFIG MODAL (TA EXCLUSIVE) */}
+      {activeConfigureApp && isTaRole && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '460px', maxWidth: '90%', padding: '24px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '480px', maxWidth: '90%', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '36px', height: '36px' }}>
                   {activeConfigureApp.icon}
                 </div>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>Configure {activeConfigureApp.name}</h4>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>Configure {activeConfigureApp.name}</h4>
+                  <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: '800' }}>TA Administrative Authority</span>
+                </div>
               </div>
               <button onClick={() => setActiveConfigureApp(null)} style={{ border: 'none', background: 'none', fontSize: '16px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
+            
             <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 16px 0', lineHeight: '1.5' }}>
               {activeConfigureApp.desc}
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
               <div>
-                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>API Key / Webhook URL</label>
-                <input type="password" defaultValue="sk_live_controlroom_api_key_993821" style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} />
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  {activeConfigureApp.id === 'meta_whatsapp' ? 'Meta Cloud API Access Token' : 'API Key / Secret Token'}
+                </label>
+                <input 
+                  type="password" 
+                  defaultValue={activeConfigureApp.id === 'meta_whatsapp' ? 'EAAG...meta_live_cloud_api_token' : 'sk_live_controlroom_api_key_993821'} 
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                <CheckCircle2 style={{ width: '16px', height: '16px', color: '#166534' }} />
-                <span style={{ fontSize: '12px', color: '#166534', fontWeight: '700' }}>Active & Ready to Connect</span>
+
+              {activeConfigureApp.id === 'meta_whatsapp' && (
+                <div>
+                  <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>WhatsApp Business Phone Number ID</label>
+                  <input 
+                    type="text" 
+                    defaultValue="10984729184729" 
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Webhook Callback URL (Shared across Platform)</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`https://controlroom.vrm.com/api/webhooks/${activeConfigureApp.id}`} 
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', backgroundColor: '#F8FAFC', color: '#475569', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#ECFDF5', padding: '10px 12px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                <CheckCircle2 style={{ width: '16px', height: '16px', color: '#047857' }} />
+                <span style={{ fontSize: '12px', color: '#047857', fontWeight: '700' }}>Active & Live for all Control Room departments</span>
               </div>
             </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
               <button onClick={() => setActiveConfigureApp(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
-              <button onClick={() => { alert(`${activeConfigureApp.name} settings saved successfully!`); setActiveConfigureApp(null); }} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#6366F1', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Save Configuration</button>
+              <button onClick={() => { alert(`${activeConfigureApp.name} configuration updated successfully.`); setActiveConfigureApp(null); }} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0284C7', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(2,132,199,0.3)' }}>Save Configuration</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD NEW INTEGRATION MODAL (TA EXCLUSIVE) */}
+      {showAddAppModal && isTaRole && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', width: '480px', maxWidth: '90%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>Register New Integration</h4>
+                  <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: '800' }}>Technical Administrator (TA) Exclusive</span>
+                </div>
+              </div>
+              <button onClick={() => setShowAddAppModal(false)} style={{ border: 'none', background: 'none', fontSize: '16px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveNewApp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px', fontSize: '12.5px' }}>Integration / Service Name <span style={{ color: '#EF4444' }}>*</span></label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Shopify, Slack, Twilio, HubSpot" 
+                  value={newAppForm.name} 
+                  onChange={(e) => setNewAppForm({ ...newAppForm, name: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px', fontSize: '12.5px' }}>Category</label>
+                <select
+                  value={newAppForm.category}
+                  onChange={(e) => setNewAppForm({ ...newAppForm, category: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                >
+                  <option value="Custom API">Custom API</option>
+                  <option value="Messaging & Social">Messaging & Social</option>
+                  <option value="Payment Gateway">Payment Gateway</option>
+                  <option value="E-Commerce & Sales">E-Commerce & Sales</option>
+                  <option value="Workflow Automation">Workflow Automation</option>
+                  <option value="Analytics & BI">Analytics & BI</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px', fontSize: '12.5px' }}>Description</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Brief description of what this integration does for the organization..." 
+                  value={newAppForm.desc} 
+                  onChange={(e) => setNewAppForm({ ...newAppForm, desc: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', resize: 'vertical' }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px', fontSize: '12.5px' }}>API Key / Secret Token</label>
+                <input 
+                  type="password" 
+                  placeholder="Paste live secret token or bearer token" 
+                  value={newAppForm.apiKey} 
+                  onChange={(e) => setNewAppForm({ ...newAppForm, apiKey: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px', fontSize: '12.5px' }}>Documentation / Portal Link</label>
+                <input 
+                  type="url" 
+                  placeholder="https://developer.example.com" 
+                  value={newAppForm.docLink} 
+                  onChange={(e) => setNewAppForm({ ...newAppForm, docLink: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowAddAppModal(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0284C7', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(2,132,199,0.3)' }}>Register Integration</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PERMISSION VIOLATION ALERT MODAL */}
+      {permissionAlert && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001 }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #FCD34D', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', width: '440px', maxWidth: '90%', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', backgroundColor: '#FFFBEB', borderBottom: '1px solid #FDE68A', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Lock size={20} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#92400E' }}>{permissionAlert.title}</h4>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#B45309' }}>Restricted Access Policy Enforced</p>
+              </div>
+            </div>
+            
+            <div style={{ padding: '20px 24px', fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 12px 0' }}>{permissionAlert.message}</p>
+              <div style={{ backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '12px', color: '#64748B' }}>
+                💡 <strong>Good to know:</strong> All active integrations continue running organization-wide in the background. Your daily workflows and transactions are uninterrupted.
+              </div>
+            </div>
+
+            <div style={{ padding: '14px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setPermissionAlert(null)} 
+                style={{ border: 'none', backgroundColor: '#0F172A', color: '#FFFFFF', borderRadius: '8px', padding: '8px 20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Understood
+              </button>
             </div>
           </div>
         </div>
