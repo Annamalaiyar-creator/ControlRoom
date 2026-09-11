@@ -230,6 +230,7 @@
     "notes": "",
     "primaryContact": {
       "name": "7092996057",
+      "designation": "Procurement Head",
       "phone": "7092996057",
       "whatsapp": "7092996057",
       "email": ""
@@ -262,7 +263,8 @@
     "salesPerson": "Mohit JV",
     "updatedAt": "2026-09-10T06:28:15.599Z",
     "createdAt": "2026-09-10T06:28:16.298Z",
-    "zohoContactId": "4080449000000357009"
+    "zohoContactId": "4080449000000357009",
+    "industry": "Solar Energy / Utility Scale"
   },
   {
     "id": "CUST-VRM-101",
@@ -651,5 +653,61 @@
     "email": "—",
     "phone": "7092996057",
     "status": "ACTIVE"
+  },
+  {
+    "id": "CUST-3758",
+    "customerCode": "CUST-3758",
+    "companyName": "Adani Solar Technologies",
+    "customerName": "Adani Solar Technologies",
+    "customerType": "EPC Contractor",
+    "industry": "Solar Energy / Utility Scale",
+    "gstNumber": "",
+    "panNumber": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "pincode": "",
+    "creditLimit": 2500000,
+    "creditDays": 30,
+    "paymentTerms": "Due on Receipt",
+    "assignedSalesperson": "Mohith JV",
+    "source": "Zoho Books",
+    "zohoContactId": "4080449000000363758",
+    "primaryContact": {
+      "name": "—",
+      "designation": "Procurement Head",
+      "phone": "",
+      "whatsapp": "",
+      "email": ""
+    },
+    "createdAt": "2026-09-10T23:50:33+0530"
+  },
+  {
+    "id": "CUST-8001",
+    "customerCode": "CUST-8001",
+    "companyName": "Tata Power Solar Systems Ltd",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "customerType": "EPC Contractor",
+    "industry": "Solar Energy / Utility Scale",
+    "gstNumber": "",
+    "panNumber": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "pincode": "",
+    "creditLimit": 2500000,
+    "creditDays": 30,
+    "paymentTerms": "Due on Receipt",
+    "assignedSalesperson": "Mohith JV",
+    "source": "Zoho Books",
+    "zohoContactId": "4080449000000388001",
+    "primaryContact": {
+      "name": "—",
+      "designation": "Procurement Head",
+      "phone": "",
+      "whatsapp": "",
+      "email": ""
+    },
+    "createdAt": "2026-09-10T23:45:52+0530"
   }
 ]

@@ -15,6 +15,7 @@ import DashboardFullReference from './components/DashboardFullReference';
 import MaterialCalculationEngine from './components/MaterialCalculationEngine';
 import InventoryAutoConversion from './components/InventoryAutoConversion';
 import CreateWorkOrderPage from './components/CreateWorkOrderPage';
+import VRMTemplateStudioView from './components/VRMTemplateStudioView';
 
 import ProductionAdminView from './components/ProductionAdminView';
 import SalesExecutiveDashboardView from './components/views/SalesExecutiveDashboardView';
@@ -341,11 +342,14 @@ function App() {
           ) : (activeTab === 'Performa Invoice' || activeTab === 'Proforma Invoice') ? (
             <PerformaInvoiceView 
               userRole={userRole}
+              onNavigateTab={handleTabChange}
               onConvertToBom={(piData) => {
                 setConvertingPiData(piData);
                 handleTabChange('Sales BOM');
               }} 
             />
+          ) : (activeTab === 'Print Templates' || activeTab === 'Template Studio' || activeTab === 'Template Customizer') ? (
+            <VRMTemplateStudioView onBackToPI={() => handleTabChange('Proforma Invoice')} />
           ) : activeTab === 'Purchase Orders' ? (
             <PurchaseOrdersView 
               userRole={userRole} 

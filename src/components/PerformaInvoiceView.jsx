@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock, Printer, Palette } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import SearchablePresetSelector from './SearchablePresetSelector';
+import VRMProformaInvoicePrintTemplate from './VRMProformaInvoicePrintTemplate';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
@@ -96,12 +97,13 @@ const normalizePiRecord = (item) => {
   return item;
 };
 
-export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procurement Head' }) {
+export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procurement Head', onNavigateTab }) {
   const isSalesRole = userRole === 'Sales Head' || userRole === 'Sales Executive';
   const storageKey = isSalesRole ? 'controlroom_sales_pi_store' : 'controlroom_procurement_pi_store';
 
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit'
   const [selectedPi, setSelectedPi] = useState(null); // For viewing details popup overlay
+  const [printModalPi, setPrintModalPi] = useState(null); // For official Print & PDF template
   const [searchQuery, setSearchQuery] = useState('');
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
 
@@ -537,6 +539,59 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     };
   };
 
+  const previewCurrentFormAsTemplate = () => {
+    const totals = calculatePiTotals();
+    const joinedProducts = (piItems || []).map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
+    const previewData = {
+      piNo: (piNumber && piNumber.trim() && piNumber !== 'Auto-Assigned') ? piNumber : 'DRAFT-PREVIEW',
+      vendor: vendorName || 'Customer Company Name',
+      customerName: vendorName || 'Customer Company Name',
+      contactPerson,
+      phone,
+      email,
+      gstNo: (gstNo || '').toUpperCase(),
+      productName: joinedProducts,
+      items: (piItems && piItems.length > 0) ? piItems : [
+        {
+          name: joinedProducts,
+          description: 'Standard VRM Solar Structure & Accessories Kit',
+          hsn: '73089090',
+          qty: 1,
+          uom: 'Set',
+          rate: totals.sub || 100000,
+          gstRate: '18%',
+          amount: totals.sub || 100000
+        }
+      ],
+      salesPerson: salesPerson || getEffectiveSalesPerson(),
+      billingStreet,
+      billingCity,
+      billingState,
+      billingPincode,
+      deliveryStreet: sameAsBilling ? billingStreet : deliveryStreet,
+      deliveryCity: sameAsBilling ? billingCity : deliveryCity,
+      deliveryState: sameAsBilling ? billingState : deliveryState,
+      deliveryPincode: sameAsBilling ? billingPincode : deliveryPincode,
+      sameAsBilling,
+      transportMode,
+      transporterName,
+      vehicleNo,
+      transportScope,
+      paymentTerms,
+      creditDays,
+      remarks,
+      unitValue: Math.round(totals.sub),
+      quantity: (piItems || []).reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1,
+      subtotal: totals.sub,
+      taxTotal: totals.gst,
+      grandTotal: totals.grand,
+      amount: '₹' + Math.round(totals.grand).toLocaleString('en-IN'),
+      piDate: piDate || new Date().toISOString().split('T')[0],
+      expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+    };
+    setPrintModalPi(previewData);
+  };
+
   const handleAddMaterialRow = () => {
     setPiItems(prev => [...(prev || []), { name: '', category: '', uom: 'NOS', qty: '1', rate: '', gstRate: '18%' }]);
   };
@@ -699,7 +754,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       productName: joinedProducts,
       items: piItems,
       presetGroups,
-      salesPerson,
       billingAddress: {
         street: billingStreet,
         city: billingCity,
@@ -970,46 +1024,84 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 </span>
               </div>
 
-              <button
-                onClick={() => {
-                  resetForm();
-                  setEditIdx(null);
-                  setViewMode('create');
-                  fetchNextPiNumber();
-                }}
-                style={{
-                  backgroundColor: '#0E7490',
-                  border: 'none',
-                  color: 'white',
-                  height: '40px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '0 6px 0 20px',
-                  borderRadius: '50px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)',
-                  transition: 'all 0.2s ease-in-out',
-                  flexShrink: 0
-                }}
-              >
-                <span>Create PI</span>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  color: '#0E7490',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <ArrowRight style={{ width: '16px', height: '16px', color: '#0E7490' }} />
-                </div>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateTab) {
+                      onNavigateTab('Print Templates');
+                    }
+                  }}
+                  title="Customize PDF and Print Templates with separate customization side menu (Logo, Stamp, Signature, Columns, Layout)"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1.5px solid #0E7490',
+                    color: '#0E7490',
+                    height: '40px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0 18px',
+                    borderRadius: '50px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(14, 116, 144, 0.1)',
+                    transition: 'all 0.2s ease-in-out',
+                    flexShrink: 0
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ECFEFF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                  }}
+                >
+                  <Palette style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+                  <span>Customize Template</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    resetForm();
+                    setEditIdx(null);
+                    setViewMode('create');
+                    fetchNextPiNumber();
+                  }}
+                  style={{
+                    backgroundColor: '#0E7490',
+                    border: 'none',
+                    color: 'white',
+                    height: '40px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '0 6px 0 20px',
+                    borderRadius: '50px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(14, 116, 144, 0.2)',
+                    transition: 'all 0.2s ease-in-out',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>Create PI</span>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    color: '#0E7490',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <ArrowRight style={{ width: '16px', height: '16px', color: '#0E7490' }} />
+                  </div>
+                </button>
+              </div>
             </div>
 
 
@@ -1565,7 +1657,14 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                       <button
                         onClick={() => {
-                          window.print();
+                          const target = (selectedPIs && selectedPIs.length > 0)
+                            ? (piList.find(p => p.piNo === selectedPIs[0]) || { piNo: selectedPIs[0], vendor: 'Customer Reference' })
+                            : null;
+                          if (target) {
+                            setPrintModalPi(target);
+                          } else {
+                            window.print();
+                          }
                           setShowFloatingMenu(false);
                         }}
                         style={{
@@ -1586,7 +1685,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                        <Printer size={14} style={{ color: '#0E7490' }} /> Export / Print PDF Template
                       </button>
 
                     </div>
@@ -2649,6 +2748,27 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                   <button
                     type="button"
+                    onClick={previewCurrentFormAsTemplate}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      backgroundColor: '#ECFEFF',
+                      color: '#0E7490',
+                      border: '1px solid #A5F3FC',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Printer size={16} /> Preview Print / PDF
+                  </button>
+                  <button
+                    type="button"
                     onClick={triggerSaveConfirm}
                     style={{
                       width: '100%',
@@ -2731,12 +2851,33 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <strong style={{ fontSize: '16px', color: '#1e293b' }}>PI Details</strong>
                 <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold' }}>{selectedPi.piNo}</span>
               </div>
-              <button
-                onClick={() => setSelectedPi(null)}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X style={{ width: '18px', height: '18px' }} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setPrintModalPi(selectedPi)}
+                  title="Open Print & PDF Template"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '5px 12px',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    border: '1px solid #A5F3FC',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Printer size={13} /> Print / PDF
+                </button>
+                <button
+                  onClick={() => setSelectedPi(null)}
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X style={{ width: '18px', height: '18px' }} />
+                </button>
+              </div>
             </div>
 
             {/* Layout showing exact same fields as creator */}
@@ -2774,10 +2915,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <span>Document Attached</span>
                       <a
                         href="#"
-                        onClick={(e) => e.preventDefault()}
-                        style={{ fontSize: '11px', fontWeight: 'bold', color: '#2563eb', textDecoration: 'none' }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPrintModalPi(selectedPi);
+                        }}
+                        style={{ fontSize: '11px', fontWeight: 'bold', color: '#0E7490', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                       >
-                        Download PDF
+                        <Printer size={11} /> Open PDF Template
                       </a>
                     </div>
                   </div>
@@ -3306,6 +3450,14 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
           </div>
         </div>
+      )}
+
+      {/* ==================== OFFICIAL PROFORMA INVOICE PRINT & PDF TEMPLATE ==================== */}
+      {printModalPi && (
+        <VRMProformaInvoicePrintTemplate
+          piData={printModalPi}
+          onClose={() => setPrintModalPi(null)}
+        />
       )}
 
     </div>

@@ -8,7 +8,7 @@ import {
   Search, HelpCircle, MessageSquare, Rocket, Sparkles, ChevronUp,
   CheckCircle, ClipboardList, Truck, Warehouse, ShieldCheck, Activity, FileCheck,
   Calendar, Wrench, Calculator, RefreshCw, Scale, Building2, BarChart3,
-  Zap, CreditCard, Layers, Briefcase
+  Zap, CreditCard, Layers, Briefcase, Palette
 } from 'lucide-react';
 import { prodModuleEngine } from '../utils/productionModuleEngine';
 import { fetchCloudStore } from '../utils/supabaseDataSync';
@@ -62,6 +62,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       items: [
         { label: 'Dashboard', icon: LayoutDashboard },
         { label: 'Purchase Orders', icon: ShoppingCart, badge: '12' },
+        { label: 'Proforma Invoice', icon: Receipt },
+        { label: 'Print Templates', icon: Palette, badge: 'Studio' },
         { label: 'Items Directory', icon: Boxes },
         { label: 'Raw Material Directory', icon: Layers },
         { label: 'Inventory Stores', icon: Warehouse }
@@ -179,6 +181,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
             { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart, badge: realAccountsAwaitingPOCount > 0 ? String(realAccountsAwaitingPOCount) : undefined },
             { label: 'Accounts Verification', icon: CheckCircle },
             { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Payments', icon: Wallet }
           ]
         },
@@ -209,6 +212,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
           items: [
             { label: 'BOM Orders', icon: GitBranch },
             { label: 'Proforma Invoice', icon: Receipt },
+            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Stock Status', icon: Warehouse }
           ]
         },
@@ -293,6 +297,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
               badge: realPendingPOCount > 0 ? String(realPendingPOCount) : undefined 
             },
             { label: 'Proforma Invoice', icon: FileText },
+            { label: 'Print Templates', icon: Palette, badge: 'Studio' },
             { label: 'Preset Management', icon: Layers }
           ]
         },
@@ -309,12 +314,16 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
       sections = [...procurementSections];
     }
 
-    // Always ensure Zoho Integration is listed under SYSTEM & CONFIG
-    const hasZoho = sections.some(s => s.items && s.items.some(i => i.label === 'Zoho Integration'));
-    if (!hasZoho) {
+    // Always ensure Zoho Integration & Print Templates are accessible
+    const hasPrintTemplates = sections.some(s => s.items && s.items.some(i => i.label === 'Print Templates'));
+    const sysSection = sections.find(s => s.category === 'SYSTEM & CONFIG');
+    if (sysSection) {
+      if (!hasPrintTemplates) sysSection.items.unshift({ label: 'Print Templates', icon: Palette, badge: 'Studio' });
+    } else {
       sections.push({
         category: 'SYSTEM & CONFIG',
         items: [
+          { label: 'Print Templates', icon: Palette, badge: 'Studio' },
           { label: 'Zoho Integration', icon: GitBranch }
         ]
       });
