@@ -240,6 +240,21 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     const qty = parseFloat(pi.quantity) || 1;
     const rate = pi.unitValue || (cleanAmount > 0 ? cleanAmount / qty : 1000);
 
+    // Cleanly normalize billing and delivery addresses for zero-loss BOM conversion
+    const bStreet = typeof pi.billingAddress === 'object' ? (pi.billingAddress?.street || pi.billingAddress?.address || '') : (typeof pi.billingAddress === 'string' ? pi.billingAddress : (pi.billingStreet || ''));
+    const bCity = typeof pi.billingAddress === 'object' ? (pi.billingAddress?.city || '') : (pi.billingCity || '');
+    const bState = typeof pi.billingAddress === 'object' ? (pi.billingAddress?.state || '') : (pi.billingState || '');
+    const bPin = typeof pi.billingAddress === 'object' ? (pi.billingAddress?.pincode || pi.billingAddress?.pin || '') : (pi.billingPincode || '');
+
+    const isSameAddr = pi.sameAsBilling !== false;
+    const dStreet = isSameAddr ? bStreet : (typeof pi.deliveryAddress === 'object' ? (pi.deliveryAddress?.street || pi.deliveryAddress?.address || '') : (typeof pi.deliveryAddress === 'string' ? pi.deliveryAddress : (pi.deliveryStreet || '')));
+    const dCity = isSameAddr ? bCity : (typeof pi.deliveryAddress === 'object' ? (pi.deliveryAddress?.city || '') : (pi.deliveryCity || ''));
+    const dState = isSameAddr ? bState : (typeof pi.deliveryAddress === 'object' ? (pi.deliveryAddress?.state || '') : (pi.deliveryState || ''));
+    const dPin = isSameAddr ? bPin : (typeof pi.deliveryAddress === 'object' ? (pi.deliveryAddress?.pincode || pi.deliveryAddress?.pin || '') : (pi.deliveryPincode || ''));
+
+    const billingObj = { street: bStreet, address: bStreet, city: bCity, state: bState, pincode: bPin };
+    const deliveryObj = { street: dStreet, address: dStreet, city: dCity, state: dState, pincode: dPin };
+
     const conversionData = {
       sourcePiNo: pi.piNo,
       customerName: pi.vendor || pi.customerName || '',
@@ -248,9 +263,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       email: pi.email || '',
       gstNo: pi.gstNo || '',
       productName: pi.productName || 'Solar Mounting Rails & Accessories',
-      billingAddress: pi.billingAddress || null,
-      deliveryAddress: pi.deliveryAddress || null,
-      sameAsBilling: pi.sameAsBilling !== undefined ? pi.sameAsBilling : true,
+      billingAddress: billingObj,
+      billingAddressObj: billingObj,
+      billingStreet: bStreet,
+      billingCity: bCity,
+      billingState: bState,
+      billingPincode: bPin,
+      deliveryAddress: deliveryObj,
+      deliveryAddressObj: deliveryObj,
+      deliveryStreet: dStreet,
+      deliveryCity: dCity,
+      deliveryState: dState,
+      deliveryPincode: dPin,
+      sameAsBilling: isSameAddr,
       transportMode: pi.transportMode || 'Transport',
       transporterName: pi.transporterName || '',
       vehicleNo: pi.vehicleNo || '',
