@@ -195,6 +195,12 @@ export default function BomOrdersView(props) {
   const [newBomLrNo, setNewBomLrNo] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
+  // Create BOM Loading & Mutex Anti-Duplicate State
+  const [isSubmittingBom, setIsSubmittingBom] = useState(false);
+  const [bomSubmitStage, setBomSubmitStage] = useState(''); // 'validating' | 'assigning' | 'reserving' | 'saving' | 'completed'
+  const [bomSubmitAssignedCode, setBomSubmitAssignedCode] = useState('');
+  const isSubmittingBomRef = useRef(false);
+
   // Comprehensive BOM Form Validation Helper
   const validateBomForm = (isDraft = false) => {
     const errors = {};
@@ -1220,6 +1226,274 @@ export default function BomOrdersView(props) {
     );
   };
 
+  // Helper to render Full-Screen Loading Animation during BOM creation to prevent duplicate clicks
+  const renderBomSubmittingOverlay = () => {
+    if (!isSubmittingBom) return null;
+
+    const isDraft = bomConfirmModal === 'draft';
+    const currentStepIndex =
+      bomSubmitStage === 'completed' ? 4 :
+      bomSubmitStage === 'saving' ? 3 :
+      bomSubmitStage === 'reserving' ? 2 : 1;
+
+    const progressPct =
+      bomSubmitStage === 'completed' ? 100 :
+      bomSubmitStage === 'saving' ? 88 :
+      bomSubmitStage === 'reserving' ? 60 : 25;
+
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.78)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '20px'
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '36px 32px',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Top Accent Animated Gradient Line */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '5px',
+              background: 'linear-gradient(90deg, #0E7490, #06B6D4, #3B82F6, #10B981, #0E7490)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmerSweep 2s linear infinite'
+            }}
+          />
+
+          {/* Central Animated Glowing Icon / Dual Spinners */}
+          <div style={{ position: 'relative', width: '84px', height: '84px', marginBottom: '20px' }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: '-6px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(14, 116, 144, 0.25) 0%, rgba(14, 116, 144, 0) 70%)',
+                animation: 'pulseGlow 2s ease-in-out infinite'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '4px solid #E2E8F0',
+                borderTopColor: '#0E7490',
+                borderRightColor: '#06B6D4',
+                animation: 'spin 1s linear infinite'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: '8px',
+                borderRadius: '50%',
+                border: '3px dashed #CBD5E1',
+                borderBottomColor: '#0E7490',
+                animation: 'spin 2.5s linear infinite reverse'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: '16px',
+                borderRadius: '50%',
+                backgroundColor: '#ECFEFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0E7490'
+              }}
+            >
+              {bomSubmitStage === 'completed' ? (
+                <CheckCircle size={28} style={{ color: '#10B981' }} />
+              ) : (
+                <Layers size={26} style={{ animation: 'bounceSubtle 1.5s ease-in-out infinite' }} />
+              )}
+            </div>
+          </div>
+
+          {/* Header Badge */}
+          <div style={{
+            fontSize: '11px',
+            fontWeight: '800',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            color: '#0E7490',
+            backgroundColor: '#ECFEFF',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            marginBottom: '10px'
+          }}>
+            {bomSubmitStage === 'completed' ? 'Success • Complete' : 'Processing BOM Order'}
+          </div>
+
+          {/* Title */}
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: '800',
+            color: '#0F172A',
+            margin: '0 0 6px 0',
+            letterSpacing: '-0.3px'
+          }}>
+            {bomSubmitStage === 'completed'
+              ? 'BOM Created Successfully!'
+              : (isDraft ? 'Saving Draft BOM...' : 'Creating Bill of Materials...')}
+          </h3>
+
+          {/* Description */}
+          <p style={{
+            fontSize: '13px',
+            color: '#64748B',
+            margin: '0 0 20px 0',
+            lineHeight: '1.5',
+            maxWidth: '360px'
+          }}>
+            {bomSubmitStage === 'completed'
+              ? `Official BOM (${bomSubmitAssignedCode || 'Saved'}) registered and dispatched.`
+              : 'Please wait while we assign sequential code, reserve inventory, and sync records.'}
+          </p>
+
+          {/* Real-time Checklist Cards */}
+          <div
+            style={{
+              width: '100%',
+              backgroundColor: '#F8FAFC',
+              borderRadius: '14px',
+              border: '1px solid #E2E8F0',
+              padding: '14px 16px',
+              marginBottom: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              textAlign: 'left'
+            }}
+          >
+            {/* Step 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
+              {currentStepIndex === 1 ? (
+                <Loader size={16} style={{ color: '#0E7490', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              ) : currentStepIndex > 1 ? (
+                <CheckCircle size={16} style={{ color: '#10B981', flexShrink: 0 }} />
+              ) : (
+                <Clock size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+              )}
+              <span style={{
+                fontWeight: currentStepIndex === 1 ? '700' : '500',
+                color: currentStepIndex === 1 ? '#0E7490' : (currentStepIndex > 1 ? '#0F172A' : '#64748B')
+              }}>
+                {bomSubmitAssignedCode ? `Sequential Code Assigned: ${bomSubmitAssignedCode}` : 'Assigning Sequential BOM Code...'}
+              </span>
+            </div>
+
+            {/* Step 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
+              {currentStepIndex === 2 ? (
+                <Loader size={16} style={{ color: '#0E7490', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              ) : currentStepIndex > 2 ? (
+                <CheckCircle size={16} style={{ color: '#10B981', flexShrink: 0 }} />
+              ) : (
+                <Clock size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+              )}
+              <span style={{
+                fontWeight: currentStepIndex === 2 ? '700' : '500',
+                color: currentStepIndex === 2 ? '#0E7490' : (currentStepIndex > 2 ? '#0F172A' : '#64748B')
+              }}>
+                Reserving Inventory Items & Raw Materials...
+              </span>
+            </div>
+
+            {/* Step 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
+              {currentStepIndex === 3 ? (
+                <Loader size={16} style={{ color: '#0E7490', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              ) : currentStepIndex > 3 ? (
+                <CheckCircle size={16} style={{ color: '#10B981', flexShrink: 0 }} />
+              ) : (
+                <Clock size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+              )}
+              <span style={{
+                fontWeight: currentStepIndex === 3 ? '700' : '500',
+                color: currentStepIndex === 3 ? '#0E7490' : (currentStepIndex > 3 ? '#0F172A' : '#64748B')
+              }}>
+                Syncing with Cloud Database & Dispatch System...
+              </span>
+            </div>
+          </div>
+
+          {/* Smooth Progress Bar */}
+          <div
+            style={{
+              width: '100%',
+              height: '6px',
+              backgroundColor: '#E2E8F0',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              position: 'relative',
+              marginBottom: '16px'
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${progressPct}%`,
+                backgroundColor: currentStepIndex >= 4 ? '#10B981' : '#0E7490',
+                borderRadius: '10px',
+                transition: 'width 0.4s ease-in-out, background-color 0.3s ease'
+              }}
+            />
+          </div>
+
+          {/* Warning Banner Against Multiple Clicks */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '11.5px',
+              color: '#B45309',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #FDE68A',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              lineHeight: '1.4'
+            }}
+          >
+            <AlertCircle size={15} style={{ flexShrink: 0, color: '#D97706' }} />
+            <span><strong>Please do not click again or refresh.</strong> Your order is being safely saved to prevent duplicates.</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ==========================================
   // RENDER 1: FULL CREATE BOM FORM
   // ==========================================
@@ -1331,13 +1605,16 @@ export default function BomOrdersView(props) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
+              disabled={isSubmittingBom}
               onClick={() => setBomConfirmModal('cancel')}
-              style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+              style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1, backdropFilter: 'blur(4px)' }}
             >
               Cancel
             </button>
             <button
+              disabled={isSubmittingBom}
               onClick={() => {
+                if (isSubmittingBom) return;
                 const validation = validateBomForm(true);
                 if (!validation.isValid) {
                   showCustomAlert({
@@ -1351,13 +1628,15 @@ export default function BomOrdersView(props) {
                 }
                 setBomConfirmModal('draft');
               }}
-              style={{ border: 'none', background: '#FFFFFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+              style={{ border: 'none', background: '#FFFFFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
             >
               <FileText style={{ width: '15px', height: '15px' }} />
               Save as Draft
             </button>
             <button
+              disabled={isSubmittingBom}
               onClick={() => {
+                if (isSubmittingBom) return;
                 const validation = validateBomForm(false);
                 if (!validation.isValid) {
                   showCustomAlert({
@@ -1371,7 +1650,7 @@ export default function BomOrdersView(props) {
                 }
                 setBomConfirmModal('create');
               }}
-              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1, boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <CheckCircle style={{ width: '16px', height: '16px' }} />
               Create Order →
@@ -2739,9 +3018,17 @@ export default function BomOrdersView(props) {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
-            <button onClick={() => setBomConfirmModal('cancel')} style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>Cancel</button>
             <button
+              disabled={isSubmittingBom}
+              onClick={() => setBomConfirmModal('cancel')}
+              style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1 }}
+            >
+              Cancel
+            </button>
+            <button
+              disabled={isSubmittingBom}
               onClick={() => {
+                if (isSubmittingBom) return;
                 const validation = validateBomForm(true);
                 if (!validation.isValid) {
                   showCustomAlert({
@@ -2755,12 +3042,14 @@ export default function BomOrdersView(props) {
                 }
                 setBomConfirmModal('draft');
               }}
-              style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '800', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <FileText style={{ width: '15px', height: '15px' }} /> Save as Draft
             </button>
             <button
+              disabled={isSubmittingBom}
               onClick={() => {
+                if (isSubmittingBom) return;
                 const validation = validateBomForm(false);
                 if (!validation.isValid) {
                   showCustomAlert({
@@ -2774,7 +3063,7 @@ export default function BomOrdersView(props) {
                 }
                 setBomConfirmModal('create');
               }}
-              style={{ border: 'none', background: '#0E7490', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(14,116,144,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ border: 'none', background: '#0E7490', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: isSubmittingBom ? 'not-allowed' : 'pointer', opacity: isSubmittingBom ? 0.6 : 1, boxShadow: '0 4px 14px rgba(14,116,144,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <Check style={{ width: '16px', height: '16px' }} /> Create & Send to Dispatch
             </button>
@@ -2804,8 +3093,25 @@ export default function BomOrdersView(props) {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-                <button onClick={() => setBomConfirmModal(null)} style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Go Back</button>
                 <button
+                  disabled={isSubmittingBom}
+                  onClick={() => setBomConfirmModal(null)}
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: 'white',
+                    color: isSubmittingBom ? '#94A3B8' : '#475569',
+                    padding: '9px 18px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: isSubmittingBom ? 'not-allowed' : 'pointer',
+                    opacity: isSubmittingBom ? 0.6 : 1
+                  }}
+                >
+                  Go Back
+                </button>
+                <button
+                  disabled={isSubmittingBom}
                   onClick={async () => {
                     if (bomConfirmModal === 'cancel') {
                       setShowBOMForm(false);
@@ -2819,239 +3125,269 @@ export default function BomOrdersView(props) {
                       setNewBomVehicleNo('');
                       setNewBomTransportScope('VRM Structures');
                     } else if (bomConfirmModal === 'draft' || bomConfirmModal === 'create') {
-                      const isDraft = bomConfirmModal === 'draft';
-                      const target = (newBomProductName || '').toLowerCase().trim();
-                      const selCust = target ? customerList.find(c => {
-                        const code = (c.code || '').toLowerCase().trim();
-                        const c2 = (c.c2 || '').toLowerCase().trim();
-                        const cName = (c.customerName || '').toLowerCase().trim();
-                        const comp = (c.companyName || '').toLowerCase().trim();
-                        return code === target || c2 === target || cName === target || comp === target ||
-                               (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
-                               (cName && cName.startsWith(target)) || (comp && comp.startsWith(target)) ||
-                               (c2 && c2.includes(target)) || (comp && comp.includes(target));
-                      }) : null;
+                      // MULTI-CLICK MUTEX GUARD: Drop any secondary clicks while submitting
+                      if (isSubmittingBomRef.current) {
+                        console.warn('BOM creation already in progress. Ignoring duplicate click.');
+                        return;
+                      }
+                      isSubmittingBomRef.current = true;
+                      setIsSubmittingBom(true);
+                      setBomSubmitStage('validating');
+                      setBomSubmitAssignedCode('');
 
-                      const bObj = selCust?.billingAddressObj || {};
-                      const bStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '';
-                      const bCity = bObj.city || '';
-                      const bState = bObj.state || '';
-                      const bPin = bObj.pincode || '';
+                      try {
+                        const isDraft = bomConfirmModal === 'draft';
+                        const target = (newBomProductName || '').toLowerCase().trim();
+                        const selCust = target ? customerList.find(c => {
+                          const code = (c.code || '').toLowerCase().trim();
+                          const c2 = (c.c2 || '').toLowerCase().trim();
+                          const cName = (c.customerName || '').toLowerCase().trim();
+                          const comp = (c.companyName || '').toLowerCase().trim();
+                          return code === target || c2 === target || cName === target || comp === target ||
+                                 (code && code.startsWith(target)) || (c2 && c2.startsWith(target)) ||
+                                 (cName && cName.startsWith(target)) || (comp && comp.startsWith(target)) ||
+                                 (c2 && c2.includes(target)) || (comp && comp.includes(target));
+                        }) : null;
 
-                      const formatAddr = (st, ct, sta, pin) => {
-                        const parts = [st, ct, sta, pin ? `Pincode: ${pin}` : ''].filter(Boolean);
-                        return parts.join(', ');
-                      };
+                        const bObj = selCust?.billingAddressObj || {};
+                        const bStreet = bObj.address || selCust?.c6 || selCust?.billingAddress || '';
+                        const bCity = bObj.city || '';
+                        const bState = bObj.state || '';
+                        const bPin = bObj.pincode || '';
 
-                      const billingObj = { address: bStreet, city: bCity, state: bState, pincode: bPin };
-                      const billingFull = formatAddr(bStreet, bCity, bState, bPin) || selCust?.c6 || selCust?.billingAddress || '-';
-                      const deliveryFull = sameAsBilling
-                        ? billingFull
-                        : (formatAddr(newBomDeliveryStreet, newBomDeliveryCity, newBomDeliveryState, newBomDeliveryPincode) || newBomDeliveryAddress || '-');
+                        const formatAddr = (st, ct, sta, pin) => {
+                          const parts = [st, ct, sta, pin ? `Pincode: ${pin}` : ''].filter(Boolean);
+                          return parts.join(', ');
+                        };
 
-                      const deliveryObj = sameAsBilling
-                        ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
-                        : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
+                        const billingObj = { address: bStreet, city: bCity, state: bState, pincode: bPin };
+                        const billingFull = formatAddr(bStreet, bCity, bState, bPin) || selCust?.c6 || selCust?.billingAddress || '-';
+                        const deliveryFull = sameAsBilling
+                          ? billingFull
+                          : (formatAddr(newBomDeliveryStreet, newBomDeliveryCity, newBomDeliveryState, newBomDeliveryPincode) || newBomDeliveryAddress || '-');
 
-                      const existingNumsRec = (bomStore || []).map(b => {
-                        const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
-                        return match ? parseInt(match[1], 10) : 0;
-                      }).filter(n => Number.isFinite(n) && n > 0);
-                      // BOM code is strictly assigned atomically upon submission
-                      const finalCode = 'BOM-PENDING';
+                        const deliveryObj = sameAsBilling
+                          ? { address: bStreet, city: bCity, state: bState, pincode: bPin }
+                          : { address: newBomDeliveryStreet, city: newBomDeliveryCity, state: newBomDeliveryState, pincode: newBomDeliveryPincode };
 
-                      const effectiveSalesPersonName = (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName;
-                      const effectiveSalesPersonCode = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
-                      const effectiveCreatorName = (localStorage.getItem('controlroom_logged_user_name') || effectiveSalesPersonName).trim();
+                        const existingNumsRec = (bomStore || []).map(b => {
+                          const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
+                          return match ? parseInt(match[1], 10) : 0;
+                        }).filter(n => Number.isFinite(n) && n > 0);
+                        // BOM code is strictly assigned atomically upon submission
+                        const finalCode = 'BOM-PENDING';
 
-                      const hasPaymentProof = Boolean(newBomPaymentProofDoc);
-                      const newBomRecord = {
-                        id: finalCode,
-                        bomCode: finalCode,
-                        code: finalCode,
-                        date: new Date().toISOString().split('T')[0],
-                        deliveryDate: newBomDeliveryDate || null,
-                        customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
-                        companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
-                        mobile: selCust?.c4 || '-',
-                        email: selCust?.c5 || '-',
-                        billingAddress: billingFull,
-                        billingAddressObj: billingObj,
-                        deliveryAddress: deliveryFull,
-                        deliveryAddressObj: deliveryObj,
-                        deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
-                        transportMode: newBomTransportMode || 'Transport',
-                        transportScope: newBomTransportScope || 'VRM Structures',
-                        transporterName: newBomTransporterName || '',
-                        vehicleNo: newBomVehicleNo || '',
-                        lrNo: newBomLrNo || '',
-                        paymentType: newBomPaymentType || '100% Paid',
-                        creditDays: newBomPaymentType === 'Credit Payment' ? (parseInt(newBomCreditDays) || 7) : null,
-                        creditDueDate: newBomPaymentType === 'Credit Payment' ? new Date(Date.now() + (parseInt(newBomCreditDays) || 7) * 86400000).toISOString().split('T')[0] : null,
-                        paymentProofDoc: newBomPaymentProofDoc || null,
-                        paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
-                        remarks: newBomRemarks || '',
-                        status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
-                        salesConfirmed: !isDraft,
-                        salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
-                        salesPerson: effectiveSalesPersonName,
-                        salesPersonCode: effectiveSalesPersonCode,
-                        createdBy: effectiveCreatorName,
-                        createdById: effectiveSalesPersonCode,
-                        items: (bomMaterialsList || []).map(item => ({
-                          name: item.name || 'Custom Item',
-                          category: item.category || '',
-                          uom: item.uom || 'NOS',
-                          qty: cleanNum(item.qty, 1),
-                          rate: cleanNum(item.rate, 0),
-                          gstRate: item.gstRate || '18%',
-                          confirmed: !isDraft
-                        })),
-                        payments: {
-                          advance50Uploaded: false,
-                          dispatch50Uploaded: false,
-                          advance100Uploaded: newBomPaymentType === '100% Paid' && hasPaymentProof,
-                          net30Uploaded: false,
-                          proofDoc: newBomPaymentProofDoc ? newBomPaymentProofDoc.name : null,
-                          proofDocObj: newBomPaymentProofDoc || null,
-                          paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc)
-                        },
-                        dispatchPacking: (bomMaterialsList || []).map(item => ({
-                          name: item.name || 'Custom Item',
-                          bomQty: cleanNum(item.qty, 1),
-                          packed: false
-                        })),
-                        accountsVerification: {
-                          paymentStatus: null,
-                          hardCopyReceived: false,
-                          softCopyReceived: false
-                        },
-                        invoiceConfirmed: false,
-                        invoiceDeducted: false,
-                        stockBlocked: !isDraft,
-                        stockBlockedAt: !isDraft ? new Date().toISOString() : null,
-                        presetName: Object.values(presetGroups).map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') || selectedPreset || null,
-                        presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null),
-                        presetSetCount: Object.values(presetGroups).reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) || (selectedPreset ? (parseInt(presetSetCount) || 1) : null),
-                        presetGroups: Object.values(presetGroups),
-                        subTotal: cleanNum(totals.sub, 0),
-                        gstAmount: cleanNum(totals.gst, 0),
-                        cgstAmount: cleanNum(totals.cgst, 0),
-                        sgstAmount: cleanNum(totals.sgst, 0),
-                        grandTotal: cleanNum(totals.grand, 0)
-                      };
+                        const effectiveSalesPersonName = (newBomSalesPerson && newBomSalesPerson.trim()) ? newBomSalesPerson.trim() : defaultSalesPersonName;
+                        const effectiveSalesPersonCode = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
+                        const effectiveCreatorName = (localStorage.getItem('controlroom_logged_user_name') || effectiveSalesPersonName).trim();
 
-                      const sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
+                        const hasPaymentProof = Boolean(newBomPaymentProofDoc);
+                        const newBomRecord = {
+                          id: finalCode,
+                          bomCode: finalCode,
+                          code: finalCode,
+                          date: new Date().toISOString().split('T')[0],
+                          deliveryDate: newBomDeliveryDate || null,
+                          customerName: selCust?.c2 || selCust?.code || newBomProductName || 'Customer Order',
+                          companyName: selCust?.c2 || selCust?.code || newBomProductName || '-',
+                          mobile: selCust?.c4 || '-',
+                          email: selCust?.c5 || '-',
+                          billingAddress: billingFull,
+                          billingAddressObj: billingObj,
+                          deliveryAddress: deliveryFull,
+                          deliveryAddressObj: deliveryObj,
+                          deliveryAddressProofDoc: sameAsBilling ? null : (newBomDeliveryProofDoc || null),
+                          transportMode: newBomTransportMode || 'Transport',
+                          transportScope: newBomTransportScope || 'VRM Structures',
+                          transporterName: newBomTransporterName || '',
+                          vehicleNo: newBomVehicleNo || '',
+                          lrNo: newBomLrNo || '',
+                          paymentType: newBomPaymentType || '100% Paid',
+                          creditDays: newBomPaymentType === 'Credit Payment' ? (parseInt(newBomCreditDays) || 7) : null,
+                          creditDueDate: newBomPaymentType === 'Credit Payment' ? new Date(Date.now() + (parseInt(newBomCreditDays) || 7) * 86400000).toISOString().split('T')[0] : null,
+                          paymentProofDoc: newBomPaymentProofDoc || null,
+                          paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc),
+                          remarks: newBomRemarks || '',
+                          status: isDraft ? 'Draft' : 'Sales Confirmed - Sent to Dispatch',
+                          salesConfirmed: !isDraft,
+                          salesConfirmedAt: !isDraft ? new Date().toISOString() : null,
+                          salesPerson: effectiveSalesPersonName,
+                          salesPersonCode: effectiveSalesPersonCode,
+                          createdBy: effectiveCreatorName,
+                          createdById: effectiveSalesPersonCode,
+                          items: (bomMaterialsList || []).map(item => ({
+                            name: item.name || 'Custom Item',
+                            category: item.category || '',
+                            uom: item.uom || 'NOS',
+                            qty: cleanNum(item.qty, 1),
+                            rate: cleanNum(item.rate, 0),
+                            gstRate: item.gstRate || '18%',
+                            confirmed: !isDraft
+                          })),
+                          payments: {
+                            advance50Uploaded: false,
+                            dispatch50Uploaded: false,
+                            advance100Uploaded: newBomPaymentType === '100% Paid' && hasPaymentProof,
+                            net30Uploaded: false,
+                            proofDoc: newBomPaymentProofDoc ? newBomPaymentProofDoc.name : null,
+                            proofDocObj: newBomPaymentProofDoc || null,
+                            paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc)
+                          },
+                          dispatchPacking: (bomMaterialsList || []).map(item => ({
+                            name: item.name || 'Custom Item',
+                            bomQty: cleanNum(item.qty, 1),
+                            packed: false
+                          })),
+                          accountsVerification: {
+                            paymentStatus: null,
+                            hardCopyReceived: false,
+                            softCopyReceived: false
+                          },
+                          invoiceConfirmed: false,
+                          invoiceDeducted: false,
+                          stockBlocked: !isDraft,
+                          stockBlockedAt: !isDraft ? new Date().toISOString() : null,
+                          presetName: Object.values(presetGroups).map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') || selectedPreset || null,
+                          presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null),
+                          presetSetCount: Object.values(presetGroups).reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) || (selectedPreset ? (parseInt(presetSetCount) || 1) : null),
+                          presetGroups: Object.values(presetGroups),
+                          subTotal: cleanNum(totals.sub, 0),
+                          gstAmount: cleanNum(totals.gst, 0),
+                          cgstAmount: cleanNum(totals.cgst, 0),
+                          sgstAmount: cleanNum(totals.sgst, 0),
+                          grandTotal: cleanNum(totals.grand, 0)
+                        };
 
-                      // 1. Synchronize with server backend & assign atomic sequential BOM code
-                      let finalAssignedCode = null;
-                      let sResOk = false;
-                      const postPayload = JSON.stringify({ bom: sanitizedNewBom, isNew: true });
-                      const endpoints = ['/api/boms', 'http://localhost:5001/api/boms'];
-                      for (const url of endpoints) {
-                        try {
-                          const sRes = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: postPayload
-                          });
-                          if (sRes.ok) {
-                            const sData = await sRes.json();
-                            if (sData && (sData.bomCode || sData.bom?.bomCode) && sData.success) {
-                              sResOk = true;
-                              finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
-                              break;
+                        const sanitizedNewBom = stripDataUrlsFromRecord(newBomRecord);
+
+                        // Stage: Assigning sequential code
+                        setBomSubmitStage('assigning');
+
+                        // 1. Synchronize with server backend & assign atomic sequential BOM code
+                        let finalAssignedCode = null;
+                        let sResOk = false;
+                        const postPayload = JSON.stringify({ bom: sanitizedNewBom, isNew: true });
+                        const endpoints = ['/api/boms', 'http://localhost:5001/api/boms'];
+                        for (const url of endpoints) {
+                          try {
+                            const sRes = await fetch(url, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: postPayload
+                            });
+                            if (sRes.ok) {
+                              const sData = await sRes.json();
+                              if (sData && (sData.bomCode || sData.bom?.bomCode) && sData.success) {
+                                sResOk = true;
+                                finalAssignedCode = sData.bomCode || sData.bom?.bomCode;
+                                break;
+                              }
                             }
+                          } catch (err) {
+                            console.warn(`Sync attempt to ${url} failed, trying next:`, err);
                           }
-                        } catch (err) {
-                          console.warn(`Sync attempt to ${url} failed, trying next:`, err);
                         }
-                      }
 
-                      // 2. Offline / Direct fallback to atomic Supabase Sequence
-                      if (!finalAssignedCode || !/^BOM-\d+$/i.test(finalAssignedCode)) {
+                        // 2. Offline / Direct fallback to atomic Supabase Sequence
+                        if (!finalAssignedCode || !/^BOM-\d+$/i.test(finalAssignedCode)) {
+                          try {
+                            const reservedCode = await getAndReserveNextBomCode(true);
+                            if (reservedCode && /^BOM-\d+$/i.test(reservedCode)) {
+                              finalAssignedCode = reservedCode;
+                            }
+                          } catch (err) {
+                            console.error('Error reserving atomic BOM code from Supabase:', err);
+                            const existingNums = (bomStore || []).map(b => {
+                              const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
+                              return match ? parseInt(match[1], 10) : 0;
+                            }).filter(n => Number.isFinite(n) && n > 0);
+                            const maxNum = existingNums.length > 0 ? Math.max(0, ...existingNums) : 655;
+                            finalAssignedCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
+                          }
+                        }
+
+                        setBomSubmitAssignedCode(finalAssignedCode);
+                        sanitizedNewBom.bomCode = finalAssignedCode;
+                        sanitizedNewBom.code = finalAssignedCode;
+                        sanitizedNewBom.id = finalAssignedCode;
+
+                        // Stage: Reserving inventory & stock allocation
+                        setBomSubmitStage('reserving');
+                        if (!isDraft && Array.isArray(sanitizedNewBom.items) && sanitizedNewBom.items.length > 0) {
+                          blockInventoryForBom(sanitizedNewBom.items, finalAssignedCode);
+                        }
+
+                        // Stage: Saving to cloud & local storage
+                        setBomSubmitStage('saving');
+                        const current = Array.isArray(bomStore) ? bomStore : [];
+                        const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
+                        const combined = [sanitizedNewBom, ...filtered];
+                        const { list: updatedList } = resolveBomCollisions(combined, 658);
+                        setBomStore(updatedList);
+
+                        // Direct cloud persistence guarantee
                         try {
-                          const reservedCode = await getAndReserveNextBomCode(true);
-                          if (reservedCode && /^BOM-\d+$/i.test(reservedCode)) {
-                            finalAssignedCode = reservedCode;
-                          }
-                        } catch (err) {
-                          console.error('Error reserving atomic BOM code from Supabase:', err);
-                          const existingNums = (bomStore || []).map(b => {
-                            const match = String(b.bomCode || b.code || b.id || '').match(/BOM-(\d+)/i);
-                            return match ? parseInt(match[1], 10) : 0;
-                          }).filter(n => Number.isFinite(n) && n > 0);
-                          const maxNum = existingNums.length > 0 ? Math.max(0, ...existingNums) : 655;
-                          finalAssignedCode = `BOM-${String(maxNum + 1).padStart(3, '0')}`;
+                          await saveCloudStoreImmediate('bom_store', updatedList);
+                        } catch (sErr) {
+                          console.error('Error in direct saveCloudStoreImmediate:', sErr);
                         }
+
+                        // Safe browser localStorage backup per Rule 5
+                        try {
+                          localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                        } catch (_) {}
+
+                        try {
+                          window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: sanitizedNewBom } }));
+                          window.dispatchEvent(new Event('controlroom_storage_update'));
+                        } catch (e) { }
+
+                        // Stage: Completed!
+                        setBomSubmitStage('completed');
+                        await new Promise(res => setTimeout(res, 650));
+
+                        setShowBOMForm(false);
+                        setBomConfirmModal(null);
+                        setCurrentPage(1);
+
+                        // 3. If sent to dispatch, trigger live notifications and synthesized sound
+                        if (!isDraft) {
+                          notifyBomSentToDispatch({
+                            bomCode: finalAssignedCode,
+                            customerName: sanitizedNewBom.companyName || sanitizedNewBom.customerName,
+                            salesPerson: sanitizedNewBom.salesPerson
+                          });
+                          alert(`✅ BOM (${finalAssignedCode}) successfully created and sent to Dispatch for packing!`);
+                        } else {
+                          alert(`📝 BOM (${finalAssignedCode}) saved as Draft.`);
+                        }
+
+                        setNewBomPaymentProofDoc(null);
+                        setNewBomDeliveryProofDoc(null);
+                        setNewBomRemarks('');
+                        setNewBomTransportMode('Transport');
+                        setNewBomTransporterName('');
+                        setNewBomVehicleNo('');
+                        setNewBomTransportScope('VRM Structures');
+                        setNewBomLrNo('');
+                        setNewBomCreditDays(7);
+                        setNewBomPaymentType('100% Paid');
+                        setNewBomProductName('');
+                        setBomMaterialsList([]);
+                        setSelectedPreset('');
+                        setPresetKitPrice('');
+                        setPresetSetCount(1);
+                        setPresetGroups({});
+                        setNewBomCode('');
+                      } catch (err) {
+                        console.error('BOM creation error:', err);
+                        alert('Error creating BOM: ' + (err.message || 'Please check your connection and try again.'));
+                      } finally {
+                        isSubmittingBomRef.current = false;
+                        setIsSubmittingBom(false);
+                        setBomSubmitStage('');
+                        setBomSubmitAssignedCode('');
                       }
-
-                      sanitizedNewBom.bomCode = finalAssignedCode;
-                      sanitizedNewBom.code = finalAssignedCode;
-                      sanitizedNewBom.id = finalAssignedCode;
-
-                      // Block and reserve inventory for this specific confirmed BOM code
-                      if (!isDraft && Array.isArray(sanitizedNewBom.items) && sanitizedNewBom.items.length > 0) {
-                        blockInventoryForBom(sanitizedNewBom.items, finalAssignedCode);
-                      }
-
-                      // Update local React state without clobbering concurrent records in the cloud
-                      const current = Array.isArray(bomStore) ? bomStore : [];
-                      const filtered = current.filter(item => item && (item.bomCode !== finalAssignedCode && item.code !== finalAssignedCode && item.id !== finalAssignedCode));
-                      const combined = [sanitizedNewBom, ...filtered];
-                      const { list: updatedList } = resolveBomCollisions(combined, 658);
-                      setBomStore(updatedList);
-
-                      // Direct cloud persistence guarantee: ALWAYS save directly to Supabase cloud store so it is never lost on refresh or live server
-                      try {
-                        await saveCloudStoreImmediate('bom_store', updatedList);
-                      } catch (sErr) {
-                        console.error('Error in direct saveCloudStoreImmediate:', sErr);
-                      }
-
-                      // Safe browser localStorage backup per Rule 5
-                      try {
-                        localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
-                      } catch (_) {}
-                      setShowBOMForm(false);
-                      setBomConfirmModal(null);
-                      setCurrentPage(1);
-                      try {
-                        window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: sanitizedNewBom } }));
-                        window.dispatchEvent(new Event('controlroom_storage_update'));
-                      } catch (e) { }
-
-                      // 3. If sent to dispatch, trigger live notifications and synthesized sound
-                      if (!isDraft) {
-                        notifyBomSentToDispatch({
-                          bomCode: finalAssignedCode,
-                          customerName: sanitizedNewBom.companyName || sanitizedNewBom.customerName,
-                          salesPerson: sanitizedNewBom.salesPerson
-                        });
-                        alert(`✅ BOM (${finalAssignedCode}) successfully created and sent to Dispatch for packing!`);
-                      } else {
-                        alert(`📝 BOM (${finalAssignedCode}) saved as Draft.`);
-                      }
-
-                      setNewBomPaymentProofDoc(null);
-                      setNewBomDeliveryProofDoc(null);
-                      setNewBomRemarks('');
-                      setNewBomTransportMode('Transport');
-                      setNewBomTransporterName('');
-                      setNewBomVehicleNo('');
-                      setNewBomTransportScope('VRM Structures');
-                      setNewBomLrNo('');
-                      setNewBomCreditDays(7);
-                      setNewBomPaymentType('100% Paid');
-                      setNewBomProductName('');
-                      setBomMaterialsList([]);
-                      setSelectedPreset('');
-                      setPresetKitPrice('');
-                      setPresetSetCount(1);
-                      setPresetGroups({});
-                      setNewBomCode('');
-                      setShowBOMForm(false);
-                      setBomConfirmModal(null);
                     }
                   }}
                   style={{
@@ -3062,18 +3398,34 @@ export default function BomOrdersView(props) {
                     borderRadius: '10px',
                     fontSize: '13px',
                     fontWeight: '800',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    cursor: isSubmittingBom ? 'not-allowed' : 'pointer',
+                    opacity: isSubmittingBom ? 0.7 : 1,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                   }}
                 >
-                  {bomConfirmModal === 'cancel' && 'Yes, Discard'}
-                  {bomConfirmModal === 'draft' && 'Yes, Save Draft'}
-                  {bomConfirmModal === 'create' && 'Yes, Confirm & Create'}
+                  {isSubmittingBom ? (
+                    <>
+                      <Loader size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                      <span>{bomConfirmModal === 'draft' ? 'Saving Draft...' : 'Creating BOM Order...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      {bomConfirmModal === 'cancel' && 'Yes, Discard'}
+                      {bomConfirmModal === 'draft' && 'Yes, Save Draft'}
+                      {bomConfirmModal === 'create' && 'Yes, Confirm & Create'}
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* FULL-SCREEN BOM CREATION LOADING OVERLAY */}
+        {renderBomSubmittingOverlay()}
 
         {/* DOCUMENT PREVIEW MODAL */}
         {renderDocPreviewModal()}
@@ -5832,6 +6184,9 @@ export default function BomOrdersView(props) {
           onClose={() => setPrintingBomRecord(null)}
         />
       )}
+
+      {/* FULL-SCREEN BOM CREATION LOADING OVERLAY */}
+      {renderBomSubmittingOverlay()}
     </div>
   );
 }
