@@ -17398,5 +17398,344 @@
     "cgstAmount": 19413.989999999998,
     "sgstAmount": 19413.989999999998,
     "grandTotal": 254538.97999999998
+  },
+  {
+    "id": "BOM-682",
+    "bomCode": "BOM-682",
+    "code": "BOM-682",
+    "sourcePiNo": "PI-00008",
+    "date": "2026-09-11",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Kathir enterprises",
+    "companyName": "Kathir enterprises",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "-",
+    "billingAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddress": "-",
+    "deliveryAddressObj": {
+      "address": "",
+      "city": "",
+      "state": "",
+      "pincode": ""
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-11 at 4.41.25 PM.jpeg",
+      "size": "0.05 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-11T11:12:08.497Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "Converted automatically from Proforma Invoice (PI-00008) dated 2026-09-11.",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-11T11:12:22.122Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 12,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 24,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "MINI RAIL 100MM NEW",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 200,
+        "gstRate": "18%",
+        "confirmed": true
+      },
+      {
+        "name": "MINI RAIL 125mm (300mm)",
+        "category": "—",
+        "uom": "Nos",
+        "qty": 10,
+        "rate": 201,
+        "gstRate": "18%",
+        "confirmed": true
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-11 at 4.41.25 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-11 at 4.41.25 PM.jpeg",
+        "size": "0.05 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-11T11:12:08.497Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2485 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 12,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 24,
+        "packed": false
+      },
+      {
+        "name": "MINI RAIL 100MM NEW",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "MINI RAIL 125mm (300mm)",
+        "bomQty": 10,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-11T11:12:22.123Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 22010,
+    "gstAmount": 3961.8,
+    "cgstAmount": 1980.9,
+    "sgstAmount": 1980.9,
+    "grandTotal": 25971.8,
+    "c2": "Kathir enterprises",
+    "c3": "MOHITH J V",
+    "c4": "50% Advance + 50% Before Dispatch",
+    "packingProgressText": "17 of 17 Items Packed",
+    "stBg": "#DCFCE7",
+    "stFg": "#166534",
+    "stBorder": "1px solid #86EFAC",
+    "tabGroup": "Packed",
+    "dispatchPackingMedia": null,
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "cancelled": true,
+    "cancelledBy": "Kalpana",
+    "cancelledAt": "2026-09-11T11:16:30.811Z"
   }
 ]

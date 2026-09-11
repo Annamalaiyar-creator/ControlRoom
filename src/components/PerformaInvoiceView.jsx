@@ -104,8 +104,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit'
   const [selectedPi, setSelectedPi] = useState(null); // For viewing details popup overlay
   const [printModalPi, setPrintModalPi] = useState(null); // For official Print & PDF template
-  const [searchQuery, setSearchQuery] = useState('');
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [validationAlert, setValidationAlert] = useState(null); // Interactive Missing Fields popup modal
 
   const [piList, setPiList] = useState(() => {
     try {
@@ -574,16 +574,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     let kitGst = 0;
     groupIds.forEach(grpId => {
       const grp = presetGroups[grpId];
-      let gRateStr = grp?.gstRate;
-      if (!gRateStr) {
-        const firstItem = (piItems || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
-        gRateStr = firstItem?.gstRate || '18%';
-      }
-      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
       if (grp) {
         const unitPrice = parseFloat(grp.kitPrice) || 0;
         const multiplier = parseInt(grp.setCount) || 1;
-        kitGst += (unitPrice * multiplier) * (gPct / 100);
+        const groupTotal = unitPrice * multiplier;
+
+        const groupItems = (piItems || []).filter(it => (it.presetGroupId || 'legacy_default') === grpId);
+        const totalQty = groupItems.reduce((sum, it) => sum + (parseFloat(it.qty) || 1), 0);
+
+        if (totalQty > 0) {
+          groupItems.forEach(it => {
+            const itQty = parseFloat(it.qty) || 1;
+            const itemShare = groupTotal * (itQty / totalQty);
+            const itGstRate = parseFloat(String(it.gstRate || grp.gstRate || '18%').replace('%', '')) || 0;
+            kitGst += itemShare * (itGstRate / 100);
+          });
+        } else {
+          const gRateStr = grp?.gstRate || '18%';
+          const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+          kitGst += groupTotal * (gPct / 100);
+        }
       }
     });
 
@@ -797,15 +807,118 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setPiConfirmModal(null);
   };
 
+  // Validates required fields before creating or saving a PI
+  const validatePiForm = (isDraft = false) => {
+    const missingList = [];
+
+    // 1. Customer Name
+    if (!vendorName || !vendorName.trim()) {
+      missingList.push({
+        field: 'Customer / Company Name',
+        message: 'Please enter or select the Customer / Company Name.',
+        targetId: 'pi-field-vendorName'
+      });
+    }
+
+    // 2. Mobile / Phone
+    if (!phone || !phone.trim()) {
+      missingList.push({
+        field: 'Contact Mobile / Phone',
+        message: 'Please provide a valid contact mobile number.',
+        targetId: 'pi-field-phone'
+      });
+    }
+
+    // 3. Billing Address
+    if (!billingStreet || !billingStreet.trim()) {
+      missingList.push({
+        field: 'Billing Street Address',
+        message: 'Please enter the Billing Street / Door / Area details.',
+        targetId: 'pi-field-billingStreet'
+      });
+    }
+    if (!billingCity || !billingCity.trim()) {
+      missingList.push({
+        field: 'Billing City',
+        message: 'Please enter the Billing City.',
+        targetId: 'pi-field-billingCity'
+      });
+    }
+    if (!billingState || !billingState.trim()) {
+      missingList.push({
+        field: 'Billing State',
+        message: 'Please enter the Billing State.',
+        targetId: 'pi-field-billingState'
+      });
+    }
+    if (!billingPincode || !billingPincode.trim()) {
+      missingList.push({
+        field: 'Billing Pincode',
+        message: 'Please enter the 6-digit Pincode.',
+        targetId: 'pi-field-billingPincode'
+      });
+    }
+
+    // 4. Delivery Address
+    if (!sameAsBilling) {
+      if (!deliveryStreet || !deliveryStreet.trim()) {
+        missingList.push({
+          field: 'Delivery Street Address',
+          message: 'Please enter the Delivery Street address (or check "Same as Billing").',
+          targetId: 'pi-field-deliveryStreet'
+        });
+      }
+      if (!deliveryCity || !deliveryCity.trim()) {
+        missingList.push({
+          field: 'Delivery City',
+          message: 'Please enter the Delivery City.',
+          targetId: 'pi-field-deliveryCity'
+        });
+      }
+    }
+
+    // 5. Line items
+    if (!Array.isArray(piItems) || piItems.length === 0) {
+      missingList.push({
+        field: 'Invoice Line Items',
+        message: 'Please add at least one line item or select a preset kit.',
+        targetId: 'pi-field-items'
+      });
+    } else {
+      const invalid = [];
+      piItems.forEach((it, idx) => {
+        const q = parseFloat(it.qty) || 0;
+        if (!it.name || !it.name.trim()) {
+          invalid.push(`Item #${idx + 1}: Name is required`);
+        } else if (q <= 0) {
+          invalid.push(`Item #${idx + 1} (${it.name}): Quantity must be > 0`);
+        }
+      });
+      if (invalid.length > 0) {
+        missingList.push({
+          field: 'Incomplete Item Details',
+          message: invalid.join(' • '),
+          targetId: 'pi-field-items'
+        });
+      }
+    }
+
+    return {
+      isValid: missingList.length === 0,
+      missingList
+    };
+  };
+
   // Triggers Save Confirmation modal
   const triggerSaveConfirm = (e) => {
     if (e) e.preventDefault();
-    if (!vendorName || !vendorName.trim()) {
-      alert('Please enter Customer / Company Name.');
-      return;
-    }
-    if (!Array.isArray(piItems) || piItems.length === 0) {
-      alert('Please add at least one line item or select a preset kit.');
+    const validation = validatePiForm(false);
+    if (!validation.isValid) {
+      setValidationAlert({
+        title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+        message: 'Please complete the following required details to finalize this Proforma Invoice:',
+        missingList: validation.missingList
+      });
       return;
     }
     setPiConfirmModal('create');
@@ -815,7 +928,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const triggerDraftConfirm = (e) => {
     if (e) e.preventDefault();
     if (!vendorName || !vendorName.trim()) {
-      alert('Please enter Customer / Company Name before saving as draft.');
+      setValidationAlert({
+        title: '⚠️ Missing Customer Name',
+        message: 'Please enter Customer / Company Name before saving as a draft.',
+        missingList: [{
+          field: 'Customer / Company Name',
+          message: 'Please specify the customer or company name.',
+          targetId: 'pi-field-vendorName'
+        }]
+      });
       return;
     }
     setPiConfirmModal('draft');
@@ -921,6 +1042,17 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
   // Pre-populates the fields to edit a Performa Invoice
   const handleStartEdit = (pi, idx) => {
+    if (pi.status === 'Converted to BOM' || pi.convertedToBom) {
+      setValidationAlert({
+        title: '🔒 Proforma Invoice Locked',
+        message: 'This Proforma Invoice has already been converted into a Bill of Materials (BOM) order and is locked from further edits.',
+        missingList: [{
+          field: 'Converted to BOM Order',
+          message: `PI #${pi.piNo || ''} is locked to preserve contractual and production integrity with Dispatch.`
+        }]
+      });
+      return;
+    }
     setEditIdx(idx);
     setPiNumber(pi.piNo || '');
     if (pi.piDate) setPiDate(pi.piDate);
@@ -1564,37 +1696,54 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   );
                 })()}
 
-                <button
-                  onClick={() => {
-                    if (selectedPIs.length > 1) {
-                      alert('You cannot edit multiple items at once.');
-                    } else if (selectedPIs.length === 1) {
-                      const targetPiNo = selectedPIs[0];
-                      const idx = piList.findIndex(p => p.piNo === targetPiNo);
-                      const targetPi = piList[idx] || { piNo: targetPiNo, vendor: '', gstNo: '', unitValue: 0, quantity: 1 };
-                      handleStartEdit(targetPi, idx >= 0 ? idx : 0);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    color: '#1E293B',
-                    borderRadius: '10px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                >
-                  <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
-                </button>
+                {(() => {
+                  const targetPiNo = selectedPIs[0];
+                  const targetPi = targetPiNo ? piList.find(p => p.piNo === targetPiNo) : null;
+                  const isConverted = targetPi && (targetPi.status === 'Converted to BOM' || targetPi.convertedToBom);
+
+                  return (
+                    <button
+                      onClick={() => {
+                        if (selectedPIs.length > 1) {
+                          alert('You cannot edit multiple items at once.');
+                        } else if (selectedPIs.length === 1) {
+                          if (isConverted) {
+                            setValidationAlert({
+                              title: '🔒 Proforma Invoice Locked',
+                              message: 'This Proforma Invoice has already been converted to a Bill of Materials (BOM) order and cannot be edited.',
+                              missingList: [{
+                                field: 'Converted to BOM Order',
+                                message: `PI #${targetPi?.piNo || targetPiNo} is locked to preserve contractual and production integrity.`
+                              }]
+                            });
+                            return;
+                          }
+                          const idx = piList.findIndex(p => p.piNo === targetPiNo);
+                          handleStartEdit(targetPi || { piNo: targetPiNo }, idx >= 0 ? idx : 0);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: isConverted ? '#F8FAFC' : '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: isConverted ? '#94A3B8' : '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: isConverted ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={isConverted ? 'Cannot edit PI that has already been converted to BOM' : 'Edit Info'}
+                    >
+                      <Edit3 size={14} style={{ color: isConverted ? '#94A3B8' : '#64748B' }} />
+                      {isConverted ? 'Locked (Converted)' : 'Edit Info'}
+                    </button>
+                  );
+                })()}
 
                 <button
                   onClick={() => {
@@ -1968,6 +2117,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     Customer / Company Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <input
+                    id="pi-field-vendorName"
                     type="text"
                     list="pi-customers-datalist"
                     placeholder="Search or enter customer..."
@@ -2002,6 +2152,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     Phone Number
                   </label>
                   <input
+                    id="pi-field-phone"
                     type="text"
                     placeholder="+91 98765 43210"
                     value={phone}
@@ -2054,6 +2205,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Street / Premises Address</label>
                       <input
+                        id="pi-field-billingStreet"
                         type="text"
                         placeholder="Plot No, Industrial Estate, Landmark..."
                         value={billingStreet}
@@ -2068,6 +2220,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
                         <input
+                          id="pi-field-billingCity"
                           type="text"
                           placeholder="City"
                           value={billingCity}
@@ -2081,6 +2234,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
                         <input
+                          id="pi-field-billingState"
                           type="text"
                           placeholder="State"
                           value={billingState}
@@ -2094,6 +2248,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>PIN Code</label>
                         <input
+                          id="pi-field-billingPincode"
                           type="text"
                           placeholder="600001"
                           value={billingPincode}
@@ -2144,6 +2299,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Site / Dispatch Location Address</label>
                       <input
+                        id="pi-field-deliveryStreet"
                         type="text"
                         disabled={sameAsBilling}
                         placeholder="Solar Project Site, Survey No, Village..."
@@ -2156,6 +2312,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City / District</label>
                         <input
+                          id="pi-field-deliveryCity"
                           type="text"
                           disabled={sameAsBilling}
                           placeholder="City"
@@ -2193,7 +2350,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
 
             {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS */}
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+            <div id="pi-field-items" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
               {/* Section 3 Header — Clean Single Row */}
               <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
                 {/* Left: Badge + Title */}
@@ -2469,19 +2626,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                 value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  if (isPresetItem && groupId) {
-                                    setPiItems(prev => prev.map((mat, idx) =>
-                                      ((mat.presetGroupId || 'legacy_default') === groupId)
-                                        ? { ...mat, gstRate: val }
-                                        : mat
-                                    ));
-                                    setPresetGroups(prev => ({
-                                      ...prev,
-                                      [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
-                                    }));
-                                  } else {
-                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                                  }
+                                  setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
                                 }}
                                 style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
                               >
@@ -2917,8 +3062,406 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         );
       })()}
 
-      {/* ==================== VIEW PI DETAILS DIALOG (MODAL OVERLAY) ==================== */}
-      {selectedPi && (
+      {/* ==================== VIEW PI DETAILS DIALOG (FULL FORM MODAL OVERLAY) ==================== */}
+      {selectedPi && (() => {
+        const bAddr = selectedPi.billingAddress || selectedPi.billingAddressObj || {};
+        const bStreet = typeof bAddr === 'object' ? (bAddr.street || bAddr.address || '') : (typeof bAddr === 'string' ? bAddr : '');
+        const bCity = typeof bAddr === 'object' ? (bAddr.city || '') : '';
+        const bState = typeof bAddr === 'object' ? (bAddr.state || '') : '';
+        const bPin = typeof bAddr === 'object' ? (bAddr.pincode || bAddr.pin || '') : '';
+
+        const dAddr = selectedPi.deliveryAddress || selectedPi.deliveryAddressObj || {};
+        const dStreet = typeof dAddr === 'object' ? (dAddr.street || dAddr.address || '') : (typeof dAddr === 'string' ? dAddr : '');
+        const dCity = typeof dAddr === 'object' ? (dAddr.city || '') : '';
+        const dState = typeof dAddr === 'object' ? (dAddr.state || '') : '';
+        const dPin = typeof dAddr === 'object' ? (dAddr.pincode || dAddr.pin || '') : '';
+
+        const isSame = selectedPi.sameAsBilling || (!dStreet && !dCity);
+        const piItemsList = Array.isArray(selectedPi.items) ? selectedPi.items : [];
+        const presetGroupsMap = selectedPi.presetGroups || {};
+        const hasPresets = Object.keys(presetGroupsMap).length > 0 || piItemsList.some(it => it.isPresetItem);
+
+        const subtotalVal = Number(selectedPi.unitValue) || piItemsList.reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
+        const grandTotalVal = parseFloat(String(selectedPi.amount || 0).replace(/[^0-9.]/g, '')) || (subtotalVal * 1.18);
+        const totalGstVal = Math.max(0, grandTotalVal - subtotalVal);
+        const isConverted = selectedPi.status === 'Converted to BOM' || selectedPi.convertedToBom;
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 9999,
+              padding: '20px'
+            }}
+            onClick={() => setSelectedPi(null)}
+          >
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1px solid #E2E8F0',
+                maxWidth: '900px',
+                width: '100%',
+                maxHeight: '92vh',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ padding: '20px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#ECFEFF', color: '#0E7490', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0F172A' }}>
+                        Proforma Invoice {selectedPi.piNo}
+                      </h3>
+                      {renderStatusBadge(
+                        isConverted ? 'converted' : selectedPi.status === 'Cancelled' ? 'cancelled' : selectedPi.status === 'Draft' ? 'draft' : 'issued',
+                        isConverted ? 'Converted to BOM' : selectedPi.status || 'Issued'
+                      )}
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>
+                      Created: <strong>{selectedPi.piDate || selectedPi.date || '—'}</strong> | Valid Until: <strong>{selectedPi.validUntilDate || selectedPi.validUntil || '15 Days'}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => setPrintModalPi(selectedPi)}
+                    title="Open Print & PDF Template"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      backgroundColor: '#ECFEFF',
+                      color: '#0E7490',
+                      border: '1.5px solid #A5F3FC',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Printer size={14} /> Official Print / PDF
+                  </button>
+                  <button
+                    onClick={() => setSelectedPi(null)}
+                    style={{ border: 'none', background: '#F1F5F9', borderRadius: '8px', padding: '6px', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Modal Content */}
+              <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* 1. Customer & Contact Details Card */}
+                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+                    <Building2 size={16} color="#0E7490" />
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                      Customer & Contact Details
+                    </h4>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Customer / Company</span>
+                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>{selectedPi.vendor || selectedPi.customerName || '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Contact Person</span>
+                      <strong style={{ fontSize: '13px', color: '#334155' }}>{selectedPi.contactPerson || '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Phone / Mobile</span>
+                      <strong style={{ fontSize: '13px', color: '#334155' }}>{selectedPi.phone || '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Email Address</span>
+                      <span style={{ fontSize: '13px', color: '#334155' }}>{selectedPi.email || '—'}</span>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>GSTIN</span>
+                      <strong style={{ fontSize: '13px', color: '#0E7490', fontFamily: 'monospace' }}>{selectedPi.gstNo || 'Unregistered'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Sales Engineer</span>
+                      <strong style={{ fontSize: '13px', color: '#334155' }}>{selectedPi.salesPerson || '—'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Addresses (Billing & Delivery) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  {/* Billing Address */}
+                  <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
+                      <Building2 size={14} color="#2563EB" />
+                      <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase' }}>Billing Address</strong>
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.5' }}>
+                      <div>{bStreet || selectedPi.billingStreet || '—'}</div>
+                      <div>{[bCity || selectedPi.billingCity, bState || selectedPi.billingState].filter(Boolean).join(', ')}</div>
+                      {(bPin || selectedPi.billingPincode) && <div>PIN: <strong>{bPin || selectedPi.billingPincode}</strong></div>}
+                    </div>
+                  </div>
+
+                  {/* Delivery Address */}
+                  <div style={{ backgroundColor: '#FAFBFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Truck size={14} color="#0E7490" />
+                        <strong style={{ fontSize: '12px', color: '#0F172A', textTransform: 'uppercase' }}>Delivery / Site Address</strong>
+                      </div>
+                      {isSame && (
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 6px', borderRadius: '4px' }}>
+                          Same as Billing
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.5' }}>
+                      {isSame ? (
+                        <>
+                          <div>{bStreet || selectedPi.billingStreet || '—'}</div>
+                          <div>{[bCity || selectedPi.billingCity, bState || selectedPi.billingState].filter(Boolean).join(', ')}</div>
+                          {(bPin || selectedPi.billingPincode) && <div>PIN: <strong>{bPin || selectedPi.billingPincode}</strong></div>}
+                        </>
+                      ) : (
+                        <>
+                          <div>{dStreet || selectedPi.deliveryStreet || '—'}</div>
+                          <div>{[dCity || selectedPi.deliveryCity, dState || selectedPi.deliveryState].filter(Boolean).join(', ')}</div>
+                          {(dPin || selectedPi.deliveryPincode) && <div>PIN: <strong>{dPin || selectedPi.deliveryPincode}</strong></div>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Commercial & Transport Terms */}
+                <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Payment Terms</span>
+                    <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{selectedPi.paymentTerms || '50% Advance + 50% Before Dispatch'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Credit Days</span>
+                    <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{selectedPi.creditDays ? `${selectedPi.creditDays} Days` : 'Immediate'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Transport Mode</span>
+                    <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{selectedPi.transportMode || 'Road Transport'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Transporter / Vehicle</span>
+                    <span style={{ fontSize: '12.5px', color: '#334155' }}>{[selectedPi.transporterName, selectedPi.vehicleNo].filter(Boolean).join(' - ') || 'To be arranged'}</span>
+                  </div>
+                  {selectedPi.remarks && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Remarks / Notes</span>
+                      <span style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic' }}>{selectedPi.remarks}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Complete Invoice Line Items & Presets */}
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 18px', backgroundColor: '#F1F5F9', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Layers size={16} color="#0E7490" />
+                      <strong style={{ fontSize: '13px', color: '#0F172A', textTransform: 'uppercase' }}>
+                        Invoice Line Items ({piItemsList.length > 0 ? piItemsList.length : selectedPi.quantity || 1})
+                      </strong>
+                    </div>
+                    {selectedPi.productName && (
+                      <span style={{ fontSize: '11px', color: '#475569', fontWeight: '600' }}>
+                        Scope: {selectedPi.productName}
+                      </span>
+                    )}
+                  </div>
+
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 14px' }}>#</th>
+                        <th style={{ padding: '10px 14px' }}>Item Description</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>Unit Rate (₹)</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'center' }}>GST Rate</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {piItemsList.length > 0 ? (
+                        piItemsList.map((it, idx) => {
+                          const isPreset = Boolean(it.isPresetItem || it.presetGroupId || (!it.rate && subtotalVal > 0));
+                          const itQty = parseFloat(it.qty) || 1;
+                          const itRate = parseFloat(it.rate) || 0;
+                          const itAmt = isPreset ? null : (itQty * itRate);
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                              <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>{idx + 1}</td>
+                              <td style={{ padding: '10px 14px', color: '#0F172A', fontWeight: '700' }}>
+                                <div>{it.name || 'Component Item'}</div>
+                                {it.category && <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 'normal' }}>{it.category}</span>}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'center', color: '#334155', fontWeight: '600' }}>
+                                {itQty} {it.uom || 'NOS'}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
+                                {isPreset ? (
+                                  <span style={{ fontSize: '11px', color: '#0E7490', fontStyle: 'italic', fontWeight: '600' }}>Included in Preset Kit</span>
+                                ) : (
+                                  `₹ ${itRate.toLocaleString('en-IN')}`
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'center', color: '#4338CA', fontWeight: '700' }}>
+                                {it.gstRate || '18%'}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>
+                                {isPreset ? (
+                                  <span style={{ fontSize: '11px', color: '#64748B' }}>—</span>
+                                ) : (
+                                  `₹ ${(itAmt || 0).toLocaleString('en-IN')}`
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td style={{ padding: '12px 14px', color: '#64748B' }}>1</td>
+                          <td style={{ padding: '12px 14px', color: '#0F172A', fontWeight: '700' }}>{selectedPi.productName || 'Solar Structure MMS Kit'}</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center', color: '#334155' }}>{selectedPi.quantity || 1} Set</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', color: '#475569' }}>₹ {subtotalVal.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center', color: '#4338CA' }}>18%</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>₹ {subtotalVal.toLocaleString('en-IN')}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 5. Financial Summary Grid */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                  <div style={{ width: '360px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                      <span>Taxable Product Value:</span>
+                      <strong style={{ color: '#0F172A' }}>₹ {subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                      <span>Applicable GST (Taxes):</span>
+                      <strong style={{ color: '#0F172A' }}>₹ {totalGstVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #0E7490', marginTop: '4px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>Total Invoice Amount:</span>
+                      <strong style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>
+                        {selectedPi.amount ? (selectedPi.amount.startsWith('₹') ? selectedPi.amount : `₹ ${selectedPi.amount}`) : `₹ ${grandTotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPi(null)}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close Details
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {selectedPi.status !== 'Cancelled' && !isConverted && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to mark Proforma Invoice ${selectedPi.piNo} as Cancelled?`)) {
+                          const updated = piList.map(p => p.piNo === selectedPi.piNo ? { ...p, status: 'Cancelled', statusType: 'cancelled' } : p);
+                          updatePiList(updated);
+                          setSelectedPi(null);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid #FCA5A5',
+                        backgroundColor: '#FEF2F2',
+                        color: '#DC2626',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel PI
+                    </button>
+                  )}
+
+                  {!isConverted && selectedPi.status !== 'Cancelled' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pi = selectedPi;
+                        setSelectedPi(null);
+                        handleConvertToBom(pi);
+                      }}
+                      style={{
+                        padding: '10px 22px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        backgroundColor: '#4F46E5',
+                        color: '#FFFFFF',
+                        fontSize: '13px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(79,70,229,0.3)'
+                      }}
+                    >
+                      <Layers size={16} /> Convert to BOM →
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ==================== MISSING REQUIRED FIELDS POPUP MODAL ==================== */}
+      {validationAlert && (
         <div
           style={{
             position: 'fixed',
@@ -2926,257 +3469,129 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
             backdropFilter: 'blur(4px)',
             display: 'flex',
-            justifyContent: 'center',
             alignItems: 'center',
-            zIndex: 999
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
           }}
+          onClick={() => setValidationAlert(null)}
         >
           <div
             style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              border: '1px solid #e2e8f0',
-              padding: '28px',
-              width: '460px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px'
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden'
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong style={{ fontSize: '16px', color: '#1e293b' }}>PI Details</strong>
-                <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold' }}>{selectedPi.piNo}</span>
+            <div style={{ padding: '20px 24px', backgroundColor: '#FEF3C7', borderBottom: '1px solid #FDE68A', display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#FDE68A', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={22} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  onClick={() => setPrintModalPi(selectedPi)}
-                  title="Open Print & PDF Template"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '5px 12px',
-                    backgroundColor: '#ECFEFF',
-                    color: '#0E7490',
-                    border: '1px solid #A5F3FC',
-                    borderRadius: '6px',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Printer size={13} /> Print / PDF
-                </button>
-                <button
-                  onClick={() => setSelectedPi(null)}
-                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
-                >
-                  <X style={{ width: '18px', height: '18px' }} />
-                </button>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#92400E' }}>
+                  {validationAlert.title}
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12.5px', color: '#B45309' }}>
+                  {validationAlert.message}
+                </p>
               </div>
             </div>
 
-            {/* Layout showing exact same fields as creator */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-              {/* PDF Document Preview block */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>PI PDF File</span>
-                <div
-                  style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    backgroundColor: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px'
-                  }}
-                >
-                  {renderPdfIcon()}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155' }}>
-                        {selectedPi.pdfName}
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle style={{ width: '12px', height: '12px', fill: '#16a34a', color: 'white' }} /> Completed
-                      </span>
-                    </div>
-
-                    <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: '#16a34a' }} />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#94a3b8' }}>
-                      <span>Document Attached</span>
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPrintModalPi(selectedPi);
-                        }}
-                        style={{ fontSize: '11px', fontWeight: 'bold', color: '#0E7490', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Printer size={11} /> Open PDF Template
-                      </a>
+            <div style={{ padding: '20px 24px', maxHeight: '340px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {(validationAlert.missingList || []).map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setValidationAlert(null);
+                      if (item.targetId) {
+                        setTimeout(() => {
+                          const el = document.getElementById(item.targetId);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el.focus?.();
+                          }
+                        }, 100);
+                      }
+                    }}
+                    style={{
+                      padding: '12px 14px',
+                      backgroundColor: '#FFFBEB',
+                      borderRadius: '10px',
+                      border: '1px solid #FDE68A',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      cursor: item.targetId ? 'pointer' : 'default'
+                    }}
+                  >
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#D97706', marginTop: '6px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#92400E' }}>
+                        {item.field}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#78350F', marginTop: '2px' }}>
+                        {item.message}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-
-              {/* Customer Name */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Customer Name</span>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>{selectedPi.vendor}</span>
-              </div>
-
-              {/* Product / Preset Items */}
-              {selectedPi.items && Array.isArray(selectedPi.items) && selectedPi.items.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Invoice Line Items ({selectedPi.items.length})</span>
-                  <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F8FAFC', padding: '6px 8px' }}>
-                    <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid #CBD5E1', color: '#64748B', textAlign: 'left' }}>
-                          <th style={{ padding: '4px' }}>Item</th>
-                          <th style={{ padding: '4px', textAlign: 'center' }}>Qty</th>
-                          <th style={{ padding: '4px', textAlign: 'right' }}>Rate</th>
-                          <th style={{ padding: '4px', textAlign: 'right' }}>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedPi.items.map((it, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '4px', fontWeight: '600', color: '#1E293B' }}>{it.name}</td>
-                            <td style={{ padding: '4px', textAlign: 'center', color: '#475569' }}>{it.qty} {it.uom || ''}</td>
-                            <td style={{ padding: '4px', textAlign: 'right', color: '#475569' }}>₹{Number(it.rate || 0).toLocaleString('en-IN')}</td>
-                            <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#0E7490' }}>₹{(Number(it.qty || 0) * Number(it.rate || 0)).toLocaleString('en-IN')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Product Name</span>
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>{selectedPi.productName || 'General Goods'}</span>
-                </div>
-              )}
-
-              {/* GST No */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>GST No.</span>
-                <span style={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', color: '#334155' }}>
-                  {selectedPi.gstNo}
-                </span>
-              </div>
-
-              {/* Value and Quantity Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Value Of Product</span>
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>
-                    ₹{(Number(selectedPi.unitValue) || 0).toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' }}>Quantity</span>
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>{selectedPi.quantity}</span>
-                </div>
-              </div>
-
-              {/* Total Calculation Separator */}
-              <div
-                style={{
-                  borderTop: '1px dashed #e2e8f0',
-                  paddingTop: '16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Total Invoice Amount</span>
-                <span style={{ fontSize: '18px', fontWeight: 'extrabold', color: '#2563eb' }}>
-                  {selectedPi.amount}
-                </span>
-              </div>
-
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', width: '100%' }}>
+            <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
-                onClick={() => setSelectedPi(null)}
+                type="button"
+                onClick={() => setValidationAlert(null)}
                 style={{
-                  height: '40px',
-                  backgroundColor: '#f1f5f9',
-                  border: 'none',
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
                   color: '#475569',
-                  borderRadius: '10px',
-                  fontWeight: 'bold',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  flex: 1
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
                 }}
               >
-                Close Details
+                Dismiss
               </button>
-              {selectedPi.status !== 'Cancelled' && selectedPi.status !== 'Converted to BOM' && (
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to mark Proforma Invoice ${selectedPi.piNo} as Cancelled?`)) {
-                      const updated = piList.map(p => p.piNo === selectedPi.piNo ? { ...p, status: 'Cancelled', statusType: 'cancelled' } : p);
-                      updatePiList(updated);
-                      setSelectedPi(null);
-                    }
-                  }}
-                  style={{
-                    height: '40px',
-                    backgroundColor: '#FEF2F2',
-                    border: '1px solid #FCA5A5',
-                    color: '#DC2626',
-                    borderRadius: '10px',
-                    fontWeight: '700',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    padding: '0 14px'
-                  }}
-                >
-                  Cancel PI
-                </button>
-              )}
               <button
+                type="button"
                 onClick={() => {
-                  const pi = selectedPi;
-                  setSelectedPi(null);
-                  handleConvertToBom(pi);
+                  const firstTarget = validationAlert.missingList?.[0]?.targetId;
+                  setValidationAlert(null);
+                  if (firstTarget) {
+                    setTimeout(() => {
+                      const el = document.getElementById(firstTarget);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.focus?.();
+                      }
+                    }, 100);
+                  }
                 }}
                 style={{
-                  height: '40px',
-                  backgroundColor: '#4F46E5',
-                  border: 'none',
-                  color: 'white',
+                  padding: '9px 22px',
                   borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#0E7490',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
                   fontWeight: '800',
-                  fontSize: '12px',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  flex: 1.3,
-                  boxShadow: '0 4px 10px rgba(79,70,229,0.25)'
+                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.3)'
                 }}
               >
-                <Layers style={{ width: '15px', height: '15px' }} />
-                Convert to BOM →
+                Review & Fill Details →
               </button>
             </div>
           </div>

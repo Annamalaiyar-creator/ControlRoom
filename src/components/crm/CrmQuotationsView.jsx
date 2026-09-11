@@ -295,6 +295,7 @@ export default function CrmQuotationsView({
 
   // Line items
   const [quoteItems, setQuoteItems] = useState([]);
+  const [validationAlert, setValidationAlert] = useState(null);
 
   // Transport & Logistics
   const [transportMode, setTransportMode] = useState('Transport');
@@ -497,16 +498,26 @@ export default function CrmQuotationsView({
     let kitGst = 0;
     groupIds.forEach(grpId => {
       const grp = presetGroups[grpId];
-      let gRateStr = grp?.gstRate;
-      if (!gRateStr) {
-        const firstItem = (quoteItems || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
-        gRateStr = firstItem?.gstRate || '18%';
-      }
-      const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
       if (grp) {
         const unitPrice = parseFloat(grp.kitPrice) || 0;
         const multiplier = parseInt(grp.setCount) || 1;
-        kitGst += (unitPrice * multiplier) * (gPct / 100);
+        const groupTotal = unitPrice * multiplier;
+
+        const groupItems = (quoteItems || []).filter(it => (it.presetGroupId || 'legacy_default') === grpId);
+        const totalQty = groupItems.reduce((sum, it) => sum + (parseFloat(it.qty) || 1), 0);
+
+        if (totalQty > 0) {
+          groupItems.forEach(it => {
+            const itQty = parseFloat(it.qty) || 1;
+            const itemShare = groupTotal * (itQty / totalQty);
+            const itGstRate = parseFloat(String(it.gstRate || grp.gstRate || '18%').replace('%', '')) || 0;
+            kitGst += itemShare * (itGstRate / 100);
+          });
+        } else {
+          const gRateStr = grp?.gstRate || '18%';
+          const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
+          kitGst += groupTotal * (gPct / 100);
+        }
       }
     });
 
@@ -762,14 +773,66 @@ export default function CrmQuotationsView({
     setSelectedQuote(null);
   };
 
-  // Submit / Save Quotation (with unlimited revision capability)
-  const handleSaveQuotationRecord = (saveAsStatus = 'Sent') => {
+  // Validate required quotation fields
+  const validateQuotationForm = () => {
+    const missing = [];
     if (!customerName || !customerName.trim()) {
-      alert('Please specify customer name.');
-      return;
+      missing.push({ name: 'Customer / Company Name', targetId: 'quote-field-customerName' });
+    }
+    if (!phone || !phone.trim()) {
+      missing.push({ name: 'Phone / WhatsApp Number', targetId: 'quote-field-phone' });
+    }
+    if (!billingStreet || !billingStreet.trim()) {
+      missing.push({ name: 'Billing Street Address', targetId: 'quote-field-billingStreet' });
+    }
+    if (!billingCity || !billingCity.trim()) {
+      missing.push({ name: 'Billing City', targetId: 'quote-field-billingCity' });
+    }
+    if (!billingState || !billingState.trim()) {
+      missing.push({ name: 'Billing State', targetId: 'quote-field-billingState' });
+    }
+    if (!billingPincode || !billingPincode.trim()) {
+      missing.push({ name: 'Billing Pincode', targetId: 'quote-field-billingPincode' });
+    }
+    if (!sameAsBilling) {
+      if (!deliveryStreet || !deliveryStreet.trim()) {
+        missing.push({ name: 'Delivery Street Address', targetId: 'quote-field-deliveryStreet' });
+      }
+      if (!deliveryCity || !deliveryCity.trim()) {
+        missing.push({ name: 'Delivery City', targetId: 'quote-field-deliveryCity' });
+      }
+      if (!deliveryState || !deliveryState.trim()) {
+        missing.push({ name: 'Delivery State', targetId: 'quote-field-deliveryState' });
+      }
+      if (!deliveryPincode || !deliveryPincode.trim()) {
+        missing.push({ name: 'Delivery Pincode', targetId: 'quote-field-deliveryPincode' });
+      }
     }
     if (!quoteItems || quoteItems.length === 0) {
-      alert('Please include at least one item in the quotation scope.');
+      missing.push({ name: 'Quotation Items (Add at least 1 item or preset kit)', targetId: 'quote-field-items' });
+    } else {
+      const hasValidItem = quoteItems.some(it => (it.name && it.name.trim()) || it.isPresetItem);
+      if (!hasValidItem) {
+        missing.push({ name: 'Valid Product / Item in Quotation Scope', targetId: 'quote-field-items' });
+      }
+    }
+
+    return {
+      isValid: missing.length === 0,
+      missingList: missing
+    };
+  };
+
+  // Submit / Save Quotation (with unlimited revision capability)
+  const handleSaveQuotationRecord = (saveAsStatus = 'Sent') => {
+    const validation = validateQuotationForm();
+    if (!validation.isValid) {
+      setValidationAlert({
+        title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+        message: 'Please complete the highlighted details before saving this Quotation:',
+        details: validation.missingList,
+        targetFieldId: validation.missingList[0]?.targetId
+      });
       return;
     }
 
@@ -1202,6 +1265,7 @@ export default function CrmQuotationsView({
                 Customer Name <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
+                id="quote-field-customerName"
                 type="text"
                 list="quotation-customer-suggestions"
                 placeholder="Type or select customer from CRM directory..."
@@ -1237,6 +1301,7 @@ export default function CrmQuotationsView({
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Phone / WhatsApp</label>
               <input
+                id="quote-field-phone"
                 type="text"
                 placeholder="+91 98765 43210"
                 value={phone}
@@ -1278,6 +1343,7 @@ export default function CrmQuotationsView({
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Address</label>
                 <input
+                  id="quote-field-billingStreet"
                   type="text"
                   placeholder="e.g. Plot No 42, SIDCO Industrial Estate, Ambattur"
                   value={billingStreet}
@@ -1293,6 +1359,7 @@ export default function CrmQuotationsView({
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
                   <input
+                    id="quote-field-billingCity"
                     type="text"
                     placeholder="e.g. Chennai"
                     value={billingCity}
@@ -1306,6 +1373,7 @@ export default function CrmQuotationsView({
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
                   <input
+                    id="quote-field-billingState"
                     type="text"
                     placeholder="e.g. Tamil Nadu"
                     value={billingState}
@@ -1319,6 +1387,7 @@ export default function CrmQuotationsView({
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
                   <input
+                    id="quote-field-billingPincode"
                     type="text"
                     placeholder="e.g. 600058"
                     value={billingPincode}
@@ -1362,6 +1431,7 @@ export default function CrmQuotationsView({
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Address</label>
                 <input
+                  id="quote-field-deliveryStreet"
                   type="text"
                   placeholder="e.g. Solar Site Project Location, Plot 10"
                   value={sameAsBilling ? billingStreet : deliveryStreet}
@@ -1374,15 +1444,15 @@ export default function CrmQuotationsView({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>City</label>
-                  <input type="text" placeholder="e.g. Chennai" value={sameAsBilling ? billingCity : deliveryCity} disabled={sameAsBilling} onChange={(e) => setDeliveryCity(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                  <input id="quote-field-deliveryCity" type="text" placeholder="e.g. Chennai" value={sameAsBilling ? billingCity : deliveryCity} disabled={sameAsBilling} onChange={(e) => setDeliveryCity(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>State</label>
-                  <input type="text" placeholder="e.g. Tamil Nadu" value={sameAsBilling ? billingState : deliveryState} disabled={sameAsBilling} onChange={(e) => setDeliveryState(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                  <input id="quote-field-deliveryState" type="text" placeholder="e.g. Tamil Nadu" value={sameAsBilling ? billingState : deliveryState} disabled={sameAsBilling} onChange={(e) => setDeliveryState(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>Pincode</label>
-                  <input type="text" placeholder="e.g. 600058" value={sameAsBilling ? billingPincode : deliveryPincode} disabled={sameAsBilling} onChange={(e) => setDeliveryPincode(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
+                  <input id="quote-field-deliveryPincode" type="text" placeholder="e.g. 600058" value={sameAsBilling ? billingPincode : deliveryPincode} disabled={sameAsBilling} onChange={(e) => setDeliveryPincode(e.target.value)} style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '12px', color: sameAsBilling ? '#64748B' : '#0F172A', backgroundColor: sameAsBilling ? '#F1F5F9' : '#FFFFFF', boxSizing: 'border-box', outline: 'none', cursor: sameAsBilling ? 'not-allowed' : 'text' }} />
                 </div>
               </div>
             </div>
@@ -1390,7 +1460,7 @@ export default function CrmQuotationsView({
         </div>
 
         {/* SECTION 3: ORDER ITEMS & BILL OF MATERIALS (BOM PRESET COMPILER) */}
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+        <div id="quote-field-items" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
           {/* Section 3 Header — Clean Single Row */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', gap: '20px', flexWrap: 'wrap', borderBottom: '1px solid #F1F5F9' }}>
             {/* Left: Badge + Title */}
@@ -1685,19 +1755,7 @@ export default function CrmQuotationsView({
                             value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
                             onChange={(e) => {
                               const val = e.target.value;
-                              if (isPresetItem && groupId) {
-                                setQuoteItems(prev => prev.map((mat, idx) =>
-                                  ((mat.presetGroupId || 'legacy_default') === groupId)
-                                    ? { ...mat, gstRate: val }
-                                    : mat
-                                ));
-                                setPresetGroups(prev => ({
-                                  ...prev,
-                                  [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
-                                }));
-                              } else {
-                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                              }
+                              setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
                             }}
                             style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
                           >
@@ -2153,12 +2211,14 @@ export default function CrmQuotationsView({
             <button
               type="button"
               onClick={() => {
-                if (!customerName || !customerName.trim()) {
-                  alert('⚠️ Please specify or select a Customer Name before proceeding.');
-                  return;
-                }
-                if (!quoteItems || quoteItems.length === 0) {
-                  alert('⚠️ Please add at least one Product / Item to the quotation materials list.');
+                const validation = validateQuotationForm();
+                if (!validation.isValid) {
+                  setValidationAlert({
+                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
+                    message: 'Please complete the highlighted details before creating or saving this Quotation:',
+                    details: validation.missingList,
+                    targetFieldId: validation.missingList[0]?.targetId
+                  });
                   return;
                 }
                 setQuoteConfirmModal('create');
@@ -2222,6 +2282,66 @@ export default function CrmQuotationsView({
                   }}
                 >
                   {quoteConfirmModal === 'cancel' ? 'Yes, Discard' : 'Confirm & Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Interactive Missing Fields Validation Popup */}
+        {validationAlert && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 11000 }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '460px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #CBD5E1' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <AlertTriangle style={{ width: '22px', height: '22px' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
+                    {validationAlert.title}
+                  </h3>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
+                    {validationAlert.message}
+                  </p>
+                </div>
+              </div>
+
+              {validationAlert.details && validationAlert.details.length > 0 && (
+                <div style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px', maxHeight: '200px', overflowY: 'auto' }}>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#9F1239', fontWeight: '600', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {validationAlert.details.map((f, i) => (
+                      <li key={i}>{f.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setValidationAlert(null)}
+                  style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetId = validationAlert.targetFieldId;
+                    setValidationAlert(null);
+                    if (targetId) {
+                      setTimeout(() => {
+                        const el = document.getElementById(targetId);
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          el.focus();
+                        }
+                      }, 100);
+                    }
+                  }}
+                  style={{ border: 'none', backgroundColor: '#0E7490', color: 'white', padding: '9px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(14,116,144,0.35)' }}
+                >
+                  Review & Fill Details →
                 </button>
               </div>
             </div>
@@ -2801,17 +2921,44 @@ export default function CrmQuotationsView({
           zIndex: 10000,
           padding: '20px'
         }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '820px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '32px',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            border: '1px solid #E2E8F0'
-          }}>
+          <div
+            id="quotation-printable-modal"
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '820px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '32px',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+              border: '1px solid #E2E8F0'
+            }}
+          >
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #quotation-printable-modal, #quotation-printable-modal * {
+                  visibility: visible !important;
+                }
+                #quotation-printable-modal {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  margin: 0 !important;
+                  padding: 16px !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
             {/* Header / Brand */}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0E7490', paddingBottom: '16px', marginBottom: '20px' }}>
               <div>
@@ -2845,32 +2992,127 @@ export default function CrmQuotationsView({
               {selectedQuote.deliveryAddress && <div><strong>Delivery Address:</strong> {selectedQuote.deliveryAddress}</div>}
             </div>
 
-            {/* Items */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ padding: '10px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>Item Description</th>
-                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Qty</th>
-                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Rate (₹)</th>
-                  <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Amount (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(selectedQuote.items || []).map((it, idx) => {
-                  const itQty = Number(it.qty || 0);
-                  const itRate = Number(it.rate || 0);
-                  const itAmt = Number(it.amount || (itQty * itRate));
-                  return (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '10px', color: '#0F172A', fontWeight: '600' }}>{it.name || it.description}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>{itQty} {it.unit || it.uom || 'NOS'}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>₹ {itRate.toLocaleString()}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>₹ {itAmt.toLocaleString()}</td>
+            {/* Items with Consolidated Preset Kit Pricing (No ₹0 rows) */}
+            {(() => {
+              const quoteItemsList = selectedQuote.items || [];
+              const rawPresetGroups = selectedQuote.presetGroups || {};
+              const groupMeta = {};
+              quoteItemsList.forEach((it, idx) => {
+                if (it.isPresetItem || it.presetGroupId) {
+                  const gid = it.presetGroupId || 'default_preset';
+                  if (!groupMeta[gid]) {
+                    const savedGrp = (typeof rawPresetGroups === 'object' && !Array.isArray(rawPresetGroups) && rawPresetGroups[gid])
+                      || (Array.isArray(rawPresetGroups) && rawPresetGroups.find(g => g.groupId === gid))
+                      || null;
+                    const name = it.presetName || (savedGrp && savedGrp.presetName) || 'Pre-Engineered MMS Kit Package';
+                    const setCount = (savedGrp && parseInt(savedGrp.setCount)) || 1;
+                    const kitPrice = savedGrp && savedGrp.kitPrice !== undefined ? parseFloat(savedGrp.kitPrice) : (parseFloat(selectedQuote.kitSubtotal) || 0);
+                    groupMeta[gid] = {
+                      groupId: gid,
+                      name,
+                      setCount,
+                      kitPrice,
+                      totalAmount: kitPrice * setCount,
+                      itemsCount: 0,
+                      firstIndex: idx
+                    };
+                  }
+                  groupMeta[gid].itemsCount += 1;
+                }
+              });
+
+              return (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <th style={{ padding: '10px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>Item Description</th>
+                      <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Qty</th>
+                      <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Rate (₹)</th>
+                      <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Amount (₹)</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {quoteItemsList.map((it, idx) => {
+                      const itQty = Number(it.qty || 0);
+                      const itRate = Number(it.rate || 0);
+                      const itAmt = Number(it.amount || (itQty * itRate));
+                      const isPreset = Boolean(it.isPresetItem || it.presetGroupId);
+                      const gid = isPreset ? (it.presetGroupId || 'default_preset') : null;
+                      const gInfo = gid ? groupMeta[gid] : null;
+                      const isFirstInGroup = gInfo && gInfo.firstIndex === idx;
+
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isPreset ? '#FBFDFF' : 'transparent' }}>
+                          <td style={{ padding: '10px', color: '#0F172A', fontWeight: isPreset ? '500' : '600' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {isPreset && (
+                                <span style={{ fontSize: '10px', backgroundColor: '#E0F2FE', color: '#0369A1', fontWeight: '700', padding: '1px 6px', borderRadius: '4px' }}>
+                                  KIT COMPONENT
+                                </span>
+                              )}
+                              <span>{it.name || it.description}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>
+                            {itQty} {it.unit || it.uom || 'NOS'}
+                          </td>
+                          {isPreset ? (
+                            isFirstInGroup ? (
+                              <td
+                                rowSpan={gInfo.itemsCount}
+                                style={{
+                                  padding: '10px',
+                                  textAlign: 'right',
+                                  verticalAlign: 'middle',
+                                  backgroundColor: '#F0FDFA',
+                                  borderLeft: '1px solid #CCFBF1',
+                                  borderRight: '1px solid #CCFBF1'
+                                }}
+                              >
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#0E7490', backgroundColor: '#CCFBF1', padding: '2px 6px', borderRadius: '4px' }}>
+                                    {gInfo.setCount} Set{gInfo.setCount > 1 ? 's' : ''} Kit
+                                  </span>
+                                  <span style={{ fontWeight: '800', color: '#0E7490', fontSize: '13px' }}>
+                                    ₹ {gInfo.kitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </td>
+                            ) : null
+                          ) : (
+                            <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>
+                              ₹ {itRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          )}
+                          {isPreset ? (
+                            isFirstInGroup ? (
+                              <td
+                                rowSpan={gInfo.itemsCount}
+                                style={{
+                                  padding: '10px',
+                                  textAlign: 'right',
+                                  verticalAlign: 'middle',
+                                  fontWeight: '800',
+                                  color: '#0E7490',
+                                  fontSize: '13px',
+                                  backgroundColor: '#F0FDFA'
+                                }}
+                              >
+                                ₹ {gInfo.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                            ) : null
+                          ) : (
+                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
+                              ₹ {itAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
 
             {/* Total Breakdown */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
@@ -2953,7 +3195,7 @@ export default function CrmQuotationsView({
             </div>
 
             {/* Bottom Actions Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => {

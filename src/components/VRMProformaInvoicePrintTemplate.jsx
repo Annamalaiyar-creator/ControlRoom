@@ -648,16 +648,86 @@ export function VRMProformaInvoicePrintSheet({
   const isTamilNadu = customerGst.startsWith('33') || customerState.includes('tamil') || customerState.includes('tn');
   const isInterState = customerGst.length >= 2 && !customerGst.startsWith('33') && !isTamilNadu;
 
+  // Extract preset groups or detect preset items
+  const presetGroups = pi.presetGroups || {};
+  const hasExplicitPresets = Object.keys(presetGroups).length > 0 || rawItems.some(it => it.isPresetItem);
+  const allZeroRate = rawItems.length > 0 && rawItems.every(it => (parseFloat(it.rate) || 0) === 0) && (Number(pi.unitValue) || 0) > 0;
+
+  // Pre-calculate group prices and GSTs
+  const groupMetaMap = {};
+  if (hasExplicitPresets) {
+    Object.keys(presetGroups).forEach(grpId => {
+      const grp = presetGroups[grpId];
+      const uPrice = parseFloat(grp.kitPrice) || 0;
+      const sCount = parseInt(grp.setCount) || 1;
+      const grpSub = uPrice * sCount;
+      const gItems = rawItems.filter(it => (it.presetGroupId || 'legacy_default') === grpId);
+      const tQty = gItems.reduce((s, it) => s + (parseFloat(it.qty) || 1), 0);
+      let grpGst = 0;
+      if (tQty > 0) {
+        gItems.forEach(it => {
+          const itShare = grpSub * ((parseFloat(it.qty) || 1) / tQty);
+          const itRate = parseFloat(String(it.gstRate || grp.gstRate || '18%').replace('%', '')) || 0;
+          grpGst += itShare * (itRate / 100);
+        });
+      } else {
+        const rPct = parseFloat(String(grp.gstRate || '18%').replace('%', '')) || 18;
+        grpGst = grpSub * (rPct / 100);
+      }
+      groupMetaMap[grpId] = {
+        name: grp.presetName || 'Solar Structure MMS Kit',
+        kitPrice: uPrice,
+        setCount: sCount,
+        groupSubtotal: grpSub,
+        groupGst: grpGst,
+        groupTotal: grpSub + grpGst,
+        gstRateStr: grp.gstRate || '18%'
+      };
+    });
+  } else if (allZeroRate) {
+    const uPrice = Number(pi.unitValue) || 0;
+    const sCount = 1;
+    const grpSub = uPrice;
+    const tQty = rawItems.reduce((s, it) => s + (parseFloat(it.qty) || 1), 0);
+    let grpGst = 0;
+    rawItems.forEach(it => {
+      const itShare = grpSub * ((parseFloat(it.qty) || 1) / (tQty || 1));
+      const itRate = parseFloat(String(it.gstRate || '18%').replace('%', '')) || 18;
+      grpGst += itShare * (itRate / 100);
+    });
+    groupMetaMap['implicit_preset_1'] = {
+      name: pi.productName || 'Solar MMS Preset Kit',
+      kitPrice: uPrice,
+      setCount: sCount,
+      groupSubtotal: grpSub,
+      groupGst: grpGst,
+      groupTotal: grpSub + grpGst,
+      gstRateStr: '18%'
+    };
+  }
+
   // Compute item totals
   const items = rawItems.map((it, idx) => {
     const q = parseFloat(it.qty) || 1;
     const r = parseFloat(it.rate) || 0;
+    const isPreset = Boolean(it.isPresetItem || (allZeroRate && !it.rate));
+    const grpId = it.presetGroupId || (allZeroRate ? 'implicit_preset_1' : null);
+    const grpMeta = grpId ? groupMetaMap[grpId] : null;
+
+    let isFirstInGroup = false;
+    let groupCount = 1;
+    if (isPreset && grpId) {
+      const firstIdx = rawItems.findIndex(x => (x.presetGroupId || (allZeroRate ? 'implicit_preset_1' : null)) === grpId);
+      isFirstInGroup = (firstIdx === idx);
+      groupCount = rawItems.filter(x => (x.presetGroupId || (allZeroRate ? 'implicit_preset_1' : null)) === grpId).length;
+    }
+
     const gross = q * r;
     const discPct = parseFloat(it.discountPct || it.discount) || 0;
     const discAmt = gross * (discPct / 100);
-    const taxable = gross - discAmt;
+    const taxable = isPreset ? 0 : (gross - discAmt);
     const gRate = parseFloat(String(it.gstRate || '18%').replace('%', '')) || 18;
-    const gstAmt = taxable * (gRate / 100);
+    const gstAmt = isPreset ? 0 : (taxable * (gRate / 100));
     const lineTotal = taxable + gstAmt;
 
     return {
@@ -672,12 +742,28 @@ export function VRMProformaInvoicePrintSheet({
       taxable,
       gRate,
       gstAmt,
-      lineTotal
+      lineTotal,
+      isPresetItem: isPreset,
+      presetGroupId: grpId,
+      isFirstInGroup,
+      groupCount,
+      presetName: grpMeta?.name || '',
+      setCount: grpMeta?.setCount || 1,
+      groupPrice: grpMeta?.kitPrice || 0,
+      groupTaxable: grpMeta?.groupSubtotal || 0,
+      groupGstRateStr: grpMeta?.gstRateStr || `${gRate}%`,
+      groupLineTotal: grpMeta?.groupTotal || 0
     };
   });
 
-  const subTotal = items.reduce((sum, item) => sum + item.taxable, 0) || (Number(pi.unitValue) || 0);
-  const totalGst = items.reduce((sum, item) => sum + item.gstAmt, 0) || (subTotal * 0.18);
+  const presetSubtotalSum = Object.values(groupMetaMap).reduce((s, g) => s + g.groupSubtotal, 0);
+  const presetGstSum = Object.values(groupMetaMap).reduce((s, g) => s + g.groupGst, 0);
+
+  const customSubtotal = items.filter(it => !it.isPresetItem).reduce((sum, item) => sum + item.taxable, 0);
+  const customGst = items.filter(it => !it.isPresetItem).reduce((sum, item) => sum + item.gstAmt, 0);
+
+  const subTotal = (presetSubtotalSum + customSubtotal) || (Number(pi.unitValue) || 0);
+  const totalGst = (presetGstSum + customGst) || (subTotal * 0.18);
   const grandTotal = subTotal + totalGst;
 
   // Terms array from text lines
@@ -1461,6 +1547,16 @@ export function VRMProformaInvoicePrintSheet({
                     </td>
                   )}
                   <td style={{ padding: '10px 10px', borderRight: '1px solid #E2E8F0' }}>
+                    {it.isPresetItem && it.isFirstInGroup && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
+                        borderRadius: '6px', padding: '2px 8px', fontSize: '10.5px', fontWeight: '800',
+                        marginBottom: '6px', textTransform: 'uppercase'
+                      }}>
+                        📦 Preset Kit: {it.presetName || 'Solar MMS Kit'} ({it.setCount || 1} Set{it.setCount > 1 ? 's' : ''})
+                      </div>
+                    )}
                     <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '11.5px' }}>
                       <EditableText
                         value={it.name}
@@ -1543,62 +1639,148 @@ export function VRMProformaInvoicePrintSheet({
                     </td>
                   )}
                   {cfg.showRateCol !== false && (
-                    <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', color: '#0F172A' }}>
-                      <EditableText
-                        value={String(it.rate)}
-                        fallback="0.00"
-                        onSave={(v) => {
-                          const num = parseFloat(v) || 0;
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], rate: num, unitValue: num };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
-                    </td>
+                    it.isPresetItem ? (
+                      it.isFirstInGroup ? (
+                        <td
+                          rowSpan={it.groupCount}
+                          style={{
+                            padding: '10px 8px',
+                            borderRight: '1px solid #E2E8F0',
+                            textAlign: 'right',
+                            color: '#0F172A',
+                            verticalAlign: 'middle',
+                            fontWeight: '700',
+                            backgroundColor: '#FAFAFA'
+                          }}
+                        >
+                          ₹ {it.groupPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <div style={{ fontSize: '9.5px', color: '#64748B', fontWeight: 'normal' }}>
+                            for {it.setCount || 1} Set{it.setCount > 1 ? 's' : ''}
+                          </div>
+                        </td>
+                      ) : null
+                    ) : (
+                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', color: '#0F172A' }}>
+                        <EditableText
+                          value={String(it.rate)}
+                          fallback="0.00"
+                          onSave={(v) => {
+                            const num = parseFloat(v) || 0;
+                            if (onUpdatePiData && pi.items) {
+                              const updated = [...pi.items];
+                              updated[idx] = { ...updated[idx], rate: num, unitValue: num };
+                              onUpdatePiData({ items: updated });
+                            }
+                          }}
+                        />
+                      </td>
+                    )
                   )}
                   {cfg.showDiscountCol && (
-                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B' }}>
-                      <EditableText
-                        value={it.discPct ? `${it.discPct}%` : '0%'}
-                        fallback="0%"
-                        onSave={(v) => {
-                          const num = parseFloat(v.replace('%', '')) || 0;
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], discPct: num, discountPct: num };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
-                    </td>
+                    it.isPresetItem ? (
+                      it.isFirstInGroup ? (
+                        <td rowSpan={it.groupCount} style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', verticalAlign: 'middle', color: '#64748B', backgroundColor: '#FAFAFA' }}>
+                          —
+                        </td>
+                      ) : null
+                    ) : (
+                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B' }}>
+                        <EditableText
+                          value={it.discPct ? `${it.discPct}%` : '0%'}
+                          fallback="0%"
+                          onSave={(v) => {
+                            const num = parseFloat(v.replace('%', '')) || 0;
+                            if (onUpdatePiData && pi.items) {
+                              const updated = [...pi.items];
+                              updated[idx] = { ...updated[idx], discPct: num, discountPct: num };
+                              onUpdatePiData({ items: updated });
+                            }
+                          }}
+                        />
+                      </td>
+                    )
                   )}
                   {cfg.showTaxableCol !== false && (
-                    <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>
-                      {it.taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
+                    it.isPresetItem ? (
+                      it.isFirstInGroup ? (
+                        <td
+                          rowSpan={it.groupCount}
+                          style={{
+                            padding: '10px 8px',
+                            borderRight: '1px solid #E2E8F0',
+                            textAlign: 'right',
+                            fontWeight: '700',
+                            color: '#0F172A',
+                            verticalAlign: 'middle',
+                            backgroundColor: '#FAFAFA'
+                          }}
+                        >
+                          ₹ {it.groupTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      ) : null
+                    ) : (
+                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>
+                        {it.taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    )
                   )}
                   {cfg.showGstCol && (
-                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: accent, fontWeight: '600' }}>
-                      <EditableText
-                        value={`${it.gRate}%`}
-                        fallback="18%"
-                        onSave={(v) => {
-                          const num = parseFloat(v.replace('%', '')) || 18;
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], gRate: num, gstRate: `${num}%` };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
-                    </td>
+                    it.isPresetItem ? (
+                      it.isFirstInGroup ? (
+                        <td
+                          rowSpan={it.groupCount}
+                          style={{
+                            padding: '10px 6px',
+                            borderRight: '1px solid #E2E8F0',
+                            textAlign: 'center',
+                            color: accent,
+                            fontWeight: '700',
+                            verticalAlign: 'middle',
+                            backgroundColor: '#FAFAFA'
+                          }}
+                        >
+                          {it.groupGstRateStr}
+                        </td>
+                      ) : null
+                    ) : (
+                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: accent, fontWeight: '600' }}>
+                        <EditableText
+                          value={`${it.gRate}%`}
+                          fallback="18%"
+                          onSave={(v) => {
+                            const num = parseFloat(v.replace('%', '')) || 18;
+                            if (onUpdatePiData && pi.items) {
+                              const updated = [...pi.items];
+                              updated[idx] = { ...updated[idx], gRate: num, gstRate: `${num}%` };
+                              onUpdatePiData({ items: updated });
+                            }
+                          }}
+                        />
+                      </td>
+                    )
                   )}
                   {cfg.showTotalCol !== false && (
-                    <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '700', color: accent }}>
-                      {it.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
+                    it.isPresetItem ? (
+                      it.isFirstInGroup ? (
+                        <td
+                          rowSpan={it.groupCount}
+                          style={{
+                            padding: '10px 10px',
+                            textAlign: 'right',
+                            fontWeight: '800',
+                            color: accent,
+                            verticalAlign: 'middle',
+                            backgroundColor: '#FAFAFA'
+                          }}
+                        >
+                          ₹ {it.groupLineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      ) : null
+                    ) : (
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '700', color: accent }}>
+                        {it.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    )
                   )}
                 </tr>
               ))}

@@ -3,7 +3,7 @@ import {
   Plus, Check, Trash2, Eye, FileText, Search, AlertCircle, AlertTriangle, X,
   CheckCircle, Clock, Calendar, Edit3, RotateCcw, UploadCloud, ChevronDown, ChevronUp,
   Truck, ShoppingCart, Upload, Printer, Download, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare,
-  Camera, Video, LayoutGrid, List, Layout, Sparkles, PackageCheck, Image, FileSpreadsheet, Loader
+  Camera, Video, LayoutGrid, List, Layout, Sparkles, PackageCheck, Image, FileSpreadsheet, Loader, Lock
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -1101,12 +1101,6 @@ export default function BomOrdersView(props) {
     let kitGst = 0;
     activeGroupIds.forEach(grpId => {
       const grp = presetGroups[grpId];
-      let gRateStr = grp?.gstRate;
-      if (!gRateStr) {
-        const firstItem = (bomMaterialsList || []).find(it => (it.presetGroupId || 'legacy_default') === grpId);
-        gRateStr = firstItem?.gstRate || '18%';
-      }
-      const gPct = cleanNum(String(gRateStr).replace('%', ''), 18);
       let groupTotal = 0;
       if (grp) {
         const unitPrice = cleanNum(grp.kitPrice, 0);
@@ -1117,7 +1111,22 @@ export default function BomOrdersView(props) {
         const multiplier = parseInt(String(presetSetCount).replace(/[^0-9]/g, ''), 10) || 1;
         groupTotal = unitPrice * multiplier;
       }
-      kitGst += groupTotal * (gPct / 100);
+
+      const groupItems = (bomMaterialsList || []).filter(it => (it.presetGroupId || 'legacy_default') === grpId);
+      const totalQty = groupItems.reduce((sum, it) => sum + cleanNum(it.qty, 1), 0);
+
+      if (totalQty > 0) {
+        groupItems.forEach(it => {
+          const itQty = cleanNum(it.qty, 1);
+          const itemShare = groupTotal * (itQty / totalQty);
+          const itGstRate = cleanNum(String(it.gstRate || grp?.gstRate || '18%').replace('%', ''), 18);
+          kitGst += itemShare * (itGstRate / 100);
+        });
+      } else {
+        const gRateStr = grp?.gstRate || '18%';
+        const gPct = cleanNum(String(gRateStr).replace('%', ''), 18);
+        kitGst += groupTotal * (gPct / 100);
+      }
     });
 
     const gst = itemsGst + kitGst;
@@ -2323,45 +2332,54 @@ export default function BomOrdersView(props) {
               <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ORDER ITEMS & BILL OF MATERIALS</span>
             </div>
 
-            {/* Preset Pill */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
-              <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
-            </div>
+            {newBomSourcePiNo ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#FEF3C7', border: '1.5px solid #F59E0B', padding: '0 16px', borderRadius: '20px', height: '40px', color: '#92400E', fontSize: '13px', fontWeight: '700' }}>
+                <Lock style={{ width: '15px', height: '15px', color: '#D97706' }} />
+                <span>Line Items Locked from PI ({newBomSourcePiNo})</span>
+              </div>
+            ) : (
+              <>
+                {/* Preset Pill */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+                  <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+                </div>
 
-            {/* Searchable Preset Selector */}
-            <SearchablePresetSelector
-              value={selectedPreset}
-              activePresetsMap={activePresetsMap}
-              accentColor="#0E7490"
-              width="380px"
-              placeholder="Pick a Preset to add..."
-              style={{ height: '40px' }}
-              onChange={(val, targetPreset) => {
-                if (val && targetPreset && targetPreset.items) {
-                  handleAddPresetToOrder(val, targetPreset, 1);
-                } else if (!val) {
-                  setSelectedPreset('');
-                }
-              }}
-            />
+                {/* Searchable Preset Selector */}
+                <SearchablePresetSelector
+                  value={selectedPreset}
+                  activePresetsMap={activePresetsMap}
+                  accentColor="#0E7490"
+                  width="380px"
+                  placeholder="Pick a Preset to add..."
+                  style={{ height: '40px' }}
+                  onChange={(val, targetPreset) => {
+                    if (val && targetPreset && targetPreset.items) {
+                      handleAddPresetToOrder(val, targetPreset, 1);
+                    } else if (!val) {
+                      setSelectedPreset('');
+                    }
+                  }}
+                />
 
-            {/* Clear Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedBomItemIndexes.length > 0) {
-                  setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
-                  setSelectedBomItemIndexes([]);
-                } else {
-                  if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
-                }
-              }}
-              title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
-              style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
-            >
-              <X style={{ width: '18px', height: '18px' }} />
-            </button>
+                {/* Clear Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedBomItemIndexes.length > 0) {
+                      setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
+                      setSelectedBomItemIndexes([]);
+                    } else {
+                      if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
+                    }
+                  }}
+                  title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
+                  style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                >
+                  <X style={{ width: '18px', height: '18px' }} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Active Preset Badges / Pills */}
@@ -2386,14 +2404,16 @@ export default function BomOrdersView(props) {
                 >
                   <Layers size={13} style={{ color: '#0E7490' }} />
                   {grp.presetName} ({grp.setCount} Set{grp.setCount > 1 ? 's' : ''})
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePresetGroup(grp.groupId)}
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 0 2px', display: 'flex', alignItems: 'center', color: '#0891B2' }}
-                    title={`Remove ${grp.presetName}`}
-                  >
-                    <X size={13} />
-                  </button>
+                  {!newBomSourcePiNo && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePresetGroup(grp.groupId)}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 0 2px', display: 'flex', alignItems: 'center', color: '#0891B2' }}
+                      title={`Remove ${grp.presetName}`}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
@@ -2401,6 +2421,13 @@ export default function BomOrdersView(props) {
 
           {/* Section 3 Content */}
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          {Boolean(newBomSourcePiNo) && (
+            <div style={{ padding: '12px 18px', backgroundColor: '#FEF3C7', border: '1.5px solid #F59E0B', borderRadius: '10px', color: '#92400E', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Lock style={{ width: '18px', height: '18px', flexShrink: 0, color: '#D97706' }} />
+              <span>Line Items & Pricing locked from Source Proforma Invoice ({newBomSourcePiNo}). Line items, quantities, and prices imported from PI cannot be modified.</span>
+            </div>
+          )}
 
           {/* Clear confirm modal */}
           {showClearConfirmModal && (
@@ -2464,6 +2491,7 @@ export default function BomOrdersView(props) {
                   (() => {
                     const hasAnyPreset = bomMaterialsList.some(it => it.isPresetItem);
                     return bomMaterialsList.map((item, i) => {
+                    const isPiLocked = Boolean(newBomSourcePiNo);
                     const q = parseFloat(item.qty) || 0;
                     const r = parseFloat(item.rate) || 0;
                     const taxable = q * r;
@@ -2489,12 +2517,13 @@ export default function BomOrdersView(props) {
                         <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent' }}>
                           <input
                             type="checkbox"
+                            disabled={isPiLocked}
                             checked={isChecked}
                             onChange={(e) => {
                               if (e.target.checked) setSelectedBomItemIndexes(prev => [...prev, i]);
                               else setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
                             }}
-                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            style={{ accentColor: '#0E7490', cursor: isPiLocked ? 'not-allowed' : 'pointer' }}
                           />
                         </td>
                         <td style={{ padding: '10px 10px' }}>
@@ -2503,6 +2532,7 @@ export default function BomOrdersView(props) {
                             <div style={{ position: 'relative' }}>
                               <input
                                 type="text"
+                                disabled={isPiLocked}
                                 list={`product-list-${i}`}
                                 placeholder="Type or select product / item..."
                                 value={item.name || ''}
@@ -2517,7 +2547,7 @@ export default function BomOrdersView(props) {
                                     category: matched ? (matched.category || matched.description || mat.category) : mat.category
                                   } : mat));
                                 }}
-                                style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                                style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', color: isPiLocked ? '#475569' : '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: isPiLocked ? 'not-allowed' : 'text' }}
                               />
                               <datalist id={`product-list-${i}`}>
                                 {(itemsList || []).map((prod, pidx) => {
@@ -2535,19 +2565,21 @@ export default function BomOrdersView(props) {
                             {/* Line 2: Description */}
                             <input
                               type="text"
+                              disabled={isPiLocked}
                               placeholder="Description..."
                               value={item.category || ''}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
                               }}
-                              style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                              style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F8FAFC' : '#F8FAFC', cursor: isPiLocked ? 'not-allowed' : 'text' }}
                             />
                           </div>
                         </td>
                         <td style={{ padding: '12px 10px' }}>
                           <input
                             type="text"
+                            disabled={isPiLocked}
                             list={`uom-list-${i}`}
                             placeholder="UOM"
                             value={item.uom || 'NOS'}
@@ -2555,7 +2587,7 @@ export default function BomOrdersView(props) {
                               const val = e.target.value;
                               setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
                             }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : '#FFFFFF', fontWeight: '600', cursor: isPiLocked ? 'not-allowed' : 'text' }}
                           />
                           <datalist id={`uom-list-${i}`}>
                             <option value="NOS" />
@@ -2571,13 +2603,14 @@ export default function BomOrdersView(props) {
                         <td style={{ padding: '12px 10px' }}>
                           <input
                             type="number"
+                            disabled={isPiLocked}
                             value={item.qty}
                             placeholder="0"
                             onChange={(e) => {
                               const val = e.target.value;
                               setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                             }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text' }}
                           />
                         </td>
                         <td style={{ padding: '12px 10px' }}>
@@ -2586,36 +2619,26 @@ export default function BomOrdersView(props) {
                           ) : (
                             <input
                               type="number"
+                              disabled={isPiLocked}
                               value={item.rate}
                               placeholder="0.00"
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
                               }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text' }}
                             />
                           )}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                           <select
+                            disabled={isPiLocked}
                             value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
                             onChange={(e) => {
                               const val = e.target.value;
-                              if (isPresetItem && groupId) {
-                                setBomMaterialsList(prev => prev.map((mat, idx) =>
-                                  ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
-                                    ? { ...mat, gstRate: val }
-                                    : mat
-                                ));
-                                setPresetGroups(prev => ({
-                                  ...prev,
-                                  [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
-                                }));
-                              } else {
-                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                              }
+                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
                             }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: isPiLocked ? '#64748B' : '#4338CA', backgroundColor: isPiLocked ? '#F1F5F9' : '#EEF2FF', outline: 'none', cursor: isPiLocked ? 'not-allowed' : 'pointer', textAlign: 'center' }}
                           >
                             <option value="18%">18% GST</option>
                             <option value="12%">12% GST</option>
@@ -2659,6 +2682,7 @@ export default function BomOrdersView(props) {
                                       <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
                                       <input
                                         type="number"
+                                        disabled={isPiLocked}
                                         value={currentGroup.kitPrice}
                                         placeholder="0.00"
                                         onFocus={(e) => e.target.select()}
@@ -2677,7 +2701,7 @@ export default function BomOrdersView(props) {
                                           border: '2px solid #818CF8', padding: '0 10px 0 26px',
                                           fontSize: '15px', fontWeight: '800', color: '#312E81',
                                           textAlign: 'right', outline: 'none', boxSizing: 'border-box',
-                                          backgroundColor: 'white'
+                                          backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text'
                                         }}
                                       />
                                     </div>
@@ -2688,6 +2712,7 @@ export default function BomOrdersView(props) {
                                       </span>
                                       <input
                                         type="number"
+                                        disabled={isPiLocked}
                                         min="0"
                                         max="999"
                                         value={currentGroup.setCount !== undefined && currentGroup.setCount !== null ? currentGroup.setCount : ''}
@@ -2739,7 +2764,7 @@ export default function BomOrdersView(props) {
                                           width: '42px', height: '26px', borderRadius: '6px',
                                           border: '1.5px solid #818CF8', fontSize: '13px',
                                           fontWeight: '800', color: '#312E81', textAlign: 'center',
-                                          padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box'
+                                          padding: '0 2px', outline: 'none', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', boxSizing: 'border-box', cursor: isPiLocked ? 'not-allowed' : 'text'
                                         }}
                                         title="Sets multiplier for this preset"
                                       />
@@ -2751,6 +2776,7 @@ export default function BomOrdersView(props) {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                                       <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
                                       <select
+                                        disabled={isPiLocked}
                                         value={currentGroup.gstRate || item.gstRate || '18%'}
                                         onChange={(e) => {
                                           const val = e.target.value;
@@ -2770,8 +2796,8 @@ export default function BomOrdersView(props) {
                                           height: '24px', borderRadius: '6px',
                                           border: '1.5px solid #818CF8', padding: '0 4px',
                                           fontSize: '11px', fontWeight: '800',
-                                          color: '#312E81', backgroundColor: '#FFFFFF',
-                                          outline: 'none', cursor: 'pointer'
+                                          color: isPiLocked ? '#64748B' : '#312E81', backgroundColor: isPiLocked ? '#F1F5F9' : '#FFFFFF',
+                                          outline: 'none', cursor: isPiLocked ? 'not-allowed' : 'pointer'
                                         }}
                                         title="Change GST Rate for this preset"
                                       >
@@ -2782,7 +2808,7 @@ export default function BomOrdersView(props) {
                                       </select>
                                     </div>
 
-                                    {groupId && (
+                                    {!isPiLocked && groupId && (
                                       <button
                                         type="button"
                                         onClick={() => handleRemovePresetGroup(groupId)}
@@ -2827,14 +2853,20 @@ export default function BomOrdersView(props) {
                           )}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMaterialRow(i)}
-                            style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                            title="Delete Item"
-                          >
-                            <Trash2 style={{ width: '15px', height: '15px' }} />
-                          </button>
+                          {isPiLocked ? (
+                            <span title="Locked from Source Proforma Invoice" style={{ color: '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Lock style={{ width: '15px', height: '15px' }} />
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMaterialRow(i)}
+                              style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              title="Delete Item"
+                            >
+                              <Trash2 style={{ width: '15px', height: '15px' }} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -2846,15 +2878,17 @@ export default function BomOrdersView(props) {
             </table>
           </div>
 
-          <div>
-            <button
-              onClick={handleAddMaterialRow}
-              style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Plus style={{ width: '15px', height: '15px' }} />
-              Add Product / Item
-            </button>
-          </div>
+          {!newBomSourcePiNo && (
+            <div>
+              <button
+                onClick={handleAddMaterialRow}
+                style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus style={{ width: '15px', height: '15px' }} />
+                Add Product / Item
+              </button>
+            </div>
+          )}
           </div>
         </div>
 
@@ -3606,6 +3640,7 @@ export default function BomOrdersView(props) {
       ['Draft', 'Pending Confirmation', 'Pending Sales Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(confirmingBomModal.status || 'Pending Sales Confirmation')
     );
     const isAlreadyForwarded = !isEditMode;
+    const isSourcePiLocked = Boolean(confirmingBomModal.sourcePiNo);
 
     const modalPresetGroups = (Array.isArray(confirmingBomModal.presetGroups) && confirmingBomModal.presetGroups.length > 0)
       ? confirmingBomModal.presetGroups.map(g => ({ ...g }))
@@ -4385,7 +4420,7 @@ export default function BomOrdersView(props) {
               </span>
             </div>
 
-            {!isAlreadyForwarded && (
+            {!isAlreadyForwarded && !isSourcePiLocked && (
               <button
                 onClick={() => {
                   const currentItems = confirmingBomModal.items || [];
@@ -4398,6 +4433,13 @@ export default function BomOrdersView(props) {
               </button>
             )}
           </div>
+
+          {isSourcePiLocked && (
+            <div style={{ padding: '10px 16px', backgroundColor: '#FEF3C7', border: '1.5px solid #F59E0B', borderRadius: '10px', color: '#92400E', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock style={{ width: '16px', height: '16px', flexShrink: 0, color: '#D97706' }} />
+              <span>Line Items & Pricing locked from Source Proforma Invoice ({confirmingBomModal.sourcePiNo}). Quantities, items, and prices imported from PI cannot be modified.</span>
+            </div>
+          )}
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -4547,6 +4589,7 @@ export default function BomOrdersView(props) {
                         <div style={{ position: 'relative' }}>
                           <input
                             type="text"
+                            disabled={isSourcePiLocked}
                             list={`confirm-product-list-${idx}`}
                             placeholder="Type or select product / item..."
                             value={item.name || ''}
@@ -4569,11 +4612,12 @@ export default function BomOrdersView(props) {
                               border: '1px solid #CBD5E1',
                               padding: '0 8px',
                               fontSize: '12px',
-                              color: '#0F172A',
-                              backgroundColor: 'white',
+                              color: isSourcePiLocked ? '#475569' : '#0F172A',
+                              backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white',
                               outline: 'none',
                               fontWeight: '600',
-                              boxSizing: 'border-box'
+                              boxSizing: 'border-box',
+                              cursor: isSourcePiLocked ? 'not-allowed' : 'text'
                             }}
                           />
                           <datalist id={`confirm-product-list-${idx}`}>
@@ -4593,6 +4637,7 @@ export default function BomOrdersView(props) {
                       <td style={{ padding: '12px 10px' }}>
                         <input
                           type="text"
+                          disabled={isSourcePiLocked}
                           placeholder="Description..."
                           value={item.category || item.specs || ''}
                           onChange={(e) => {
@@ -4600,12 +4645,13 @@ export default function BomOrdersView(props) {
                             const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, category: val, specs: val } : it);
                             setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                           }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', outline: 'none' }}
+                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F8FAFC' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
                         />
                       </td>
                       <td style={{ padding: '12px 10px' }}>
                         <input
                           type="text"
+                          disabled={isSourcePiLocked}
                           placeholder="UOM"
                           value={item.uom || item.unit || 'NOS'}
                           onChange={(e) => {
@@ -4613,26 +4659,28 @@ export default function BomOrdersView(props) {
                             const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, uom: val, unit: val } : it);
                             setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                           }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', fontWeight: '700', color: '#0F172A', outline: 'none' }}
+                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', fontWeight: '700', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
                         />
                       </td>
                       <td style={{ padding: '12px 10px' }}>
                         <input
                           type="number"
                           min="1"
+                          disabled={isSourcePiLocked}
                           value={item.qty}
                           onChange={(e) => {
                             const val = e.target.value;
                             const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, qty: val } : it);
                             setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                           }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', color: '#0F172A', outline: 'none' }}
+                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
                         />
                       </td>
                       <td style={{ padding: '12px 10px' }}>
                         <input
                           type="number"
                           min="0"
+                          disabled={isSourcePiLocked}
                           value={item.rate}
                           placeholder={isPartBundle ? '0 (Bundled)' : '0'}
                           onChange={(e) => {
@@ -4640,7 +4688,7 @@ export default function BomOrdersView(props) {
                             const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
                             setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
                           }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', textAlign: 'right', color: '#0F172A', outline: 'none' }}
+                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', textAlign: 'right', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
                         />
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
@@ -4655,15 +4703,21 @@ export default function BomOrdersView(props) {
                         )}
                       </td>
                       <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => {
-                            const updatedItems = (confirmingBomModal.items || []).filter((_, i) => i !== idx);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                          style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <Trash2 style={{ width: '14px', height: '14px' }} />
-                        </button>
+                        {isSourcePiLocked ? (
+                          <span title="Locked from Source Proforma Invoice" style={{ color: '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lock style={{ width: '14px', height: '14px' }} />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const updatedItems = (confirmingBomModal.items || []).filter((_, i) => i !== idx);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                            style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <Trash2 style={{ width: '14px', height: '14px' }} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
