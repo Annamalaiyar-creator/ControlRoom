@@ -150,33 +150,10 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
         }} />
       </div>
 
-      {/* ROW 1: 8 SELECTED PERIOD PERFORMANCE CARDS */}
+      {/* ROW 1: SELECTED PERIOD PERFORMANCE CARDS */}
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px', width: '100%' }}>
-          {/* Card 1: Target */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Target</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>₹ 75.0 L</div>
-            <span style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: '500' }}>Selected period</span>
-          </div>
-
-          {/* Card 2: Achieved Sales */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Achieved Sales</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#16A34A' }}>₹ 72.0 L</div>
-            <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '800', backgroundColor: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', width: 'fit-content' }}>
-              96% achieved
-            </span>
-          </div>
-
-          {/* Card 3: Offer Value */}
-          <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Offer Value</span>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284C7' }}>₹ 1.74 Cr</div>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '500' }}>36 quotations</span>
-          </div>
-
-          {/* Card 4: Conversion */}
+          {/* Card: Conversion */}
           <div className="section-card" style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
             <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Conversion</span>
             <div style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>41.4%</div>
