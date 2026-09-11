@@ -4,7 +4,7 @@ import {
   FileText, Calendar, Filter, ChevronDown, ArrowUpRight, ArrowDownRight,
   Clock, ShieldAlert, Sparkles, RefreshCw, Layers, DollarSign, ChevronRight,
   ChevronLeft, Edit3, Trash2, X, MoreHorizontal, ExternalLink, ArrowRight,
-  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart, Tag
+  Check, Eye, Search, SlidersHorizontal, BarChart3, PieChart, Tag, ArrowUpDown
 } from 'lucide-react';
 
 export default function SalesExecutiveDashboardView({ userRole = 'Sales Executive', onNavigateTab }) {
@@ -623,23 +623,24 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
           </div>
         </div>
 
-        {/* Card C: Top 10 Customers Month Sales Contribution (Styled like PO Ageing Summary table) */}
-        <div className="section-card" style={{ padding: '14px 18px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+        {/* Card C: Top 10 Customers Month Sales Contribution (Styled like RECEIVABLE AGEING SUMMARY reference) */}
+        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
           {/* Card Title */}
-          <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
-            TOP 10 CUSTOMERS — MONTH SALES
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              TOP 10 CUSTOMERS — MONTH SALES
+            </span>
           </div>
 
           {/* Table Header */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1.4fr 1fr 1fr',
-            paddingBottom: '8px',
+            paddingBottom: '6px',
             borderBottom: '1px solid #E2E8F0',
             fontSize: '10.5px',
             fontWeight: '700',
-            color: '#64748B',
-            textTransform: 'none'
+            color: '#64748B'
           }}>
             <div>Customer</div>
             <div style={{ textAlign: 'right' }}>Sales Value</div>
@@ -649,14 +650,13 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
           {/* Table Rows */}
           <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '205px', overflowY: 'auto' }}>
             {topCustomers.map((c, idx) => {
-              // Color gradient pills matching the reference screenshot indicator dots
               const dotColors = [
-                '#10B981', // green
-                '#22C55E', // lime green
+                '#16A34A', // green
+                '#65A30D', // lime green
                 '#84CC16', // light olive
-                '#EAB308', // amber
-                '#F59E0B', // amber-orange
-                '#F97316', // orange
+                '#CA8A04', // amber
+                '#EA580C', // orange
+                '#DC2626', // red
                 '#EF4444', // red
                 '#EC4899', // pink
                 '#8B5CF6', // violet
@@ -671,17 +671,17 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                     display: 'grid',
                     gridTemplateColumns: '1.4fr 1fr 1fr',
                     alignItems: 'center',
-                    padding: '8px 0',
+                    padding: '7px 0',
                     borderBottom: '1px solid #F8FAFC',
-                    fontSize: '11.5px',
+                    fontSize: '11px',
                     lineHeight: '1.3'
                   }}
                 >
                   {/* Customer with Dot Indicator */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, paddingRight: '4px' }}>
                     <span style={{
-                      width: '8px',
-                      height: '8px',
+                      width: '7px',
+                      height: '7px',
                       borderRadius: '50%',
                       backgroundColor: dotColor,
                       flexShrink: 0
@@ -697,7 +697,7 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                   </div>
 
                   {/* % Share */}
-                  <div style={{ textAlign: 'right', fontWeight: '500', color: '#64748B' }}>
+                  <div style={{ textAlign: 'right', color: '#64748B' }}>
                     {c.share}
                   </div>
                 </div>
@@ -710,115 +710,137 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
             display: 'grid',
             gridTemplateColumns: '1.4fr 1fr 1fr',
             alignItems: 'center',
-            paddingTop: '10px',
-            marginTop: '8px',
-            borderTop: '2px solid #0F172A',
-            fontSize: '12px',
+            paddingTop: '8px',
+            marginTop: '6px',
+            borderTop: '2px solid #E2E8F0',
+            fontSize: '11.5px',
             fontWeight: '800',
-            color: '#0F172A'
+            color: '#1E3A8A'
           }}>
             <div>Total (Top 10)</div>
-            <div style={{ textAlign: 'right', color: '#0284C7' }}>₹ 59.8 L</div>
-            <div style={{ textAlign: 'right', color: '#0F172A' }}>83.1%</div>
+            <div style={{ textAlign: 'right', color: '#1E3A8A' }}>₹ 59.8 L</div>
+            <div style={{ textAlign: 'right', color: '#1E3A8A' }}>83.1%</div>
           </div>
         </div>
       </div>
 
       {/* ROW 4: FOLLOW-UP AND OPPORTUNITIES TABLE + ACTIVITY SUMMARY & EXPIRY ALERTS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '16px', width: '100%', alignItems: 'start' }}>
-        {/* Table: Follow-up and Opportunity List */}
-        <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#0F172A', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+        {/* Table: Follow-up and Opportunity List (Styled like OVERDUE PAYMENT INVOICES reference) */}
+        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          {/* Card Header matching OVERDUE PAYMENT INVOICES style */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Follow-up and Opportunity List — Selected Period
             </span>
-            <span style={{ fontSize: '11px', color: '#38BDF8', fontWeight: '700' }}>
-              {followupsData.length} Live Opportunities
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '800',
+              letterSpacing: '0.5px',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              backgroundColor: '#EFF6FF',
+              color: '#1D4ED8',
+              border: '1px solid #DBEAFE'
+            }}>
+              {followupsData.length} LIVE OPPORTUNITIES
             </span>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ width: '36px', padding: '12px 14px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={currentFollowupRows.length > 0 && currentFollowupRows.every(r => selectedFollowups.includes(r.id))}
-                      onChange={() => {
-                        if (currentFollowupRows.every(r => selectedFollowups.includes(r.id))) {
-                          setSelectedFollowups([]);
-                        } else {
-                          setSelectedFollowups(currentFollowupRows.map(r => r.id));
-                        }
-                      }}
-                      style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                    />
-                  </th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Customer / Opportunity</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Offer Value</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Next Follow-up</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Stage</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Age</th>
-                  <th style={{ padding: '12px 14px', fontWeight: '800', color: '#475569' }}>Priority</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentFollowupRows.map((row) => {
-                  const isSelected = selectedFollowups.includes(row.id);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="table-row-hover"
-                      style={{
-                        backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
-                        borderBottom: '1px solid #F1F5F9',
-                        transition: 'background-color 0.15s ease'
-                      }}
-                    >
-                      <td style={{
-                        padding: '12px 14px',
-                        textAlign: 'center',
-                        borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {
-                            if (isSelected) setSelectedFollowups(selectedFollowups.filter(i => i !== row.id));
-                            else setSelectedFollowups([...selectedFollowups, row.id]);
-                          }}
-                          style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 14px', fontWeight: '700', color: '#1E293B' }}>{row.customer}</td>
-                      <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0E7490' }}>{row.offerValue}</td>
-                      <td style={{ padding: '12px 14px', color: '#334155' }}>{row.nextFollowup}</td>
-                      <td style={{ padding: '12px 14px', color: '#64748B', fontWeight: '600' }}>{row.stage}</td>
-                      <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.age}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          backgroundColor: row.priority === 'HIGH' ? '#FEE2E2' : '#FEF3C7',
-                          color: row.priority === 'HIGH' ? '#EF4444' : '#D97706'
+          {/* Table Container with rounded border matching reference */}
+          <div style={{ border: '1px solid #F1F5F9', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ width: '36px', padding: '10px 14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={currentFollowupRows.length > 0 && currentFollowupRows.every(r => selectedFollowups.includes(r.id))}
+                        onChange={() => {
+                          if (currentFollowupRows.every(r => selectedFollowups.includes(r.id))) {
+                            setSelectedFollowups([]);
+                          } else {
+                            setSelectedFollowups(currentFollowupRows.map(r => r.id));
+                          }
+                        }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                      />
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Customer / Opportunity <ArrowUpDown size={11} style={{ opacity: 0.6 }} />
+                      </div>
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>Offer Value</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>Next Follow-up</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>Stage</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>Age</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px' }}>Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentFollowupRows.map((row) => {
+                    const isSelected = selectedFollowups.includes(row.id);
+                    return (
+                      <tr
+                        key={row.id}
+                        className="table-row-hover"
+                        style={{
+                          backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
+                          borderBottom: '1px solid #F1F5F9',
+                          transition: 'background-color 0.15s ease'
+                        }}
+                      >
+                        <td style={{
+                          padding: '10px 14px',
+                          textAlign: 'center',
+                          borderLeft: isSelected ? '4px solid #0E7490' : '4px solid transparent'
                         }}>
-                          {row.priority}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) setSelectedFollowups(selectedFollowups.filter(i => i !== row.id));
+                              else setSelectedFollowups([...selectedFollowups, row.id]);
+                            }}
+                            style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{row.customer}</td>
+                        <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{row.offerValue}</td>
+                        <td style={{ padding: '10px 14px', color: '#475569', fontWeight: '500' }}>{row.nextFollowup}</td>
+                        <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>{row.stage}</td>
+                        <td style={{ padding: '10px 14px', color: '#64748B' }}>{row.age}</td>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 10px',
+                            borderRadius: '14px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            backgroundColor: row.priority === 'HIGH' ? '#FEF2F2' : '#FFFBEB',
+                            border: `1px solid ${row.priority === 'HIGH' ? '#FEE2E2' : '#FEF3C7'}`,
+                            color: row.priority === 'HIGH' ? '#DC2626' : '#D97706'
+                          }}>
+                            {row.priority === 'HIGH' && <Clock size={11} />}
+                            {row.priority}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Standard Pagination Footer Layout (AGENTS.md strict rules) */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', backgroundColor: '#FFFFFF', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: '500' }}>Showing per page</span>
+              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Showing per page</span>
               <select
                 value={followupRowsPerPage}
                 onChange={(e) => { setFollowupRowsPerPage(parseInt(e.target.value)); setFollowupPage(1); }}
@@ -827,12 +849,12 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                 <option value={5}>5</option>
                 <option value={10}>10</option>
               </select>
-              <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: '500' }}>
+              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>
                 Showing {(followupPage - 1) * followupRowsPerPage + 1} to {Math.min(followupPage * followupRowsPerPage, followupsData.length)} of {followupsData.length} entries
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <button
                 disabled={followupPage === 1}
                 onClick={() => setFollowupPage(1)}
@@ -859,7 +881,8 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
                     backgroundColor: followupPage === idx + 1 ? '#0E7490' : '#FFFFFF',
                     color: followupPage === idx + 1 ? '#FFFFFF' : '#475569',
                     fontWeight: 'bold',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '11px'
                   }}
                 >
                   {idx + 1}
@@ -905,108 +928,165 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
 
         {/* Right Stack: Activity Summary + Risk & Expiry Alerts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Card: Activity Summary */}
-          <div className="section-card" style={{ padding: '18px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              Activity Summary — Selected Period
+          {/* Card: Activity Summary (Styled like RECEIVABLE AGEING SUMMARY reference) */}
+          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                ACTIVITY SUMMARY — SELECTED PERIOD
+              </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <span style={{ color: '#475569' }}>Calls completed</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>186</strong>
-                  <span style={{ fontSize: '10.5px', color: '#94A3B8', marginLeft: '6px' }}>Out 142 / In 44</span>
-                </div>
-              </div>
+            {/* Sub-header matching reference table */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1.4fr 1fr',
+              paddingBottom: '6px',
+              borderBottom: '1px solid #E2E8F0',
+              fontSize: '10.5px',
+              fontWeight: '700',
+              color: '#64748B'
+            }}>
+              <div>Activity</div>
+              <div style={{ textAlign: 'right' }}>Achieved / Metric</div>
+            </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <span style={{ color: '#475569' }}>Customer meetings</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>28</strong>
-                  <span style={{ fontSize: '10.5px', color: '#94A3B8', marginLeft: '6px' }}>Target 20</span>
+            {/* Rows with Dot indicators matching RECEIVABLE AGEING SUMMARY */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {[
+                { label: 'Calls completed', count: '186', sub: 'Out 142 / In 44', color: '#0284C7' },
+                { label: 'Customer meetings', count: '28', sub: 'Target 20', color: '#0D9488' },
+                { label: 'Offers sent', count: '36', sub: 'Target 32', color: '#8B5CF6' },
+                { label: 'Follow-ups completed', count: '142', sub: '91% on time', color: '#16A34A' },
+                { label: 'Proforma invoices', count: '18', sub: '₹ 82.0 L', color: '#0E7490' },
+                { label: 'Invoices', count: '16', sub: '₹ 68.5 L', color: '#EA580C' }
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 1fr',
+                    alignItems: 'center',
+                    padding: '6px 0',
+                    borderBottom: '1px solid #F8FAFC',
+                    fontSize: '11px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
+                    <span style={{ color: '#1E293B', fontWeight: '600' }}>{item.label}</span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <strong style={{ color: '#1E293B', fontSize: '12px' }}>{item.count}</strong>
+                    <span style={{ fontSize: '10.5px', color: '#64748B', marginLeft: '6px' }}>{item.sub}</span>
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <span style={{ color: '#475569' }}>Offers sent</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>36</strong>
-                  <span style={{ fontSize: '10.5px', color: '#94A3B8', marginLeft: '6px' }}>Target 32</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <span style={{ color: '#475569' }}>Follow-ups completed</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>142</strong>
-                  <span style={{ fontSize: '10.5px', color: '#16A34A', marginLeft: '6px', fontWeight: '700' }}>91% on time</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #F1F5F9' }}>
-                <span style={{ color: '#475569' }}>Proforma invoices</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>18</strong>
-                  <span style={{ fontSize: '10.5px', color: '#0E7490', marginLeft: '6px', fontWeight: '700' }}>₹ 82.0 L</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
-                <span style={{ color: '#475569' }}>Invoices</span>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ color: '#0F172A', fontSize: '13px' }}>16</strong>
-                  <span style={{ fontSize: '10.5px', color: '#EA580C', marginLeft: '6px', fontWeight: '700' }}>₹ 68.5 L</span>
-                </div>
-              </div>
+            {/* Total Row matching reference */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1.4fr 1fr',
+              alignItems: 'center',
+              paddingTop: '8px',
+              marginTop: '4px',
+              borderTop: '2px solid #E2E8F0',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#1E3A8A'
+            }}>
+              <div>Total Engagement Actions</div>
+              <div style={{ textAlign: 'right', color: '#1E3A8A' }}>426 Interactions</div>
             </div>
           </div>
 
-          {/* Card: Opportunity Risk & Expiry Alerts */}
-          <div className="section-card" style={{ padding: '18px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              Opportunity Risk and Expiry Alerts
+          {/* Card: Opportunity Risk & Expiry Alerts (Styled like OVERDUE PAYMENT INVOICES reference) */}
+          <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Opportunity Risk and Expiry Alerts
+              </span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                letterSpacing: '0.5px',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                backgroundColor: '#FEF2F2',
+                color: '#DC2626',
+                border: '1px solid #FEE2E2'
+              }}>
+                ATTENTION
+              </span>
             </div>
 
-            {/* Inactive Alert Sub-block */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                Inactive Above 15 Days
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11.5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>ABC Solar</span>
-                  <span style={{ fontWeight: '700' }}>₹ 12.4 L <span style={{ color: '#DC2626' }}>(18 days)</span></span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>Green Infra</span>
-                  <span style={{ fontWeight: '700' }}>₹ 9.8 L <span style={{ color: '#DC2626' }}>(16 days)</span></span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>Kaveri Energy</span>
-                  <span style={{ fontWeight: '700' }}>₹ 4.6 L <span style={{ color: '#DC2626' }}>(21 days)</span></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Expiring Alert Sub-block */}
+            {/* Inactive Alert Sub-block with pill badges matching reference */}
             <div>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                Offers Expiring This Week
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={12} /> Inactive Above 15 Days
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11.5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>Bright Energy</span>
-                  <span style={{ fontWeight: '700' }}>₹ 8.2 L <span style={{ color: '#D97706' }}>(02 Sep)</span></span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>Sun Power EPC</span>
-                  <span style={{ fontWeight: '700' }}>₹ 6.7 L <span style={{ color: '#D97706' }}>(04 Sep)</span></span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>Nova Energy</span>
-                  <span style={{ fontWeight: '700' }}>₹ 3.1 L <span style={{ color: '#D97706' }}>(05 Sep)</span></span>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  { name: 'ABC Solar', val: '₹ 12.4 L', delay: '18 Days Inactive' },
+                  { name: 'Green Infra', val: '₹ 9.8 L', delay: '16 Days Inactive' },
+                  { name: 'Kaveri Energy', val: '₹ 4.6 L', delay: '21 Days Inactive' }
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                    <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '11.5px' }}>{item.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '11.5px' }}>{item.val}</span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid #FEE2E2',
+                        color: '#DC2626',
+                        fontSize: '10.5px',
+                        fontWeight: '700'
+                      }}>
+                        <Clock size={10} /> {item.delay}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Expiring Alert Sub-block with pill badges */}
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={12} /> Offers Expiring This Week
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  { name: 'Bright Energy', val: '₹ 8.2 L', date: '02 Sep Expiry' },
+                  { name: 'Sun Power EPC', val: '₹ 6.7 L', date: '04 Sep Expiry' },
+                  { name: 'Nova Energy', val: '₹ 3.1 L', date: '05 Sep Expiry' }
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                    <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '11.5px' }}>{item.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '11.5px' }}>{item.val}</span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: '#FFFBEB',
+                        border: '1px solid #FEF3C7',
+                        color: '#D97706',
+                        fontSize: '10.5px',
+                        fontWeight: '700'
+                      }}>
+                        <Clock size={10} /> {item.date}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1015,92 +1095,138 @@ export default function SalesExecutiveDashboardView({ userRole = 'Sales Executiv
 
       {/* ROW 5: CUSTOMER OUTSTANDING & CREDIT + LOST / CANCELLED OPPORTUNITIES */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px', width: '100%', alignItems: 'start' }}>
-        {/* Table: Customer Outstanding and Credit Status */}
-        <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', backgroundColor: '#0F172A', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Customer Outstanding and Credit Status — Selected Period
+        {/* Table: Customer Outstanding and Credit Status (Styled like OVERDUE PAYMENT INVOICES reference) */}
+        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Customer Outstanding and Credit Status — Selected Period
+            </span>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '800',
+              letterSpacing: '0.5px',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              backgroundColor: '#EFF6FF',
+              color: '#1E40AF',
+              border: '1px solid #DBEAFE'
+            }}>
+              CREDIT STATUS
+            </span>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'left' }}>Customer</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Invoiced</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Outstanding</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Overdue</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Credit Limit</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'center' }}>Credit Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outstandingData.map(c => (
-                  <tr key={c.id} className="table-row-hover" style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{c.customer}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>{c.invoiced}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{c.outstanding}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: c.overdue !== '—' ? '#DC2626' : '#64748B' }}>{c.overdue}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748B' }}>{c.creditLimit}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        backgroundColor: c.creditStatus === 'Within limit' ? '#DCFCE7' : c.creditStatus === '72% used' ? '#FEF3C7' : '#FEE2E2',
-                        color: c.creditStatus === 'Within limit' ? '#166534' : c.creditStatus === '72% used' ? '#92400E' : '#991B1B'
-                      }}>
-                        {c.creditStatus}
-                      </span>
-                    </td>
+
+          <div style={{ border: '1px solid #F1F5F9', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Customer <ArrowUpDown size={11} style={{ opacity: 0.6 }} /></div>
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Invoiced</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Outstanding</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Overdue</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Credit Limit</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'center' }}>Credit Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {outstandingData.map(c => (
+                    <tr key={c.id} className="table-row-hover" style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{c.customer}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>{c.invoiced}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#1E293B' }}>{c.outstanding}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: c.overdue !== '—' ? '#DC2626' : '#64748B' }}>{c.overdue}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748B' }}>{c.creditLimit}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 10px',
+                          borderRadius: '14px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          backgroundColor: c.creditStatus === 'Within limit' ? '#ECFDF5' : c.creditStatus === '72% used' ? '#FFFBEB' : '#FEF2F2',
+                          border: `1px solid ${c.creditStatus === 'Within limit' ? '#D1FAE5' : c.creditStatus === '72% used' ? '#FEF3C7' : '#FEE2E2'}`,
+                          color: c.creditStatus === 'Within limit' ? '#059669' : c.creditStatus === '72% used' ? '#D97706' : '#DC2626'
+                        }}>
+                          {c.creditStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Table: Lost and Cancelled Opportunities */}
-        <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', backgroundColor: '#0F172A', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Lost and Cancelled Opportunities — Selected Period
+        {/* Table: Lost and Cancelled Opportunities (Styled like OVERDUE PAYMENT INVOICES reference) */}
+        <div className="section-card" style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', border: '1px solid #EAEFEF', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 18px rgba(15, 23, 42, 0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Lost and Cancelled Opportunities — Selected Period
+            </span>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '800',
+              letterSpacing: '0.5px',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FEE2E2'
+            }}>
+              ANALYSIS
+            </span>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'left' }}>Opportunity</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Value</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'left' }}>Reason</th>
-                  <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Closed Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lostCancelledData.map(l => (
-                  <tr key={l.id} className="table-row-hover" style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{l.opportunity}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>{l.value}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        backgroundColor: l.status === 'Lost' ? '#FEE2E2' : '#F1F5F9',
-                        color: l.status === 'Lost' ? '#DC2626' : '#64748B'
-                      }}>
-                        {l.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.reason}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94A3B8' }}>{l.closedDate}</td>
+
+          <div style={{ border: '1px solid #F1F5F9', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Opportunity <ArrowUpDown size={11} style={{ opacity: 0.6 }} /></div>
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Value</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'left' }}>Reason</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '700', color: '#64748B', fontSize: '11px', textAlign: 'right' }}>Closed Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ padding: '8px 14px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', textAlign: 'right', fontSize: '11px', color: '#DC2626', fontWeight: '700' }}>
-            Total lost / cancelled value: ₹ 14.7 L
+                </thead>
+                <tbody>
+                  {lostCancelledData.map(l => (
+                    <tr key={l.id} className="table-row-hover" style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1E293B' }}>{l.opportunity}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#1E293B' }}>{l.value}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 10px',
+                          borderRadius: '14px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          backgroundColor: l.status === 'Lost' ? '#FEF2F2' : '#F1F5F9',
+                          border: `1px solid ${l.status === 'Lost' ? '#FEE2E2' : '#E2E8F0'}`,
+                          color: l.status === 'Lost' ? '#DC2626' : '#64748B'
+                        }}>
+                          {l.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.reason}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94A3B8' }}>{l.closedDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '10px 14px', backgroundColor: '#F8FAFC', borderTop: '1px solid #F1F5F9', textAlign: 'right', fontSize: '11px', color: '#DC2626', fontWeight: '700' }}>
+              Total lost / cancelled value: ₹ 14.7 L
+            </div>
           </div>
         </div>
       </div>
