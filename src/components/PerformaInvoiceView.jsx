@@ -653,7 +653,25 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   };
 
   const handleRemoveMaterialRow = (idx) => {
-    setPiItems(prev => (prev || []).filter((_, i) => i !== idx));
+    setPiItems(prev => {
+      const target = (prev || [])[idx];
+      const remaining = (prev || []).filter((_, i) => i !== idx);
+      if (target && target.presetGroupId) {
+        const stillHasGroup = remaining.some(it => it.presetGroupId === target.presetGroupId);
+        if (!stillHasGroup) {
+          setPresetGroups(pg => {
+            const copy = { ...pg };
+            delete copy[target.presetGroupId];
+            return copy;
+          });
+        }
+      }
+      if (remaining.length === 0) {
+        setSelectedPreset('');
+      }
+      return remaining;
+    });
+    setSelectedItemIndexes(prev => prev.filter(i => i !== idx).map(i => i > idx ? i - 1 : i));
   };
 
   const fetchNextPiNumber = async () => {
@@ -2590,18 +2608,34 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                               )}
                             </td>
                             <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {isPresetItem ? (
-                                <span style={{ fontSize: '10px', color: '#94A3B8', fontStyle: 'italic' }}>Preset</span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveMaterialRow(i)}
-                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', padding: '4px' }}
-                                  title="Remove item"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMaterialRow(i)}
+                                style={{
+                                  border: 'none',
+                                  background: '#FEF2F2',
+                                  color: '#EF4444',
+                                  width: '30px',
+                                  height: '30px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#FEE2E2';
+                                  e.currentTarget.style.color = '#DC2626';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#FEF2F2';
+                                  e.currentTarget.style.color = '#EF4444';
+                                }}
+                                title="Delete Item"
+                              >
+                                <Trash2 size={15} />
+                              </button>
                             </td>
                           </tr>
                         );
