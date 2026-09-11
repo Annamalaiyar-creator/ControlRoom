@@ -4631,41 +4631,6 @@ export default function BomOrdersView(props) {
             {pageConfig.subtitle}
           </span>
         </div>
-        {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
-          <button
-            onClick={() => {
-              if (typeof props.onChangeTab === 'function') {
-                props.onChangeTab('Proforma Invoice');
-              } else if (typeof props.onNavigateTab === 'function') {
-                props.onNavigateTab('Proforma Invoice');
-              } else {
-                window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { detail: 'Proforma Invoice' }));
-              }
-            }}
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1.5px solid #0E7490',
-              color: '#0E7490',
-              height: '40px',
-              padding: '0 18px',
-              borderRadius: '50px',
-              fontSize: '13px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(14, 116, 144, 0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFEFF'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-            title="BOMs must originate from an issued Proforma Invoice. Click to view and convert Proforma Invoices."
-          >
-            <FileText size={15} color="#0E7490" />
-            <span>Convert from Proforma Invoice →</span>
-          </button>
-        )}
       </div>
 
       {/* ADDRESS PROOF RE-UPLOAD REQUEST NOTIFICATION BANNER */}
