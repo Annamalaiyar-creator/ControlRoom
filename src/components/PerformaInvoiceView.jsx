@@ -1785,7 +1785,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                    PI Number (Zoho Quote Sequence)
+                    PI Number
                   </label>
                   <div style={{ position: 'relative' }}>
                     <input
@@ -1793,7 +1793,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       readOnly
                       disabled
                       value={piNumber || 'Auto-Assigned'}
-                      placeholder="Auto-Assigned (Zoho Quote Sequence)"
+                      placeholder="Auto-Assigned"
                       style={{
                         width: '100%',
                         height: '42px',
