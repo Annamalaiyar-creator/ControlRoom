@@ -27,13 +27,13 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   // Theme & Identity
   accentColor: '#0E7490', // Default VRM Teal
   documentTitle: 'PROFORMA INVOICE',
-  companyName: 'VRM Structures India Pvt Ltd',
-  companyTagline: 'Engineered Solar Mounting Structures & Solutions',
+  companyName: '',
+  companyTagline: '',
   showLogo: true,
   customLogoUrl: null, // Custom uploaded logo base64
   logoHeight: 52,
-  showCompanyName: true,
-  showCompanyTagline: true,
+  showCompanyName: false,
+  showCompanyTagline: false,
   showContactInfo: true,
   showCompanyAddress: true,
   showCinGst: true,
@@ -991,36 +991,38 @@ export function VRMProformaInvoicePrintSheet({
                     />
                   </RemovableBlock>
                 )}
-                <div>
-                  {cfg.showCompanyName !== false && (
-                    <div style={{ fontSize: '16.5px', fontWeight: '800', color: accent, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
-                      <EditableText
-                        value={cfg.companyName}
-                        fallback="VRM Structures India Pvt Ltd"
-                        onSave={(v) => onUpdateSetting?.({ companyName: v })}
-                        onRemove={() => {
-                          onUpdateSetting?.({ showCompanyName: false });
-                          onElementRemoved?.('showCompanyName', 'Company Name');
-                        }}
-                        removeLabel="Company Name"
-                      />
-                    </div>
-                  )}
-                  {cfg.showCompanyTagline && (
-                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600' }}>
-                      <EditableText
-                        value={cfg.companyTagline}
-                        fallback="Engineered Solar Mounting Structures & Solutions"
-                        onSave={(v) => onUpdateSetting?.({ companyTagline: v })}
-                        onRemove={() => {
-                          onUpdateSetting?.({ showCompanyTagline: false });
-                          onElementRemoved?.('showCompanyTagline', 'Company Tagline');
-                        }}
-                        removeLabel="Company Tagline"
-                      />
-                    </div>
-                  )}
-                </div>
+                {((cfg.showCompanyName && cfg.companyName) || (cfg.showCompanyTagline && cfg.companyTagline)) ? (
+                  <div>
+                    {cfg.showCompanyName && cfg.companyName && (
+                      <div style={{ fontSize: '16.5px', fontWeight: '800', color: accent, letterSpacing: '-0.3px', textTransform: 'uppercase' }}>
+                        <EditableText
+                          value={cfg.companyName}
+                          fallback=""
+                          onSave={(v) => onUpdateSetting?.({ companyName: v })}
+                          onRemove={() => {
+                            onUpdateSetting?.({ showCompanyName: false, companyName: '' });
+                            onElementRemoved?.('showCompanyName', 'Company Name');
+                          }}
+                          removeLabel="Company Name"
+                        />
+                      </div>
+                    )}
+                    {cfg.showCompanyTagline && cfg.companyTagline && (
+                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600' }}>
+                        <EditableText
+                          value={cfg.companyTagline}
+                          fallback=""
+                          onSave={(v) => onUpdateSetting?.({ companyTagline: v })}
+                          onRemove={() => {
+                            onUpdateSetting?.({ showCompanyTagline: false, companyTagline: '' });
+                            onElementRemoved?.('showCompanyTagline', 'Company Tagline');
+                          }}
+                          removeLabel="Company Tagline"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               {cfg.showContactInfo && (
@@ -3170,7 +3172,12 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
     try {
       const saved = localStorage.getItem('vrm_pi_template_customization');
       if (saved) {
-        return { ...DEFAULT_PI_TEMPLATE_SETTINGS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.companyName === 'VRM Structures India Pvt Ltd') parsed.companyName = '';
+        if (parsed.companyTagline === 'Engineered Solar Mounting Structures & Solutions') parsed.companyTagline = '';
+        parsed.showCompanyName = false;
+        parsed.showCompanyTagline = false;
+        return { ...DEFAULT_PI_TEMPLATE_SETTINGS, ...parsed };
       }
     } catch (e) {}
     return DEFAULT_PI_TEMPLATE_SETTINGS;

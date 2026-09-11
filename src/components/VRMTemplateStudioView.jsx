@@ -415,7 +415,20 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     try {
       const saved = localStorage.getItem('vrm_multi_templates_v2');
       if (saved) {
-        return { ...DEFAULT_MULTI_TEMPLATES, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        Object.keys(parsed).forEach(cat => {
+          if (Array.isArray(parsed[cat])) {
+            parsed[cat] = parsed[cat].map(t => {
+              const s = { ...t.settings };
+              if (s.companyName === 'VRM Structures India Pvt Ltd') s.companyName = '';
+              if (s.companyTagline === 'Engineered Solar Mounting Structures & Solutions') s.companyTagline = '';
+              s.showCompanyName = false;
+              s.showCompanyTagline = false;
+              return { ...t, settings: s };
+            });
+          }
+        });
+        return { ...DEFAULT_MULTI_TEMPLATES, ...parsed };
       }
     } catch (e) {}
     return DEFAULT_MULTI_TEMPLATES;
@@ -425,7 +438,12 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   const [currentSettings, setCurrentSettings] = useState(() => {
     const list = templatesStore.pi || [];
     const def = list.find(t => t.isDefault) || list[0];
-    return def ? def.settings : DEFAULT_PI_TEMPLATE_SETTINGS;
+    const s = def ? { ...def.settings } : { ...DEFAULT_PI_TEMPLATE_SETTINGS };
+    if (s.companyName === 'VRM Structures India Pvt Ltd') s.companyName = '';
+    if (s.companyTagline === 'Engineered Solar Mounting Structures & Solutions') s.companyTagline = '';
+    s.showCompanyName = false;
+    s.showCompanyTagline = false;
+    return s;
   });
 
   // Undo Notification Toast State
@@ -481,7 +499,12 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     if (tmpl) {
       setActiveCategory(categoryKey);
       setActiveTemplateId(tmpl.id);
-      setCurrentSettings({ ...tmpl.settings });
+      const s = { ...tmpl.settings };
+      if (s.companyName === 'VRM Structures India Pvt Ltd') s.companyName = '';
+      if (s.companyTagline === 'Engineered Solar Mounting Structures & Solutions') s.companyTagline = '';
+      s.showCompanyName = false;
+      s.showCompanyTagline = false;
+      setCurrentSettings(s);
       setViewMode('editor');
     }
   };
