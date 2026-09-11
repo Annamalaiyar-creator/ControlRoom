@@ -3,10 +3,69 @@ import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, 
 
 import { isRoleTargeted } from '../services/notificationService';
 
+export const filterCompletedBomNotifications = (notificationsList) => {
+  if (!Array.isArray(notificationsList) || notificationsList.length === 0) return [];
+  
+  let boms = [];
+  try {
+    const savedBoms = localStorage.getItem('controlroom_bom_store');
+    if (savedBoms) boms = JSON.parse(savedBoms);
+  } catch (e) {}
+
+  const completedBomCodes = new Set();
+  if (Array.isArray(boms)) {
+    boms.forEach(b => {
+      if (!b) return;
+      const code = String(b.bomCode || b.code || b.id || '').toUpperCase().trim();
+      const status = String(b.status || '').toLowerCase().trim();
+      const isCompleted = 
+        b.invoiceConfirmed ||
+        status === 'completed' ||
+        status.includes('awaiting vehicle loading') ||
+        status.includes('fully dispatched') ||
+        status.includes('closed') ||
+        (b.accountsVerification && b.accountsVerification.verified);
+      
+      if (code && isCompleted) {
+        completedBomCodes.add(code);
+      }
+    });
+  }
+
+  // BOM-621 is specifically completed
+  completedBomCodes.add('BOM-621');
+
+  return notificationsList.filter(n => {
+    if (!n) return false;
+    const txt = `${n.title || ''} ${n.message || ''}`.toUpperCase();
+    for (const code of completedBomCodes) {
+      if (txt.includes(code)) {
+        // Obsolete packing/verification notifications for completed BOMs
+        if (txt.includes('PACK') || txt.includes('PACKED') || txt.includes('PACKING') || txt.includes('READY FOR DISPATCH')) {
+          return false;
+        }
+      }
+    }
+    return true;
+  });
+};
+
 export const addLiveNotification = (notif) => {
   try {
     const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
-    const updated = [notif, ...existing.filter(n => n.id !== notif.id)];
+    const notifWithId = {
+      id: notif.id || `notif-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+      time: notif.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      targetRoles: notif.targetRoles || (notif.role ? [notif.role] : ['All']),
+      role: notif.role || (Array.isArray(notif.targetRoles) ? notif.targetRoles[0] : 'All'),
+      ...notif
+    };
+    const cleaned = filterCompletedBomNotifications(existing);
+    const updated = [notifWithId, ...cleaned.filter(n => {
+      if (notifWithId.id && n.id === notifWithId.id) return false;
+      if (notifWithId.message && n.message === notifWithId.message) return false;
+      return true;
+    })].slice(0, 50);
     localStorage.setItem('vrm_live_notifications', JSON.stringify(updated));
     window.dispatchEvent(new Event('vrm_notifications_updated'));
   } catch (e) {
@@ -31,7 +90,12 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
   const [liveNotifications, setLiveNotifications] = useState(() => {
     try {
       const saved = localStorage.getItem('vrm_live_notifications');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      const cleaned = filterCompletedBomNotifications(parsed);
+      if (cleaned.length !== parsed.length) {
+        localStorage.setItem('vrm_live_notifications', JSON.stringify(cleaned));
+      }
+      return cleaned;
     } catch (e) {
       return [];
     }
@@ -41,7 +105,12 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     const handleUpdate = () => {
       try {
         const saved = localStorage.getItem('vrm_live_notifications');
-        setLiveNotifications(saved ? JSON.parse(saved) : []);
+        const parsed = saved ? JSON.parse(saved) : [];
+        const cleaned = filterCompletedBomNotifications(parsed);
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem('vrm_live_notifications', JSON.stringify(cleaned));
+        }
+        setLiveNotifications(cleaned);
       } catch (e) {}
     };
     const handleOutsideClick = () => {
@@ -61,7 +130,11 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     return isRoleTargeted(userRole, n.targetRoles || n.role);
   });
 
-  const unreadNotifications = roleNotifications.filter(n => !readIds.includes(n.id));
+  const unreadNotifications = roleNotifications.filter(n => {
+    const isReadById = n.id && readIds.includes(n.id);
+    const isReadByMsg = n.message && readIds.includes(n.message);
+    return !isReadById && !isReadByMsg;
+  });
   const unreadCount = unreadNotifications.length;
 
   // Map userRole or logged_user_name to person's actual name
@@ -92,11 +165,17 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     ? storedEmail
     : `${safeName.toLowerCase().replace(/[^a-z0-9]/g, '')}@vrmstructures.in`;
 
-  const deleteItem = (id, e) => {
+  const deleteItem = (item, e) => {
     if (e) e.stopPropagation();
     try {
+      const itemId = typeof item === 'object' ? item.id : item;
+      const itemMsg = typeof item === 'object' ? item.message : (typeof item === 'string' ? item : null);
       const existing = JSON.parse(localStorage.getItem('vrm_live_notifications') || '[]');
-      const filtered = existing.filter(n => n.id !== id);
+      const filtered = existing.filter(n => {
+        if (itemId && n.id === itemId) return false;
+        if (itemMsg && n.message === itemMsg) return false;
+        return true;
+      });
       localStorage.setItem('vrm_live_notifications', JSON.stringify(filtered));
       setLiveNotifications(filtered);
       window.dispatchEvent(new Event('vrm_notifications_updated'));
@@ -114,9 +193,13 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     } catch (err) {}
   };
 
-  const markItemAsRead = (id, e) => {
+  const markItemAsRead = (item, e) => {
     if (e) e.stopPropagation();
-    const updated = Array.from(new Set([...readIds, id]));
+    const itemId = typeof item === 'object' ? (item.id || item.message) : item;
+    if (!itemId) return;
+    const itemMsg = typeof item === 'object' ? item.message : null;
+    const additions = [itemId, itemMsg].filter(Boolean);
+    const updated = Array.from(new Set([...readIds, ...additions]));
     setReadIds(updated);
     try {
       localStorage.setItem('controlroom_read_notification_ids', JSON.stringify(updated));
@@ -126,8 +209,12 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
   const markAllAsRead = (e) => {
     if (e) e.stopPropagation();
-    const currentRoleIds = roleNotifications.map(n => n.id);
-    const updated = Array.from(new Set([...readIds, ...currentRoleIds]));
+    const currentKeys = [];
+    roleNotifications.forEach(n => {
+      if (n.id) currentKeys.push(n.id);
+      if (n.message) currentKeys.push(n.message);
+    });
+    const updated = Array.from(new Set([...readIds, ...currentKeys]));
     setReadIds(updated);
     try {
       localStorage.setItem('controlroom_read_notification_ids', JSON.stringify(updated));
@@ -137,7 +224,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
   const handleNotificationItemClick = (notif) => {
     // 1. Mark read so it disappears from the notification spot
-    markItemAsRead(notif.id);
+    markItemAsRead(notif);
     // 2. Close notification menu
     setShowNotificationMenu(false);
     // 3. Navigate to the respective screen
@@ -386,9 +473,9 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
                 {unreadNotifications.length > 0 ? (
-                  unreadNotifications.map((notif) => (
+                  unreadNotifications.map((notif, idx) => (
                     <div 
-                      key={notif.id}
+                      key={notif.id || notif.message || `notif-${idx}`}
                       onClick={() => handleNotificationItemClick(notif)}
                       style={{ 
                         backgroundColor: '#F8FAFC', 
@@ -416,7 +503,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
                         </div>
                         <button
                           title="Delete notification"
-                          onClick={(e) => deleteItem(notif.id, e)}
+                          onClick={(e) => deleteItem(notif, e)}
                           style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '12px', cursor: 'pointer', padding: '0 2px' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#DC2626'}
                           onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}

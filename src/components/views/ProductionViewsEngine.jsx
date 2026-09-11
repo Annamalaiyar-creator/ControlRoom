@@ -10239,10 +10239,14 @@ export default function ProductionViewsEngine(props) {
               }));
               setDispatchPackingModal(null);
               addLiveNotification({
+                id: `notif-pack-${targetBomCode}-${Date.now()}`,
                 title: allItemsPacked ? 'BOM Packing Verified' : 'BOM Packing Updated',
                 message: `BOM Order ${targetBomCode} for ${dispatchPackingModal.customerName || 'Customer'} is ${allItemsPacked ? '100% Packed & Ready' : 'Partially Packed'}. Status: ${nextStatus}`,
                 type: allItemsPacked ? 'success' : 'info',
-                category: 'Dispatch'
+                category: 'Dispatch',
+                time: 'Just now',
+                targetTab: 'Accounts Verification',
+                targetRoles: ['Sales Executive', 'Sales Head', 'Accounts Head', 'Accounts Executive', 'Production Head', 'Dispatch Head']
               });
               if (allItemsPacked) {
                 // Trigger Real-time Workflow Notifications with synthesized sound & deep-links for Sales & Accounts
