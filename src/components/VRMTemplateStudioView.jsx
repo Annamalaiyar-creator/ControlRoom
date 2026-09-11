@@ -1309,11 +1309,16 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                 </div>
 
                 {[
+                  { key: 'showSnoCol', label: 'S.No (#) Column' },
                   { key: 'showHsn', label: 'HSN / SAC Code Column' },
+                  { key: 'showQty', label: 'Quantity Column' },
                   { key: 'showUom', label: 'Unit of Measure (UOM) Column' },
-                  { key: 'showItemDescription', label: 'Item Technical Description & Specs' },
+                  { key: 'showRateCol', label: 'Unit Rate (₹) Column' },
                   { key: 'showDiscountCol', label: 'Discount % Column' },
-                  { key: 'showGstCol', label: 'Line Item GST% Column' }
+                  { key: 'showTaxableCol', label: 'Taxable Value Column' },
+                  { key: 'showGstCol', label: 'Line Item GST% Column' },
+                  { key: 'showTotalCol', label: 'Total Amount Column' },
+                  { key: 'showItemDescription', label: 'Item Technical Description & Specs' }
                 ].map(col => (
                   <label
                     key={col.key}
@@ -1457,8 +1462,17 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
             {activeMenu === 'addresses' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[
+                  { key: 'showBillTo', label: 'Show Bill To / Buyer Block' },
+                  { key: 'showBuyerAddress', label: 'Show Buyer Street & City Address' },
+                  { key: 'showBuyerGstin', label: 'Show Buyer GSTIN Number' },
+                  { key: 'showBuyerContact', label: 'Show Buyer Contact Person' },
+                  { key: 'showBuyerPhone', label: 'Show Buyer Phone Number' },
+                  { key: 'showBuyerEmail', label: 'Show Buyer Email Address' },
                   { key: 'showShipTo', label: 'Show Ship To / Delivery Address' },
                   { key: 'showTransportDetails', label: 'Show Transport Mode & Vehicle / LR No.' },
+                  { key: 'showDocNo', label: 'Show Document Number' },
+                  { key: 'showDate', label: 'Show Document Date' },
+                  { key: 'showValidUntil', label: 'Show Valid Until Date' },
                   { key: 'showPaymentTerms', label: 'Show Payment Terms in Header' },
                   { key: 'showPlaceOfSupply', label: 'Show Place Of Supply' },
                   { key: 'showSalesExecutive', label: 'Show Sales Executive Name' }
