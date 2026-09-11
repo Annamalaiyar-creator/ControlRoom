@@ -730,6 +730,16 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setPiConfirmModal('create');
   };
 
+  // Triggers Draft Confirmation modal
+  const triggerDraftConfirm = (e) => {
+    if (e) e.preventDefault();
+    if (!vendorName || !vendorName.trim()) {
+      alert('Please enter Customer / Company Name before saving as draft.');
+      return;
+    }
+    setPiConfirmModal('draft');
+  };
+
   // Submits the new or edited PI
   const executeCreatePI = async (isDraft = false) => {
     const totals = calculatePiTotals();
@@ -1739,10 +1749,18 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 </button>
                 <button
                   type="button"
-                  onClick={triggerSaveConfirm}
-                  style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  onClick={triggerDraftConfirm}
+                  style={{ border: '1px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.18)', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#FFFFFF', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'all 0.15s ease' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
                 >
-                  <CheckCircle style={{ width: '16px', height: '16px' }} />
+                  Save as Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={triggerSaveConfirm}
+                  style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}
+                >
                   {viewMode === 'edit' ? 'Update & Release PI →' : 'Save & Release PI →'}
                 </button>
               </div>
@@ -2734,7 +2752,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       width: '100%',
                       height: '44px',
                       borderRadius: '8px',
-                      backgroundColor: '#0E7490',
+                      backgroundColor: '#10B981',
                       color: 'white',
                       border: 'none',
                       fontSize: '13px',
@@ -2743,11 +2761,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(14, 116, 144, 0.3)'
+                      boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
                     }}
                   >
-                    <Check size={18} /> Confirm & Save PI
+                    Confirm & Save PI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={triggerDraftConfirm}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#0E7490',
+                      border: '1.5px solid #0E7490',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    Save as Draft
                   </button>
                   <button
                     type="button"
@@ -3184,27 +3221,28 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               gap: '16px'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <div
                 style={{
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  backgroundColor: piConfirmModal === 'cancel' ? '#FEF2F2' : (piConfirmModal === 'draft' ? '#FFFBEB' : '#ECFEFF'),
-                  color: piConfirmModal === 'cancel' ? '#EF4444' : (piConfirmModal === 'draft' ? '#D97706' : '#0E7490'),
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  backgroundColor: piConfirmModal === 'cancel' ? '#FEF2F2' : (piConfirmModal === 'draft' ? '#FFFBEB' : '#ECFEFF'),
+                  color: piConfirmModal === 'cancel' ? '#EF4444' : (piConfirmModal === 'draft' ? '#D97706' : '#0E7490'),
+                  flexShrink: 0
                 }}
               >
                 {piConfirmModal === 'cancel' ? <AlertTriangle size={20} /> : <FileCheck size={20} />}
               </div>
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                  {piConfirmModal === 'cancel' ? 'Discard Proforma Invoice?' : 'Release Proforma Invoice?'}
+                  {piConfirmModal === 'cancel' ? 'Discard Proforma Invoice?' : (piConfirmModal === 'draft' ? 'Save as Draft?' : 'Release Proforma Invoice?')}
                 </h3>
                 <span style={{ fontSize: '11px', color: '#64748B' }}>
-                  {piConfirmModal === 'cancel' ? 'Unsaved modifications will be permanently lost' : 'Commercial document confirmation'}
+                  {piConfirmModal === 'cancel' ? 'Unsaved modifications will be permanently lost' : (piConfirmModal === 'draft' ? 'Progress will be saved in Draft state' : 'Commercial document confirmation')}
                 </span>
               </div>
             </div>
@@ -3212,6 +3250,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.6', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
               {piConfirmModal === 'cancel' ? (
                 <span>Are you sure you want to discard this Proforma Invoice? Any configured line items, preset structures, and addresses will be erased.</span>
+              ) : piConfirmModal === 'draft' ? (
+                <span>Save this Proforma Invoice as a <strong>Draft</strong>. It will be stored safely and can be edited, completed, or converted at any time later.</span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div><strong>Customer:</strong> {vendorName || 'Not specified'}</div>
@@ -3246,6 +3286,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     setPiConfirmModal(null);
                     resetForm();
                     setViewMode('list');
+                  } else if (piConfirmModal === 'draft') {
+                    setPiConfirmModal(null);
+                    executeCreatePI(true);
                   } else {
                     setPiConfirmModal(null);
                     executeCreatePI(false);
@@ -3254,7 +3297,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 style={{
                   padding: '8px 18px',
                   borderRadius: '8px',
-                  backgroundColor: piConfirmModal === 'cancel' ? '#EF4444' : '#0E7490',
+                  backgroundColor: piConfirmModal === 'cancel' ? '#EF4444' : (piConfirmModal === 'draft' ? '#0E7490' : '#10B981'),
                   color: 'white',
                   border: 'none',
                   fontSize: '12px',
@@ -3263,7 +3306,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               >
-                {piConfirmModal === 'cancel' ? 'Yes, Discard' : 'Confirm & Release PI'}
+                {piConfirmModal === 'cancel' ? 'Yes, Discard' : (piConfirmModal === 'draft' ? 'Save Draft' : 'Confirm & Release PI')}
               </button>
             </div>
           </div>
