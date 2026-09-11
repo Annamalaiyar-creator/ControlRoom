@@ -83,6 +83,20 @@ export default function ZohoIntegrationView({ userRole = '' }) {
     docLink: ''
   });
 
+  // Meta WhatsApp Real Configuration State
+  const [metaWhatsappConfig, setMetaWhatsappConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_meta_whatsapp_config');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      accessToken: '',
+      phoneNumberId: '',
+      wabaId: '',
+      webhookVerifyToken: 'controlroom_vrm_verify_secret_2026'
+    };
+  });
+
   // Save integrations state
   const persistIntegrationsState = (newState) => {
     setIntegrationsState(newState);
@@ -1109,45 +1123,125 @@ export default function ZohoIntegrationView({ userRole = '' }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
               <div>
                 <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                  {activeConfigureApp.id === 'meta_whatsapp' ? 'Meta Cloud API Access Token' : 'API Key / Secret Token'}
+                  {activeConfigureApp.id === 'meta_whatsapp' ? 'Meta Cloud API Permanent Access Token' : 'API Key / Secret Token'}
                 </label>
                 <input 
                   type="password" 
-                  defaultValue={activeConfigureApp.id === 'meta_whatsapp' ? 'EAAG...meta_live_cloud_api_token' : 'sk_live_controlroom_api_key_993821'} 
+                  placeholder={activeConfigureApp.id === 'meta_whatsapp' ? 'Paste EAAG... Meta System User Token' : 'Paste API Secret Key'}
+                  value={activeConfigureApp.id === 'meta_whatsapp' ? metaWhatsappConfig.accessToken : undefined}
+                  defaultValue={activeConfigureApp.id !== 'meta_whatsapp' ? 'sk_live_controlroom_api_key_993821' : undefined}
+                  onChange={(e) => {
+                    if (activeConfigureApp.id === 'meta_whatsapp') {
+                      setMetaWhatsappConfig({ ...metaWhatsappConfig, accessToken: e.target.value });
+                    }
+                  }}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
                 />
               </div>
 
               {activeConfigureApp.id === 'meta_whatsapp' && (
-                <div>
-                  <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>WhatsApp Business Phone Number ID</label>
-                  <input 
-                    type="text" 
-                    defaultValue="10984729184729" 
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
-                  />
-                </div>
+                <>
+                  <div>
+                    <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      WhatsApp Business Phone Number ID
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 10984729184729" 
+                      value={metaWhatsappConfig.phoneNumberId}
+                      onChange={(e) => setMetaWhatsappConfig({ ...metaWhatsappConfig, phoneNumberId: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      WhatsApp Business Account ID (WABA ID - Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 98234710928374" 
+                      value={metaWhatsappConfig.wabaId}
+                      onChange={(e) => setMetaWhatsappConfig({ ...metaWhatsappConfig, wabaId: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }} 
+                    />
+                  </div>
+                </>
               )}
 
               <div>
-                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>Webhook Callback URL (Shared across Platform)</label>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`https://controlroom.vrm.com/api/webhooks/${activeConfigureApp.id}`} 
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', backgroundColor: '#F8FAFC', color: '#475569', boxSizing: 'border-box' }} 
-                />
+                <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Webhook Callback URL (Paste into Meta Dashboard)
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={`https://controlroom.vrm.com/api/webhooks/${activeConfigureApp.id}`} 
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', backgroundColor: '#F8FAFC', color: '#475569', boxSizing: 'border-box' }} 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://controlroom.vrm.com/api/webhooks/${activeConfigureApp.id}`);
+                      alert('Webhook URL copied to clipboard!');
+                    }}
+                    style={{ padding: '0 12px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
+
+              {activeConfigureApp.id === 'meta_whatsapp' && (
+                <div>
+                  <label style={{ fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    Webhook Verify Token (Paste into Meta Dashboard)
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={metaWhatsappConfig.webhookVerifyToken} 
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', backgroundColor: '#F8FAFC', color: '#475569', boxSizing: 'border-box' }} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(metaWhatsappConfig.webhookVerifyToken);
+                        alert('Verify Token copied to clipboard!');
+                      }}
+                      style={{ padding: '0 12px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: '#334155' }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#ECFDF5', padding: '10px 12px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
                 <CheckCircle2 style={{ width: '16px', height: '16px', color: '#047857' }} />
-                <span style={{ fontSize: '12px', color: '#047857', fontWeight: '700' }}>Active & Live for all Control Room departments</span>
+                <span style={{ fontSize: '12px', color: '#047857', fontWeight: '700' }}>Active & Live across whole platform for all departments</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
               <button onClick={() => setActiveConfigureApp(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
-              <button onClick={() => { alert(`${activeConfigureApp.name} configuration updated successfully.`); setActiveConfigureApp(null); }} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0284C7', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(2,132,199,0.3)' }}>Save Configuration</button>
+              <button 
+                onClick={() => { 
+                  if (activeConfigureApp.id === 'meta_whatsapp') {
+                    localStorage.setItem('controlroom_meta_whatsapp_config', JSON.stringify(metaWhatsappConfig));
+                    persistIntegrationsState({ ...integrationsState, meta_whatsapp: true });
+                    alert('Meta WhatsApp credentials saved! Active organization-wide across Control Room.');
+                  } else {
+                    alert(`${activeConfigureApp.name} configuration updated successfully.`);
+                  }
+                  setActiveConfigureApp(null); 
+                }} 
+                style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0284C7', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(2,132,199,0.3)' }}
+              >
+                Save Configuration
+              </button>
             </div>
           </div>
         </div>
