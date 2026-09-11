@@ -672,7 +672,16 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     const totalCount = categories.reduce((sum, c) => sum + c.templates.length, 0);
 
     return (
-      <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '24px 32px' }}>
+      <div style={{
+        backgroundColor: '#F8FAFC',
+        height: '100%',
+        width: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        boxSizing: 'border-box',
+        padding: '24px 32px 80px 32px'
+      }}>
         {/* Top Hub Bar */}
         <div style={{
           display: 'flex',
@@ -820,7 +829,16 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                 </div>
 
                 {/* Templates List inside this Category Card */}
-                <div style={{ padding: '16px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{
+                  padding: '16px 20px',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  maxHeight: '380px',
+                  overflowY: 'auto',
+                  paddingRight: '6px'
+                }}>
                   <div style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Available Templates in this Section:
                   </div>
@@ -984,7 +1002,17 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   const activeAccent = currentSettings.accentColor || '#0E7490';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F1F5F9', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      maxHeight: '100%',
+      width: '100%',
+      backgroundColor: '#F1F5F9',
+      overflow: 'hidden',
+      flex: 1,
+      minHeight: 0
+    }}>
       
       {/* 1. TOP EDITOR NAVIGATION & ACTION BAR */}
       <div style={{
@@ -996,7 +1024,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         justifyContent: 'space-between',
         gap: '12px',
         flexWrap: 'wrap',
-        zIndex: 50
+        zIndex: 50,
+        flexShrink: 0
       }}>
         {/* Left: Back to Hub + Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1048,6 +1077,93 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Center: Zoom & View Controls */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          backgroundColor: '#F8FAFC',
+          padding: '3px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0'
+        }}>
+          <button
+            type="button"
+            title="Zoom Out"
+            onClick={() => {
+              setFitToWidth(false);
+              setZoomLevel(prev => Math.max(0.4, Math.round((prev - 0.1) * 10) / 10));
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              color: '#475569'
+            }}
+          >
+            <ZoomOut size={14} />
+          </button>
+          
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E293B', minWidth: '38px', textAlign: 'center' }}>
+            {Math.round(zoomLevel * 100)}%
+          </span>
+
+          <button
+            type="button"
+            title="Zoom In"
+            onClick={() => {
+              setFitToWidth(false);
+              setZoomLevel(prev => Math.min(1.5, Math.round((prev + 0.1) * 10) / 10));
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              color: '#475569'
+            }}
+          >
+            <ZoomIn size={14} />
+          </button>
+
+          <button
+            type="button"
+            title={fitToWidth ? "Fit to Width Active" : "Fit to Width"}
+            onClick={() => {
+              if (fitToWidth) {
+                setFitToWidth(false);
+                setZoomLevel(1);
+              } else {
+                setFitToWidth(true);
+              }
+            }}
+            style={{
+              marginLeft: '4px',
+              padding: '2px 8px',
+              fontSize: '11px',
+              fontWeight: '700',
+              borderRadius: '4px',
+              border: fitToWidth ? `1px solid ${activeAccent}` : '1px solid #CBD5E1',
+              backgroundColor: fitToWidth ? `${activeAccent}15` : '#FFFFFF',
+              color: fitToWidth ? activeAccent : '#64748B',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Maximize2 size={12} />
+            Fit
+          </button>
         </div>
 
         {/* Center/Right: Action Buttons */}
@@ -1166,7 +1282,15 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
       </div>
 
       {/* 2. MAIN WORKSPACE: LEFT CUSTOMIZER DRAWER + RIGHT LIVE PREVIEW */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <div style={{
+        display: 'flex',
+        flex: 1,
+        height: '100%',
+        minHeight: 0,
+        minWidth: 0,
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
         
         {/* LEFT DRAWER: CUSTOMIZATION PANELS */}
         <div style={{
@@ -1175,6 +1299,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
           borderRight: '1px solid #E2E8F0',
           display: 'flex',
           flexDirection: 'column',
+          height: '100%',
+          minHeight: 0,
           transition: 'width 0.2s ease',
           zIndex: 40,
           flexShrink: 0
@@ -1756,10 +1882,18 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         {/* RIGHT PANE: LIVE CLEAN DOCUMENT SHEET PREVIEW */}
         <div
           ref={previewContainerRef}
+          className="template-studio-center-scroller"
           style={{
             flex: 1,
+            height: '100%',
+            minHeight: 0,
+            minWidth: 0,
             overflowY: 'auto',
-            padding: '24px 16px',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+            scrollBehavior: 'smooth',
+            padding: '28px 24px 140px 24px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -1797,7 +1931,9 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
             transition: 'transform 0.15s ease',
             width: '100%',
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            minHeight: 'fit-content',
+            marginBottom: zoomLevel > 1 ? `${Math.round((zoomLevel - 1) * 1600)}px` : '40px'
           }}>
             <VRMProformaInvoicePrintSheet
               id="studio-printable-sheet"
