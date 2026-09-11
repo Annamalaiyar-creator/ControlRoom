@@ -1809,21 +1809,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         cursor: 'not-allowed'
                       }}
                     />
-                    <span style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      color: '#0E7490',
-                      backgroundColor: '#ECFEFF',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      border: '1px solid #A5F3FC'
-                    }}>
-                      Locked (Auto)
-                    </span>
                   </div>
                 </div>
 
@@ -1839,9 +1824,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       value={salesPerson || getActiveUserName()}
                       style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '600', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed' }}
                     />
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '2px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
-                      Account Owner (Locked)
-                    </span>
                   </div>
                 </div>
               </div>

@@ -756,36 +756,5 @@
     "salesPerson": "Mohit JV",
     "updatedAt": "2026-09-10T06:45:44.646Z",
     "createdAt": "2026-09-10T06:45:44.878Z"
-  },
-  {
-    "id": "VRM Structures India Private Limited [CUST-VRM-105]",
-    "customerCode": "VRM Structures India Private Limited [CUST-VRM-105]",
-    "companyName": "VRM Structures India Private Limited",
-    "customerName": "VRM Structures India Private Limited",
-    "customerType": "Customer",
-    "industry": "Solar Energy / Utility Scale",
-    "gstNumber": "—",
-    "panNumber": "—",
-    "address": "",
-    "city": "",
-    "state": "",
-    "pincode": "",
-    "creditLimit": 2500000,
-    "creditDays": 30,
-    "paymentTerms": "Due on Receipt",
-    "assignedSalesperson": "Mohith JV",
-    "source": "Zoho Books",
-    "zohoContactId": "4080449000000357009",
-    "primaryContact": {
-      "name": "Contact 7092996057",
-      "designation": "Procurement Head",
-      "phone": "7092996057",
-      "whatsapp": "7092996057",
-      "email": ""
-    },
-    "createdAt": "2026-09-10T12:53:01+0530",
-    "email": "—",
-    "phone": "7092996057",
-    "status": "ACTIVE"
   }
 ]
