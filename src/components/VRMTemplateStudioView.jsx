@@ -5,8 +5,6 @@ import {
   Save,
   RotateCcw,
   Palette,
-  PenTool,
-  Stamp,
   Layers,
   CreditCard,
   Building2,
@@ -23,7 +21,18 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Sliders
+  Sliders,
+  Plus,
+  Star,
+  Receipt,
+  FileSpreadsheet,
+  GitBranch,
+  ShieldCheck,
+  Undo2,
+  ChevronRight,
+  Eye,
+  Settings2,
+  Copy
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -32,81 +41,325 @@ import {
   DEFAULT_PI_TEMPLATE_SETTINGS
 } from './VRMProformaInvoicePrintTemplate';
 
+// 12 Curated Preset Swatches
 const COLOR_PRESETS = [
   { name: 'VRM Teal', hex: '#0E7490' },
   { name: 'Royal Navy', hex: '#1E3A8A' },
   { name: 'Tech Cobalt', hex: '#2563EB' },
-  { name: 'Emerald Forest', hex: '#059669' },
+  { name: 'Deep Emerald', hex: '#059669' },
+  { name: 'Forest Green', hex: '#166534' },
   { name: 'Charcoal Slate', hex: '#1E293B' },
-  { name: 'Crimson Burgundy', hex: '#991B1B' }
+  { name: 'Crimson Burgundy', hex: '#991B1B' },
+  { name: 'Amber Gold', hex: '#D97706' },
+  { name: 'Modern Indigo', hex: '#4338CA' },
+  { name: 'Amethyst Violet', hex: '#7C3AED' },
+  { name: 'Dark Graphite', hex: '#334155' },
+  { name: 'Steel Blue', hex: '#0284C7' }
 ];
 
-const TITLE_PRESETS = ['PROFORMA INVOICE', 'QUOTATION', 'ESTIMATE', 'PROFORMA TAX INVOICE'];
-
-// Sample PI Data for live preview
-const SAMPLE_PREVIEW_PI = {
-  piNo: 'SPI-2025-101',
-  piDate: new Date().toISOString().split('T')[0],
-  expDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-  vendor: 'Apex Solar Infra Solutions Pvt Ltd',
-  customerName: 'Apex Solar Infra Solutions Pvt Ltd',
-  contactPerson: 'K. Rajesh Kumar (Project Head)',
-  phone: '+91 98401 23456',
-  email: 'procurement@apexsolar.in',
-  gstNo: '33AAAAA9999A1Z9',
-  billingStreet: 'Plot No 48, Guindy Industrial Estate',
-  billingCity: 'Chennai',
-  billingState: 'Tamil Nadu',
-  billingPincode: '600032',
-  sameAsBilling: true,
-  deliveryStreet: 'Plot No 48, Guindy Industrial Estate',
-  deliveryCity: 'Chennai',
-  deliveryState: 'Tamil Nadu',
-  deliveryPincode: '600032',
-  paymentTerms: '50% Advance + 50% Before Dispatch',
-  salesPerson: 'ManojRaj (VRM Sales)',
-  transportMode: 'By Road (VRM Logistics)',
-  vehicleNo: 'TN-05-AB-4890',
-  transportScope: 'VRM Structures',
-  items: [
+// Initial Multi-Template Store: 3 Categories (PI, Quotation, BOM)
+const DEFAULT_MULTI_TEMPLATES = {
+  pi: [
     {
-      sNo: 1,
-      name: 'Solar On-Grid Mounting Structure (HDG 80 Micron)',
-      description: 'Hot Dip Galvanized 2x3 Table 2000mm x 2500mm with C-Channels, Railless clamps, and SS-304 hardware fasteners.',
-      hsn: '73089090',
-      qty: 12,
-      uom: 'Sets',
-      rate: 185000,
-      discountPct: 0,
-      gstRate: '18%'
+      id: 'pi_std',
+      name: 'Standard GST Proforma',
+      description: 'Official GST proforma invoice with HSN, Taxable Value, CGST/SGST/IGST breakdown, and Bank Details.',
+      isDefault: true,
+      lastModified: '11 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'PROFORMA INVOICE',
+        accentColor: '#0E7490',
+        logoHeight: 65,
+        stampSize: 125,
+        showHsn: true,
+        showRateCol: true,
+        showTaxableCol: true,
+        showGstCol: true,
+        showTotalCol: true,
+        showBankDetails: true,
+        showTerms: true
+      }
     },
     {
-      sNo: 2,
-      name: 'Aluminium Rooftop Mounting Rails 4.2m',
-      description: 'High tensile 6063-T6 architectural grade aluminium rails with anodized surface treatment.',
-      hsn: '76109090',
-      qty: 25,
-      uom: 'Nos',
-      rate: 28500,
-      discountPct: 0,
-      gstRate: '18%'
+      id: 'pi_no_amt',
+      name: 'Commercial PI (Without Rates / Amounts)',
+      description: 'Material specifications & delivery scope with Rate and Amount columns hidden for site logistics.',
+      isDefault: false,
+      lastModified: '10 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'PROFORMA INVOICE',
+        accentColor: '#0E7490',
+        logoHeight: 65,
+        stampSize: 125,
+        showRateCol: false,
+        showTaxableCol: false,
+        showGstCol: false,
+        showTotalCol: false,
+        showTotalInWords: false,
+        showBankDetails: true
+      }
+    }
+  ],
+  quotation: [
+    {
+      id: 'quote_std',
+      name: 'Standard Commercial Quotation',
+      description: 'Formal commercial proposal with line-item rates, payment terms, and project validity period.',
+      isDefault: true,
+      lastModified: '11 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'COMMERCIAL QUOTATION',
+        docNoLabel: 'Quote No:',
+        dateLabel: 'Quote Date:',
+        validUntilLabel: 'Proposal Validity:',
+        accentColor: '#1E3A8A', // Royal Navy for Quotes
+        logoHeight: 70,
+        stampSize: 125,
+        showPaymentTerms: true,
+        showPlaceOfSupply: true,
+        showSalesExecutive: true,
+        showTerms: true
+      }
     },
     {
-      sNo: 3,
-      name: 'Mid & End Clamp Fastener Hardware Accessories Kit',
-      description: 'SS-304 Allen bolts, EPDM rubber pads, and grounding earthing clips.',
-      hsn: '73181500',
-      qty: 1,
-      uom: 'Kit',
-      rate: 45000,
-      discountPct: 0,
-      gstRate: '18%'
+      id: 'quote_lump',
+      name: 'Technical Solar Quote (Lump Sum)',
+      description: 'Engineering scope and bill of quantities with item rates hidden, presenting an all-inclusive project price.',
+      isDefault: false,
+      lastModified: '09 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'SOLAR PROJECT PROPOSAL',
+        docNoLabel: 'Proposal Ref:',
+        dateLabel: 'Date:',
+        validUntilLabel: 'Offer Valid Till:',
+        accentColor: '#0E7490',
+        logoHeight: 65,
+        stampSize: 125,
+        showRateCol: false,
+        showTaxableCol: false,
+        showGstCol: false,
+        showPaymentTerms: true
+      }
+    }
+  ],
+  bom: [
+    {
+      id: 'bom_eng',
+      name: 'Detailed Engineering BOM',
+      description: 'Structural fabrication bill of materials with member dimensions, zinc micron specs, and component costs.',
+      isDefault: true,
+      lastModified: '11 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'BILL OF MATERIALS (BOM)',
+        docNoLabel: 'BOM No:',
+        dateLabel: 'Release Date:',
+        validUntilLabel: 'Rev Date:',
+        accentColor: '#1E293B', // Charcoal Slate for Engineering
+        logoHeight: 60,
+        stampSize: 120,
+        colHeaderDesc: 'Structural Component & Profile Specification',
+        showHsn: true,
+        showUom: true,
+        showRateCol: true,
+        showTotalCol: true
+      }
+    },
+    {
+      id: 'bom_client',
+      name: 'Client Supply BOM (Without Rates)',
+      description: 'Assembly schedule and quantities for site erection and client handoff without internal cost disclosure.',
+      isDefault: false,
+      lastModified: '08 Sep 2026',
+      settings: {
+        ...DEFAULT_PI_TEMPLATE_SETTINGS,
+        documentTitle: 'MATERIAL SCHEDULE (BOM)',
+        docNoLabel: 'Schedule No:',
+        dateLabel: 'Release Date:',
+        accentColor: '#059669', // Emerald Green
+        logoHeight: 60,
+        stampSize: 120,
+        colHeaderDesc: 'Assembly Profile & Hardware Item',
+        showHsn: true,
+        showUom: true,
+        showRateCol: false,
+        showTaxableCol: false,
+        showGstCol: false,
+        showTotalCol: false,
+        showTotalInWords: false
+      }
     }
   ]
 };
 
-// Lightweight canvas image compressor
-const compressImageFile = (file, maxDim = 450, quality = 0.85) => {
+// Sample datasets for live previews
+const SAMPLE_DATASETS = {
+  pi: {
+    piNo: 'SPI-2025-101',
+    piDate: new Date().toISOString().split('T')[0],
+    expDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    vendor: 'Apex Solar Infra Solutions Pvt Ltd',
+    customerName: 'Apex Solar Infra Solutions Pvt Ltd',
+    contactPerson: 'K. Rajesh Kumar (Project Head)',
+    phone: '+91 98401 23456',
+    email: 'procurement@apexsolar.in',
+    gstNo: '33AAAAA9999A1Z9',
+    billingStreet: 'Plot No 48, Guindy Industrial Estate',
+    billingCity: 'Chennai',
+    billingState: 'Tamil Nadu',
+    billingPincode: '600032',
+    sameAsBilling: true,
+    deliveryStreet: 'Plot No 48, Guindy Industrial Estate',
+    deliveryCity: 'Chennai',
+    deliveryState: 'Tamil Nadu',
+    deliveryPincode: '600032',
+    paymentTerms: '50% Advance + 50% Before Dispatch',
+    salesPerson: 'ManojRaj (VRM Sales)',
+    transportMode: 'By Road (VRM Logistics)',
+    vehicleNo: 'TN-05-AB-4890',
+    items: [
+      {
+        sNo: 1,
+        name: 'Solar On-Grid Mounting Structure (HDG 80 Micron)',
+        description: 'Hot Dip Galvanized 2x3 Table 2000mm x 2500mm with C-Channels, Railless clamps, and SS-304 fasteners.',
+        hsn: '73089090',
+        qty: 12,
+        uom: 'Sets',
+        rate: 185000,
+        discountPct: 0,
+        gstRate: '18%'
+      },
+      {
+        sNo: 2,
+        name: 'Aluminium Rooftop Mounting Rails 4.2m',
+        description: 'High tensile 6063-T6 architectural grade aluminium rails with anodized surface treatment.',
+        hsn: '76109090',
+        qty: 25,
+        uom: 'Nos',
+        rate: 28500,
+        discountPct: 0,
+        gstRate: '18%'
+      },
+      {
+        sNo: 3,
+        name: 'Mid & End Clamp Fastener Hardware Accessories Kit',
+        description: 'SS-304 Allen bolts, EPDM rubber pads, and grounding earthing clips.',
+        hsn: '73181500',
+        qty: 1,
+        uom: 'Kit',
+        rate: 45000,
+        discountPct: 0,
+        gstRate: '18%'
+      }
+    ]
+  },
+  quotation: {
+    piNo: 'VRM-QT-2025-442',
+    piDate: new Date().toISOString().split('T')[0],
+    expDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+    vendor: 'SunGrid Renewable Energies Ltd',
+    customerName: 'SunGrid Renewable Energies Ltd',
+    contactPerson: 'Dr. Anand Ramanathan (VP Engineering)',
+    phone: '+91 94440 98765',
+    email: 'tenders@sungridrenewables.com',
+    gstNo: '33AAACS1234F1Z8',
+    billingStreet: 'Tech Park Blvd, OMR Corridor',
+    billingCity: 'Chennai',
+    billingState: 'Tamil Nadu',
+    billingPincode: '600096',
+    sameAsBilling: true,
+    paymentTerms: '20% Mobilization Advance + 80% On Pro-rata Dispatch',
+    salesPerson: 'Suresh Babu (Commercial Head)',
+    transportMode: 'Trailer Transit (Door Delivery Included)',
+    vehicleNo: 'TN-22-BY-8012',
+    items: [
+      {
+        sNo: 1,
+        name: 'Turnkey Ground Mount Solar Structure (500 kW Scope)',
+        description: 'Engineered Galvalume C-Lips, Columns, Rafters, Bracings & Ground Screws designed for 160 km/h wind speed.',
+        hsn: '73089090',
+        qty: 1,
+        uom: 'Lot',
+        rate: 1450000,
+        discountPct: 0,
+        gstRate: '18%'
+      },
+      {
+        sNo: 2,
+        name: 'Structural Foundation Hardware & Anchor J-Bolts M16x400',
+        description: 'High tensile Grade 8.8 hot dip galvanized foundation bolts with double nuts and heavy washers.',
+        hsn: '73181500',
+        qty: 320,
+        uom: 'Nos',
+        rate: 420,
+        discountPct: 0,
+        gstRate: '18%'
+      }
+    ]
+  },
+  bom: {
+    piNo: 'BOM-ENG-2025-089',
+    piDate: new Date().toISOString().split('T')[0],
+    expDate: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0],
+    vendor: 'VRM Solar Structures — Factory Works',
+    customerName: 'Sterling Solar EPC Services',
+    contactPerson: 'M. Senthil Nathan (Plant Quality Lead)',
+    phone: '+91 98402 11223',
+    email: 'fabrication@vrmstructures.com',
+    gstNo: '33AAGCV4262N1ZZ',
+    billingStreet: '1427, GNT Road, Nagappa Industrial Estate, Puzhal',
+    billingCity: 'Chennai',
+    billingState: 'Tamil Nadu',
+    billingPincode: '600066',
+    sameAsBilling: true,
+    paymentTerms: 'Internal Job Work Order / Stock Allocation',
+    salesPerson: 'Engineering Design Center',
+    transportMode: 'Internal Dispatch & Yard Staging',
+    vehicleNo: 'Internal Stock Yard',
+    items: [
+      {
+        sNo: 1,
+        name: 'C-Channel 80 x 40 x 15 x 2.0 mm (HR Coil YST-250)',
+        description: 'CNC Roll-formed channel member, length 4500mm, punched slot 14x25mm, Hot Dip Galvanized 80 micron.',
+        hsn: '73089090',
+        qty: 180,
+        uom: 'Nos',
+        rate: 1850,
+        discountPct: 0,
+        gstRate: '18%'
+      },
+      {
+        sNo: 2,
+        name: 'Purlin Profile Member 100 x 50 x 2.5 mm',
+        description: 'Pre-galvanized high yield structural purlin with staggered slotted hole pattern.',
+        hsn: '73089090',
+        qty: 90,
+        uom: 'Nos',
+        rate: 2450,
+        discountPct: 0,
+        gstRate: '18%'
+      },
+      {
+        sNo: 3,
+        name: 'Base Plate 200 x 200 x 10 mm (MS Plate E250)',
+        description: 'Plasma cut base plate with 4-hole foundation pattern, welded gusset stiffeners, HDG treated.',
+        hsn: '73089090',
+        qty: 45,
+        uom: 'Nos',
+        rate: 680,
+        discountPct: 0,
+        gstRate: '18%'
+      }
+    ]
+  }
+};
+
+// Image compressor helper
+const compressImageFile = (file, maxDim = 600, quality = 0.85) => {
   return new Promise((resolve, reject) => {
     if (!file) return resolve(null);
     const reader = new FileReader();
@@ -145,38 +398,214 @@ const compressImageFile = (file, maxDim = 450, quality = 0.85) => {
   });
 };
 
+/**
+ * Main Template Studio View with:
+ * 1. Card-Style Templates Hub (PI, Quotation, BOM)
+ * 2. Dedicated Live Customizer with Photoshop-style Color Picker,
+ *    300px Logo Sizing, Stamp Sizing, Section/Column Removal & Undo!
+ */
 export default function VRMTemplateStudioView({ onBackToPI }) {
-  // Active side menu category
-  const [activeMenu, setActiveMenu] = useState('branding'); // branding | labels | stamp | signature | columns | addresses | banking | terms
-  const [isDirectEditMode, setIsDirectEditMode] = useState(true);
-  const [previewPi, setPreviewPi] = useState(SAMPLE_PREVIEW_PI);
+  // Navigation Mode: 'hub' | 'editor'
+  const [viewMode, setViewMode] = useState('hub');
+  const [activeCategory, setActiveCategory] = useState('pi'); // 'pi' | 'quotation' | 'bom'
+  const [activeTemplateId, setActiveTemplateId] = useState('pi_std');
 
-  // Load saved preferences or fall back to defaults
-  const [settings, setSettings] = useState(() => {
+  // Multi-Templates Store loaded from localStorage
+  const [templatesStore, setTemplatesStore] = useState(() => {
     try {
-      const saved = localStorage.getItem('vrm_pi_template_customization');
+      const saved = localStorage.getItem('vrm_multi_templates_v2');
       if (saved) {
-        return { ...DEFAULT_PI_TEMPLATE_SETTINGS, ...JSON.parse(saved) };
+        return { ...DEFAULT_MULTI_TEMPLATES, ...JSON.parse(saved) };
       }
     } catch (e) {}
-    return DEFAULT_PI_TEMPLATE_SETTINGS;
+    return DEFAULT_MULTI_TEMPLATES;
   });
 
-  const [saveToast, setSaveToast] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  // Current working settings for the active template
+  const [currentSettings, setCurrentSettings] = useState(() => {
+    const list = templatesStore.pi || [];
+    const def = list.find(t => t.isDefault) || list[0];
+    return def ? def.settings : DEFAULT_PI_TEMPLATE_SETTINGS;
+  });
+
+  // Undo Notification Toast State
+  const [undoToast, setUndoToast] = useState(null); // { message: string, key: string, label: string }
+  const undoTimeoutRef = useRef(null);
+
+  // Save Toast
+  const [saveNotice, setSaveNotice] = useState(null);
+
+  // Modal State: "Save as New Template"
+  const [newTemplateModalOpen, setNewTemplateModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateDesc, setNewTemplateDesc] = useState('');
+
+  // Editor Sidebar Drawer active tab
+  const [editorMenu, setEditorMenu] = useState('color'); // 'color' | 'logo' | 'stamp' | 'columns' | 'sections'
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0.85);
   const [fitToWidth, setFitToWidth] = useState(true);
   const previewContainerRef = useRef(null);
 
-  // File upload refs
+  // File Upload refs
   const logoInputRef = useRef(null);
   const stampInputRef = useRef(null);
-  const signatureInputRef = useRef(null);
 
-  // Auto-scale preview sheet dynamically based on available container width
+  // Save store changes to localStorage
+  const persistStore = (newStore) => {
+    setTemplatesStore(newStore);
+    try {
+      localStorage.setItem('vrm_multi_templates_v2', JSON.stringify(newStore));
+    } catch (e) {
+      console.warn('Failed to save templates store to localStorage:', e);
+    }
+  };
+
+  // Open a template in editor
+  const handleOpenEditor = (categoryKey, templateId) => {
+    const list = templatesStore[categoryKey] || [];
+    const tmpl = list.find(t => t.id === templateId) || list[0];
+    if (tmpl) {
+      setActiveCategory(categoryKey);
+      setActiveTemplateId(tmpl.id);
+      setCurrentSettings({ ...tmpl.settings });
+      setViewMode('editor');
+    }
+  };
+
+  // Update setting in working draft
+  const updateSetting = (updates) => {
+    setCurrentSettings(prev => ({ ...prev, ...updates }));
+  };
+
+  // Triggered when a section or column is removed in the editor
+  const handleElementRemoved = (key, label) => {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setUndoToast({ key, label, message: `Removed "${label}"` });
+    undoTimeoutRef.current = setTimeout(() => {
+      setUndoToast(null);
+    }, 8000);
+  };
+
+  // Trigger Undo
+  const handleUndo = () => {
+    if (undoToast && undoToast.key) {
+      updateSetting({ [undoToast.key]: true });
+      setUndoToast(null);
+    }
+  };
+
+  // Save Current Template as Default for its Category
+  const handleSaveAsDefault = () => {
+    const list = templatesStore[activeCategory] || [];
+    const updatedList = list.map(t => ({
+      ...t,
+      isDefault: t.id === activeTemplateId,
+      settings: t.id === activeTemplateId ? currentSettings : t.settings,
+      lastModified: t.id === activeTemplateId ? new Date().toLocaleDateString('en-GB') : t.lastModified
+    }));
+
+    const newStore = { ...templatesStore, [activeCategory]: updatedList };
+    persistStore(newStore);
+    setSaveNotice('Template saved as active default!');
+    setTimeout(() => setSaveNotice(null), 3000);
+  };
+
+  // Save changes to current template
+  const handleSaveChanges = () => {
+    const list = templatesStore[activeCategory] || [];
+    const updatedList = list.map(t => {
+      if (t.id === activeTemplateId) {
+        return {
+          ...t,
+          settings: currentSettings,
+          lastModified: new Date().toLocaleDateString('en-GB')
+        };
+      }
+      return t;
+    });
+    const newStore = { ...templatesStore, [activeCategory]: updatedList };
+    persistStore(newStore);
+    setSaveNotice('Changes saved successfully!');
+    setTimeout(() => setSaveNotice(null), 3000);
+  };
+
+  // Save as New Template Variant
+  const handleConfirmSaveNew = () => {
+    if (!newTemplateName.trim()) return;
+    const newId = `${activeCategory}_${Date.now()}`;
+    const newRecord = {
+      id: newId,
+      name: newTemplateName.trim(),
+      description: newTemplateDesc.trim() || 'Custom user-saved template variant',
+      isDefault: false,
+      lastModified: new Date().toLocaleDateString('en-GB'),
+      settings: { ...currentSettings }
+    };
+
+    const currentList = templatesStore[activeCategory] || [];
+    const updatedList = [...currentList, newRecord];
+    const newStore = { ...templatesStore, [activeCategory]: updatedList };
+    persistStore(newStore);
+    setActiveTemplateId(newId);
+    setNewTemplateModalOpen(false);
+    setNewTemplateName('');
+    setNewTemplateDesc('');
+    setSaveNotice(`Created new template: "${newRecord.name}"`);
+    setTimeout(() => setSaveNotice(null), 3500);
+  };
+
+  // Delete a non-default template
+  const handleDeleteTemplate = (categoryKey, templateId, e) => {
+    e.stopPropagation();
+    const list = templatesStore[categoryKey] || [];
+    const target = list.find(t => t.id === templateId);
+    if (!target) return;
+    if (target.isDefault) {
+      alert('The system default template cannot be deleted. Set another template as default first.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete "${target.name}"?`)) {
+      const updatedList = list.filter(t => t.id !== templateId);
+      const newStore = { ...templatesStore, [categoryKey]: updatedList };
+      persistStore(newStore);
+    }
+  };
+
+  // Export to PDF
+  const handleDownloadPdf = async () => {
+    const sheetEl = document.getElementById('studio-printable-sheet');
+    if (!sheetEl) return;
+    try {
+      const prevZoom = zoomLevel;
+      setZoomLevel(1);
+      await new Promise(r => setTimeout(r, 200));
+
+      const canvas = await html2canvas(sheetEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${currentSettings.documentTitle || 'VRM_Template'}_${activeTemplateId}.pdf`);
+      setZoomLevel(prevZoom);
+    } catch (e) {
+      alert('Failed to generate PDF: ' + e.message);
+    }
+  };
+
+  // Calculate dynamic fit-to-width zoom
   useEffect(() => {
-    if (!previewContainerRef.current) return;
+    if (viewMode !== 'editor' || !previewContainerRef.current) return;
     const calculateOptimalZoom = () => {
       if (!fitToWidth || !previewContainerRef.current) return;
       const containerWidth = previewContainerRef.current.clientWidth - 48;
@@ -187,1595 +616,329 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
         setZoomLevel(1);
       }
     };
-
     calculateOptimalZoom();
-    const observer = new ResizeObserver(() => {
-      calculateOptimalZoom();
-    });
-    observer.observe(previewContainerRef.current);
     window.addEventListener('resize', calculateOptimalZoom);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', calculateOptimalZoom);
-    };
-  }, [fitToWidth, isMenuCollapsed]);
+    return () => window.removeEventListener('resize', calculateOptimalZoom);
+  }, [viewMode, fitToWidth, isMenuCollapsed]);
 
-  const updateSettings = (updates) => {
-    setSettings(prev => ({ ...prev, ...updates }));
-  };
+  // Current active template object
+  const activeTemplateObj = (templatesStore[activeCategory] || []).find(t => t.id === activeTemplateId) || { name: 'Template' };
 
-  const handleSaveDefaults = () => {
-    try {
-      localStorage.setItem('vrm_pi_template_customization', JSON.stringify(settings));
-      setSaveToast(true);
-      setTimeout(() => setSaveToast(false), 3000);
-    } catch (e) {
-      alert('Could not save template settings: ' + e.message);
-    }
-  };
-
-  const handleResetDefaults = () => {
-    if (window.confirm('Reset all template customizations back to VRM factory defaults?')) {
-      setSettings(DEFAULT_PI_TEMPLATE_SETTINGS);
-      try {
-        localStorage.removeItem('vrm_pi_template_customization');
-      } catch (e) {}
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownloadPdf = async () => {
-    setIsExporting(true);
-    const prevZoom = zoomLevel;
-    setZoomLevel(1);
-    try {
-      const sheetEl = document.getElementById('studio-printable-sheet');
-      if (!sheetEl) {
-        alert('Could not locate printable sheet element.');
-        setIsExporting(false);
-        return;
+  // ==========================================
+  // VIEW 1: TEMPLATES HUB (CARD STYLE OVERVIEW)
+  // ==========================================
+  if (viewMode === 'hub') {
+    const categories = [
+      {
+        key: 'pi',
+        title: 'Proforma Invoice (PI)',
+        badgeColor: '#0E7490',
+        icon: Receipt,
+        description: 'Customer GST proforma invoices, formal payment requests, advance billing, and dispatch advice.',
+        templates: templatesStore.pi || []
+      },
+      {
+        key: 'quotation',
+        title: 'Quotation / Commercial Proposals',
+        badgeColor: '#1E3A8A',
+        icon: FileSpreadsheet,
+        description: 'Commercial bids, solar engineering quotations, client tenders, and lump-sum estimates.',
+        templates: templatesStore.quotation || []
+      },
+      {
+        key: 'bom',
+        title: 'Bill of Materials (BOM)',
+        badgeColor: '#1E293B',
+        icon: GitBranch,
+        description: 'Fabrication specifications, zinc micron standards, member schedules, and assembly lists.',
+        templates: templatesStore.bom || []
       }
-      await new Promise(res => setTimeout(res, 250));
+    ];
 
-      const canvas = await html2canvas(sheetEl, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
+    const totalCount = categories.reduce((sum, c) => sum + c.templates.length, 0);
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      let heightLeft = pdfHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, '', 'FAST');
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, '', 'FAST');
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`VRM_Proforma_Invoice_Template_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (err) {
-      alert('Failed to generate PDF: ' + err.message);
-    } finally {
-      setZoomLevel(prevZoom);
-      setIsExporting(false);
-    }
-  };
-
-  // Image Upload Handlers
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImageFile(file, 450, 0.85);
-      updateSettings({ customLogoUrl: dataUrl, showLogo: true });
-    } catch (err) {
-      alert('Failed to upload logo: ' + err.message);
-    } finally {
-      if (logoInputRef.current) logoInputRef.current.value = '';
-    }
-  };
-
-  const handleStampUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImageFile(file, 350, 0.85);
-      updateSettings({ customStampUrl: dataUrl, stampMode: 'custom', showSignatoryStamp: true });
-    } catch (err) {
-      alert('Failed to upload stamp: ' + err.message);
-    } finally {
-      if (stampInputRef.current) stampInputRef.current.value = '';
-    }
-  };
-
-  const handleSignatureUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImageFile(file, 350, 0.85);
-      updateSettings({ customSignatureUrl: dataUrl, signatureMode: 'custom', showSignatoryStamp: true });
-    } catch (err) {
-      alert('Failed to upload signature: ' + err.message);
-    } finally {
-      if (signatureInputRef.current) signatureInputRef.current.value = '';
-    }
-  };
-
-  const SIDE_MENU_ITEMS = [
-    { id: 'branding', label: 'Company & Branding', icon: Palette, desc: 'Name, address, GSTIN, CIN & logo' },
-    { id: 'labels', label: 'Document Labels', icon: FileText, desc: 'Document title, PO/PI labels & dates' },
-    { id: 'columns', label: 'Table Columns & Names', icon: Layers, desc: 'Show/hide & rename column headers' },
-    { id: 'stamp', label: 'Company Stamp / Seal', icon: Stamp, desc: 'Upload rubber stamp or customize seal' },
-    { id: 'signature', label: 'Authorized Signature', icon: PenTool, desc: 'Upload signature & signatory title' },
-    { id: 'addresses', label: 'Addresses & Dispatch', icon: Building2, desc: 'Ship To, transporter & sales exec' },
-    { id: 'banking', label: 'Bank Account Details', icon: CreditCard, desc: 'Beneficiary, account no & IFSC' },
-    { id: 'terms', label: 'Terms & Footer', icon: Sparkles, desc: 'Commercial policy, acceptance & notes' }
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '850px', width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', backgroundColor: '#F1F5F9' }}>
-
-      {/* TOP STUDIO HEADER BAR */}
-      <div
-        className="no-print"
-        style={{
-          backgroundColor: '#0F172A',
-          color: '#FFFFFF',
-          padding: '12px 20px',
+    return (
+      <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '24px 32px' }}>
+        {/* Top Hub Bar */}
+        <div style={{
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'space-between',
-          boxShadow: '0 4px 12px rgba(15,23,42,0.25)',
-          zIndex: 20,
+          alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '12px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          {onBackToPI && (
-            <button
-              onClick={onBackToPI}
-              style={{
-                backgroundColor: '#1E293B',
-                color: '#94A3B8',
-                border: '1px solid #334155',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
+          gap: '16px',
+          marginBottom: '28px',
+          paddingBottom: '20px',
+          borderBottom: '1px solid #E2E8F0'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: '#0E7490',
+                color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <ArrowLeft size={14} /> Back to PIs
-            </button>
-          )}
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px', fontWeight: '800', letterSpacing: '-0.2px' }}>
-                PDF & Print Template Studio
-              </span>
-              <span style={{
-                fontSize: '10px',
-                backgroundColor: settings.accentColor || '#0E7490',
-                color: 'white',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontWeight: '700'
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(14, 116, 144, 0.25)'
               }}>
-                Live Customizer
-              </span>
+                <Palette size={22} />
+              </div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.3px' }}>
+                  Templates Studio
+                </h1>
+                <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#64748B' }}>
+                  Manage, customize, and save executive print layouts for Proforma Invoices, Quotations, and Bill of Materials.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{
+              backgroundColor: '#ECFEFF',
+              color: '#0E7490',
+              border: '1px solid #A5F3FC',
+              borderRadius: '20px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700'
+            }}>
+              {totalCount} Total Templates Active
+            </span>
+            {onBackToPI && (
               <button
-                onClick={() => setIsMenuCollapsed(prev => !prev)}
-                title={isMenuCollapsed ? 'Show Customization Controls' : 'Hide Customization Controls'}
+                type="button"
+                onClick={onBackToPI}
                 style={{
-                  backgroundColor: isMenuCollapsed ? '#0E7490' : '#1E293B',
-                  color: '#FFFFFF',
-                  border: '1px solid #334155',
-                  borderRadius: '6px',
-                  padding: '4px 10px',
-                  fontSize: '11.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  marginLeft: '4px',
-                  transition: 'all 0.15s ease'
+                  gap: '6px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
                 }}
               >
-                {isMenuCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
-                <span>{isMenuCollapsed ? 'Show Controls' : 'Hide Controls'}</span>
+                <ArrowLeft size={14} />
+                Back to Proforma Invoice
               </button>
-            </div>
-            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
-              Changes apply across all Proforma Invoices, Quotations, and Print documents
-            </div>
+            )}
           </div>
         </div>
 
-        {/* TOP ACTIONS */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {saveToast && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#15803D',
-              backgroundColor: '#DCFCE7',
-              padding: '6px 14px',
-              borderRadius: '8px'
-            }}>
-              <CheckCircle size={15} /> Saved as Default Template!
-            </div>
-          )}
+        {/* 3 Main Category Cards Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gap: '24px'
+        }}>
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const defaultTmpl = cat.templates.find(t => t.isDefault) || cat.templates[0];
 
-          <button
-            onClick={handleSaveDefaults}
-            style={{
-              backgroundColor: '#0E7490',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 18px',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 6px rgba(14,116,144,0.4)'
-            }}
-          >
-            <Save size={15} /> Save As Default
-          </button>
+            return (
+              <div
+                key={cat.key}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                }}
+              >
+                {/* Card Header Banner */}
+                <div style={{
+                  padding: '18px 20px',
+                  borderBottom: '1px solid #E2E8F0',
+                  borderTop: `4px solid ${cat.badgeColor}`,
+                  backgroundColor: '#FAFAFA'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
+                        backgroundColor: `${cat.badgeColor}15`,
+                        color: cat.badgeColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Icon size={18} />
+                      </div>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                          {cat.title}
+                        </h2>
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748B' }}>
+                          {cat.templates.length} {cat.templates.length === 1 ? 'Template Saved' : 'Templates Saved'}
+                        </span>
+                      </div>
+                    </div>
 
-          <button
-            onClick={handleDownloadPdf}
-            disabled={isExporting}
-            style={{
-              backgroundColor: '#059669',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: isExporting ? 'wait' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Download size={15} /> {isExporting ? 'Generating PDF...' : 'Sample PDF'}
-          </button>
-
-          <button
-            onClick={handlePrint}
-            style={{
-              backgroundColor: '#334155',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 14px',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Printer size={15} /> Print
-          </button>
-
-          <button
-            onClick={handleResetDefaults}
-            title="Reset to factory VRM defaults"
-            style={{
-              backgroundColor: 'transparent',
-              color: '#94A3B8',
-              border: '1px solid #475569',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              fontSize: '12px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <RotateCcw size={13} /> Reset
-          </button>
-        </div>
-      </div>
-
-      {/* MAIN TWO-COLUMN STUDIO WORKSPACE */}
-      <div style={{ display: 'flex', flex: 1, minWidth: 0, width: '100%', overflow: 'hidden' }}>
-
-        {/* ==================== LEFT COLUMN: SEPARATE SIDE MENU ==================== */}
-        <div
-          className="no-print"
-          style={{
-            width: isMenuCollapsed ? '0px' : '330px',
-            minWidth: isMenuCollapsed ? '0px' : '330px',
-            maxWidth: isMenuCollapsed ? '0px' : '330px',
-            flexShrink: 0,
-            backgroundColor: '#FFFFFF',
-            borderRight: isMenuCollapsed ? 'none' : '1px solid #CBD5E1',
-            display: isMenuCollapsed ? 'none' : 'flex',
-            flexDirection: 'column',
-            overflowY: isMenuCollapsed ? 'hidden' : 'auto',
-            overflowX: 'hidden',
-            boxShadow: isMenuCollapsed ? 'none' : '4px 0 16px rgba(0,0,0,0.03)',
-            zIndex: 10,
-            transition: 'width 0.2s ease'
-          }}
-        >
-          {/* SIDE MENU TABS STRIP */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}>
-            <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Customization Menu
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {SIDE_MENU_ITEMS.map(item => {
-                const Icon = item.icon;
-                const isSelected = activeMenu === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveMenu(item.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: isSelected ? '1px solid #A5F3FC' : '1px solid transparent',
-                      backgroundColor: isSelected ? '#ECFEFF' : 'transparent',
-                      color: isSelected ? '#0E7490' : '#334155',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '6px',
-                      backgroundColor: isSelected ? '#0E7490' : '#F1F5F9',
-                      color: isSelected ? '#FFFFFF' : '#64748B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
+                    <span style={{
+                      backgroundColor: `${cat.badgeColor}15`,
+                      color: cat.badgeColor,
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      padding: '3px 8px',
+                      borderRadius: '12px'
                     }}>
-                      <Icon size={15} />
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: isSelected ? '800' : '600', fontSize: '12.5px' }}>
-                        {item.label}
-                      </div>
-                      <div style={{ fontSize: '10px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {item.desc}
-                      </div>
-                    </div>
-
-                    {isSelected && <Check size={14} style={{ color: '#0E7490' }} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ACTIVE CATEGORY SETTINGS FORM */}
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
-
-            {/* 1. BRANDING & LOGO */}
-            {activeMenu === 'branding' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Logo Upload Box */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Image size={15} style={{ color: '#0E7490' }} /> Company Logo
+                      {cat.key.toUpperCase()}
                     </span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748B', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={settings.showLogo}
-                        onChange={(e) => updateSettings({ showLogo: e.target.checked })}
-                        style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                      />
-                      <span>Show Logo</span>
-                    </label>
                   </div>
 
-                  {settings.showLogo && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{
-                        padding: '10px 14px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px dashed #CBD5E1',
+                  <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: '1.4' }}>
+                    {cat.description}
+                  </p>
+                </div>
+
+                {/* Templates List inside this Category Card */}
+                <div style={{ padding: '16px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Available Templates in this Section:
+                  </div>
+
+                  {cat.templates.map((tmpl) => (
+                    <div
+                      key={tmpl.id}
+                      onClick={() => handleOpenEditor(cat.key, tmpl.id)}
+                      style={{
+                        padding: '12px 14px',
                         borderRadius: '8px',
-                        textAlign: 'center',
-                        minHeight: '60px',
+                        border: tmpl.isDefault ? `1.5px solid ${cat.badgeColor}` : '1px solid #E2E8F0',
+                        backgroundColor: tmpl.isDefault ? `${cat.badgeColor}08` : '#FFFFFF',
+                        cursor: 'pointer',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <img
-                          src={settings.customLogoUrl || '/vrm_logo.png'}
-                          alt="Logo Preview"
-                          style={{ maxHeight: `${settings.logoHeight || 52}px`, maxWidth: '200px', objectFit: 'contain' }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          ref={logoInputRef}
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={handleLogoUpload}
-                        />
-                        <button
-                          onClick={() => logoInputRef.current?.click()}
-                          style={{
-                            flex: 1,
-                            padding: '8px 12px',
-                            backgroundColor: '#0E7490',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <Upload size={13} /> {settings.customLogoUrl ? 'Change Logo Image' : 'Upload Custom Logo'}
-                        </button>
-
-                        {settings.customLogoUrl && (
-                          <button
-                            onClick={() => updateSettings({ customLogoUrl: null })}
-                            title="Reset to default VRM logo"
-                            style={{
-                              padding: '8px 12px',
-                              backgroundColor: '#FEE2E2',
-                              color: '#DC2626',
-                              border: '1px solid #FCA5A5',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              display: 'flex',
+                        gap: '12px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = cat.badgeColor;
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = tmpl.isDefault ? cat.badgeColor : '#E2E8F0';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                            {tmpl.name}
+                          </span>
+                          {tmpl.isDefault && (
+                            <span style={{
+                              backgroundColor: cat.badgeColor,
+                              color: '#FFFFFF',
+                              fontSize: '9.5px',
+                              fontWeight: '800',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <Trash2 size={13} /> Reset
-                          </button>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748B' }}>
-                        <span>Logo Size ({settings.logoHeight || 52}px)</span>
-                        <input
-                          type="range"
-                          min="35"
-                          max="75"
-                          value={settings.logoHeight || 52}
-                          onChange={(e) => updateSettings({ logoHeight: Number(e.target.value) })}
-                          style={{ width: '130px', accentColor: settings.accentColor, cursor: 'pointer' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Accent Color Palettes */}
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
-                    Brand Accent Color
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                    {COLOR_PRESETS.map(preset => {
-                      const isSelected = settings.accentColor === preset.hex;
-                      return (
-                        <button
-                          key={preset.hex}
-                          onClick={() => updateSettings({ accentColor: preset.hex })}
-                          style={{
-                            padding: '8px 10px',
-                            border: isSelected ? `2px solid ${preset.hex}` : '1px solid #E2E8F0',
-                            borderRadius: '8px',
-                            backgroundColor: isSelected ? `${preset.hex}12` : '#FFFFFF',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '11px',
-                            fontWeight: isSelected ? '700' : '500',
-                            color: '#1E293B'
-                          }}
-                        >
-                          <span style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: preset.hex, display: 'inline-block', flexShrink: 0 }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preset.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Company Information Inputs */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Company Details (Header)</div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company Name</label>
-                    <input
-                      type="text"
-                      value={settings.companyName || ''}
-                      onChange={(e) => updateSettings({ companyName: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company Tagline / Subtitle</label>
-                    <input
-                      type="text"
-                      value={settings.companyTagline || ''}
-                      onChange={(e) => updateSettings({ companyTagline: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Address Line 1</label>
-                    <input
-                      type="text"
-                      value={settings.companyAddressLine1 || ''}
-                      onChange={(e) => updateSettings({ companyAddressLine1: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Address Line 2 (City, State, PIN)</label>
-                    <input
-                      type="text"
-                      value={settings.companyAddressLine2 || ''}
-                      onChange={(e) => updateSettings({ companyAddressLine2: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company GSTIN</label>
-                      <input
-                        type="text"
-                        value={settings.companyGstin || ''}
-                        onChange={(e) => updateSettings({ companyGstin: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Company CIN</label>
-                      <input
-                        type="text"
-                        value={settings.companyCin || ''}
-                        onChange={(e) => updateSettings({ companyCin: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Phone / Support</label>
-                      <input
-                        type="text"
-                        value={settings.companyPhone || ''}
-                        onChange={(e) => updateSettings({ companyPhone: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Official Email</label>
-                      <input
-                        type="text"
-                        value={settings.companyEmail || ''}
-                        onChange={(e) => updateSettings({ companyEmail: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Website</label>
-                    <input
-                      type="text"
-                      value={settings.companyWebsite || ''}
-                      onChange={(e) => updateSettings({ companyWebsite: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Header Information Toggles */}
-                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Header Visibility Options</label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
-                    <span>Show GSTIN & CIN Registration</span>
-                    <input
-                      type="checkbox"
-                      checked={settings.showCinGst}
-                      onChange={(e) => updateSettings({ showCinGst: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
-                  </label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#334155' }}>
-                    <span>Show Factory Address & Contact Info</span>
-                    <input
-                      type="checkbox"
-                      checked={settings.showContactInfo}
-                      onChange={(e) => updateSettings({ showContactInfo: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* 2. DOCUMENT LABELS */}
-            {activeMenu === 'labels' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Document Title Selector */}
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
-                    Main Document Title
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.documentTitle}
-                    onChange={(e) => updateSettings({ documentTitle: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      color: '#0F172A',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                    {TITLE_PRESETS.map(preset => (
-                      <button
-                        key={preset}
-                        onClick={() => updateSettings({ documentTitle: preset })}
-                        style={{
-                          fontSize: '10.5px',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          backgroundColor: settings.documentTitle === preset ? '#ECFEFF' : '#F8FAFC',
-                          color: settings.documentTitle === preset ? '#0E7490' : '#475569',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Customizable Field Labels */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Customize Field Labels</div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Document Number Label</label>
-                    <input
-                      type="text"
-                      value={settings.docNoLabel || 'Document No:'}
-                      onChange={(e) => updateSettings({ docNoLabel: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Date Label</label>
-                      <input
-                        type="text"
-                        value={settings.dateLabel || 'Date:'}
-                        onChange={(e) => updateSettings({ dateLabel: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Valid Until Label</label>
-                      <input
-                        type="text"
-                        value={settings.validUntilLabel || 'Valid Until:'}
-                        onChange={(e) => updateSettings({ validUntilLabel: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Payment Terms Label</label>
-                    <input
-                      type="text"
-                      value={settings.paymentTermsLabel || 'Payment Terms:'}
-                      onChange={(e) => updateSettings({ paymentTermsLabel: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Place Of Supply Label</label>
-                    <input
-                      type="text"
-                      value={settings.placeOfSupplyLabel || 'Place Of Supply:'}
-                      onChange={(e) => updateSettings({ placeOfSupplyLabel: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Sales Executive Label</label>
-                    <input
-                      type="text"
-                      value={settings.salesExecutiveLabel || 'Sales Executive:'}
-                      onChange={(e) => updateSettings({ salesExecutiveLabel: e.target.value })}
-                      style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Bill To Label</label>
-                      <input
-                        type="text"
-                        value={settings.billToLabel || 'Bill To / Buyer:'}
-                        onChange={(e) => updateSettings({ billToLabel: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Ship To Label</label>
-                      <input
-                        type="text"
-                        value={settings.shipToLabel || 'Ship To / Delivery Destination:'}
-                        onChange={(e) => updateSettings({ shipToLabel: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 2. STAMP & SEAL */}
-            {activeMenu === 'stamp' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Official Stamp Format</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748B', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={settings.showSignatoryStamp}
-                        onChange={(e) => updateSettings({ showSignatoryStamp: e.target.checked })}
-                        style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                      />
-                      <span>Show Stamp</span>
-                    </label>
-                  </div>
-
-                  {settings.showSignatoryStamp && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {/* Stamp Style Modes */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-                        {[
-                          { id: 'vector', label: 'Vector Seal' },
-                          { id: 'custom', label: 'Upload Stamp' },
-                          { id: 'none', label: 'No Stamp' }
-                        ].map(mode => {
-                          const isSel = settings.stampMode === mode.id;
-                          return (
-                            <button
-                              key={mode.id}
-                              onClick={() => updateSettings({ stampMode: mode.id })}
-                              style={{
-                                padding: '8px 6px',
-                                borderRadius: '6px',
-                                border: isSel ? `2px solid ${settings.accentColor}` : '1px solid #CBD5E1',
-                                backgroundColor: isSel ? '#FFFFFF' : '#F1F5F9',
-                                color: isSel ? settings.accentColor : '#475569',
-                                fontSize: '11px',
-                                fontWeight: isSel ? '800' : '600',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {mode.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Vector Seal Custom Text */}
-                      {settings.stampMode === 'vector' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                          <div>
-                            <label style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Seal Header Text</label>
-                            <input
-                              type="text"
-                              value={settings.stampText}
-                              onChange={(e) => updateSettings({ stampText: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Seal Location Subtitle</label>
-                            <input
-                              type="text"
-                              value={settings.stampLocation}
-                              onChange={(e) => updateSettings({ stampLocation: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                            />
-                          </div>
+                              gap: '2px'
+                            }}>
+                              <Star size={9} fill="#FFFFFF" />
+                              DEFAULT
+                            </span>
+                          )}
                         </div>
-                      )}
-
-                      {/* Custom Stamp Upload */}
-                      {settings.stampMode === 'custom' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
-                          <div style={{
-                            padding: '12px',
-                            backgroundColor: '#FFFFFF',
-                            border: '1px dashed #CBD5E1',
-                            borderRadius: '8px',
-                            textAlign: 'center',
-                            minHeight: '65px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            {settings.customStampUrl ? (
-                              <img
-                                src={settings.customStampUrl}
-                                alt="Custom Stamp Preview"
-                                style={{ maxHeight: '55px', maxWidth: '140px', objectFit: 'contain' }}
-                              />
-                            ) : (
-                              <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>No stamp image uploaded yet</span>
-                            )}
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                              ref={stampInputRef}
-                              type="file"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={handleStampUpload}
-                            />
-                            <button
-                              onClick={() => stampInputRef.current?.click()}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                backgroundColor: '#0E7490',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11.5px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <Upload size={13} /> {settings.customStampUrl ? 'Change Stamp Image' : 'Upload Rubber Stamp PNG'}
-                            </button>
-
-                            {settings.customStampUrl && (
-                              <button
-                                onClick={() => updateSettings({ customStampUrl: null, stampMode: 'vector' })}
-                                title="Remove custom stamp"
-                                style={{
-                                  padding: '8px 12px',
-                                  backgroundColor: '#FEE2E2',
-                                  color: '#DC2626',
-                                  border: '1px solid #FCA5A5',
-                                  borderRadius: '6px',
-                                  fontSize: '11.5px',
-                                  fontWeight: '600',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B' }}>
-                            💡 Tip: Uploading a transparent PNG of your official company seal gives the cleanest printed output.
-                          </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px', lineHeight: '1.3' }}>
+                          {tmpl.description}
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3. SIGNATURE */}
-            {activeMenu === 'signature' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', marginBottom: '10px' }}>
-                    Authorized Signature Style
-                  </div>
-
-                  {/* Signature Mode Switcher */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
-                    {[
-                      { id: 'vector', label: 'Digital Stroke' },
-                      { id: 'custom', label: 'Upload Sign' },
-                      { id: 'blank', label: 'Blank Line' }
-                    ].map(mode => {
-                      const isSel = settings.signatureMode === mode.id;
-                      return (
-                        <button
-                          key={mode.id}
-                          onClick={() => updateSettings({ signatureMode: mode.id })}
-                          style={{
-                            padding: '8px 6px',
-                            borderRadius: '6px',
-                            border: isSel ? `2px solid ${settings.accentColor}` : '1px solid #CBD5E1',
-                            backgroundColor: isSel ? '#FFFFFF' : '#F1F5F9',
-                            color: isSel ? settings.accentColor : '#475569',
-                            fontSize: '11px',
-                            fontWeight: isSel ? '800' : '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {mode.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Custom Signature Upload */}
-                  {settings.signatureMode === 'custom' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
-                      <div style={{
-                        padding: '12px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px dashed #CBD5E1',
-                        borderRadius: '8px',
-                        textAlign: 'center',
-                        minHeight: '55px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {settings.customSignatureUrl ? (
-                          <img
-                            src={settings.customSignatureUrl}
-                            alt="Custom Signature Preview"
-                            style={{ maxHeight: '45px', maxWidth: '160px', objectFit: 'contain' }}
-                          />
-                        ) : (
-                          <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>No signature image uploaded</span>
-                        )}
+                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px' }}>
+                          Last modified: {tmpl.lastModified || 'Recent'}
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          ref={signatureInputRef}
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={handleSignatureUpload}
-                        />
-                        <button
-                          onClick={() => signatureInputRef.current?.click()}
-                          style={{
-                            flex: 1,
-                            padding: '8px 12px',
-                            backgroundColor: '#0E7490',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <Upload size={13} /> {settings.customSignatureUrl ? 'Change Signature' : 'Upload Handwritten Sign PNG'}
-                        </button>
-
-                        {settings.customSignatureUrl && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {!tmpl.isDefault && (
                           <button
-                            onClick={() => updateSettings({ customSignatureUrl: null, signatureMode: 'vector' })}
-                            title="Remove custom signature"
+                            type="button"
+                            title="Delete this template"
+                            onClick={(e) => handleDeleteTemplate(cat.key, tmpl.id, e)}
                             style={{
-                              padding: '8px 12px',
                               backgroundColor: '#FEE2E2',
                               color: '#DC2626',
-                              border: '1px solid #FCA5A5',
+                              border: 'none',
                               borderRadius: '6px',
-                              fontSize: '11.5px',
-                              fontWeight: '600',
+                              padding: '6px',
                               cursor: 'pointer'
                             }}
                           >
                             <Trash2 size={13} />
                           </button>
                         )}
+                        <ChevronRight size={16} color="#94A3B8" />
                       </div>
                     </div>
-                  )}
-
-                  {/* Signatory Text Fields */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Signatory Name (optional)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. M. Annamalaiyar"
-                        value={settings.signatoryName || ''}
-                        onChange={(e) => updateSettings({ signatoryName: e.target.value })}
-                        style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Designation Title</label>
-                      <input
-                        type="text"
-                        value={settings.signatoryTitle || 'Authorized Signatory'}
-                        onChange={(e) => updateSettings({ signatoryTitle: e.target.value })}
-                        style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Customer Acceptance Box */}
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
-                  <span>Show Customer Acceptance & Sign Box</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.showCustomerAcceptance}
-                    onChange={(e) => updateSettings({ showCustomerAcceptance: e.target.checked })}
-                    style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                  />
-                </label>
-              </div>
-            )}
-
-            {/* 4. ITEM TABLE COLUMNS */}
-            {activeMenu === 'columns' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>
-                  Toggle which columns and data elements appear in the line items table:
-                </div>
-
-                {[
-                  { key: 'showSnoCol', label: 'S.No (#) Column' },
-                  { key: 'showHsn', label: 'HSN / SAC Code Column' },
-                  { key: 'showQty', label: 'Quantity Column' },
-                  { key: 'showUom', label: 'Unit of Measure (UOM) Column' },
-                  { key: 'showRateCol', label: 'Unit Rate (₹) Column' },
-                  { key: 'showDiscountCol', label: 'Discount % Column' },
-                  { key: 'showTaxableCol', label: 'Taxable Value Column' },
-                  { key: 'showGstCol', label: 'Line Item GST% Column' },
-                  { key: 'showTotalCol', label: 'Total Amount Column' },
-                  { key: 'showItemDescription', label: 'Item Technical Description & Specs' }
-                ].map(col => (
-                  <label
-                    key={col.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#0F172A',
-                      fontWeight: '700'
-                    }}
-                  >
-                    <span>{col.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={settings[col.key]}
-                      onChange={(e) => updateSettings({ [col.key]: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
-                  </label>
-                ))}
-
-                {/* Rename Column Headers */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Rename Column Headers</div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>S.No Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderSno || '#'}
-                        onChange={(e) => updateSettings({ colHeaderSno: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Item / Description</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderDesc || 'Item & Specification'}
-                        onChange={(e) => updateSettings({ colHeaderDesc: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>HSN/SAC Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderHsn || 'HSN/SAC'}
-                        onChange={(e) => updateSettings({ colHeaderHsn: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Quantity Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderQty || 'Qty'}
-                        onChange={(e) => updateSettings({ colHeaderQty: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>UOM Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderUom || 'UOM'}
-                        onChange={(e) => updateSettings({ colHeaderUom: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Rate Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderRate || 'Rate (₹)'}
-                        onChange={(e) => updateSettings({ colHeaderRate: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Discount Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderDiscount || 'Disc%'}
-                        onChange={(e) => updateSettings({ colHeaderDiscount: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Taxable Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderTaxable || 'Taxable (₹)'}
-                        onChange={(e) => updateSettings({ colHeaderTaxable: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>GST% Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderGst || 'GST%'}
-                        onChange={(e) => updateSettings({ colHeaderGst: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Total Column</label>
-                      <input
-                        type="text"
-                        value={settings.colHeaderAmount || 'Total (₹)'}
-                        onChange={(e) => updateSettings({ colHeaderAmount: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 5. ADDRESSES & LOGISTICS */}
-            {activeMenu === 'addresses' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {[
-                  { key: 'showBillTo', label: 'Show Bill To / Buyer Block' },
-                  { key: 'showBuyerAddress', label: 'Show Buyer Street & City Address' },
-                  { key: 'showBuyerGstin', label: 'Show Buyer GSTIN Number' },
-                  { key: 'showBuyerContact', label: 'Show Buyer Contact Person' },
-                  { key: 'showBuyerPhone', label: 'Show Buyer Phone Number' },
-                  { key: 'showBuyerEmail', label: 'Show Buyer Email Address' },
-                  { key: 'showShipTo', label: 'Show Ship To / Delivery Address' },
-                  { key: 'showTransportDetails', label: 'Show Transport Mode & Vehicle / LR No.' },
-                  { key: 'showDocNo', label: 'Show Document Number' },
-                  { key: 'showDate', label: 'Show Document Date' },
-                  { key: 'showValidUntil', label: 'Show Valid Until Date' },
-                  { key: 'showPaymentTerms', label: 'Show Payment Terms in Header' },
-                  { key: 'showPlaceOfSupply', label: 'Show Place Of Supply' },
-                  { key: 'showSalesExecutive', label: 'Show Sales Executive Name' }
-                ].map(item => (
-                  <label
-                    key={item.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#0F172A',
-                      fontWeight: '700'
-                    }}
-                  >
-                    <span>{item.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={settings[item.key]}
-                      onChange={(e) => updateSettings({ [item.key]: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {/* 6. BANKING DETAILS */}
-            {activeMenu === 'banking' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
-                  <span>Show Company Bank Account</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.showBankDetails}
-                    onChange={(e) => updateSettings({ showBankDetails: e.target.checked })}
-                    style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                  />
-                </label>
-
-                {settings.showBankDetails && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Beneficiary Name</label>
-                      <input
-                        type="text"
-                        value={settings.bankBeneficiary}
-                        onChange={(e) => updateSettings({ bankBeneficiary: e.target.value })}
-                        style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Bank Name</label>
-                      <input
-                        type="text"
-                        value={settings.bankName}
-                        onChange={(e) => updateSettings({ bankName: e.target.value })}
-                        style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Account No.</label>
-                        <input
-                          type="text"
-                          value={settings.bankAccountNo}
-                          onChange={(e) => updateSettings({ bankAccountNo: e.target.value })}
-                          style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>IFSC Code</label>
-                        <input
-                          type="text"
-                          value={settings.bankIfsc}
-                          onChange={(e) => updateSettings({ bankIfsc: e.target.value })}
-                          style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Branch</label>
-                      <input
-                        type="text"
-                        value={settings.bankBranch}
-                        onChange={(e) => updateSettings({ bankBranch: e.target.value })}
-                        style={{ width: '100%', padding: '7px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 7. TERMS & CONDITIONS AND FOOTER */}
-            {activeMenu === 'terms' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
-                  <span>Show Terms & Conditions</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.showTerms}
-                    onChange={(e) => updateSettings({ showTerms: e.target.checked })}
-                    style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                  />
-                </label>
-
-                {settings.showTerms && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                        Terms Section Heading
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.termsHeading || 'Terms & Conditions:'}
-                        onChange={(e) => updateSettings({ termsHeading: e.target.value })}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                        Edit Terms Lines (1 numbered item per line)
-                      </label>
-                      <textarea
-                        rows={8}
-                        value={settings.termsText}
-                        onChange={(e) => updateSettings({ termsText: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          fontSize: '11.5px',
-                          borderRadius: '8px',
-                          border: '1px solid #CBD5E1',
-                          lineHeight: '1.45',
-                          boxSizing: 'border-box',
-                          resize: 'vertical'
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
-                  <span>Show Total Amount In Words</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.showTotalInWords}
-                    onChange={(e) => updateSettings({ showTotalInWords: e.target.checked })}
-                    style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                  />
-                </label>
-
-                {/* Customer Acceptance Box Controls */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '700' }}>
-                    <span>Customer Acceptance & Sign Box</span>
-                    <input
-                      type="checkbox"
-                      checked={settings.showCustomerAcceptance}
-                      onChange={(e) => updateSettings({ showCustomerAcceptance: e.target.checked })}
-                      style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
-                  </label>
-
-                  {settings.showCustomerAcceptance && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                      <div>
-                        <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Box Heading</label>
-                        <input
-                          type="text"
-                          value={settings.customerAcceptanceHeading || 'Customer Acceptance & Signature'}
-                          onChange={(e) => updateSettings({ customerAcceptanceHeading: e.target.value })}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748B' }}>Line Subtext</label>
-                        <input
-                          type="text"
-                          value={settings.customerAcceptanceSubtext || 'Authorised Signature & Stamp'}
-                          onChange={(e) => updateSettings({ customerAcceptanceSubtext: e.target.value })}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Footer Notice */}
-                <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Bottom Footer Note</label>
-                  <input
-                    type="text"
-                    value={settings.footerNote || ''}
-                    onChange={(e) => updateSettings({ footerNote: e.target.value })}
-                    placeholder="This is a Computer Generated Proforma Invoice..."
-                    style={{ width: '100%', padding: '8px 10px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
-                  />
-                  <span style={{ fontSize: '10px', color: '#94A3B8' }}>Appears centered at the bottom of the printed page.</span>
-                </div>
-              </div>
-            )}
-
-          </div>
-
-          {/* SIDE MENU BOTTOM STICKY BAR */}
-          <div style={{ padding: '16px', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', gap: '8px' }}>
-            <button
-              onClick={handleSaveDefaults}
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                backgroundColor: '#0E7490',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <Save size={15} /> Save As Default
-            </button>
-
-            <button
-              onClick={handleResetDefaults}
-              title="Reset to factory defaults"
-              style={{
-                padding: '10px 14px',
-                backgroundColor: '#FFFFFF',
-                color: '#64748B',
-                border: '1px solid #CBD5E1',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <RotateCcw size={14} /> Reset
-            </button>
-          </div>
-        </div>
-
-        {/* ==================== RIGHT COLUMN: LIVE INTERACTIVE A4 SHEET ==================== */}
-        <div
-          ref={previewContainerRef}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflowX: 'auto',
-            overflowY: 'auto',
-            padding: '20px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            backgroundColor: '#F1F5F9'
-          }}
-        >
-          <div style={{ width: '100%', maxWidth: '870px', minWidth: 0 }}>
-            {/* Live Sheet Banner Info with Zoom & Screen Fit Controls */}
-            <div
-              className="no-print"
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '10px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                borderRadius: '8px',
-                padding: '8px 14px',
-                marginBottom: '16px',
-                fontSize: '11.5px',
-                color: '#64748B',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {isMenuCollapsed && (
+                {/* Card Action Buttons Footer */}
+                <div style={{
+                  padding: '14px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderTop: '1px solid #E2E8F0',
+                  display: 'flex',
+                  gap: '8px'
+                }}>
                   <button
-                    onClick={() => setIsMenuCollapsed(false)}
+                    type="button"
+                    onClick={() => handleOpenEditor(cat.key, defaultTmpl.id)}
                     style={{
-                      backgroundColor: '#0E7490',
-                      color: 'white',
+                      flex: 1,
+                      backgroundColor: cat.badgeColor,
+                      color: '#FFFFFF',
                       border: 'none',
-                      borderRadius: '6px',
-                      padding: '4px 10px',
-                      fontSize: '11px',
+                      borderRadius: '8px',
+                      padding: '9px 12px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: `0 2px 6px ${cat.badgeColor}30`
+                    }}
+                  >
+                    <Sliders size={14} />
+                    Customize {cat.title.split(' ')[0]}
+                  </button>
+
+                  <button
+                    type="button"
+                    title="Create new template variant"
+                    onClick={() => {
+                      setActiveCategory(cat.key);
+                      setActiveTemplateId(defaultTmpl.id);
+                      setCurrentSettings({ ...defaultTmpl.settings });
+                      setNewTemplateName(`${cat.title.split(' ')[0]} Variant`);
+                      setNewTemplateModalOpen(true);
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      color: '#0F172A',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '9px 12px',
+                      fontSize: '12px',
                       fontWeight: '700',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1783,175 +946,1007 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                       gap: '4px'
                     }}
                   >
-                    <Sliders size={12} /> Open Customizer
-                  </button>
-                )}
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: '#334155' }}>
-                  <Sparkles size={14} style={{ color: settings.accentColor || '#0E7490' }} />
-                  Live A4 Interactive Preview
-                </span>
-              </div>
-
-              {/* Zoom & Screen-Fit Toolbar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: '6px', padding: '2px', border: '1px solid #E2E8F0' }}>
-                  <button
-                    onClick={() => {
-                      setFitToWidth(false);
-                      setZoomLevel(z => Math.max(0.5, Math.round((z - 0.05) * 100) / 100));
-                    }}
-                    title="Zoom Out"
-                    style={{ backgroundColor: 'transparent', border: 'none', padding: '3px 7px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
-                  >
-                    <ZoomOut size={13} />
-                  </button>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#0F172A', minWidth: '40px', textAlign: 'center', userSelect: 'none' }}>
-                    {Math.round(zoomLevel * 100)}%
-                  </span>
-                  <button
-                    onClick={() => {
-                      setFitToWidth(false);
-                      setZoomLevel(z => Math.min(1.4, Math.round((z + 0.05) * 100) / 100));
-                    }}
-                    title="Zoom In"
-                    style={{ backgroundColor: 'transparent', border: 'none', padding: '3px 7px', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center' }}
-                  >
-                    <ZoomIn size={13} />
+                    <Plus size={14} />
+                    New
                   </button>
                 </div>
-
-                <button
-                  onClick={() => {
-                    setFitToWidth(true);
-                    if (previewContainerRef.current) {
-                      const containerWidth = previewContainerRef.current.clientWidth - 48;
-                      if (containerWidth > 0 && containerWidth < 880) {
-                        setZoomLevel(Math.round(Math.min(1, Math.max(0.55, containerWidth / 870)) * 100) / 100);
-                      } else {
-                        setZoomLevel(1);
-                      }
-                    }
-                  }}
-                  style={{
-                    backgroundColor: fitToWidth ? '#0E7490' : '#F1F5F9',
-                    color: fitToWidth ? '#FFFFFF' : '#475569',
-                    border: '1px solid ' + (fitToWidth ? '#0E7490' : '#CBD5E1'),
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  title="Automatically scale to fit inside screen"
-                >
-                  <Maximize2 size={12} /> Fit Screen
-                </button>
-
-                <button
-                  onClick={() => {
-                    setFitToWidth(false);
-                    setZoomLevel(1);
-                  }}
-                  style={{
-                    backgroundColor: (!fitToWidth && zoomLevel === 1) ? '#0F172A' : '#F1F5F9',
-                    color: (!fitToWidth && zoomLevel === 1) ? '#FFFFFF' : '#475569',
-                    border: '1px solid ' + ((!fitToWidth && zoomLevel === 1) ? '#0F172A' : '#CBD5E1'),
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                  title="100% native scale"
-                >
-                  100%
-                </button>
-
-                {/* DIRECT CLICK-TO-EDIT ON/OFF TOGGLE */}
-                <button
-                  onClick={() => setIsDirectEditMode(prev => !prev)}
-                  style={{
-                    backgroundColor: isDirectEditMode ? '#0E7490' : '#FFFFFF',
-                    color: isDirectEditMode ? '#FFFFFF' : '#475569',
-                    border: '1px solid ' + (isDirectEditMode ? '#0E7490' : '#CBD5E1'),
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: isDirectEditMode ? '0 2px 5px rgba(14,116,144,0.3)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Toggle in-place click-to-edit directly on the invoice sheet"
-                >
-                  <PenTool size={12} />
-                  <span>Click-to-Edit: {isDirectEditMode ? 'ON' : 'OFF'}</span>
-                </button>
               </div>
-            </div>
+            );
+          })}
+        </div>
 
-            {/* IN-PLACE CLICK-TO-EDIT NOTIFICATION BANNER */}
-            {isDirectEditMode && (
-              <div
-                className="no-print"
-                style={{
-                  backgroundColor: '#ECFEFF',
-                  border: '1px solid #A5F3FC',
-                  borderRadius: '8px',
-                  padding: '9px 16px',
-                  marginBottom: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '11.5px',
-                  color: '#0E7490',
-                  fontWeight: '600'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={15} style={{ color: '#0E7490', flexShrink: 0 }} />
-                  <span>
-                    <strong>In-Place Direct Edit Active:</strong> Click directly on any text, company name, address, labels, item descriptions, rates, or bank details on the invoice sheet below to edit them!
-                  </span>
-                </div>
-                <span style={{ fontSize: '10px', backgroundColor: '#0E7490', color: '#FFFFFF', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>
-                  Live Editable
-                </span>
-              </div>
+        {/* Global Footer Note */}
+        <div style={{ marginTop: '36px', textAlign: 'center', fontSize: '11px', color: '#94A3B8' }}>
+          VRM Structures India Private Limited • Chennai, Tamil Nadu, India
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: TEMPLATE LIVE CUSTOMIZER / EDITOR
+  // ==========================================
+  const activeDataset = SAMPLE_DATASETS[activeCategory] || SAMPLE_DATASETS.pi;
+  const activeAccent = currentSettings.accentColor || '#0E7490';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F1F5F9', overflow: 'hidden' }}>
+      
+      {/* 1. TOP EDITOR NAVIGATION & ACTION BAR */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderBottom: '1px solid #E2E8F0',
+        padding: '10px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        flexWrap: 'wrap',
+        zIndex: 50
+      }}>
+        {/* Left: Back to Hub + Breadcrumb */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('hub')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#F8FAFC',
+              color: '#0F172A',
+              border: '1px solid #CBD5E1',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={14} />
+            Templates Hub
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              backgroundColor: `${activeAccent}15`,
+              color: activeAccent,
+              fontSize: '11px',
+              fontWeight: '800',
+              padding: '3px 8px',
+              borderRadius: '6px'
+            }}>
+              {activeCategory.toUpperCase()}
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+              {activeTemplateObj.name}
+            </span>
+            {activeTemplateObj.isDefault && (
+              <span style={{
+                backgroundColor: '#10B981',
+                color: '#FFFFFF',
+                fontSize: '9.5px',
+                fontWeight: '800',
+                padding: '2px 6px',
+                borderRadius: '4px'
+              }}>
+                ACTIVE DEFAULT
+              </span>
             )}
+          </div>
+        </div>
 
-            {/* LIVE PRINTABLE DOCUMENT SHEET WRAPPER */}
-            <div
+        {/* Center/Right: Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleSaveAsDefault}
+            title="Make this template the active default for this section"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#FFFFFF',
+              color: activeAccent,
+              border: `1.5px solid ${activeAccent}`,
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <Star size={14} />
+            Save as Default
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setNewTemplateName(`${activeTemplateObj.name} Copy`);
+              setNewTemplateModalOpen(true);
+            }}
+            title="Save these settings as a new template variant"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#FFFFFF',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={14} />
+            Save as New
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveChanges}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: activeAccent,
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: `0 2px 6px ${activeAccent}35`
+            }}
+          >
+            <Save size={14} />
+            Save Changes
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#FFFFFF',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <Printer size={14} />
+            Print
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#1E293B',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <Download size={14} />
+            PDF
+          </button>
+        </div>
+      </div>
+
+      {/* 2. MAIN WORKSPACE: LEFT CUSTOMIZER DRAWER + RIGHT LIVE PREVIEW */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        
+        {/* LEFT DRAWER: CUSTOMIZATION PANELS */}
+        <div style={{
+          width: isMenuCollapsed ? '48px' : '360px',
+          backgroundColor: '#FFFFFF',
+          borderRight: '1px solid #E2E8F0',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'width 0.2s ease',
+          zIndex: 40,
+          flexShrink: 0
+        }}>
+          {/* Drawer Category Tabs */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            borderBottom: '1px solid #E2E8F0',
+            backgroundColor: '#F8FAFC',
+            overflowX: 'auto'
+          }}>
+            <button
+              type="button"
+              onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+              title={isMenuCollapsed ? 'Expand Controls' : 'Collapse Controls'}
               style={{
-                zoom: zoomLevel,
-                transformOrigin: 'top center',
-                width: '100%',
-                maxWidth: '850px',
-                margin: '0 auto',
-                transition: 'zoom 0.15s ease',
-                display: 'flex',
-                justifyContent: 'center'
+                backgroundColor: 'transparent',
+                border: 'none',
+                padding: '10px 12px',
+                cursor: 'pointer',
+                color: '#64748B'
               }}
             >
-              <VRMProformaInvoicePrintSheet
-                piData={previewPi}
-                settings={settings}
-                id="studio-printable-sheet"
-                isEditable={isDirectEditMode}
-                onUpdateSetting={updateSettings}
-                onUpdatePiData={(up) => setPreviewPi(p => ({ ...p, ...up }))}
-              />
+              {isMenuCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+
+            {!isMenuCollapsed && (
+              <div style={{ display: 'flex', overflowX: 'auto', flex: 1 }}>
+                {[
+                  { id: 'color', label: 'Color Picker', icon: Palette },
+                  { id: 'logo', label: 'Logo Sizing', icon: Image },
+                  { id: 'stamp', label: 'Stamp & Sign', icon: ShieldCheck },
+                  { id: 'columns', label: 'Columns', icon: Layers },
+                  { id: 'sections', label: 'Sections', icon: Settings2 }
+                ].map(tab => {
+                  const Icon = tab.icon;
+                  const isActive = editorMenu === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEditorMenu(tab.id)}
+                      style={{
+                        padding: '10px 10px',
+                        border: 'none',
+                        borderBottom: isActive ? `2px solid ${activeAccent}` : '2px solid transparent',
+                        backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                        color: isActive ? activeAccent : '#64748B',
+                        fontSize: '11px',
+                        fontWeight: isActive ? '800' : '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Icon size={13} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Drawer Tab Content */}
+          {!isMenuCollapsed && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+              
+              {/* TAB 1: PHOTOSHOP-STYLE COLOR PICKER */}
+              {editorMenu === 'color' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>
+                      Photoshop-Style Color Picker
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B' }}>
+                      Set the primary accent color across tables, headers, and stamps.
+                    </div>
+                  </div>
+
+                  {/* Hex & Live Spectrum Picker */}
+                  <div style={{
+                    padding: '14px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Native HTML5 Color Spectrum Picker Button */}
+                      <label style={{ position: 'relative', cursor: 'pointer' }}>
+                        <div style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '8px',
+                          backgroundColor: activeAccent,
+                          border: '2px solid #FFFFFF',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Palette size={18} color="#FFFFFF" />
+                        </div>
+                        <input
+                          type="color"
+                          value={activeAccent}
+                          onChange={(e) => updateSetting({ accentColor: e.target.value })}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            opacity: 0,
+                            width: '100%',
+                            height: '100%',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      </label>
+
+                      {/* Hex Code Input */}
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                          Hex Color Code (#)
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <input
+                            type="text"
+                            maxLength={7}
+                            value={activeAccent}
+                            onChange={(e) => {
+                              let v = e.target.value;
+                              if (!v.startsWith('#')) v = '#' + v;
+                              updateSetting({ accentColor: v.toUpperCase() });
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '7px 10px',
+                              fontSize: '13px',
+                              fontFamily: 'monospace',
+                              fontWeight: '700',
+                              color: '#0F172A',
+                              backgroundColor: '#FFFFFF',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '10.5px', color: '#64748B', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Current Theme: <strong>{activeAccent}</strong></span>
+                      <span>Click swatch or enter custom Hex</span>
+                    </div>
+                  </div>
+
+                  {/* Preset Swatches Palette */}
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      Curated Color Swatches
+                    </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '8px'
+                    }}>
+                      {COLOR_PRESETS.map((color) => {
+                        const isSelected = activeAccent.toLowerCase() === color.hex.toLowerCase();
+                        return (
+                          <button
+                            key={color.hex}
+                            type="button"
+                            onClick={() => updateSetting({ accentColor: color.hex })}
+                            title={`${color.name} (${color.hex})`}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              border: isSelected ? `2px solid ${color.hex}` : '1px solid #E2E8F0',
+                              borderRadius: '8px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '4px',
+                              boxShadow: isSelected ? `0 2px 8px ${color.hex}40` : 'none'
+                            }}
+                          >
+                            <div style={{
+                              width: '100%',
+                              height: '24px',
+                              borderRadius: '4px',
+                              backgroundColor: color.hex
+                            }} />
+                            <span style={{ fontSize: '9.5px', fontWeight: '700', color: isSelected ? color.hex : '#64748B', textAlign: 'center' }}>
+                              {color.name.split(' ')[0]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: LOGO EDITING & 300PX SLIDER */}
+              {editorMenu === 'logo' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>
+                      Company Logo Sizing & Upload
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B' }}>
+                      Upload custom logo and scale size up to <strong>300 px</strong>.
+                    </div>
+                  </div>
+
+                  {/* Logo Size Slider (Up to 300px) */}
+                  <div style={{
+                    padding: '14px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                        Logo Height:
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: activeAccent }}>
+                        {currentSettings.logoHeight || 52} px
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min={30}
+                      max={300}
+                      step={5}
+                      value={currentSettings.logoHeight || 52}
+                      onChange={(e) => updateSetting({ logoHeight: parseInt(e.target.value, 10) })}
+                      style={{ accentColor: activeAccent, width: '100%', cursor: 'pointer' }}
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
+                      <span>Compact (30px)</span>
+                      <span>Standard (65px)</span>
+                      <span>Large (300px)</span>
+                    </div>
+                  </div>
+
+                  {/* Upload Custom Logo Button */}
+                  <div style={{
+                    padding: '14px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    border: '1px dashed #CBD5E1',
+                    textAlign: 'center'
+                  }}>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const compressed = await compressImageFile(file, 600, 0.9);
+                        updateSetting({ customLogoUrl: compressed, showLogo: true });
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      style={{
+                        backgroundColor: activeAccent,
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Upload size={14} />
+                      Upload New Logo Image
+                    </button>
+
+                    {currentSettings.customLogoUrl && (
+                      <div style={{ marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => updateSetting({ customLogoUrl: null })}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#DC2626',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Reset to VRM Default Logo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: STAMP & SIGNATURE SIZING */}
+              {editorMenu === 'stamp' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>
+                      Company Stamp & Seal Size
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B' }}>
+                      Adjust stamp dimensions (up to 250px) or upload custom stamp.
+                    </div>
+                  </div>
+
+                  {/* Stamp Size Slider (Up to 250px) */}
+                  <div style={{
+                    padding: '14px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                        Stamp Size Width:
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: activeAccent }}>
+                        {currentSettings.stampSize || 125} px
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min={40}
+                      max={250}
+                      step={5}
+                      value={currentSettings.stampSize || 125}
+                      onChange={(e) => updateSetting({ stampSize: parseInt(e.target.value, 10) })}
+                      style={{ accentColor: activeAccent, width: '100%', cursor: 'pointer' }}
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
+                      <span>40px</span>
+                      <span>Standard (125px)</span>
+                      <span>Extra Large (250px)</span>
+                    </div>
+                  </div>
+
+                  {/* Stamp Mode (Vector vs Custom Upload) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                      Stamp Render Mode
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => updateSetting({ stampMode: 'vector' })}
+                        style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: currentSettings.stampMode === 'vector' ? `2px solid ${activeAccent}` : '1px solid #CBD5E1',
+                          backgroundColor: currentSettings.stampMode === 'vector' ? `${activeAccent}10` : '#FFFFFF',
+                          color: '#0F172A',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Vector Oval Seal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSetting({ stampMode: 'custom' })}
+                        style={{
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: currentSettings.stampMode === 'custom' ? `2px solid ${activeAccent}` : '1px solid #CBD5E1',
+                          backgroundColor: currentSettings.stampMode === 'custom' ? `${activeAccent}10` : '#FFFFFF',
+                          color: '#0F172A',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Custom Image Stamp
+                      </button>
+                    </div>
+
+                    {currentSettings.stampMode === 'custom' && (
+                      <div style={{ marginTop: '8px' }}>
+                        <input
+                          ref={stampInputRef}
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const compressed = await compressImageFile(file, 400, 0.9);
+                            updateSetting({ customStampUrl: compressed });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => stampInputRef.current?.click()}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px dashed #CBD5E1',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: activeAccent,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Upload Stamp File
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: TABLE COLUMNS (WITH INSTANT UNDO) */}
+              {editorMenu === 'columns' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>
+                      Table Columns Visibility
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B' }}>
+                      Toggle any column on or off (e.g. hide Amount or Unit Rates). Undo anytime.
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { key: 'showTotalCol', label: 'Total Amount Column' },
+                      { key: 'showRateCol', label: 'Rate (₹) Column' },
+                      { key: 'showTaxableCol', label: 'Taxable Value Column' },
+                      { key: 'showGstCol', label: 'GST% Column' },
+                      { key: 'showDiscountCol', label: 'Discount% Column' },
+                      { key: 'showHsn', label: 'HSN / SAC Code Column' },
+                      { key: 'showQty', label: 'Quantity Column' },
+                      { key: 'showUom', label: 'UOM Column' },
+                      { key: 'showSnoCol', label: 'S.No Column' },
+                      { key: 'showItemDescription', label: 'Item Technical Specs Description' }
+                    ].map(col => {
+                      const isChecked = currentSettings[col.key] !== false;
+                      return (
+                        <label
+                          key={col.key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 12px',
+                            backgroundColor: isChecked ? '#FFFFFF' : '#F1F5F9',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: isChecked ? '#0F172A' : '#94A3B8',
+                            fontWeight: '700'
+                          }}
+                        >
+                          <span>{col.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              updateSetting({ [col.key]: checked });
+                              if (!checked) {
+                                handleElementRemoved(col.key, col.label);
+                              }
+                            }}
+                            style={{ accentColor: activeAccent, cursor: 'pointer' }}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: SECTIONS TOGGLES (WITH INSTANT UNDO) */}
+              {editorMenu === 'sections' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>
+                      Document Sections Visibility
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B' }}>
+                      Show or hide sections like Shipping, Banking, Terms, and Signatures.
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { key: 'showShipTo', label: 'Ship To / Delivery Destination' },
+                      { key: 'showTransportDetails', label: 'Transport Mode & LR / Vehicle No' },
+                      { key: 'showBankDetails', label: 'Bank Details Box' },
+                      { key: 'showTerms', label: 'Terms & Conditions' },
+                      { key: 'showTotalInWords', label: 'Amount in Words' },
+                      { key: 'showCustomerAcceptance', label: 'Customer Acceptance Sign Box' },
+                      { key: 'showSignatoryStamp', label: 'Company Signatory & Stamp Box' },
+                      { key: 'showPaymentTerms', label: 'Payment Terms in Meta Header' },
+                      { key: 'showPlaceOfSupply', label: 'Place of Supply Meta' },
+                      { key: 'showSalesExecutive', label: 'Sales Executive Name' }
+                    ].map(sec => {
+                      const isChecked = currentSettings[sec.key] !== false;
+                      return (
+                        <label
+                          key={sec.key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 12px',
+                            backgroundColor: isChecked ? '#FFFFFF' : '#F1F5F9',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: isChecked ? '#0F172A' : '#94A3B8',
+                            fontWeight: '700'
+                          }}
+                        >
+                          <span>{sec.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              updateSetting({ [sec.key]: checked });
+                              if (!checked) {
+                                handleElementRemoved(sec.key, sec.label);
+                              }
+                            }}
+                            style={{ accentColor: activeAccent, cursor: 'pointer' }}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
             </div>
+          )}
+        </div>
+
+        {/* RIGHT PANE: LIVE CLEAN DOCUMENT SHEET PREVIEW */}
+        <div
+          ref={previewContainerRef}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '24px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            backgroundColor: '#E2E8F0'
+          }}
+        >
+          {/* Floating Save Notice */}
+          {saveNotice && (
+            <div style={{
+              position: 'fixed',
+              top: '70px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#0F172A',
+              color: '#FFFFFF',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '700',
+              zIndex: 99,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <CheckCircle size={14} color="#10B981" />
+              {saveNotice}
+            </div>
+          )}
+
+          {/* Clean Sheet Scaler Container */}
+          <div style={{
+            transform: `scale(${zoomLevel})`,
+            transformOrigin: 'top center',
+            transition: 'transform 0.15s ease',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <VRMProformaInvoicePrintSheet
+              id="studio-printable-sheet"
+              piData={activeDataset}
+              settings={currentSettings}
+              isEditable={false} // Clean mode: ZERO dotted boxes on text!
+              onUpdateSetting={updateSetting}
+            />
           </div>
         </div>
 
       </div>
+
+      {/* 3. FLOATING UNDO NOTIFICATION TOAST */}
+      {undoToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          padding: '10px 20px',
+          borderRadius: '30px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          zIndex: 100,
+          border: '1px solid rgba(255,255,255,0.15)',
+          animation: 'fadeIn 0.2s ease-in-out'
+        }}>
+          <span style={{ fontSize: '12.5px', fontWeight: '600' }}>
+            {undoToast.message}
+          </span>
+          <button
+            type="button"
+            onClick={handleUndo}
+            style={{
+              backgroundColor: '#ECFEFF',
+              color: '#0E7490',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '4px 12px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Undo2 size={13} />
+            Undo
+          </button>
+        </div>
+      )}
+
+      {/* 4. MODAL: SAVE AS NEW TEMPLATE */}
+      {newTemplateModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            width: '420px',
+            padding: '24px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
+              Save as New Template
+            </h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748B' }}>
+              Create a new template variant in <strong>{activeCategory.toUpperCase()}</strong> with current layout and settings.
+            </p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155' }}>Template Name</label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="e.g. Commercial PI (Zero Rates)"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginTop: '4px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155' }}>Description (Optional)</label>
+              <textarea
+                rows={2}
+                placeholder="Short description of this template variant..."
+                value={newTemplateDesc}
+                onChange={(e) => setNewTemplateDesc(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginTop: '4px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '12px',
+                  boxSizing: 'border-box',
+                  resize: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setNewTemplateModalOpen(false)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSaveNew}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: activeAccent,
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Save Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

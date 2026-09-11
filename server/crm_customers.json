@@ -299,7 +299,7 @@
     "sameAsBilling": true,
     "code": "Vikram Solar Pvt Ltd",
     "c2": "Vikram Solar Pvt Ltd",
-    "c3": "Rajesh Kannan",
+    "c3": "Rajesh Kumar",
     "c4": "+91 98765 43210",
     "c5": "rajesh@vikramsolar.com",
     "c6": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
@@ -316,7 +316,12 @@
       "state": "Tamil Nadu",
       "pincode": "600066"
     },
-    "status": "ACTIVE"
+    "status": "ACTIVE",
+    "gstNo": "33AABCU9603R1ZM",
+    "stBg": "#dcfce7",
+    "stFg": "#166534",
+    "stBorder": "1px solid #bbf7d0",
+    "tabGroup": "Active"
   },
   {
     "id": "CUST-VRM-102",
@@ -787,5 +792,31 @@
       "email": ""
     },
     "createdAt": "2026-09-10T23:45:52+0530"
+  },
+  {
+    "code": "Tata Power Renewable",
+    "c2": "Tata Power Ltd",
+    "gstNo": "29AAACT2727Q1ZW",
+    "c3": "Anish Sharma",
+    "c4": "+91 98123 45678",
+    "c5": "anish.s@tatapower.com",
+    "status": "ACTIVE",
+    "stBg": "#dcfce7",
+    "stFg": "#166534",
+    "stBorder": "1px solid #bbf7d0",
+    "tabGroup": "Active"
+  },
+  {
+    "code": "Apex Infra Systems",
+    "c2": "Apex Infra Ltd",
+    "gstNo": "33AABCA1234F1Z5",
+    "c3": "Priya Sundaram",
+    "c4": "+91 99400 11223",
+    "c5": "priya@apexinfra.com",
+    "status": "ACTIVE",
+    "stBg": "#dcfce7",
+    "stFg": "#166534",
+    "stBorder": "1px solid #bbf7d0",
+    "tabGroup": "Active"
   }
 ]

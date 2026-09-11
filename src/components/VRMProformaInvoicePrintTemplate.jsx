@@ -128,6 +128,7 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   // Stamp / Seal Customization
   showSignatoryStamp: true,
   stampMode: 'vector', // 'vector' | 'custom' | 'none'
+  stampSize: 125, // Width in px (40 - 250)
   customStampUrl: null, // Custom uploaded stamp image base64
   stampText: 'VRM STRUCTURES INDIA',
   stampLocation: 'CHENNAI - AUTHORIZED',
@@ -144,7 +145,7 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   customerAcceptanceHeading: 'Customer Acceptance & Signature',
   customerAcceptanceSubtext: 'Authorised Signature & Stamp',
   showFooterNote: true,
-  footerNote: 'This is a system-generated Proforma Invoice by Control Room ERP. Registered under VRM Structures India Pvt Ltd.'
+  footerNote: 'This is an official commercial document issued by VRM Structures India Private Limited. Chennai, Tamil Nadu, India.'
 };
 
 const COLOR_PRESETS = [
@@ -296,15 +297,13 @@ export function VRMProformaInvoicePrintSheet({
               e.currentTarget.blur();
             }
           }}
-          title="Click to edit text directly"
           style={{
             ...style,
             outline: 'none',
-            cursor: 'text',
-            borderBottom: '1px dashed ' + accent,
-            backgroundColor: 'rgba(14, 116, 144, 0.08)',
-            borderRadius: '3px',
-            padding: '1px 3px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            borderRadius: '0',
+            padding: 0,
             transition: 'all 0.15s ease',
             display: multiline ? 'block' : 'inline-block'
           }}
@@ -312,42 +311,6 @@ export function VRMProformaInvoicePrintSheet({
         >
           {value || fallback || placeholder}
         </span>
-
-        {isHovered && onRemove && (
-          <button
-            type="button"
-            className="no-print"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onRemove();
-            }}
-            title="Remove / Hide this item"
-            style={{
-              position: 'absolute',
-              top: '-8px',
-              right: '-10px',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              backgroundColor: '#EF4444',
-              color: '#FFFFFF',
-              border: '1px solid #FFFFFF',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '11px',
-              fontWeight: '900',
-              cursor: 'pointer',
-              zIndex: 35,
-              padding: 0,
-              lineHeight: 1
-            }}
-          >
-            ×
-          </button>
-        )}
       </span>
     );
   };
@@ -712,7 +675,8 @@ export function VRMProformaInvoicePrintSheet({
                       alt={cfg.companyName}
                       style={{
                         height: `${cfg.logoHeight || 52}px`,
-                        maxWidth: '220px',
+                        maxHeight: '300px',
+                        maxWidth: `${Math.max(220, (cfg.logoHeight || 52) * 3)}px`,
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
@@ -1732,14 +1696,18 @@ export function VRMProformaInvoicePrintSheet({
                         src={cfg.customStampUrl}
                         alt="Company Stamp"
                         style={{
-                          maxHeight: '52px',
-                          maxWidth: '110px',
+                          maxHeight: `${Math.round((cfg.stampSize || 125) * 0.45)}px`,
+                          maxWidth: `${cfg.stampSize || 125}px`,
                           objectFit: 'contain'
                         }}
                       />
                     ) : cfg.stampMode === 'vector' ? (
                       <div style={{ textAlign: 'center' }}>
-                        <svg width="125" height="46" viewBox="0 0 125 46">
+                        <svg
+                          width={cfg.stampSize || 125}
+                          height={Math.round((cfg.stampSize || 125) * (46 / 125))}
+                          viewBox="0 0 125 46"
+                        >
                           <ellipse cx="62" cy="23" rx="54" ry="19" stroke={accent} strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
                           <text x="62" y="19" textAnchor="middle" fill={accent} fontSize="6.5" fontWeight="bold">{cfg.stampText || 'VRM STRUCTURES INDIA'}</text>
                           <text x="62" y="30" textAnchor="middle" fill={accent} fontSize="5.5">{cfg.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
