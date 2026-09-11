@@ -1761,7 +1761,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   onClick={triggerSaveConfirm}
                   style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}
                 >
-                  {viewMode === 'edit' ? 'Update & Release PI →' : 'Save & Release PI →'}
+                  {viewMode === 'edit' ? 'Update & Release PI' : 'Save & Release PI'}
                 </button>
               </div>
             </div>
