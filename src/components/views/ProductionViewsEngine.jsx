@@ -296,6 +296,154 @@ export default function ProductionViewsEngine(props) {
   const [newBomStatus, setNewBomStatus] = useState('ACTIVE');
   const [bomFormErrors, setBomFormErrors] = useState({});
 
+  // Permission Check for Cancel BOM (Strictly Dispatch, Accounts, Production, Billing, and Admin)
+  const canCancelBom = [
+    'Dispatch Head', 'Dispatch Executive',
+    'Accounts Head', 'Accounts Executive',
+    'Production Head', 'Technical Administrator', 'CEO', 'MD', 'Managing Director',
+    'Floor Supervisor', 'Billing', 'Invoice Executive'
+  ].includes(userRole);
+
+  // Helper to Restore / Unblock Inventory when a BOM is Cancelled
+  const restoreInventoryForBom = (bomItems = [], bomCode = '') => {
+    if (!Array.isArray(bomItems) || bomItems.length === 0) return;
+    try {
+      const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
+      let currentMats = [];
+      if (rawStoreStr) {
+        try { currentMats = JSON.parse(rawStoreStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentMats)) currentMats = [];
+
+      const itemsListStr = localStorage.getItem('controlroom_items_list');
+      let currentItems = [];
+      if (itemsListStr) {
+        try { currentItems = JSON.parse(itemsListStr); } catch (_) {}
+      }
+      if (!Array.isArray(currentItems)) currentItems = [];
+
+      bomItems.forEach(pItem => {
+        const qtyToRestore = parseFloat(pItem.qty || pItem.bomQty || 1) || 0;
+        const pCode = (pItem.code || '').toUpperCase().trim();
+        const pName = (pItem.name || pItem.description || '').toLowerCase().trim();
+
+        let match = currentMats.find(m => {
+          const mCode = (m.code || '').toUpperCase().trim();
+          const mName = (m.name || '').toLowerCase().trim();
+          if (pCode && mCode === pCode) return true;
+          if (pName && (mName === pName || mName.includes(pName) || pName.includes(mName))) return true;
+          return false;
+        });
+
+        if (match) {
+          const currStock = parseFloat(String(match.stock).replace(/,/g, '')) || 0;
+          const newStock = currStock + qtyToRestore;
+          match.stock = newStock;
+          match.reserved = Math.max(0, (parseFloat(match.reserved) || 0) - qtyToRestore);
+          match.blockedForBom = Math.max(0, (match.blockedForBom || 0) - qtyToRestore);
+          const minL = parseFloat(String(match.minLevel || '100').replace(/,/g, '')) || 100;
+          match.status = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
+          match.lastUpdated = `Restored from Cancelled BOM ${bomCode}`;
+        }
+
+        let itemMatch = currentItems.find(it => {
+          const itCode = (it.code || '').toUpperCase().trim();
+          const itName = (it.name || '').toLowerCase().trim();
+          if (pCode && itCode === pCode) return true;
+          if (pName && (itName === pName || itName.includes(pName) || pName.includes(itName))) return true;
+          return false;
+        });
+        if (itemMatch) {
+          const currStock = parseFloat(String(itemMatch.stock || itemMatch.availableStock || 0).replace(/,/g, '')) || 0;
+          const newStock = currStock + qtyToRestore;
+          itemMatch.stock = newStock;
+          itemMatch.availableStock = newStock;
+          itemMatch.reserved = Math.max(0, (parseFloat(itemMatch.reserved) || 0) - qtyToRestore);
+          itemMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
+        }
+      });
+
+      localStorage.setItem('controlroom_raw_materials_store', JSON.stringify(currentMats));
+      if (currentItems.length > 0) localStorage.setItem('controlroom_items_list', JSON.stringify(currentItems));
+      saveCloudStore('raw_materials_store', currentMats);
+      window.dispatchEvent(new Event('controlroom_raw_materials_update'));
+      window.dispatchEvent(new Event('controlroom_storage_update'));
+    } catch (err) {
+      console.error('Error restoring inventory for BOM:', err);
+    }
+  };
+
+  // Execution function for Cancel BOM
+  const handleCancelBomOrder = async (bomToCancel) => {
+    if (!bomToCancel) return;
+    if (!canCancelBom) {
+      alert('⛔ Access Restricted!\nOnly Dispatch, Accounts, Production, or Billing logins are authorized to cancel a BOM and release reserved inventory.');
+      return;
+    }
+
+    const bCode = bomToCancel.bomCode || bomToCancel.code || bomToCancel.id;
+    const confirmCancel = window.confirm(`⚠️ Are you sure you want to CANCEL BOM ${bCode}?\n\nThis will immediately release and restore all blocked items back into live inventory so other sales persons can book them.`);
+    if (!confirmCancel) return;
+
+    // 1. Restore Inventory
+    const itemsToRestore = (bomToCancel.items && bomToCancel.items.length > 0)
+      ? bomToCancel.items
+      : (bomToCancel.dispatchPacking && bomToCancel.dispatchPacking.length > 0)
+        ? bomToCancel.dispatchPacking
+        : [];
+    restoreInventoryForBom(itemsToRestore, bCode);
+
+    // 2. Prepare updated cancelled BOM record
+    const loggedInUser = localStorage.getItem('controlroom_logged_user_name') || userRole;
+    const updatedBomRecord = {
+      ...bomToCancel,
+      status: 'Cancelled & Stock Restored',
+      cancelled: true,
+      stockBlocked: false,
+      cancelledBy: loggedInUser,
+      cancelledAt: new Date().toISOString()
+    };
+
+    // 3. Update local bomStore and storage
+    setBomStore(prev => {
+      const updated = prev.map(b => (b.bomCode === bCode || b.code === bCode || b.id === bCode) ? updatedBomRecord : b);
+      const sanitized = updated.map(stripDataUrlsFromRecord);
+      try {
+        localStorage.setItem('controlroom_bom_store', JSON.stringify(sanitized));
+      } catch (_) {}
+      saveCloudStore('bom_store', sanitized);
+      return sanitized;
+    });
+
+    try {
+      await fetch('/api/boms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedBomRecord), isUpdate: true })
+      });
+    } catch (apiErr) {
+      console.error('Error updating cancelled BOM to /api/boms:', apiErr);
+    }
+
+    window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: updatedBomRecord } }));
+
+    // 4. Close open modals if target BOM matches
+    if (dispatchPackingModal && (dispatchPackingModal.bomCode === bCode || dispatchPackingModal.code === bCode || dispatchPackingModal.id === bCode)) {
+      setDispatchPackingModal(null);
+    }
+    if (accountsVerificationModal && (accountsVerificationModal.bomCode === bCode || accountsVerificationModal.code === bCode || accountsVerificationModal.id === bCode)) {
+      setAccountsVerificationModal(null);
+    }
+    if (confirmingBomModal && (confirmingBomModal.bomCode === bCode || confirmingBomModal.code === bCode || confirmingBomModal.id === bCode)) {
+      setConfirmingBomModal(null);
+    }
+    if (quickPreviewRecord && (quickPreviewRecord.bomCode === bCode || quickPreviewRecord.code === bCode || quickPreviewRecord.id === bCode)) {
+      setQuickPreviewRecord(null);
+    }
+
+    alert(`✅ BOM (${bCode}) has been successfully CANCELLED.\nAll items have been restored and unblocked in live inventory.`);
+  };
+
   // Validation for Production BOM creation
   const validateProductionBomForm = (isDraft = false) => {
     const errors = {};
@@ -10338,20 +10486,37 @@ export default function ProductionViewsEngine(props) {
                   </div>
 
                   {/* Action Buttons */}
-                  {!isPackedAndReady && (
-                    <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                    {canCancelBom && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
                       <button
-                        onClick={() => setDispatchPackingModal(null)}
+                        onClick={() => handleCancelBomOrder(dispatchPackingModal)}
                         style={{
-                          border: '1px solid rgba(255,255,255,0.3)',
-                          backgroundColor: 'rgba(255,255,255,0.1)',
-                          color: '#FFFFFF', height: '42px', padding: '0 20px',
-                          borderRadius: '10px', fontSize: '13px', fontWeight: '700',
-                          cursor: 'pointer', backdropFilter: 'blur(4px)'
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                          color: '#FEE2E2', height: '42px', padding: '0 18px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          cursor: 'pointer', backdropFilter: 'blur(4px)',
+                          display: 'flex', alignItems: 'center', gap: '6px'
                         }}
+                        title="Cancel BOM and restore blocked stock back into inventory"
                       >
-                        Cancel
+                        <XCircle style={{ width: '15px', height: '15px', color: '#FCA5A5' }} />
+                        Cancel BOM
                       </button>
+                    )}
+                    <button
+                      onClick={() => setDispatchPackingModal(null)}
+                      style={{
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        color: '#FFFFFF', height: '42px', padding: '0 20px',
+                        borderRadius: '10px', fontSize: '13px', fontWeight: '700',
+                        cursor: 'pointer', backdropFilter: 'blur(4px)'
+                      }}
+                    >
+                      Close
+                    </button>
+                    {!isPackedAndReady && (
                       <button
                         onClick={savePackingData}
                         style={{
@@ -10368,8 +10533,8 @@ export default function ProductionViewsEngine(props) {
                         <CheckCircle style={{ width: '16px', height: '16px' }} />
                         Save Verification
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* ─── 4 STATS CARDS ─── */}
@@ -10910,6 +11075,23 @@ export default function ProductionViewsEngine(props) {
                           <CheckSquare style={{ width: '14px', height: '14px' }} /> Pack All Items
                         </button>
                       )}
+                      {canCancelBom && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
+                        <button
+                          onClick={() => handleCancelBomOrder(dispatchPackingModal)}
+                          style={{
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            color: '#DC2626', height: '40px', padding: '0 18px',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                            boxShadow: '0 1px 2px rgba(220,38,38,0.08)'
+                          }}
+                          title="Cancel BOM and restore blocked stock back into inventory"
+                        >
+                          <XCircle style={{ width: '15px', height: '15px', color: '#DC2626' }} />
+                          Cancel BOM & Restore Stock
+                        </button>
+                      )}
                       <button
                         onClick={() => setDispatchPackingModal(null)}
                         style={{
@@ -10920,7 +11102,7 @@ export default function ProductionViewsEngine(props) {
                           cursor: 'pointer'
                         }}
                       >
-                        Cancel
+                        Close
                       </button>
                       {!isPackedAndReady && (
                         <button
@@ -11259,18 +11441,35 @@ export default function ProductionViewsEngine(props) {
                     </div>
                   </div>
 
-                  {!isAlreadyCompleted && (
-                    <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                    {canCancelBom && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
                       <button
-                        onClick={() => setAccountsVerificationModal(null)}
+                        onClick={() => handleCancelBomOrder(accountsVerificationModal)}
                         style={{
-                          border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)',
-                          color: '#FFFFFF', height: '42px', padding: '0 20px', borderRadius: '10px',
-                          fontSize: '13px', fontWeight: '700', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                          color: '#FEE2E2', height: '42px', padding: '0 18px',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                          cursor: 'pointer', backdropFilter: 'blur(4px)',
+                          display: 'flex', alignItems: 'center', gap: '6px'
                         }}
+                        title="Cancel BOM and release reserved inventory"
                       >
-                        Cancel
+                        <XCircle style={{ width: '15px', height: '15px', color: '#FCA5A5' }} />
+                        Cancel BOM
                       </button>
+                    )}
+                    <button
+                      onClick={() => setAccountsVerificationModal(null)}
+                      style={{
+                        border: '1px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)',
+                        color: '#FFFFFF', height: '42px', padding: '0 20px', borderRadius: '10px',
+                        fontSize: '13px', fontWeight: '700', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                      }}
+                    >
+                      Close
+                    </button>
+                    {!isAlreadyCompleted && (
                       <button
                         onClick={completeVerification}
                         style={{
@@ -11285,8 +11484,8 @@ export default function ProductionViewsEngine(props) {
                         <CheckCircle style={{ width: '16px', height: '16px' }} />
                         Complete Verification & Create Invoice
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* ─── 3 STAT CARDS (Payment Type, Total Amount, Payment Date) ─── */}
@@ -11882,6 +12081,23 @@ export default function ProductionViewsEngine(props) {
                       Confirm payment date, total amount, and customer payment status to complete accounts clearance.
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {canCancelBom && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
+                        <button
+                          onClick={() => handleCancelBomOrder(accountsVerificationModal)}
+                          style={{
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            color: '#DC2626', height: '42px', padding: '0 20px',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: '800',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                            boxShadow: '0 1px 2px rgba(220,38,38,0.08)'
+                          }}
+                          title="Cancel BOM and release reserved inventory"
+                        >
+                          <XCircle style={{ width: '15px', height: '15px', color: '#DC2626' }} />
+                          Cancel BOM & Release Stock
+                        </button>
+                      )}
                       <button
                         onClick={completeVerification}
                         style={{
@@ -15280,6 +15496,43 @@ export default function ProductionViewsEngine(props) {
                     </button>
                   )}
 
+                  {canCancelBom && ['Dispatch Orders', 'Accounts Verification', 'BOM Orders', 'BOM', 'BOM / Routing'].includes(activeTab) && (() => {
+                    const hasCancellable = (selectedRows || []).some(codeVal => {
+                      const row = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => (b.bomCode || b.code || b.id) === codeVal);
+                      return row && row.status !== 'Cancelled & Stock Restored';
+                    });
+                    if (!hasCancellable) return null;
+
+                    return (
+                      <button
+                        onClick={() => {
+                          const targetCode = selectedRows[0];
+                          const targetBom = (filteredRows || []).find(r => r.code === targetCode || r.id === targetCode || r.bomCode === targetCode) || (bomStore || []).find(b => (b.bomCode || b.code || b.id) === targetCode);
+                          if (targetBom) handleCancelBomOrder(targetBom);
+                        }}
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          color: '#DC2626',
+                          borderRadius: '10px',
+                          padding: '6px 14px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          boxShadow: '0 1px 2px rgba(220,38,38,0.08)'
+                        }}
+                        title="Cancel BOM and restore blocked stock back into inventory"
+                      >
+                        <XCircle size={14} style={{ color: '#DC2626' }} /> Cancel BOM
+                      </button>
+                    );
+                  })()}
+
                   {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
                     <button
                       onClick={() => {
@@ -15573,6 +15826,32 @@ export default function ProductionViewsEngine(props) {
                           View Full Details
                         </button>
 
+                        {canCancelBom && ['Dispatch Orders', 'Accounts Verification', 'BOM Orders', 'BOM', 'BOM / Routing'].includes(activeTab) && quickPreviewRecord.status !== 'Cancelled & Stock Restored' && (
+                          <button
+                            onClick={() => {
+                              const rec = quickPreviewRecord;
+                              handleCancelBomOrder(rec);
+                              setQuickPreviewRecord(null);
+                            }}
+                            style={{
+                              border: '1px solid #FECACA',
+                              backgroundColor: '#FEF2F2',
+                              color: '#DC2626',
+                              padding: '6px 14px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 1px 2px rgba(220,38,38,0.08)'
+                            }}
+                            title="Cancel BOM and restore blocked stock back into inventory"
+                          >
+                            <XCircle size={14} style={{ color: '#DC2626' }} /> Cancel BOM
+                          </button>
+                        )}
                         <button
                           onClick={() => setQuickPreviewRecord(null)}
                           style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B', padding: '4px', display: 'inline-flex', alignItems: 'center' }}
