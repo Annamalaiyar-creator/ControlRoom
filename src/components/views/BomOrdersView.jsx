@@ -14,7 +14,7 @@ import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressA
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
-import { notifyBomSentToDispatch } from '../../services/notificationService';
+import { notifyBomSentToDispatch, notifyBomCancelledByDispatch } from '../../services/notificationService';
 
 export default function BomOrdersView(props) {
   const {
@@ -35,6 +35,8 @@ export default function BomOrdersView(props) {
   const [printingBomRecord, setPrintingBomRecord] = useState(null);
   const [exportFormatRecord, setExportFormatRecord] = useState(null);
   const [isExportingFormat, setIsExportingFormat] = useState(null); // 'pdf' | 'jpg' | 'csv' | null
+  const [bomCancelPromptModal, setBomCancelPromptModal] = useState(null);
+  const [cancellationReasonInput, setCancellationReasonInput] = useState('');
 
   // BOM Store from localStorage & Supabase
   const [bomStore, setBomStore] = useState(() => {
@@ -732,22 +734,28 @@ export default function BomOrdersView(props) {
       alert('⛔ Access Restricted!\nOnly Dispatch, Production, or Billing logins are authorized to cancel a BOM and release reserved inventory.');
       return;
     }
+    setCancellationReasonInput('');
+    setBomCancelPromptModal(bomToCancel);
+  };
 
+  const executeCancelBom = (bomToCancel, reason) => {
+    if (!bomToCancel) return;
     const bCode = bomToCancel.bomCode || bomToCancel.code;
-    const confirmCancel = window.confirm(`⚠️ Are you sure you want to CANCEL BOM ${bCode}?\n\nThis will immediately release and restore all blocked items back into live inventory so other sales persons can book them.`);
-    if (!confirmCancel) return;
+    const currentUser = getEffectiveSalesPerson() || 'Dispatch Executive';
+    const reasonText = reason || 'Order cancelled by Dispatch';
 
     // 1. Restore Inventory
     restoreInventoryForBom(bomToCancel.items || bomToCancel.dispatchPacking, bCode);
 
-    // 2. Update BOM status
+    // 2. Update BOM status with cancellation details
     setBomStore(prev => {
       const updated = prev.map(b => (b.bomCode === bCode || b.code === bCode) ? {
         ...b,
         status: 'Cancelled & Stock Restored',
         cancelled: true,
         stockBlocked: false,
-        cancelledBy: getEffectiveSalesPerson(),
+        cancellationReason: reasonText,
+        cancelledBy: currentUser,
         cancelledAt: new Date().toISOString()
       } : b);
       const sanitized = updated.map(stripDataUrlsFromRecord);
@@ -756,10 +764,29 @@ export default function BomOrdersView(props) {
     });
 
     if (confirmingBomModal && (confirmingBomModal.bomCode === bCode || confirmingBomModal.code === bCode)) {
-      setConfirmingBomModal(prev => prev ? { ...prev, status: 'Cancelled & Stock Restored', cancelled: true, stockBlocked: false } : null);
+      setConfirmingBomModal(prev => prev ? {
+        ...prev,
+        status: 'Cancelled & Stock Restored',
+        cancelled: true,
+        stockBlocked: false,
+        cancellationReason: reasonText,
+        cancelledBy: currentUser,
+        cancelledAt: new Date().toISOString(),
+        isEditMode: false
+      } : null);
     }
 
-    alert(`✅ BOM (${bCode}) has been successfully CANCELLED.\nAll items have been restored and unblocked in live inventory.`);
+    // 3. Notify Sales Person immediately
+    notifyBomCancelledByDispatch({
+      bomCode: bCode,
+      customerName: bomToCancel.customerName || bomToCancel.clientName || 'Customer',
+      salesPerson: bomToCancel.salesPerson || bomToCancel.createdBy || 'Sales Executive',
+      reason: reasonText,
+      cancelledBy: currentUser
+    });
+
+    setBomCancelPromptModal(null);
+    setCancellationReasonInput('');
   };
 
   // Alert function supporting structured error details and target scrolling
@@ -3635,7 +3662,14 @@ export default function BomOrdersView(props) {
   // RENDER 2: CONFIRMING / EDITING BOM MODAL
   // ==========================================
   if (confirmingBomModal) {
+    const isCancelled = Boolean(
+      confirmingBomModal.cancelled ||
+      confirmingBomModal.status === 'Cancelled' ||
+      confirmingBomModal.status === 'Cancelled & Stock Restored' ||
+      (typeof confirmingBomModal.status === 'string' && confirmingBomModal.status.toLowerCase().includes('cancel'))
+    );
     const isEditMode = Boolean(
+      !isCancelled &&
       confirmingBomModal.isEditMode !== false &&
       ['Draft', 'Pending Confirmation', 'Pending Sales Confirmation', 'Edited / Pending Confirmation', 'Cancelled & Reissued to Dispatch', 'ACTIVE', 'Active', 'Pending Verification', 'Pending'].includes(confirmingBomModal.status || 'Pending Sales Confirmation')
     );
@@ -3711,13 +3745,28 @@ export default function BomOrdersView(props) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', fontFamily: "'DM Sans', sans-serif", backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '16px', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-              {isAlreadyForwarded ? `BOM Details & Order Summary — ${confirmingBomModal.bomCode}` : `BOM Verification & Order Editing — ${confirmingBomModal.bomCode}`}
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                {isCancelled
+                  ? `BOM Order (Cancelled) — ${confirmingBomModal.bomCode}`
+                  : (isAlreadyForwarded ? `BOM Details & Order Summary — ${confirmingBomModal.bomCode}` : `BOM Verification & Order Editing — ${confirmingBomModal.bomCode}`)}
+              </h1>
+              {isCancelled && (
+                <span style={{
+                  backgroundColor: '#FEE2E2', color: '#DC2626',
+                  fontSize: '11px', fontWeight: '800', padding: '3px 10px',
+                  borderRadius: '12px', border: '1px solid #FECACA'
+                }}>
+                  CANCELLED • VIEW ONLY
+                </span>
+              )}
+            </div>
             <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
-              {isAlreadyForwarded
-                ? 'Review verified bill of materials, product breakdown, and order specifications.'
-                : 'Review & modify company details, billing/delivery addresses, payment terms, or product specifications before final dispatch.'}
+              {isCancelled
+                ? 'This BOM was cancelled and reserved stock was released back into inventory.'
+                : (isAlreadyForwarded
+                  ? 'Review verified bill of materials, product breakdown, and order specifications.'
+                  : 'Review & modify company details, billing/delivery addresses, payment terms, or product specifications before final dispatch.')}
             </span>
           </div>
 
@@ -3750,7 +3799,7 @@ export default function BomOrdersView(props) {
               Back to BOM Dashboard
             </button>
 
-            {canCancelBom && confirmingBomModal.status !== 'Cancelled & Stock Restored' && (
+            {canCancelBom && !isCancelled && confirmingBomModal.status !== 'Cancelled & Stock Restored' && (
               <button
                 onClick={() => handleCancelBomOrder(confirmingBomModal)}
                 style={{
@@ -3890,6 +3939,53 @@ export default function BomOrdersView(props) {
             )}
           </div>
         </div>
+
+        {/* CANCELLATION ALERT BANNER */}
+        {isCancelled && (
+          <div style={{
+            backgroundColor: '#FEF2F2',
+            border: '1.5px solid #FCA5A5',
+            borderRadius: '14px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '14px',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.08)'
+          }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              backgroundColor: '#DC2626', color: '#FFFFFF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <XCircle style={{ width: '22px', height: '22px' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '15px', fontWeight: '900', color: '#991B1B' }}>
+                  This BOM was Cancelled
+                </span>
+                <span style={{
+                  backgroundColor: '#FFFFFF', color: '#DC2626',
+                  fontSize: '11px', fontWeight: '800', padding: '2px 8px',
+                  borderRadius: '6px', border: '1px solid #FECACA'
+                }}>
+                  Non-Editable • Stock Restored
+                </span>
+              </div>
+              <div style={{ marginTop: '6px', fontSize: '13px', color: '#7F1D1D', lineHeight: 1.5 }}>
+                <strong>Reason:</strong> {confirmingBomModal.cancellationReason || 'Order cancelled by Dispatch'}
+              </div>
+              <div style={{ marginTop: '8px', display: 'flex', gap: '16px', fontSize: '11px', color: '#991B1B', flexWrap: 'wrap' }}>
+                <span><strong>Cancelled By:</strong> {confirmingBomModal.cancelledBy || 'Dispatch Head'}</span>
+                <span>•</span>
+                <span><strong>Cancelled At:</strong> {confirmingBomModal.cancelledAt ? new Date(confirmingBomModal.cancelledAt).toLocaleString('en-IN') : 'Recently'}</span>
+                <span>•</span>
+                <span><strong>Sales Person Notified:</strong> {(confirmingBomModal.salesPerson || 'Sales Executive').replace(/\s*\([^)]*\)/g, '').trim()}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ORDER DETAILS & ADDRESSES */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -6392,6 +6488,203 @@ export default function BomOrdersView(props) {
           bomData={printingBomRecord}
           onClose={() => setPrintingBomRecord(null)}
         />
+      )}
+
+      {/* BOM CANCELLATION REASON PROMPT MODAL */}
+      {bomCancelPromptModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100000, padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '540px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            border: '1px solid #E2E8F0',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#FFFFFF'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <AlertTriangle style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800' }}>
+                    Cancel BOM & Restore Stock
+                  </h3>
+                  <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>
+                    BOM: <strong>{bomCancelPromptModal.bomCode || bomCancelPromptModal.code}</strong> • Customer: {bomCancelPromptModal.customerName || bomCancelPromptModal.clientName || 'Customer'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setBomCancelPromptModal(null);
+                  setCancellationReasonInput('');
+                }}
+                style={{
+                  background: 'none', border: 'none', color: '#FFFFFF',
+                  cursor: 'pointer', padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                fontSize: '12px',
+                color: '#991B1B',
+                lineHeight: 1.5
+              }}>
+                <strong>⚠️ Why are you cancelling this BOM?</strong>
+                <br />
+                The Sales Person (<strong>{(bomCancelPromptModal.salesPerson || bomCancelPromptModal.createdBy || 'Sales Executive').replace(/\s*\([^)]*\)/g, '').trim()}</strong>) who raised this order will be immediately notified with your reason, and reserved stock will be returned to raw inventory.
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Quick Select Reason
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[
+                    'Customer requested order cancellation',
+                    'Specification / Drawing changed by client',
+                    'Payment term non-compliance',
+                    'Wrong profile / cut length selected in BOM',
+                    'Duplicate BOM entry created',
+                    'Material grade / thickness unavailable'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCancellationReasonInput(preset)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: cancellationReasonInput === preset ? '1.5px solid #DC2626' : '1px solid #CBD5E1',
+                        backgroundColor: cancellationReasonInput === preset ? '#FEF2F2' : '#F8FAFC',
+                        color: cancellationReasonInput === preset ? '#DC2626' : '#475569',
+                        fontSize: '11px',
+                        fontWeight: cancellationReasonInput === preset ? '700' : '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Cancellation Reason <span style={{ color: '#DC2626' }}>* (Required)</span>
+                </label>
+                <textarea
+                  value={cancellationReasonInput}
+                  onChange={(e) => setCancellationReasonInput(e.target.value)}
+                  placeholder="Explain why this BOM is being cancelled (e.g. Customer cancelled the project, drawing mismatch...)"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '13px',
+                    color: '#0F172A',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.5'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#DC2626'}
+                  onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              backgroundColor: '#F8FAFC',
+              borderTop: '1px solid #E2E8F0',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setBomCancelPromptModal(null);
+                  setCancellationReasonInput('');
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep BOM Active
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!cancellationReasonInput.trim()) {
+                    alert('Please enter or select a reason for cancelling this BOM.');
+                    return;
+                  }
+                  executeCancelBom(bomCancelPromptModal, cancellationReasonInput.trim());
+                }}
+                disabled={!cancellationReasonInput.trim()}
+                style={{
+                  padding: '9px 22px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: cancellationReasonInput.trim() ? '#DC2626' : '#FCA5A5',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: cancellationReasonInput.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: cancellationReasonInput.trim() ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none'
+                }}
+              >
+                <XCircle size={15} /> Confirm & Cancel BOM
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* FULL-SCREEN BOM CREATION LOADING OVERLAY */}

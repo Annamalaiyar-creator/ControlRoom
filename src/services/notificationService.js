@@ -459,3 +459,35 @@ export function notifyInvoiceCompletedReadyForDispatch({ invoiceNo, bomCode, cus
     }
   });
 }
+
+/**
+ * STEP 5: BOM Cancelled by Dispatch (or Accounts/Production).
+ * Immediately notifies the Sales Person who raised this BOM with the exact reason,
+ * releases inventory, and logs to the audit notification center.
+ */
+export function notifyBomCancelledByDispatch({ bomCode, customerName, salesPerson, reason, cancelledBy }) {
+  const safeCustomer = customerName || 'Customer';
+  const safeCode = bomCode || 'BOM';
+  const safeReason = reason || 'Order cancelled by Dispatch';
+  const safeCancelledBy = cancelledBy || 'Dispatch Head';
+  const safeSalesPerson = salesPerson || 'Sales Executive';
+
+  // 5a. High-priority notification specifically targeting the Sales Person and Sales Team
+  return sendWorkflowNotification({
+    title: `❌ BOM Cancelled: ${safeCode}`,
+    message: `BOM ${safeCode} (${safeCustomer}) was CANCELLED by ${safeCancelledBy}. Reason: "${safeReason}". Blocked stock has been released.`,
+    targetTab: 'BOM Orders',
+    targetRoles: [safeSalesPerson, 'Sales Executive', 'Sales Head', 'All', 'Admin', 'CEO', 'MD'],
+    type: 'error',
+    soundType: 'alert',
+    metadata: {
+      bomCode: safeCode,
+      customerName: safeCustomer,
+      salesPerson: safeSalesPerson,
+      cancelledBy: safeCancelledBy,
+      reason: safeReason,
+      step: 'BOM_CANCELLED_NOTIF'
+    }
+  });
+}
+

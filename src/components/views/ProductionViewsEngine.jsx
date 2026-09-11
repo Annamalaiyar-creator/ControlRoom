@@ -27,7 +27,8 @@ import {
   notifyBomSentToDispatch,
   notifyBomPackedAndSentToAccounts,
   notifyAccountsVerificationCompleted,
-  notifyInvoiceCompletedReadyForDispatch
+  notifyInvoiceCompletedReadyForDispatch,
+  notifyBomCancelledByDispatch
 } from '../../services/notificationService';
 
 
@@ -267,6 +268,8 @@ export default function ProductionViewsEngine(props) {
   const [paymentProofFile, setPaymentProofFile] = useState(null);
   const [paymentStageType, setPaymentStageType] = useState('100% Advance'); // '100% Advance' | '50% Advance' | '50% Dispatch' | 'Net 30 Days'
   const [dispatchPackingModal, setDispatchPackingModal] = useState(null); // Full BOM object being packed by Dispatch Head
+  const [bomCancelPromptModal, setBomCancelPromptModal] = useState(null); // Full BOM object awaiting cancellation reason
+  const [cancellationReasonInput, setCancellationReasonInput] = useState('');
   const [accountsVerificationModal, setAccountsVerificationModal] = useState(null); // Full BOM object being verified by Accounts Team
   const [isAccountsViewOnly, setIsAccountsViewOnly] = useState(false); // Controls View mode vs Verification mode
   const [accountsBomViewMode, setAccountsBomViewMode] = useState('paper'); // 'paper' | 'table'
@@ -373,17 +376,27 @@ export default function ProductionViewsEngine(props) {
     }
   };
 
-  // Execution function for Cancel BOM
-  const handleCancelBomOrder = async (bomToCancel) => {
+  // Execution function to initiate Cancel BOM - prompts for mandatory reason
+  const handleCancelBomOrder = (bomToCancel) => {
     if (!bomToCancel) return;
     if (!canCancelBom) {
       alert('⛔ Access Restricted!\nOnly Dispatch, Accounts, Production, or Billing logins are authorized to cancel a BOM and release reserved inventory.');
       return;
     }
+    setBomCancelPromptModal(bomToCancel);
+    setCancellationReasonInput('');
+  };
+
+  // Execution function to finalize Cancel BOM with mandatory reason and notify Sales Person
+  const executeCancelBom = async (bomToCancel, reason) => {
+    if (!bomToCancel) return;
+    const cleanReason = (reason || '').trim();
+    if (!cleanReason) {
+      alert('⚠️ Cancellation Reason is mandatory.\nPlease specify why this BOM is being cancelled so the sales team is notified.');
+      return;
+    }
 
     const bCode = bomToCancel.bomCode || bomToCancel.code || bomToCancel.id;
-    const confirmCancel = window.confirm(`⚠️ Are you sure you want to CANCEL BOM ${bCode}?\n\nThis will immediately release and restore all blocked items back into live inventory so other sales persons can book them.`);
-    if (!confirmCancel) return;
 
     // 1. Restore Inventory
     const itemsToRestore = (bomToCancel.items && bomToCancel.items.length > 0)
@@ -394,11 +407,12 @@ export default function ProductionViewsEngine(props) {
     restoreInventoryForBom(itemsToRestore, bCode);
 
     // 2. Prepare updated cancelled BOM record
-    const loggedInUser = localStorage.getItem('controlroom_logged_user_name') || userRole;
+    const loggedInUser = localStorage.getItem('controlroom_logged_user_name') || userRole || 'Dispatch Head';
     const updatedBomRecord = {
       ...bomToCancel,
       status: 'Cancelled & Stock Restored',
       cancelled: true,
+      cancellationReason: cleanReason,
       stockBlocked: false,
       cancelledBy: loggedInUser,
       cancelledAt: new Date().toISOString()
@@ -427,7 +441,17 @@ export default function ProductionViewsEngine(props) {
 
     window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: updatedBomRecord } }));
 
-    // 4. Close open modals if target BOM matches
+    // 4. Notify Sales Person who raised this BOM
+    const salesPerson = bomToCancel.salesPerson || bomToCancel.salesExecutive || bomToCancel.createdBy || 'Sales Executive';
+    notifyBomCancelledByDispatch({
+      bomCode: bCode,
+      customerName: bomToCancel.customerName,
+      salesPerson: salesPerson,
+      reason: cleanReason,
+      cancelledBy: loggedInUser
+    });
+
+    // 5. Close open modals if target BOM matches
     if (dispatchPackingModal && (dispatchPackingModal.bomCode === bCode || dispatchPackingModal.code === bCode || dispatchPackingModal.id === bCode)) {
       setDispatchPackingModal(null);
     }
@@ -440,8 +464,10 @@ export default function ProductionViewsEngine(props) {
     if (quickPreviewRecord && (quickPreviewRecord.bomCode === bCode || quickPreviewRecord.code === bCode || quickPreviewRecord.id === bCode)) {
       setQuickPreviewRecord(null);
     }
+    setBomCancelPromptModal(null);
+    setCancellationReasonInput('');
 
-    alert(`✅ BOM (${bCode}) has been successfully CANCELLED.\nAll items have been restored and unblocked in live inventory.`);
+    alert(`✅ BOM (${bCode}) has been CANCELLED.\nReason: "${cleanReason}"\nSales person (${salesPerson.replace(/\\s*\\([^)]*\\)/g, '').trim()}) has been notified and all items have been restored to live inventory.`);
   };
 
   // Validation for Production BOM creation
@@ -4558,11 +4584,12 @@ export default function ProductionViewsEngine(props) {
               searchPlaceholder: 'Filter Dispatch Orders (BOM Code, Customer Name, Logistics)...',
               tabs: [
                 { id: 'All', label: 'All Orders', count: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true)).length, bg: '#F1F5F9', fg: '#334155' },
-                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Awaiting Vehicle Loading & Dispatch', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#FFEDD5', fg: '#C2410C' },
-                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED'].includes(b.status)).length, bg: '#FEF3C7', fg: '#B45309' },
-                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Awaiting Vehicle Loading & Dispatch'].includes(b.status) && !b.invoiceConfirmed).length, bg: '#DCFCE7', fg: '#166534' },
-                { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered'].includes(b.status)).length, bg: '#DBEAFE', fg: '#1E40AF' },
-                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered').length, bg: '#F1F5F9', fg: '#475569' }
+                { id: 'PendingPacking', label: 'Pending Packing', count: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true) && !['Closed', 'CLOSED', 'Packed & Ready for Dispatch', 'Partially Packed', 'Awaiting Vehicle Loading & Dispatch', 'Completed', 'Fully Dispatched & Delivered', 'Cancelled', 'Cancelled & Stock Restored'].includes(b.status) && !b.cancelled && !b.invoiceConfirmed).length, bg: '#FFEDD5', fg: '#C2410C' },
+                { id: 'PartiallyPacked', label: 'Partially Packed', count: (bomStore || []).filter(b => (b.status === 'Partially Packed' || (b.dispatchPacking && b.dispatchPacking.some(p => p.packed) && !b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Cancelled', 'Cancelled & Stock Restored'].includes(b.status) && !b.cancelled).length, bg: '#FEF3C7', fg: '#B45309' },
+                { id: 'Packed', label: 'Packing Verified', count: (bomStore || []).filter(b => (b.status === 'Packed & Ready for Dispatch' || b.status === 'Dispatch Packing Verified - Sent to Accounts' || (b.dispatchPacking && b.dispatchPacking.length > 0 && b.dispatchPacking.every(p => p.packed))) && !['Closed', 'CLOSED', 'Awaiting Vehicle Loading & Dispatch', 'Cancelled', 'Cancelled & Stock Restored'].includes(b.status) && !b.cancelled && !b.invoiceConfirmed).length, bg: '#DCFCE7', fg: '#166534' },
+                { id: 'AwaitingLoading', label: 'Awaiting Vehicle Loading', count: (bomStore || []).filter(b => (b.status === 'Awaiting Vehicle Loading & Dispatch' || b.invoiceConfirmed) && !['Closed', 'CLOSED', 'Completed', 'Fully Dispatched & Delivered', 'Cancelled', 'Cancelled & Stock Restored'].includes(b.status) && !b.cancelled).length, bg: '#DBEAFE', fg: '#1E40AF' },
+                { id: 'Closed', label: 'Closed / Dispatched', count: (bomStore || []).filter(b => (b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered') && !b.cancelled).length, bg: '#F1F5F9', fg: '#475569' },
+                { id: 'Cancelled', label: 'Cancelled', count: (bomStore || []).filter(b => b && (b.status === 'Cancelled' || b.status === 'Cancelled & Stock Restored' || b.cancelled)).length, bg: '#FEE2E2', fg: '#DC2626' }
               ],
               headers: ['BOM Code', 'Customer Name', 'Sales Person', 'Payment Type', 'Dispatch Packing Status'],
               rows: (bomStore || []).filter(b => b && (b.status ? b.status !== 'Draft' : true)).sort((a, b) => {
@@ -4582,6 +4609,7 @@ export default function ProductionViewsEngine(props) {
                 const isFullyPacked = totalItemsCount > 0 && packedCount === totalItemsCount;
                 const isPartiallyPacked = packedCount > 0 && packedCount < totalItemsCount;
                 const isClosed = b.status === 'Closed' || b.status === 'CLOSED' || b.status === 'Completed' || b.fullyCompleted || b.status === 'Fully Dispatched & Delivered';
+                const isCancelled = Boolean(b.cancelled || b.status === 'Cancelled' || b.status === 'Cancelled & Stock Restored');
 
                 let statusLabel = 'PENDING DISPATCH PACKING';
                 let stBg = '#FFF7ED';
@@ -4589,7 +4617,13 @@ export default function ProductionViewsEngine(props) {
                 let stBorder = '1px solid #FED7AA';
                 let tabGroup = 'PendingPacking';
 
-                if (isClosed) {
+                if (isCancelled) {
+                  statusLabel = 'CANCELLED';
+                  stBg = '#FEF2F2';
+                  stFg = '#DC2626';
+                  stBorder = '1px solid #FECACA';
+                  tabGroup = 'Cancelled';
+                } else if (isClosed) {
                   statusLabel = 'COMPLETED & DISPATCHED';
                   stBg = '#DCFCE7';
                   stFg = '#166534';
@@ -4629,7 +4663,7 @@ export default function ProductionViewsEngine(props) {
                   salesPerson: salesPersonName,
                   c3: salesPersonName,
                   c4: b.paymentType || '100% Paid',
-                  packingProgressText: isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`,
+                  packingProgressText: isCancelled ? `Cancelled (${b.cancellationReason || 'Stock Restored'})` : (isClosed ? `All ${totalItemsCount} Items Dispatched & Closed` : `${packedCount} of ${totalItemsCount} Items Packed`),
                   status: statusLabel,
                   stBg: stBg,
                   stFg: stFg,
@@ -10377,8 +10411,18 @@ export default function ProductionViewsEngine(props) {
                 })
               : rawItems;
 
+            const isCancelled = Boolean(
+              dispatchPackingModal.cancelled ||
+              dispatchPackingModal.status === 'Cancelled' ||
+              dispatchPackingModal.status === 'CANCELLED' ||
+              dispatchPackingModal.status === 'Cancelled & Stock Restored' ||
+              (dispatchPackingModal.status && typeof dispatchPackingModal.status === 'string' && dispatchPackingModal.status.toLowerCase().includes('cancel'))
+            );
+
             const isPackedAndReady = Boolean(
+              isCancelled ||
               dispatchPackingModal.isReadOnly ||
+              dispatchPackingModal.isViewOnly ||
               dispatchPackingModal.status === 'Packed & Ready for Dispatch' ||
               dispatchPackingModal.status === 'PACKED & READY FOR DISPATCH' ||
               dispatchPackingModal.status === 'Packed & Awaiting Dispatch Payment' ||
@@ -10490,18 +10534,21 @@ export default function ProductionViewsEngine(props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', fontFamily: "'DM Sans', sans-serif", minHeight: '100%' }}>
 
                 {/* ─── GRADIENT STATUS BANNER HEADER ─── */}
+                {/* ─── GRADIENT STATUS BANNER HEADER ─── */}
                 <div style={{
-                  background: allItemsPacked
-                    ? 'linear-gradient(135deg, #064E3B 0%, #065F46 100%)'
-                    : isPartial
-                      ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)'
-                      : 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
+                  background: isCancelled
+                    ? 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)'
+                    : allItemsPacked
+                      ? 'linear-gradient(135deg, #064E3B 0%, #065F46 100%)'
+                      : isPartial
+                        ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)'
+                        : 'linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%)',
                   borderRadius: '16px',
                   padding: '24px 28px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  boxShadow: allItemsPacked ? '0 8px 24px rgba(6,78,59,0.35)' : isPartial ? '0 8px 24px rgba(120,53,15,0.35)' : '0 8px 24px rgba(30,58,138,0.35)'
+                  boxShadow: isCancelled ? '0 8px 24px rgba(127,29,29,0.35)' : allItemsPacked ? '0 8px 24px rgba(6,78,59,0.35)' : isPartial ? '0 8px 24px rgba(120,53,15,0.35)' : '0 8px 24px rgba(30,58,138,0.35)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     {/* Back button */}
@@ -10526,7 +10573,9 @@ export default function ProductionViewsEngine(props) {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#FFFFFF', margin: 0, letterSpacing: '-0.2px' }}>
-                          {isPackedAndReady ? 'Dispatch Packing Specifications (Locked)' : 'Dispatch Packing Verification'}
+                          {isCancelled
+                            ? 'Dispatch Packing Specifications (CANCELLED - VIEW ONLY)'
+                            : (isPackedAndReady ? 'Dispatch Packing Specifications (Locked)' : 'Dispatch Packing Verification')}
                         </h1>
                         <span style={{
                           backgroundColor: 'rgba(255,255,255,0.2)',
@@ -10536,16 +10585,29 @@ export default function ProductionViewsEngine(props) {
                         }}>
                           {dispatchPackingModal.bomCode}
                         </span>
-                        <span style={{
-                          backgroundColor: allItemsPacked ? '#DCFCE7' : isPartial ? '#FEF3C7' : '#DBEAFE',
-                          color: allItemsPacked ? '#166534' : isPartial ? '#92400E' : '#1E40AF',
-                          padding: '3px 12px', borderRadius: '20px',
-                          fontSize: '11px', fontWeight: '800',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }}>
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: allItemsPacked ? '#166534' : isPartial ? '#D97706' : '#2563EB' }}></span>
-                          {allItemsPacked ? 'ALL ITEMS PACKED' : isPartial ? 'PARTIALLY PACKED' : 'PENDING PACKING'}
-                        </span>
+                        {isCancelled ? (
+                          <span style={{
+                            backgroundColor: '#FEE2E2',
+                            color: '#DC2626',
+                            padding: '3px 12px', borderRadius: '20px',
+                            fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#DC2626' }}></span>
+                            CANCELLED (VIEW ONLY)
+                          </span>
+                        ) : (
+                          <span style={{
+                            backgroundColor: allItemsPacked ? '#DCFCE7' : isPartial ? '#FEF3C7' : '#DBEAFE',
+                            color: allItemsPacked ? '#166534' : isPartial ? '#92400E' : '#1E40AF',
+                            padding: '3px 12px', borderRadius: '20px',
+                            fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: allItemsPacked ? '#166534' : isPartial ? '#D97706' : '#2563EB' }}></span>
+                            {allItemsPacked ? 'ALL ITEMS PACKED' : isPartial ? 'PARTIALLY PACKED' : 'PENDING PACKING'}
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         <span>Customer: <strong style={{ color: '#FFFFFF' }}>{dispatchPackingModal.customerName}</strong></span>
@@ -10559,7 +10621,7 @@ export default function ProductionViewsEngine(props) {
 
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                    {canCancelBom && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
+                    {canCancelBom && !isCancelled && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
                       <button
                         onClick={() => handleCancelBomOrder(dispatchPackingModal)}
                         style={{
@@ -10588,7 +10650,7 @@ export default function ProductionViewsEngine(props) {
                     >
                       Close
                     </button>
-                    {!isPackedAndReady && (
+                    {!isPackedAndReady && !isCancelled && (
                       <button
                         onClick={savePackingData}
                         style={{
@@ -10608,6 +10670,55 @@ export default function ProductionViewsEngine(props) {
                     )}
                   </div>
                 </div>
+
+                {/* ─── CANCELLATION DETAILS ALERT BANNER ─── */}
+                {isCancelled && (
+                  <div style={{
+                    backgroundColor: '#FEF2F2',
+                    border: '1.5px solid #FCA5A5',
+                    borderRadius: '14px',
+                    padding: '18px 24px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.08)'
+                  }}>
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '10px',
+                      backgroundColor: '#DC2626', color: '#FFFFFF',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <XCircle style={{ width: '22px', height: '22px' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#991B1B' }}>
+                          This BOM Order has been Cancelled
+                        </h3>
+                        <span style={{
+                          backgroundColor: '#FEE2E2', color: '#DC2626',
+                          fontSize: '11px', fontWeight: '800', padding: '2px 10px',
+                          borderRadius: '12px', border: '1px solid #FCA5A5'
+                        }}>
+                          VIEW ONLY MODE • NON-EDITABLE
+                        </span>
+                      </div>
+                      <p style={{ margin: '6px 0 10px 0', fontSize: '13px', color: '#7F1D1D', lineHeight: 1.5 }}>
+                        <strong>Cancellation Reason:</strong> {dispatchPackingModal.cancellationReason || 'No cancellation reason provided.'}
+                      </p>
+                      <div style={{ display: 'flex', gap: '20px', fontSize: '12px', color: '#991B1B', flexWrap: 'wrap' }}>
+                        <span><strong>Cancelled By:</strong> {dispatchPackingModal.cancelledBy || 'Dispatch Head'}</span>
+                        <span>•</span>
+                        <span><strong>Date:</strong> {dispatchPackingModal.cancelledAt ? new Date(dispatchPackingModal.cancelledAt).toLocaleString('en-IN') : 'Recently'}</span>
+                        <span>•</span>
+                        <span><strong>Inventory Status:</strong> All reserved stock released back to inventory</span>
+                        <span>•</span>
+                        <span><strong>Sales Person:</strong> {(dispatchPackingModal.salesPerson || 'Sales Executive').replace(/\s*\([^)]*\)/g, '').trim()} (Notified)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* ─── 4 STATS CARDS ─── */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
@@ -11126,11 +11237,13 @@ export default function ProductionViewsEngine(props) {
                     background: '#FAFBFC',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                   }}>
-                    <span style={{ fontSize: '12px', color: '#64748B' }}>
-                      {isPackedAndReady ? 'Status: Closed / Dispatched' : 'Click any row to toggle packing status'}
+                    <span style={{ fontSize: '12px', color: isCancelled ? '#DC2626' : '#64748B', fontWeight: isCancelled ? '700' : '400' }}>
+                      {isCancelled
+                        ? 'Status: Cancelled & Stock Restored (View Only)'
+                        : (isPackedAndReady ? 'Status: Closed / Dispatched' : 'Click any row to toggle packing status')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {!isPackedAndReady && (
+                      {!isPackedAndReady && !isCancelled && (
                         <button
                           onClick={() => {
                             const packAll = itemsToPack.map(pi => ({ ...pi, packed: true }));
@@ -11147,7 +11260,7 @@ export default function ProductionViewsEngine(props) {
                           <CheckSquare style={{ width: '14px', height: '14px' }} /> Pack All Items
                         </button>
                       )}
-                      {canCancelBom && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
+                      {canCancelBom && !isCancelled && dispatchPackingModal.status !== 'Cancelled & Stock Restored' && (
                         <button
                           onClick={() => handleCancelBomOrder(dispatchPackingModal)}
                           style={{
@@ -11176,7 +11289,7 @@ export default function ProductionViewsEngine(props) {
                       >
                         Close
                       </button>
-                      {!isPackedAndReady && (
+                      {!isPackedAndReady && !isCancelled && (
                         <button
                           onClick={savePackingData}
                           style={{
@@ -15530,100 +15643,121 @@ export default function ProductionViewsEngine(props) {
                     <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
                   </span>
 
-                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (
-                    <button
-                      onClick={() => {
-                        if (selectedRows.length > 1) {
-                          alert('You cannot edit multiple items at once.');
-                        } else if (selectedRows.length === 1) {
-                          const codeVal = selectedRows[0];
-                          const targetRow = (filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal };
+                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (() => {
+                    const firstCode = selectedRows[0];
+                    const targetRow = (filteredRows || []).find(r => r.code === firstCode || r.id === firstCode || r.bomCode === firstCode) || { code: firstCode };
+                    const isCancelledRow = Boolean(
+                      targetRow && (
+                        targetRow.cancelled ||
+                        targetRow.status === 'CANCELLED' ||
+                        targetRow.status === 'Cancelled' ||
+                        targetRow.status === 'Cancelled & Stock Restored' ||
+                        (typeof targetRow.status === 'string' && targetRow.status.toLowerCase().includes('cancel'))
+                      )
+                    );
 
-                          if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
-                            setConfirmingBomModal({ ...targetRow, isEditMode: true });
-                          } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
-                            setEditingVendor(targetRow);
-                          } else if (activeTab === 'Customer Management') {
-                            setEditingCustomer({ ...targetRow, originalCode: targetRow.code });
-                            setCustFormName(targetRow.code);
-                            setCustFormCompany(targetRow.c2 || targetRow.code);
-                            setCustFormGstNo(targetRow.gstNo || '33AABCU9603R1ZM');
-                            setCustFormMobile(targetRow.c4 || '');
-                            setCustFormEmail(targetRow.c5 || '');
+                    return (
+                      <button
+                        onClick={() => {
+                          if (selectedRows.length > 1) {
+                            alert('You cannot edit multiple items at once.');
+                          } else if (selectedRows.length === 1) {
+                            if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
+                              setConfirmingBomModal(isCancelledRow ? { ...targetRow, isEditMode: false } : { ...targetRow, isEditMode: true });
+                            } else if (activeTab === 'Vendor Directory' || activeTab === 'Vendor Management') {
+                              setEditingVendor(targetRow);
+                            } else if (activeTab === 'Customer Management') {
+                              setEditingCustomer({ ...targetRow, originalCode: targetRow.code });
+                              setCustFormName(targetRow.code);
+                              setCustFormCompany(targetRow.c2 || targetRow.code);
+                              setCustFormGstNo(targetRow.gstNo || '33AABCU9603R1ZM');
+                              setCustFormMobile(targetRow.c4 || '');
+                              setCustFormEmail(targetRow.c5 || '');
 
-                            const bObj = targetRow.billingAddressObj || {};
-                            const dObj = targetRow.deliveryAddressObj || {};
-                            setCustFormBillingAddress(bObj.address || targetRow.c6 || targetRow.billingAddress || '');
-                            setCustFormBillingCity(bObj.city || '');
-                            setCustFormBillingState(bObj.state || '');
-                            setCustFormBillingPincode(bObj.pincode || '');
+                              const bObj = targetRow.billingAddressObj || {};
+                              const dObj = targetRow.deliveryAddressObj || {};
+                              setCustFormBillingAddress(bObj.address || targetRow.c6 || targetRow.billingAddress || '');
+                              setCustFormBillingCity(bObj.city || '');
+                              setCustFormBillingState(bObj.state || '');
+                              setCustFormBillingPincode(bObj.pincode || '');
 
-                            const isSame = (targetRow.deliveryAddress === targetRow.billingAddress && Boolean(targetRow.billingAddress)) || (!targetRow.c7 && !targetRow.deliveryAddress);
-                            setCustFormSameAsBilling(isSame);
-                            setCustFormDeliveryAddress(dObj.address || targetRow.c7 || targetRow.deliveryAddress || '');
-                            setCustFormDeliveryCity(dObj.city || '');
-                            setCustFormDeliveryState(dObj.state || '');
-                            setCustFormDeliveryPincode(dObj.pincode || '');
-                          } else if (activeTab === 'Goods Receipt Note (GRN)') {
-                            resetCreateGRNForm();
-                            loadPOItems(targetRow.poRef || targetRow.code);
-                            if (targetRow.challanNo) setGrnChallanNo(targetRow.challanNo);
-                            if (targetRow.receivedBy) setGrnReceivedBy(targetRow.receivedBy);
-                            if (targetRow.inspectorName) setGrnInspectorName(targetRow.inspectorName);
-                            if (targetRow.inspectionRemarks) setGrnInspectionRemarks(targetRow.inspectionRemarks);
-                            setEditingGrnId(targetRow.id || targetRow.code);
-                            setIsViewOnlyMode(false);
-                            setShowCreateGRN(true);
-                          } else if (activeTab === 'Invoice Management') {
-                            setViewingInvoiceModal(targetRow);
-                            setInvoiceModalActiveTab('Invoice Items');
-                            setIsEditingInvoice(true);
-                            setInvoiceEditForm({
-                              invNo: targetRow.invNo || targetRow.code || '',
-                              customerName: targetRow.customerName || targetRow.vendor || 'Customer',
-                              date: targetRow.date || new Date().toLocaleDateString('en-GB'),
-                              paymentType: targetRow.paymentType || '100% Advance',
-                              billingAddress: targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
-                              deliveryAddress: targetRow.deliveryAddress || targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
-                              items: (targetRow.items && targetRow.items.length > 0)
-                                ? targetRow.items.map(it => ({ ...it }))
-                                : [{ code: 'PRD-001', name: 'Standard Component', qty: 1, bomQty: 1, invQty: 1, rate: 1000, tax: 18, amt: 1180, selected: true }]
-                            });
-                          } else if (activeTab === 'Dispatch Orders') {
-                            if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
-                              setVehicleLoadingModal(targetRow);
+                              const isSame = (targetRow.deliveryAddress === targetRow.billingAddress && Boolean(targetRow.billingAddress)) || (!targetRow.c7 && !targetRow.deliveryAddress);
+                              setCustFormSameAsBilling(isSame);
+                              setCustFormDeliveryAddress(dObj.address || targetRow.c7 || targetRow.deliveryAddress || '');
+                              setCustFormDeliveryCity(dObj.city || '');
+                              setCustFormDeliveryState(dObj.state || '');
+                              setCustFormDeliveryPincode(dObj.pincode || '');
+                            } else if (activeTab === 'Goods Receipt Note (GRN)') {
+                              resetCreateGRNForm();
+                              loadPOItems(targetRow.poRef || targetRow.code);
+                              if (targetRow.challanNo) setGrnChallanNo(targetRow.challanNo);
+                              if (targetRow.receivedBy) setGrnReceivedBy(targetRow.receivedBy);
+                              if (targetRow.inspectorName) setGrnInspectorName(targetRow.inspectorName);
+                              if (targetRow.inspectionRemarks) setGrnInspectionRemarks(targetRow.inspectionRemarks);
+                              setEditingGrnId(targetRow.id || targetRow.code);
+                              setIsViewOnlyMode(false);
+                              setShowCreateGRN(true);
+                            } else if (activeTab === 'Invoice Management') {
+                              setViewingInvoiceModal(targetRow);
+                              setInvoiceModalActiveTab('Invoice Items');
+                              setIsEditingInvoice(!isCancelledRow);
+                              setInvoiceEditForm({
+                                invNo: targetRow.invNo || targetRow.code || '',
+                                customerName: targetRow.customerName || targetRow.vendor || 'Customer',
+                                date: targetRow.date || new Date().toLocaleDateString('en-GB'),
+                                paymentType: targetRow.paymentType || '100% Advance',
+                                billingAddress: targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                                deliveryAddress: targetRow.deliveryAddress || targetRow.billingAddress || 'Plot No 42, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
+                                items: (targetRow.items && targetRow.items.length > 0)
+                                  ? targetRow.items.map(it => ({ ...it }))
+                                  : [{ code: 'PRD-001', name: 'Standard Component', qty: 1, bomQty: 1, invQty: 1, rate: 1000, tax: 18, amt: 1180, selected: true }]
+                              });
+                            } else if (activeTab === 'Dispatch Orders') {
+                              if (isCancelledRow) {
+                                setDispatchPackingModal({ ...targetRow, isViewOnly: true, isReadOnly: true });
+                              } else if (targetRow.status === 'Awaiting Vehicle Loading & Dispatch' || targetRow.invoiceConfirmed || targetRow.stockDeducted) {
+                                setVehicleLoadingModal(targetRow);
+                              } else {
+                                setDispatchPackingModal(targetRow);
+                              }
+                            } else if (activeTab === 'Accounts Verification') {
+                              setAccountsVerificationModal(targetRow);
+                              setIsAccountsViewOnly(isCancelledRow ? true : false);
                             } else {
-                              setDispatchPackingModal(targetRow);
+                              setConfirmingBomModal(isCancelledRow ? { ...targetRow, isEditMode: false } : { ...targetRow, isEditMode: true });
                             }
-                          } else if (activeTab === 'Accounts Verification') {
-                            setAccountsVerificationModal(targetRow);
-                            setIsAccountsViewOnly(false);
-                          } else {
-                            setConfirmingBomModal({ ...targetRow, isEditMode: true });
                           }
-                        }
-                      }}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        color: '#1E293B',
-                        borderRadius: '10px',
-                        padding: '6px 14px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                    >
-                      <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
-                    </button>
-                  )}
+                        }}
+                        style={{
+                          backgroundColor: isCancelledRow ? '#FEF2F2' : '#FFFFFF',
+                          border: isCancelledRow ? '1px solid #FECACA' : '1px solid #E2E8F0',
+                          color: isCancelledRow ? '#DC2626' : '#1E293B',
+                          borderRadius: '10px',
+                          padding: '6px 14px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isCancelledRow ? '#FEE2E2' : '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isCancelledRow ? '#FEF2F2' : '#FFFFFF'}
+                      >
+                        {isCancelledRow ? (
+                          <>
+                            <Eye size={14} style={{ color: '#DC2626' }} /> View Info (Cancelled)
+                          </>
+                        ) : (
+                          <>
+                            <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
+                          </>
+                        )}
+                      </button>
+                    );
+                  })()}
 
                   {canCancelBom && ['Dispatch Orders', 'Accounts Verification', 'BOM Orders', 'BOM', 'BOM / Routing'].includes(activeTab) && (() => {
                     const hasCancellable = (selectedRows || []).some(codeVal => {
@@ -15926,7 +16060,8 @@ export default function ProductionViewsEngine(props) {
                               setViewingInvoiceModal(rec);
                               setInvoiceModalActiveTab('Invoice Items');
                             } else if (activeTab === 'Dispatch Orders') {
-                              setDispatchPackingModal(rec);
+                              const isRecCancelled = Boolean(rec.cancelled || rec.status === 'CANCELLED' || rec.status === 'Cancelled' || rec.status === 'Cancelled & Stock Restored' || (typeof rec.status === 'string' && rec.status.toLowerCase().includes('cancel')));
+                              setDispatchPackingModal(isRecCancelled ? { ...rec, isViewOnly: true, isReadOnly: true } : rec);
                             } else if (activeTab === 'Accounts Verification') {
                               setAccountsVerificationModal(rec);
                               setIsAccountsViewOnly(true);
@@ -15955,7 +16090,7 @@ export default function ProductionViewsEngine(props) {
                           View Full Details
                         </button>
 
-                        {canCancelBom && ['Dispatch Orders', 'Accounts Verification', 'BOM Orders', 'BOM', 'BOM / Routing'].includes(activeTab) && quickPreviewRecord.status !== 'Cancelled & Stock Restored' && (
+                        {canCancelBom && ['Dispatch Orders', 'Accounts Verification', 'BOM Orders', 'BOM', 'BOM / Routing'].includes(activeTab) && quickPreviewRecord.status !== 'Cancelled & Stock Restored' && quickPreviewRecord.status !== 'CANCELLED' && !quickPreviewRecord.cancelled && (
                           <button
                             onClick={() => {
                               const rec = quickPreviewRecord;
@@ -18587,6 +18722,203 @@ export default function ProductionViewsEngine(props) {
 
       {/* DOCUMENT PREVIEW MODAL */}
       {renderDocPreviewModal()}
+
+      {/* BOM CANCELLATION REASON PROMPT MODAL */}
+      {bomCancelPromptModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100000, padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '540px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            border: '1px solid #E2E8F0',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#FFFFFF'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <AlertTriangle style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800' }}>
+                    Cancel BOM & Restore Stock
+                  </h3>
+                  <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>
+                    BOM: <strong>{bomCancelPromptModal.bomCode || bomCancelPromptModal.code}</strong> • Customer: {bomCancelPromptModal.customerName || bomCancelPromptModal.clientName || 'Customer'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setBomCancelPromptModal(null);
+                  setCancellationReasonInput('');
+                }}
+                style={{
+                  background: 'none', border: 'none', color: '#FFFFFF',
+                  cursor: 'pointer', padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                fontSize: '12px',
+                color: '#991B1B',
+                lineHeight: 1.5
+              }}>
+                <strong>⚠️ Why are you cancelling this BOM?</strong>
+                <br />
+                The Sales Person (<strong>{(bomCancelPromptModal.salesPerson || localStorage.getItem('controlroom_logged_user_name') || 'Sales Executive').replace(/\s*\([^)]*\)/g, '').trim()}</strong>) who raised this order will be immediately notified with your reason, and reserved stock will be returned to raw inventory.
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Quick Select Reason
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[
+                    'Customer requested order cancellation',
+                    'Specification / Drawing changed by client',
+                    'Payment term non-compliance',
+                    'Wrong profile / cut length selected in BOM',
+                    'Duplicate BOM entry created',
+                    'Material grade / thickness unavailable'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCancellationReasonInput(preset)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: cancellationReasonInput === preset ? '1.5px solid #DC2626' : '1px solid #CBD5E1',
+                        backgroundColor: cancellationReasonInput === preset ? '#FEF2F2' : '#F8FAFC',
+                        color: cancellationReasonInput === preset ? '#DC2626' : '#475569',
+                        fontSize: '11px',
+                        fontWeight: cancellationReasonInput === preset ? '700' : '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Cancellation Reason <span style={{ color: '#DC2626' }}>* (Required)</span>
+                </label>
+                <textarea
+                  value={cancellationReasonInput}
+                  onChange={(e) => setCancellationReasonInput(e.target.value)}
+                  placeholder="Explain why this BOM is being cancelled (e.g. Customer cancelled the project, drawing mismatch...)"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '13px',
+                    color: '#0F172A',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.5'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#DC2626'}
+                  onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              backgroundColor: '#F8FAFC',
+              borderTop: '1px solid #E2E8F0',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setBomCancelPromptModal(null);
+                  setCancellationReasonInput('');
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep BOM Active
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!cancellationReasonInput.trim()) {
+                    alert('Please enter or select a reason for cancelling this BOM.');
+                    return;
+                  }
+                  executeCancelBom(bomCancelPromptModal, cancellationReasonInput.trim());
+                }}
+                disabled={!cancellationReasonInput.trim()}
+                style={{
+                  padding: '9px 22px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: cancellationReasonInput.trim() ? '#DC2626' : '#FCA5A5',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: cancellationReasonInput.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: cancellationReasonInput.trim() ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none'
+                }}
+              >
+                <XCircle size={15} /> Confirm & Cancel BOM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
