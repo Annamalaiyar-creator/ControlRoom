@@ -379,7 +379,7 @@ if (typeof window !== 'undefined') {
  * Checks whether a given role matches the notification's target roles.
  * System administrators and Executives always receive all notifications.
  */
-export function isRoleTargeted(userRole, targetRoles) {
+export function isRoleTargeted(userRole, targetRoles, metadata = {}) {
   if (!userRole) return true;
   
   // Executive Leadership & Tech Admins have global visibility
@@ -394,10 +394,54 @@ export function isRoleTargeted(userRole, targetRoles) {
 
   const roleList = Array.isArray(targetRoles) ? targetRoles : [targetRoles];
 
-  // Direct match
+  // Resolve active logged in user name and employee ID
+  let currentUserName = '';
+  let currentUserEmpId = '';
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      currentUserName = (localStorage.getItem('controlroom_logged_user_name') || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      currentUserEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim().toUpperCase();
+    }
+  } catch (_) {}
+
+  // Fallback defaults if not set in localStorage
+  if (!currentUserName) {
+    if (userRole === 'Sales Executive') currentUserName = 'mohith jv';
+    else if (userRole === 'Sales Head') currentUserName = 'vijay';
+    else if (userRole === 'Technical Administrator' || userRole === 'CEO') currentUserName = 'annamalaiyar';
+  }
+
+  // 1. Direct match by employee ID
+  if (currentUserEmpId) {
+    for (const t of roleList) {
+      if (t && String(t).trim().toUpperCase() === currentUserEmpId) return true;
+    }
+    if (metadata && metadata.salesPersonCode && String(metadata.salesPersonCode).trim().toUpperCase() === currentUserEmpId) {
+      return true;
+    }
+  }
+
+  // 2. Direct match by user name (e.g. Sales Person who created the BOM)
+  if (currentUserName) {
+    for (const t of roleList) {
+      if (!t) continue;
+      const cleanTarget = String(t).replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (cleanTarget && (cleanTarget === currentUserName || cleanTarget.includes(currentUserName) || currentUserName.includes(cleanTarget))) {
+        return true;
+      }
+    }
+    if (metadata && (metadata.salesPerson || metadata.createdBy)) {
+      const sp = String(metadata.salesPerson || metadata.createdBy).replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (sp && (sp === currentUserName || sp.includes(currentUserName) || currentUserName.includes(sp))) {
+        return true;
+      }
+    }
+  }
+
+  // 3. Direct match by userRole
   if (roleList.includes(userRole)) return true;
 
-  // Departmental fuzzy matches
+  // 4. Departmental / role-level matching
   const normalizedUserRole = userRole.toLowerCase();
 
   for (const t of roleList) {
@@ -411,6 +455,18 @@ export function isRoleTargeted(userRole, targetRoles) {
     
     // Sales department
     if (norm.includes('sales') && normalizedUserRole.includes('sales')) {
+      // If notification has a specific salesPerson and this user is a Sales Executive:
+      if (normalizedUserRole === 'sales executive' && currentUserName && metadata && (metadata.salesPerson || metadata.createdBy)) {
+        const creator = String(metadata.salesPerson || metadata.createdBy).replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+        if (creator && creator !== 'sales executive' && creator !== 'sales head' && creator !== 'sales') {
+          // Check if current user is that creator
+          if (creator === currentUserName || creator.includes(currentUserName) || currentUserName.includes(creator)) {
+            return true;
+          }
+          // Different sales executive: do not alert them
+          return false;
+        }
+      }
       return true;
     }
     
@@ -487,14 +543,21 @@ export function sendWorkflowNotification({
     console.error('Error saving live notification:', e);
   }
 
-  // 2. Play iconic Porter-style order alert chime
-  playPorterOrderAlert();
+  // 2. Play iconic Porter-style order alert chime & speak voice cue if current user session is targeted
+  const currentRole = (typeof window !== 'undefined' && window.localStorage)
+    ? (localStorage.getItem('controlroom_user_role') || '')
+    : '';
+  const isTargetedToCurrentSession = isRoleTargeted(currentRole, targetRoles, metadata);
 
-  // 2b. Speak short, punchy Porter-style voice cue (e.g. "New Order to Pack!", "Order Packed!")
-  setTimeout(() => {
-    const cue = getPorterVoiceCue(notification, notification.metadata);
-    speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
-  }, 320);
+  if (isTargetedToCurrentSession) {
+    playPorterOrderAlert();
+
+    // 2b. Speak short, punchy Porter-style voice cue (e.g. "Vikram Solar, Order Packed!")
+    setTimeout(() => {
+      const cue = getPorterVoiceCue(notification, notification.metadata);
+      speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+    }, 320);
+  }
 
   // 3. Emit local event for current tab toast
   if (typeof window !== 'undefined') {
@@ -507,7 +570,7 @@ export function sendWorkflowNotification({
     try {
       broadcastChannel.postMessage({
         type: 'VRM_WORKFLOW_NOTIFICATION',
-        payload: notification
+        payload: { ...notification, fromBroadcast: true }
       });
     } catch (e) {
       console.warn('Error posting to BroadcastChannel:', e);
@@ -595,39 +658,53 @@ export function notifyBomSentToDispatch({ bomCode, customerName, salesPerson }) 
  * 2. Accounts team receives notification: "BOM [BOM ID] is packed and ready for Accounts verification"
  * Clicking redirects to 'Accounts Verification' or 'BOM Orders'.
  */
-export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesPerson }) {
+export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesPerson, salesPersonCode }) {
   const safeCustomer = customerName || 'Customer';
+  const cleanSalesPerson = (salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
 
-  // 2a. Notification for Sales Person
+  // Target list specifically for the salesperson who created this BOM:
+  // Includes their exact name/ID, as well as Sales Executive and Sales Head
+  const salesTargets = [
+    cleanSalesPerson,
+    salesPersonCode,
+    'Sales Executive',
+    'Sales Head'
+  ].filter(Boolean);
+
+  // 2a. Notification specifically for the Sales Person who created the BOM
   sendWorkflowNotification({
     title: `📦 BOM Packed & Sent to Accounts`,
     message: `BOM ${bomCode} (${safeCustomer}) has been packed and proceeded to Accounts verification.`,
     targetTab: 'BOM Orders',
-    targetRoles: ['Sales Executive', 'Sales Head'],
+    targetRoles: salesTargets,
     type: 'success',
     soundType: 'success',
     metadata: {
       bomCode,
       customerName: safeCustomer,
-      salesPerson: salesPerson || 'Sales Executive',
-      step: 'BOM_PACKED_SALES_NOTIF'
+      salesPerson: cleanSalesPerson || 'Sales Executive',
+      salesPersonCode: salesPersonCode || '',
+      step: 'BOM_PACKED'
     }
   });
 
-  // 2b. Notification for Accounts Team
-  return sendWorkflowNotification({
-    title: `💳 New BOM for Accounts Verification`,
-    message: `BOM ${bomCode} (${safeCustomer}) is fully packed and ready for payment & accounts verification.`,
-    targetTab: 'Accounts Verification',
-    targetRoles: ['Accounts Head', 'Accounts Executive'],
-    type: 'info',
-    soundType: 'chime',
-    metadata: {
-      bomCode,
-      customerName: safeCustomer,
-      step: 'BOM_PACKED_ACCOUNTS_NOTIF'
-    }
-  });
+  // 2b. Notification for Accounts Team (staggered slightly so voice alerts don't collide)
+  setTimeout(() => {
+    sendWorkflowNotification({
+      title: `💳 New BOM for Accounts Verification`,
+      message: `BOM ${bomCode} (${safeCustomer}) is fully packed and ready for payment & accounts verification.`,
+      targetTab: 'Accounts Verification',
+      targetRoles: ['Accounts Head', 'Accounts Executive'],
+      type: 'info',
+      soundType: 'chime',
+      metadata: {
+        bomCode,
+        customerName: safeCustomer,
+        salesPerson: cleanSalesPerson,
+        step: 'BOM_PACKED_ACCOUNTS_NOTIF'
+      }
+    });
+  }, 1600);
 }
 
 /**

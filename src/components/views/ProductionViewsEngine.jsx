@@ -10502,29 +10502,47 @@ export default function ProductionViewsEngine(props) {
                 return inv;
               }));
               setDispatchPackingModal(null);
+
+              // Safely resolve the salesperson who created the BOM and customer name
+              const matchingBom = (bomStore || []).find(b => b.bomCode === targetBomCode || b.code === targetBomCode || b.id === dispatchPackingModal.id);
+              const resolvedSalesPerson = (dispatchPackingModal.salesPerson || dispatchPackingModal.createdBy || dispatchPackingModal.salesperson || matchingBom?.salesPerson || matchingBom?.createdBy || matchingBom?.salesperson || '').replace(/\s*\([^)]*\)/g, '').trim();
+              const resolvedSalesPersonCode = dispatchPackingModal.salesPersonCode || dispatchPackingModal.createdById || matchingBom?.salesPersonCode || matchingBom?.createdById || '';
+              const resolvedCustomer = dispatchPackingModal.customerName || dispatchPackingModal.companyName || matchingBom?.customerName || matchingBom?.companyName || 'Customer';
+
               addLiveNotification({
                 id: `notif-pack-${targetBomCode}-${Date.now()}`,
                 title: allItemsPacked ? 'BOM Packing Verified' : 'BOM Packing Updated',
-                message: `BOM Order ${targetBomCode} for ${dispatchPackingModal.customerName || 'Customer'} is ${allItemsPacked ? '100% Packed & Ready' : 'Partially Packed'}. Status: ${nextStatus}`,
+                message: `BOM Order ${targetBomCode} for ${resolvedCustomer} is ${allItemsPacked ? '100% Packed & Ready' : 'Partially Packed'}. Status: ${nextStatus}`,
                 type: allItemsPacked ? 'success' : 'info',
                 category: 'Dispatch',
                 time: 'Just now',
-                targetTab: 'Accounts Verification',
-                targetRoles: ['Sales Executive', 'Sales Head', 'Accounts Head', 'Accounts Executive', 'Production Head', 'Dispatch Head']
+                targetTab: 'BOM Orders',
+                targetRoles: [resolvedSalesPerson, resolvedSalesPersonCode, 'Sales Executive', 'Sales Head', 'Accounts Head', 'Accounts Executive', 'Production Head', 'Dispatch Head'].filter(Boolean),
+                metadata: {
+                  bomCode: targetBomCode,
+                  customerName: resolvedCustomer,
+                  salesPerson: resolvedSalesPerson,
+                  salesPersonCode: resolvedSalesPersonCode,
+                  step: 'BOM_PACKED'
+                }
               });
+
               if (allItemsPacked) {
-                // Trigger Real-time Workflow Notifications with synthesized sound & deep-links for Sales & Accounts
+                // Trigger Real-time Workflow Notifications with Porter order alert sound & voice for Sales & Accounts
                 notifyBomPackedAndSentToAccounts({
                   bomCode: targetBomCode,
-                  customerName: dispatchPackingModal.customerName || dispatchPackingModal.companyName,
-                  salesPerson: dispatchPackingModal.salesPerson
+                  customerName: resolvedCustomer,
+                  salesPerson: resolvedSalesPerson,
+                  salesPersonCode: resolvedSalesPersonCode
                 });
 
-                if (isWhileDispatch) {
-                  alert(`📦 Dispatch packing completed for BOM (${targetBomCode})!\n🔔 Notification sent to Salesperson to attach Dispatch Payment Receipt before Accounts verification.`);
-                } else {
-                  alert(`📦 Dispatch packing verified & completed for BOM (${targetBomCode})!\nOrder is now forwarded to Accounts for payment & document verification.`);
-                }
+                setTimeout(() => {
+                  if (isWhileDispatch) {
+                    alert(`📦 Dispatch packing completed for BOM (${targetBomCode})!\n🔔 Notification sent to Salesperson (${resolvedSalesPerson || 'Sales Creator'}) to attach Dispatch Payment Receipt before Accounts verification.`);
+                  } else {
+                    alert(`📦 Dispatch packing verified & completed for BOM (${targetBomCode})!\nOrder is now forwarded to Accounts for payment & document verification.`);
+                  }
+                }, 350);
               } else {
                 alert(`📦 Dispatch packing progress saved as Partially Packed.`);
               }

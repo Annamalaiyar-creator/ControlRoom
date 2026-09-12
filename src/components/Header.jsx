@@ -151,7 +151,7 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
 
   // Filter notifications based on active user login role (or show system-wide alerts)
   const roleNotifications = liveNotifications.filter(n => {
-    return isRoleTargeted(userRole, n.targetRoles || n.role);
+    return isRoleTargeted(userRole, n.targetRoles || n.role, n.metadata);
   });
 
   const unreadNotifications = roleNotifications.filter(n => {

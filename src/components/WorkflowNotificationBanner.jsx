@@ -23,8 +23,17 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
       if (!notif) return;
 
       // Filter by role unless Admin or All
-      if (!isRoleTargeted(userRole, notif.targetRoles)) {
+      if (!isRoleTargeted(userRole, notif.targetRoles, notif.metadata)) {
         return;
+      }
+
+      // If received from another tab via BroadcastChannel, play chime & voice in this tab for the targeted sales person
+      if (notif.fromBroadcast) {
+        playPorterOrderAlert();
+        setTimeout(() => {
+          const cue = getPorterVoiceCue(notif, notif.metadata);
+          speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+        }, 320);
       }
 
       // Clear any previous timers
