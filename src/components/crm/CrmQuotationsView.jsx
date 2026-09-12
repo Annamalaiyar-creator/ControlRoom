@@ -2223,10 +2223,10 @@ export default function CrmQuotationsView({
                     5
                   </div>
                   <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Landmark size={16} style={{ color: '#0E7490' }} /> OUR COMPANY BANK ACCOUNT DETAILS
+                    <Landmark size={16} style={{ color: '#0E7490' }} /> VRM OFFICIAL COMMERCIAL BANK DETAILS
                   </h3>
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 9px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#ECFDF5', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 9px', borderRadius: '6px' }}>
                   RTGS / NEFT / IMPS
                 </span>
               </div>
@@ -2249,7 +2249,7 @@ export default function CrmQuotationsView({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px' }}>
                     <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Bank Name</div>
-                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>HDFC Bank Ltd</div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>HDFC Bank</div>
                   </div>
                   <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px' }}>
                     <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Account Type</div>
@@ -2277,11 +2277,11 @@ export default function CrmQuotationsView({
                   <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '10px', color: '#0284C7', fontWeight: '700', textTransform: 'uppercase' }}>IFSC Code</div>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#0369A1', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>HDFC0000574</div>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#0369A1', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>HDFC0007315</div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleCopyBankDetail('HDFC0000574', 'IFSC Code')}
+                      onClick={() => handleCopyBankDetail('HDFC0007315', 'IFSC Code')}
                       title="Copy IFSC Code"
                       style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                     >
@@ -2292,7 +2292,7 @@ export default function CrmQuotationsView({
 
                 {/* Branch Location */}
                 <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span><strong>Branch:</strong> Kodambakkam, Chennai</span>
+                  <span><strong>Branch:</strong> Vinayagapuram Branch</span>
                   <span style={{ color: '#64748B', fontSize: '10px' }}>Settlement: INR (₹)</span>
                 </div>
               </div>
@@ -3403,7 +3403,7 @@ export default function CrmQuotationsView({
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
                     <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <Landmark size={15} style={{ color: '#0284C7' }} /> COMPANY BANK ACCOUNT DETAILS
+                      <Landmark size={15} style={{ color: '#0284C7' }} /> VRM OFFICIAL COMMERCIAL BANK DETAILS
                     </h4>
                     <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#E0F2FE', color: '#0284C7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BAE6FD' }}>
                       RTGS / NEFT / IMPS
@@ -3419,7 +3419,7 @@ export default function CrmQuotationsView({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 10px' }}>
                         <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600' }}>Bank Name:</div>
-                        <strong style={{ color: '#0F172A', fontSize: '12px' }}>HDFC Bank Ltd</strong>
+                        <strong style={{ color: '#0F172A', fontSize: '12px' }}>HDFC Bank</strong>
                       </div>
                       <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 10px' }}>
                         <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600' }}>Account Type:</div>
@@ -3446,11 +3446,11 @@ export default function CrmQuotationsView({
                       <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <div style={{ color: '#0284C7', fontSize: '10px', fontWeight: '700' }}>IFSC Code:</div>
-                          <strong style={{ color: '#0369A1', fontFamily: 'monospace', fontSize: '13px' }}>HDFC0000574</strong>
+                          <strong style={{ color: '#0369A1', fontFamily: 'monospace', fontSize: '13px' }}>HDFC0007315</strong>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleCopyBankDetail('HDFC0000574', 'IFSC Code')}
+                          onClick={() => handleCopyBankDetail('HDFC0007315', 'IFSC Code')}
                           title="Copy IFSC Code"
                           style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '4px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                         >
@@ -3460,7 +3460,7 @@ export default function CrmQuotationsView({
                     </div>
 
                     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 10px', color: '#475569', fontSize: '11px' }}>
-                      <strong>Branch:</strong> Kodambakkam, Chennai
+                      <strong>Branch:</strong> Vinayagapuram Branch
                     </div>
                   </div>
                 </div>

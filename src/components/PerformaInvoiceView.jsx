@@ -3241,7 +3241,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   <div style={{ paddingBottom: '10px', borderBottom: '1px solid #CCFBF1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Beneficiary Account Name</div>
-                      <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>VRM STRUCTURES INDIA PVT LTD</div>
+                      <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>VRM Structures India Private Limited</div>
                     </div>
                     <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A7F3D0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       <ShieldCheck size={13} /> Verified
@@ -3252,7 +3252,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCFBF1', borderRadius: '8px', padding: '10px 12px' }}>
                       <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Bank Name</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>HDFC Bank Ltd</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>HDFC Bank</div>
                     </div>
                     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCFBF1', borderRadius: '8px', padding: '10px 12px' }}>
                       <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Account Type</div>
@@ -3265,11 +3265,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #99F6E4', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: '10px', color: '#0E7490', fontWeight: '700', textTransform: 'uppercase' }}>Current Account Number</div>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>50200088912456</div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>50200031629272</div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleCopyBankDetail('50200088912456', 'Account Number')}
+                        onClick={() => handleCopyBankDetail('50200031629272', 'Account Number')}
                         title="Copy Account Number"
                         style={{ border: '1px solid #99F6E4', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                       >
@@ -3280,11 +3280,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #99F6E4', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: '10px', color: '#0E7490', fontWeight: '700', textTransform: 'uppercase' }}>RTGS / NEFT / IFSC</div>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>HDFC0001234</div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>HDFC0007315</div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleCopyBankDetail('HDFC0001234', 'IFSC Code')}
+                        onClick={() => handleCopyBankDetail('HDFC0007315', 'IFSC Code')}
                         title="Copy IFSC Code"
                         style={{ border: '1px solid #99F6E4', backgroundColor: '#ECFEFF', color: '#0E7490', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                       >
@@ -3295,7 +3295,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                   {/* Branch Location */}
                   <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCFBF1', borderRadius: '8px', padding: '8px 12px', fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span><strong>Branch:</strong> Ambattur Industrial Estate, Chennai - 600058</span>
+                    <span><strong>Branch:</strong> Vinayagapuram Branch</span>
                     <span style={{ color: '#0E7490', fontSize: '10px', fontWeight: '700' }}>Settlement: INR (₹)</span>
                   </div>
                 </div>

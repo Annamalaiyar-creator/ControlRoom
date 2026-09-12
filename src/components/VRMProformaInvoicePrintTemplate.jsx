@@ -113,12 +113,12 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   showBankAccountNo: true,
   showBankIfsc: true,
   showBankBranch: true,
-  bankHeading: 'VRM Company Bank Details (NEFT / RTGS / IMPS)',
+  bankHeading: 'VRM Official Commercial Bank Details (NEFT / RTGS / IMPS)',
   bankBeneficiary: 'VRM Structures India Private Limited',
-  bankName: 'HDFC Bank Ltd.',
+  bankName: 'HDFC Bank',
   bankAccountNo: '50200031629272',
-  bankIfsc: 'HDFC0000574',
-  bankBranch: 'Kodambakkam, Chennai',
+  bankIfsc: 'HDFC0007315',
+  bankBranch: 'Vinayagapuram Branch',
   bankAccountType: 'Current Account',
 
   // Terms & Conditions
@@ -3330,6 +3330,10 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         if (parsed.companyTagline === 'Engineered Solar Mounting Structures & Solutions') parsed.companyTagline = '';
         if (parsed.companyCin === 'U28112TN2020PTC135489') parsed.companyCin = '';
         if (parsed.signatureMode === 'vector' && !parsed.customSignatureUrl) parsed.signatureMode = 'none';
+        if (parsed.bankIfsc === 'HDFC0000574' || parsed.bankIfsc === 'HDFC0001234') parsed.bankIfsc = 'HDFC0007315';
+        if (parsed.bankBranch === 'Kodambakkam, Chennai' || parsed.bankBranch === 'Kodambakkam' || parsed.bankBranch?.includes('Ambattur')) parsed.bankBranch = 'Vinayagapuram Branch';
+        if (parsed.bankAccountNo === '50200088912456') parsed.bankAccountNo = '50200031629272';
+        if (parsed.bankName === 'HDFC Bank Ltd.' || parsed.bankName === 'HDFC Bank Ltd') parsed.bankName = 'HDFC Bank';
         parsed.showCompanyName = false;
         parsed.showCompanyTagline = false;
         initial = { ...initial, ...parsed };

@@ -286,8 +286,8 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                   <div>Beneficiary: VRM Structures India Private Limited</div>
                   <div>A/c No: 50200031629272</div>
                   <div>Bank: HDFC Bank</div>
-                  <div>Branch: Kodambakkam</div>
-                  <div>IFSC: HDFC0000574</div>
+                  <div>Branch: Vinayagapuram Branch</div>
+                  <div>IFSC: HDFC0007315</div>
                 </div>
 
                 <div style={{ fontSize: '10px', color: '#1E293B', lineHeight: '1.4' }}>
