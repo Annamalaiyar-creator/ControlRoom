@@ -109,7 +109,7 @@ export async function fetchCloudStore(storeKey, fallbackData = []) {
     const res = await fetch(`/api/store/${storeKey}`);
     if (res.ok) {
       const json = await res.json();
-      if (json && json.data && Array.isArray(json.data)) {
+      if (json && json.data !== undefined && json.data !== null) {
         return json.data;
       }
     }
@@ -192,6 +192,13 @@ export async function saveCloudStoreImmediate(storeKey, storeData) {
         const existingCloud = JSON.parse(record.reason);
         if (Array.isArray(existingCloud) && existingCloud.length > 0) {
           finalPayload = mergeDatasets(existingCloud, storeData);
+        }
+      } catch (_) {}
+    } else if (storeData && typeof storeData === 'object' && !Array.isArray(storeData) && record && record.reason) {
+      try {
+        const existingCloud = JSON.parse(record.reason);
+        if (existingCloud && typeof existingCloud === 'object' && !Array.isArray(existingCloud)) {
+          finalPayload = { ...existingCloud, ...storeData };
         }
       } catch (_) {}
     }

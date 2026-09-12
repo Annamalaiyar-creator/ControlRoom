@@ -115,23 +115,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const getConvertedBomsForPi = (pi) => {
     if (!pi) return [];
     const piNum = (pi.piNo || pi.estimate_number || pi.id || '').trim().toLowerCase();
-    const explicitCode = (pi.convertedBomNo || pi.convertedBomCode || '').trim();
+    const explicitCode = (pi.convertedBomNo || pi.convertedBomCode || '').trim().toLowerCase();
 
-    const matches = (bomList || []).filter(b => {
+    return (bomList || []).filter(b => {
       if (!b) return false;
       const sPi = (b.sourcePiNo || b.piNo || '').trim().toLowerCase();
-      if (piNum && sPi && (sPi === piNum || sPi.includes(piNum) || piNum.includes(sPi))) return true;
+      // Strict exact match for PI number
+      if (piNum && sPi && sPi === piNum) return true;
       if (explicitCode) {
         const bCode = (b.bomCode || b.code || b.id || '').trim().toLowerCase();
-        if (bCode === explicitCode.toLowerCase()) return true;
+        if (bCode && bCode === explicitCode) return true;
       }
       return false;
     });
-
-    if (matches.length === 0 && explicitCode) {
-      return [{ bomCode: explicitCode, code: explicitCode, id: explicitCode, status: 'Sales Confirmed' }];
-    }
-    return matches;
   };
 
   const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
@@ -411,24 +407,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
     };
 
-    // Update PI record status to 'Converted to BOM' and ensure it persists safely
-    const updatedRecord = {
-      ...pi,
-      id: pi.id || pi.piNo,
-      status: 'Converted to BOM',
-      statusType: 'converted',
-      convertedToBom: true
-    };
-    const updatedList = piList.map(item => item.piNo === pi.piNo ? updatedRecord : item);
-    updatePiList(updatedList);
-
-    // Also persist update to server and Zoho
-    fetch('/api/zoho/estimates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedRecord)
-    }).catch(() => {});
-
     try {
       localStorage.setItem('controlroom_pending_pi_to_bom', JSON.stringify(conversionData));
     } catch (e) {}
@@ -682,17 +660,21 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
     const sub = itemsSub + kitSubtotal;
 
-    // 3. GST: Custom item GSTs + Preset kits GST (dynamically from preset's selected gstRate)
-    const itemsGst = (piItems || []).reduce((acc, item) => {
-      if (item.isPresetItem) return acc;
+    // 3. GST: Custom item GSTs + Preset kits GST grouped by rate (e.g. 5%, 18%)
+    const gstTiersMap = {};
+
+    (piItems || []).forEach(item => {
+      if (item.isPresetItem) return;
       const q = parseFloat(item.qty) || 0;
       const r = parseFloat(item.rate) || 0;
       const rowTot = q * r;
       const pct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-      return acc + (rowTot * (pct / 100));
-    }, 0);
+      const amt = rowTot * (pct / 100);
+      if (!gstTiersMap[pct]) gstTiersMap[pct] = { rate: pct, taxable: 0, gstAmt: 0 };
+      gstTiersMap[pct].taxable += rowTot;
+      gstTiersMap[pct].gstAmt += amt;
+    });
 
-    let kitGst = 0;
     groupIds.forEach(grpId => {
       const grp = presetGroups[grpId];
       if (grp) {
@@ -703,33 +685,44 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const groupItems = (piItems || []).filter(it => (it.presetGroupId || 'legacy_default') === grpId);
         const totalQty = groupItems.reduce((sum, it) => sum + (parseFloat(it.qty) || 1), 0);
 
-        if (totalQty > 0) {
+        if (groupItems.length > 0 && totalQty > 0) {
           groupItems.forEach(it => {
             const itQty = parseFloat(it.qty) || 1;
             const itemShare = groupTotal * (itQty / totalQty);
-            const itGstRate = parseFloat(String(it.gstRate || grp.gstRate || '18%').replace('%', '')) || 0;
-            kitGst += itemShare * (itGstRate / 100);
+            const itGstRate = parseFloat(String(it.gstRate || grp.gstRate || '18%').replace('%', '')) || 18;
+            const itAmt = itemShare * (itGstRate / 100);
+            if (!gstTiersMap[itGstRate]) gstTiersMap[itGstRate] = { rate: itGstRate, taxable: 0, gstAmt: 0 };
+            gstTiersMap[itGstRate].taxable += itemShare;
+            gstTiersMap[itGstRate].gstAmt += itAmt;
           });
         } else {
           const gRateStr = grp?.gstRate || '18%';
-          const gPct = parseFloat(String(gRateStr).replace('%', '')) || 0;
-          kitGst += groupTotal * (gPct / 100);
+          const gPct = parseFloat(String(gRateStr).replace('%', '')) || 18;
+          const gAmt = groupTotal * (gPct / 100);
+          if (!gstTiersMap[gPct]) gstTiersMap[gPct] = { rate: gPct, taxable: 0, gstAmt: 0 };
+          gstTiersMap[gPct].taxable += groupTotal;
+          gstTiersMap[gPct].gstAmt += gAmt;
         }
       }
     });
 
-    const gst = itemsGst + kitGst;
+    const gstTiers = Object.values(gstTiersMap)
+      .filter(t => t.gstAmt > 0 || t.taxable > 0)
+      .sort((a, b) => a.rate - b.rate);
 
+    const gst = gstTiers.reduce((sum, t) => sum + t.gstAmt, 0);
     const grand = sub + gst;
     const cgst = gst / 2;
     const sgst = gst / 2;
+
     return {
       sub: isNaN(sub) ? 0 : sub,
       kitSubtotal: isNaN(kitSubtotal) ? 0 : kitSubtotal,
       gst: isNaN(gst) ? 0 : gst,
       grand: isNaN(grand) ? 0 : grand,
       cgst: isNaN(cgst) ? 0 : cgst,
-      sgst: isNaN(sgst) ? 0 : sgst
+      sgst: isNaN(sgst) ? 0 : sgst,
+      gstTiers: gstTiers.length > 0 ? gstTiers : [{ rate: 18, taxable: sub, gstAmt: gst }]
     };
   };
 
@@ -1398,15 +1391,20 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             String(pi.productName || '').toLowerCase().includes(searchLower) ||
             bomCodesStr.includes(searchLower);
 
-          const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-          const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom) || hasSavedBom;
+          const isConverted = hasSavedBom;
+          const currentStatus = isConverted
+            ? 'Converted to BOM'
+            : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM')
+              ? 'Issued'
+              : (pi.status || 'Issued'));
+
           const matchesStatus = statusFilter === 'All'
-            || (statusFilter === 'Issued' && (currentStatus === 'Issued' || isConverted))
-            || (statusFilter === 'Converted to BOM' && isConverted)
+            || (statusFilter === 'Issued' && currentStatus === 'Issued')
+            || (statusFilter === 'Converted to BOM' && currentStatus === 'Converted to BOM')
             || currentStatus === statusFilter;
           const matchesTab = piTab === 'All'
-            || (piTab === 'Issued' && (currentStatus === 'Issued' || isConverted))
-            || (piTab === 'Converted to BOM' && isConverted)
+            || (piTab === 'Issued' && currentStatus === 'Issued')
+            || (piTab === 'Converted to BOM' && currentStatus === 'Converted to BOM')
             || currentStatus === piTab;
           return matchesSearch && matchesStatus && matchesTab;
         });
@@ -1536,10 +1534,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 {[
                   { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
                   { id: 'Issued', label: 'Issued / Active', count: visiblePIList.filter(pi => {
-                    const st = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-                    return st === 'Issued' || st === 'Converted to BOM' || Boolean(pi.convertedToBom) || getConvertedBomsForPi(pi).length > 0;
+                    const isConverted = getConvertedBomsForPi(pi).length > 0;
+                    const st = isConverted ? 'Converted to BOM' : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM') ? 'Issued' : (pi.status || 'Issued'));
+                    return st === 'Issued';
                   }).length },
-                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM' || Boolean(pi.convertedToBom) || getConvertedBomsForPi(pi).length > 0).length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => getConvertedBomsForPi(pi).length > 0).length },
                   { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
@@ -1610,8 +1609,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                         const matchedBoms = getConvertedBomsForPi(pi);
                         const hasSavedBom = matchedBoms.length > 0;
-                        const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-                        const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom) || hasSavedBom;
+                        const isConverted = hasSavedBom;
+                        const currentStatus = isConverted
+                          ? 'Converted to BOM'
+                          : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM')
+                            ? 'Issued'
+                            : (pi.status || 'Issued'));
 
                         let statusBg = '#eff6ff';
                         let statusFg = '#2563eb';
@@ -1621,10 +1624,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           statusBg = '#ecfdf5';
                           statusFg = '#059669';
                           displayStatus = 'Converted to BOM';
-                        } else if (isConverted) {
-                          statusBg = '#fffbeb';
-                          statusFg = '#d97706';
-                          displayStatus = 'Conversion Pending';
                         } else if (currentStatus === 'Issued') {
                           statusBg = '#f0fdf4';
                           statusFg = '#16a34a';
@@ -1965,7 +1964,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   if (!target || target.status === 'Cancelled') return null;
                   const matchedBoms = getConvertedBomsForPi(target);
                   const hasSavedBom = matchedBoms.length > 0;
-                  const isConverted = target.status === 'Converted to BOM' || Boolean(target.convertedToBom) || hasSavedBom;
+                  const isConverted = hasSavedBom;
 
                   if (hasSavedBom) {
                     const firstBomCode = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
@@ -3357,18 +3356,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <span>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
-                    <span>CGST (9%):</span>
-                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
-                    <span>SGST (9%):</span>
-                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
+                  {(totals.gstTiers || []).map(tier => (
+                    <div key={tier.rate} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                      <span>IGST ({tier.rate}%):</span>
+                      <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{tier.gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  ))}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '7px 12px', borderRadius: '8px' }}>
-                    <span>Total GST Amount (18%):</span>
+                    <span>Total GST Amount:</span>
                     <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
 
@@ -3513,7 +3509,36 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const totalGstVal = Math.max(0, grandTotalVal - subtotalVal);
         const matchedBoms = getConvertedBomsForPi(selectedPi);
         const hasSavedBom = matchedBoms.length > 0;
-        const isConverted = selectedPi.status === 'Converted to BOM' || Boolean(selectedPi.convertedToBom) || hasSavedBom;
+        const isConverted = hasSavedBom;
+
+        const modalGstTiersMap = {};
+        (piItemsList || []).forEach(it => {
+          const q = parseFloat(it.qty) || 1;
+          const r = parseFloat(it.rate) || 0;
+          const taxable = it.taxable !== undefined ? parseFloat(it.taxable) : (q * r);
+          const rate = parseFloat(String(it.gstRate || '18').replace('%', '')) || 18;
+          const amt = taxable * (rate / 100);
+          if (!modalGstTiersMap[rate]) modalGstTiersMap[rate] = { rate, taxable: 0, gstAmt: 0 };
+          modalGstTiersMap[rate].taxable += taxable;
+          modalGstTiersMap[rate].gstAmt += amt;
+        });
+
+        if (selectedPi.presetGroups) {
+          Object.values(selectedPi.presetGroups).forEach(grp => {
+            const unitPrice = parseFloat(grp.kitPrice) || 0;
+            const multiplier = parseInt(grp.setCount) || 1;
+            const groupTotal = unitPrice * multiplier;
+            const rate = parseFloat(String(grp.gstRate || '18').replace('%', '')) || 18;
+            const amt = groupTotal * (rate / 100);
+            if (!modalGstTiersMap[rate]) modalGstTiersMap[rate] = { rate, taxable: 0, gstAmt: 0 };
+            modalGstTiersMap[rate].taxable += groupTotal;
+            modalGstTiersMap[rate].gstAmt += amt;
+          });
+        }
+
+        const modalGstTiers = Object.values(modalGstTiersMap)
+          .filter(t => t.gstAmt > 0 || t.taxable > 0)
+          .sort((a, b) => a.rate - b.rate);
 
         return (
           <div
@@ -3715,79 +3740,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   </div>
                 )}
 
-                {!hasSavedBom && isConverted && (
-                  <div style={{
-                    backgroundColor: '#FFFBEB',
-                    border: '1.5px solid #FCD34D',
-                    borderRadius: '14px',
-                    padding: '16px 20px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '12px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#D97706', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                        ⏳
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#92400E' }}>
-                          Conversion Initiated — Pending BOM Order Creation
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#B45309', marginTop: '2px' }}>
-                          This Proforma Invoice was marked for conversion, but the BOM order hasn't been saved to the database yet.
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const p = selectedPi;
-                          setSelectedPi(null);
-                          handleConvertToBom(p);
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#D97706',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        Complete BOM Creation
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const uncovertedRecord = { ...selectedPi, status: 'Issued', convertedToBom: false };
-                          const updatedList = piList.map(item => item.piNo === selectedPi.piNo ? uncovertedRecord : item);
-                          updatePiList(updatedList);
-                          setSelectedPi(uncovertedRecord);
-                        }}
-                        style={{
-                          padding: '8px 14px',
-                          backgroundColor: '#FFFFFF',
-                          color: '#78350F',
-                          border: '1px solid #D97706',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Revert to Issued
-                      </button>
-                    </div>
-                  </div>
-                )}
+
 
                 {/* 1. Customer & Contact Details Card */}
                 <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px' }}>
@@ -3983,10 +3936,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <span>Taxable Product Value:</span>
                       <strong style={{ color: '#0F172A' }}>₹ {subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
-                      <span>Applicable GST (Taxes):</span>
-                      <strong style={{ color: '#0F172A' }}>₹ {totalGstVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                    </div>
+                    {modalGstTiers.length > 0 ? (
+                      modalGstTiers.map(tier => (
+                        <div key={tier.rate} style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                          <span>IGST ({tier.rate}%):</span>
+                          <strong style={{ color: '#0F172A' }}>₹ {tier.gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                        <span>Applicable GST (Taxes):</span>
+                        <strong style={{ color: '#0F172A' }}>₹ {totalGstVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #0E7490', marginTop: '4px' }}>
                       <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>Total Invoice Amount:</span>
                       <strong style={{ fontSize: '18px', fontWeight: '900', color: '#0E7490' }}>
@@ -4072,31 +4034,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       }}
                     >
                       <Layers size={16} /> View {matchedBoms[0]?.bomCode || 'BOM'} Order ↗
-                    </button>
-                  ) : (!hasSavedBom && isConverted) ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const pi = selectedPi;
-                        setSelectedPi(null);
-                        handleConvertToBom(pi);
-                      }}
-                      style={{
-                        padding: '10px 22px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        backgroundColor: '#D97706',
-                        color: '#FFFFFF',
-                        fontSize: '13px',
-                        fontWeight: '800',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(217,119,6,0.3)'
-                      }}
-                    >
-                      <Layers size={16} /> Complete BOM Creation
                     </button>
                   ) : (
                     selectedPi.status !== 'Cancelled' && (

@@ -294,8 +294,8 @@
     },
     "piDate": "2026-09-12",
     "expDate": "2026-09-27",
-    "status": "Converted to BOM",
-    "statusType": "converted",
+    "status": "Issued",
+    "statusType": "issued",
     "salesPerson": "MOHITH J V",
     "salesperson": "MOHITH J V",
     "salesPersonCode": "SE-VRM004",
@@ -306,7 +306,10 @@
     "zohoEstimateId": "4080449000000409005",
     "zohoModule": "Quotes",
     "zohoSyncError": null,
-    "convertedToBom": true
+    "convertedToBom": false,
+    "convertedBomNo": null,
+    "convertedBomCode": null,
+    "convertedAt": null
   },
   {
     "id": "PI-00014",
@@ -408,7 +411,7 @@
     "amount": "₹47,000.00",
     "total": 47000,
     "status": "Pending",
-    "statusType": "sent",
+    "statusType": "issued",
     "contactPerson": "Ar Annamalaiyar",
     "phone": "7092996057",
     "email": "arannamalaiyar@gmail.com",
@@ -634,10 +637,13 @@
     "approver": "Velmurugan Rathinam (CEO)",
     "approvalPriority": "High",
     "zohoEstimateId": "4080449000000371002",
-    "convertedToBom": true,
+    "convertedToBom": false,
     "zohoSynced": true,
     "zohoModule": "Quotes",
-    "zohoSyncError": "Quote PI-00006 already exists"
+    "zohoSyncError": "Quote PI-00006 already exists",
+    "convertedBomNo": null,
+    "convertedBomCode": null,
+    "convertedAt": null
   },
   {
     "id": "4080449000000386001",
@@ -1063,7 +1069,7 @@
     "amount": "₹38,710.00",
     "total": 38710,
     "status": "Pending",
-    "statusType": "sent",
+    "statusType": "issued",
     "contactPerson": "Kathir enterprises",
     "phone": "9812890956",
     "email": "",
@@ -1312,7 +1318,7 @@
       "uploadedAt": "2026-09-11"
     },
     "expDate": "2026-10-11",
-    "convertedToBom": true,
+    "convertedToBom": false,
     "sourceBomCode": "BOM-681",
     "salesPerson": "MOHITH J V",
     "salesperson": "MOHITH J V",
@@ -1320,10 +1326,11 @@
     "createdBy": "MOHITH J V",
     "createdById": "SE-VRM004",
     "zohoEstimateId": "4080449000000408001",
-    "convertedBomNo": "BOM-681",
-    "convertedBomCode": "BOM-681",
+    "convertedBomNo": null,
+    "convertedBomCode": null,
     "zohoSynced": true,
-    "zohoModule": "Quotes"
+    "zohoModule": "Quotes",
+    "convertedAt": null
   },
   {
     "id": "4080449000000406001",
@@ -1335,7 +1342,7 @@
     "amount": "₹3,88,200.00",
     "total": 388200,
     "status": "Pending",
-    "statusType": "sent",
+    "statusType": "issued",
     "contactPerson": "Annamalaiyar",
     "phone": "7092996057",
     "email": "arannamalaiyar",
@@ -1565,10 +1572,13 @@
     "salesPersonCode": "SE-VRM001",
     "createdBy": "Mohit JV",
     "createdById": "SE-VRM001",
-    "convertedToBom": true,
+    "convertedToBom": false,
     "zohoEstimateId": "4080449000000406001",
     "zohoSynced": true,
-    "zohoModule": "Quotes"
+    "zohoModule": "Quotes",
+    "convertedBomNo": null,
+    "convertedBomCode": null,
+    "convertedAt": null
   },
   {
     "id": "4080449000000399003",

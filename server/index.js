@@ -706,6 +706,14 @@ app.post('/api/store/:key', async (req, res) => {
       });
 
       finalDataToSave = Array.from(map.values());
+    } else if (key === 'presets_store' && storeData && typeof storeData === 'object' && !Array.isArray(storeData)) {
+      let existingPresets = {};
+      if (fs.existsSync(filePath)) {
+        try {
+          existingPresets = JSON.parse(fs.readFileSync(filePath, 'utf8')) || {};
+        } catch (_) {}
+      }
+      finalDataToSave = { ...existingPresets, ...storeData };
     }
 
     try {

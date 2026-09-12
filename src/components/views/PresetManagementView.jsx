@@ -5,7 +5,7 @@ import {
   Package, AlertCircle, ArrowLeft, Eye
 } from 'lucide-react';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
-import { VRM_HDG_PRESETS, getAllActivePresets, saveCustomPreset, deleteCustomPreset } from '../../vrmHdgProposalPresets';
+import { VRM_HDG_PRESETS, getAllActivePresets, saveCustomPreset, deleteCustomPreset, syncPresetsWithCloud } from '../../vrmHdgProposalPresets';
 import { saveCloudStore, fetchCloudStore } from '../../utils/supabaseDataSync';
 import CreatePresetKitView from './CreatePresetKitView';
 
@@ -31,17 +31,16 @@ export default function PresetManagementView(props) {
   const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [suggestedProducts, setSuggestedProducts] = useState([]);
 
-  // Load from cloud or localStorage on mount
+  // Load and sync from cloud/server on mount
   useEffect(() => {
     const loadStore = async () => {
       try {
-        const cloudData = await fetchCloudStore('presets_store', {});
-        if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
-          const merged = { ...VRM_HDG_PRESETS, ...cloudData };
-          setAllPresets(merged);
+        const synced = await syncPresetsWithCloud();
+        if (synced && typeof synced === 'object') {
+          setAllPresets(synced);
         }
       } catch (err) {
-        console.error('Failed to load cloud presets', err);
+        console.error('Failed to sync cloud presets', err);
       }
     };
     loadStore();

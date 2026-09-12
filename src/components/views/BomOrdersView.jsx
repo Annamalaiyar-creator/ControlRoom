@@ -3704,6 +3704,12 @@ export default function BomOrdersView(props) {
                                       return item;
                                     });
                                     localStorage.setItem(storeKey, JSON.stringify(updated));
+                                    fetch(`/api/store/${storeKey.replace('controlroom_', '')}`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(updated)
+                                    }).catch(() => {});
+                                    saveCloudStoreImmediate(storeKey.replace('controlroom_', ''), updated).catch(() => {});
                                   }
                                 }
                               } catch (_) {}

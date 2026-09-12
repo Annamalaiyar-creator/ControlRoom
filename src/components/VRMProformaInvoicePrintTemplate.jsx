@@ -768,6 +768,33 @@ export function VRMProformaInvoicePrintSheet({
   const totalGst = (presetGstSum + customGst) || (subTotal * 0.18);
   const grandTotal = subTotal + totalGst;
 
+  // Group GST by rate tier (e.g. 5%, 18%)
+  const gstTiersMap = {};
+
+  // From preset groups
+  Object.values(groupMetaMap).forEach(grp => {
+    const rate = parseFloat(String(grp.gstRateStr || grp.gstRate || '18').replace('%', '')) || 18;
+    if (!gstTiersMap[rate]) gstTiersMap[rate] = { rate, taxable: 0, gstAmt: 0 };
+    gstTiersMap[rate].taxable += (grp.groupSubtotal || 0);
+    gstTiersMap[rate].gstAmt += (grp.groupGst || 0);
+  });
+
+  // From custom non-preset line items
+  items.filter(it => !it.isPresetItem).forEach(it => {
+    const rate = it.gRate || 18;
+    if (!gstTiersMap[rate]) gstTiersMap[rate] = { rate, taxable: 0, gstAmt: 0 };
+    gstTiersMap[rate].taxable += (it.taxable || 0);
+    gstTiersMap[rate].gstAmt += (it.gstAmt || 0);
+  });
+
+  const rawGstTiers = Object.values(gstTiersMap)
+    .filter(t => t.gstAmt > 0 || t.taxable > 0)
+    .sort((a, b) => a.rate - b.rate);
+
+  const gstTiers = rawGstTiers.length > 0
+    ? rawGstTiers
+    : (totalGst > 0 ? [{ rate: 18, taxable: subTotal, gstAmt: totalGst }] : []);
+
   // Terms array from text lines
   const termsLines = (cfg.termsText || '')
     .split('\n')
@@ -1970,29 +1997,14 @@ export function VRMProformaInvoicePrintSheet({
                   </td>
                 </tr>
 
-                {isInterState ? (
-                  <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                    <td style={{ padding: '6px 14px', color: '#475569', fontWeight: '600' }}>IGST (18%):</td>
+                {gstTiers.map((tier) => (
+                  <tr key={tier.rate} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                    <td style={{ padding: '6px 14px', color: '#475569', fontWeight: '600' }}>IGST ({tier.rate}%):</td>
                     <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
-                      ₹{totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{tier.gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
-                ) : (
-                  <>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                      <td style={{ padding: '4px 14px', color: '#475569', fontWeight: '600' }}>CGST (9%):</td>
-                      <td style={{ padding: '4px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
-                        ₹{(totalGst / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                      <td style={{ padding: '4px 14px', color: '#475569', fontWeight: '600' }}>SGST (9%):</td>
-                      <td style={{ padding: '4px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
-                        ₹{(totalGst / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  </>
-                )}
+                ))}
 
                 <tr style={{ borderBottom: `1.5px solid ${accent}`, backgroundColor: `${accent}15` }}>
                   <td style={{ padding: '8px 14px', color: accent, fontWeight: '800', fontSize: '13px' }}>Grand Total:</td>
