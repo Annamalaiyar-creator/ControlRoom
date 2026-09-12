@@ -196,7 +196,12 @@ app.use(helmet({
 // 2. Rate Limiting Firewall against DDoS & Brute Force Attacks
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 300, // max 300 requests per IP per 15 minutes
+  max: 50000, // High capacity for active real-time ERP sync
+  skip: (req) => {
+    // Whitelist local and intranet loopback connections
+    const ip = req.ip || req.connection?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || req.hostname === 'localhost';
+  },
   message: { error: 'Security Firewall Triggered: Too many requests from this IP address. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -1072,7 +1077,8 @@ app.post('/api/zoho/customers', async (req, res) => {
       contact_type: 'customer',
       customer_sub_type: 'business',
       currency_code: 'INR',
-      gst_no: isValidGst ? rawGst : undefined,
+      gst_treatment: isValidGst ? 'business_gst' : 'business_none',
+      gstin: isValidGst ? rawGst : undefined,
       pan_no: localCustomerRecord.panNumber ? String(localCustomerRecord.panNumber).trim().slice(0, 10) : undefined,
       billing_address: billingAddress,
       shipping_address: shippingAddress,
@@ -3638,9 +3644,52 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
             r.end();
           });
         } catch (_) {}
+      } else {
+        zohoErrorMsg = zohoRes?.message || 'Zoho estimate created but record details unavailable';
+        newPI.zohoSynced = false;
+        newPI.zohoSyncError = zohoErrorMsg;
+      }
+    } else if (zohoRes && (zohoRes.code === 36015 || (zohoRes.message && zohoRes.message.toLowerCase().includes('already exists')))) {
+      // If estimate already exists in Zoho Books, search and link its existing Quote ID seamlessly
+      try {
+        const estNum = encodeURIComponent(req.body.piNo || '');
+        const findRes = await new Promise((resolve) => {
+          const opt = {
+            hostname: 'www.zohoapis.in',
+            port: 443,
+            path: `/books/v3/estimates?organization_id=${zohoSession.orgId}&estimate_number=${estNum}`,
+            method: 'GET',
+            headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+          };
+          const r = https.request(opt, (resp) => {
+            let d = '';
+            resp.on('data', c => d += c);
+            resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+          });
+          r.on('error', () => resolve(null));
+          r.end();
+        });
+
+        if (findRes && Array.isArray(findRes.estimates) && findRes.estimates.length > 0) {
+          const found = findRes.estimates[0];
+          zohoEstimateCreated = found;
+          newPI.zohoEstimateId = found.estimate_id;
+          newPI.piNo = found.estimate_number || newPI.piNo;
+          newPI.zohoSynced = true;
+          newPI.zohoSyncError = null;
+          newPI.zohoModule = 'Quotes';
+        } else {
+          zohoErrorMsg = zohoRes?.message || 'Estimate number already exists in Zoho Books';
+          newPI.zohoSynced = false;
+          newPI.zohoSyncError = zohoErrorMsg;
+        }
+      } catch (err) {
+        zohoErrorMsg = zohoRes?.message || 'Estimate already exists in Zoho Books';
+        newPI.zohoSynced = false;
+        newPI.zohoSyncError = zohoErrorMsg;
       }
     } else {
-      zohoErrorMsg = zohoRes?.message || 'Zoho estimate creation rejected';
+      zohoErrorMsg = zohoRes?.message || (zohoRes?.error ? (typeof zohoRes.error === 'string' ? zohoRes.error : JSON.stringify(zohoRes.error)) : 'Zoho estimate creation rejected');
       newPI.zohoSynced = false;
       newPI.zohoSyncError = zohoErrorMsg;
       console.warn('[ZOHO ESTIMATE REJECTED]', zohoRes);

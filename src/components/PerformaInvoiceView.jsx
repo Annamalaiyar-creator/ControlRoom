@@ -309,7 +309,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         updatePiList(updated);
         alert(`✓ Proforma Invoice ${targetPi.piNo} successfully synced with Zoho Books (Quotes # ${targetPi.piNo})!`);
       } else {
-        alert(`Notice: Zoho Books response: ${data?.zohoError || data?.notice || 'Sync could not be verified'}`);
+        const errMsg = data?.zohoError || data?.notice || data?.error || data?.message || (!res.ok ? `HTTP ${res.status} error` : 'Sync could not be verified');
+        alert(`Notice: Zoho Books response: ${errMsg}`);
       }
     } catch (err) {
       alert(`Error syncing with Zoho Books: ${err.message}`);
