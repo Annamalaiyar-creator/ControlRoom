@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Volume2, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead } from '../services/notificationService';
+import { Bell, Volume2, VolumeX, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled } from '../services/notificationService';
 
 export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
   const [activeToast, setActiveToast] = useState(null);
   const [progress, setProgress] = useState(100);
+  const [voiceEnabled, setVoiceEnabled] = useState(() => isVoiceNotificationEnabled());
   const timerRef = useRef(null);
   const progressIntervalRef = useRef(null);
+
+  useEffect(() => {
+    const handleVoiceChange = (e) => {
+      if (e && e.detail) setVoiceEnabled(e.detail.enabled);
+    };
+    window.addEventListener('controlroom_voice_setting_changed', handleVoiceChange);
+    return () => window.removeEventListener('controlroom_voice_setting_changed', handleVoiceChange);
+  }, []);
 
   useEffect(() => {
     const handleWorkflowToast = (event) => {
@@ -193,28 +202,40 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
                 {roleBadge}
               </span>
               
-              <div 
-                title="Notification sound played" 
+              <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playWorkflowNotificationSound(activeToast.soundType || 'chime');
+                  const nextVal = !voiceEnabled;
+                  setVoiceEnabled(nextVal);
+                  setVoiceNotificationEnabled(nextVal);
+                  if (nextVal && activeToast) {
+                    speakNotificationVoice(`${activeToast.title}. ${activeToast.message || ''}`);
+                  }
                 }}
+                title={voiceEnabled ? 'Voice Announcement Active (Click to Mute)' : 'Voice Muted (Click to Enable)'}
                 style={{
+                  border: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
                   fontSize: '11px',
                   fontWeight: '700',
-                  color: '#0284C7',
-                  backgroundColor: '#F0F9FF',
-                  padding: '2px 6px',
+                  color: voiceEnabled ? '#0E7490' : '#94A3B8',
+                  backgroundColor: voiceEnabled ? '#ECFEFF' : '#F1F5F9',
+                  padding: '2px 8px',
                   borderRadius: '6px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <Volume2 size={13} style={{ animation: 'audioPulse 1.4s infinite' }} />
-                <span>Chime</span>
-              </div>
+                {voiceEnabled ? (
+                  <Volume2 size={13} style={{ animation: 'audioPulse 1.4s infinite' }} />
+                ) : (
+                  <VolumeX size={13} />
+                )}
+                <span>{voiceEnabled ? 'Voice ON' : 'Muted'}</span>
+              </button>
             </div>
 
             <button

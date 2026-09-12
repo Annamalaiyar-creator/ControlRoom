@@ -123,6 +123,126 @@ function playMelody(ctx, soundType) {
     osc.stop(now + time + duration + 0.05);
   });
 }
+/**
+ * Global preference for Voice Notifications (Text-to-Speech)
+ */
+export function isVoiceNotificationEnabled() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const saved = localStorage.getItem('controlroom_voice_notifications_enabled');
+    return saved === null ? true : saved === 'true';
+  } catch (_) {
+    return true;
+  }
+}
+
+export function setVoiceNotificationEnabled(enabled) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('controlroom_voice_notifications_enabled', String(enabled));
+    if (!enabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    } else if (enabled) {
+      speakNotificationVoice('Voice notifications enabled.');
+    }
+    window.dispatchEvent(new CustomEvent('controlroom_voice_setting_changed', { detail: { enabled } }));
+  } catch (_) {}
+}
+
+/**
+ * Cache available speech synthesis voices
+ */
+let cachedVoices = [];
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  const loadVoices = () => {
+    try {
+      cachedVoices = window.speechSynthesis.getVoices() || [];
+    } catch (_) {}
+  };
+  loadVoices();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
+/**
+ * Pronounces a notification cleanly using the browser's native Web Speech Synthesis API.
+ * Cleans emojis and expands technical abbreviations (B-O-M, P-I, P-O, Rupees, etc.)
+ * @param {string} text - The text to speak
+ * @param {Object} options - Optional configuration { rate, pitch, volume }
+ */
+export function speakNotificationVoice(text, options = {}) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (!isVoiceNotificationEnabled()) return;
+
+  try {
+    // Cancel previous utterance to avoid queue buildup
+    window.speechSynthesis.cancel();
+
+    // Sanitize message for natural pronunciation
+    let spoken = (text || '')
+      // Strip emojis
+      .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+      // Expand acronyms for natural spelling
+      .replace(/\bBOM\b/g, 'B O M')
+      .replace(/\bPI\b/g, 'P I')
+      .replace(/\bPO\b/g, 'P O')
+      .replace(/\bDC\b/g, 'Delivery Challan')
+      .replace(/\b₹\s*([0-9,]+)/g, '$1 rupees')
+      .replace(/\bGST\b/g, 'G S T')
+      .replace(/\bMMS\b/g, 'M M S')
+      .replace(/\bHDG\b/g, 'H D G')
+      .replace(/\bkg\b/gi, 'kilograms')
+      .replace(/\bNOS\b/gi, 'numbers')
+      .replace(/\bPvt\s+Ltd\b/gi, 'Private Limited')
+      .replace(/[–—_#*]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!spoken) return;
+
+    // Limit length to keep spoken alert punchy and responsive
+    if (spoken.length > 150) {
+      spoken = spoken.slice(0, 147) + '...';
+    }
+
+    const utterance = new SpeechSynthesisUtterance(spoken);
+    utterance.lang = 'en-US';
+    utterance.rate = options.rate || 1.05;
+    utterance.pitch = options.pitch || 1.0;
+    utterance.volume = options.volume != null ? options.volume : 1.0;
+
+    // Select the best natural-sounding voice if available
+    const voices = cachedVoices.length > 0 ? cachedVoices : (window.speechSynthesis.getVoices() || []);
+    if (voices.length > 0) {
+      const preferred = voices.find(v => 
+        v.lang.startsWith('en') && (
+          v.name.includes('Google') || 
+          v.name.includes('Samantha') || 
+          v.name.includes('Daniel') || 
+          v.name.includes('Natural') || 
+          v.name.includes('Siri') || 
+          v.name.includes('Karen') ||
+          v.name.includes('Zira')
+        )
+      ) || voices.find(v => v.lang.startsWith('en'));
+      if (preferred) utterance.voice = preferred;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn('Speech synthesis error:', e);
+  }
+}
+
+// Global listener for custom speak events
+if (typeof window !== 'undefined') {
+  window.addEventListener('controlroom_voice_speak', (e) => {
+    if (e && e.detail && e.detail.text) {
+      speakNotificationVoice(e.detail.text, e.detail.options);
+    }
+  });
+}
 
 /**
  * Checks whether a given role matches the notification's target roles.
@@ -238,6 +358,14 @@ export function sendWorkflowNotification({
 
   // 2. Play sound immediately in this window
   playWorkflowNotificationSound(soundType);
+
+  // 2b. Speak natural voice announcement right after chime
+  setTimeout(() => {
+    const textToSpeak = notification.title
+      ? `${notification.title}. ${notification.message || ''}`
+      : (notification.message || '');
+    speakNotificationVoice(textToSpeak);
+  }, 250);
 
   // 3. Emit local event for current tab toast
   if (typeof window !== 'undefined') {
