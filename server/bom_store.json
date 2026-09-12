@@ -1566,5 +1566,2974 @@
     "pendingSalesDispatchPayment": false,
     "reissuedByAccounts": false,
     "isAccountsDone": false
+  },
+  {
+    "id": "BOM-697",
+    "bomCode": "BOM-697",
+    "code": "BOM-697",
+    "sourcePiNo": "PI-00024",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Designer private limited",
+    "companyName": "Designer private limited",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+      "size": "0.91 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T13:02:31.907Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T13:02:35.543Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "code": "MR100O",
+        "name": "100mm mini rail (old)",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 200,
+        "rate": 210,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 200
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+        "size": "0.91 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T13:02:31.907Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "code": "",
+        "name": "100mm mini rail (old)",
+        "bomQty": 200,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T13:02:35.543Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 42000,
+    "gstAmount": 7560,
+    "cgstAmount": 3780,
+    "sgstAmount": 3780,
+    "grandTotal": 49560
+  },
+  {
+    "id": "BOM-696",
+    "bomCode": "BOM-696",
+    "code": "BOM-696",
+    "sourcePiNo": "PI-00023",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Designer private limited",
+    "companyName": "Designer private limited",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "No.8/1, Chennai, Tamil Nadu, Pincode: 600059",
+    "deliveryAddressObj": {
+      "address": "No.8/1",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600059"
+    },
+    "deliveryAddressProofDoc": {
+      "name": "Screenshot 2026-09-12 at 2.40.15 PM.png",
+      "size": "0.54 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T12:39:59.751Z"
+    },
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "TN002",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-12 at 5.46.38 PM.png",
+      "size": "0.06 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T12:39:38.984Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T12:40:07.839Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "category": "ADANI (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 21000,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 36
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-12 at 5.46.38 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-12 at 5.46.38 PM.png",
+        "size": "0.06 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T12:39:38.984Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T12:40:07.839Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 756000,
+    "gstAmount": 37800,
+    "cgstAmount": 18900,
+    "sgstAmount": 18900,
+    "grandTotal": 793800
+  },
+  {
+    "id": "BOM-695",
+    "bomCode": "BOM-695",
+    "code": "BOM-695",
+    "sourcePiNo": "PI-00022",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "companyName": "Tata Power Solar Systems Ltd",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "Corporate Park, Phase 2, Whitefield, Bengaluru, Karnataka, Pincode: 560066",
+    "billingAddressObj": {
+      "address": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "deliveryAddress": "Corporate Park, Phase 2, Whitefield, Bengaluru, Karnataka, Pincode: 560066",
+    "deliveryAddressObj": {
+      "address": "Corporate Park, Phase 2, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "12312433",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "size": "0.71 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T12:19:39.383Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Cancelled & Stock Restored",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T12:20:06.600Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 585wp",
+        "category": "WAREE (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 21000,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 36
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+        "size": "0.71 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T12:19:39.383Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 585wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": false,
+    "stockBlockedAt": "2026-09-12T12:20:06.600Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 756000,
+    "gstAmount": 37800,
+    "cgstAmount": 18900,
+    "sgstAmount": 18900,
+    "grandTotal": 793800,
+    "c2": "Tata Power Solar Systems Ltd",
+    "c3": "Mohit JV",
+    "c4": "50% Advance + 50% Before Dispatch",
+    "packingProgressText": "0 of 1 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking",
+    "cancelled": true,
+    "cancellationReason": "Customer requested order cancellation",
+    "cancelledBy": "Kalpana",
+    "cancelledAt": "2026-09-12T12:36:53.237Z"
+  },
+  {
+    "id": "BOM-694",
+    "bomCode": "BOM-694",
+    "code": "BOM-694",
+    "sourcePiNo": "PI-00021",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "VRM Structures India Private Limited",
+    "companyName": "VRM Structures India Private Limited",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "8/1 Agathiyar street, Chennai, Tamil Nadu - 600057, Chennai, Tamil Nadu, Pincode: 600057",
+    "billingAddressObj": {
+      "address": "8/1 Agathiyar street, Chennai, Tamil Nadu - 600057",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600057"
+    },
+    "deliveryAddress": "8/1 Agathiyar street, Chennai, Tamil Nadu - 600057, Chennai, Tamil Nadu, Pincode: 600057",
+    "deliveryAddressObj": {
+      "address": "8/1 Agathiyar street, Chennai, Tamil Nadu - 600057",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600057"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "1₹12₹2131",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "size": "0.71 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T12:15:59.596Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T12:16:11.752Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 610wp",
+        "category": "WAREE (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 21000,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 36
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+      "proofDocObj": {
+        "name": "Screenshot 2026-09-10 at 12.22.07 PM.png",
+        "size": "0.71 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T12:15:59.596Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 610wp",
+        "bomQty": 36,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T12:16:11.752Z",
+    "presetName": null,
+    "presetKitPrice": null,
+    "presetSetCount": null,
+    "presetGroups": [],
+    "subTotal": 756000,
+    "gstAmount": 37800,
+    "cgstAmount": 18900,
+    "sgstAmount": 18900,
+    "grandTotal": 793800
+  },
+  {
+    "id": "BOM-692",
+    "bomCode": "BOM-692",
+    "code": "BOM-692",
+    "sourcePiNo": "PI-00020",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-14",
+    "customerName": "Kathir enterprises",
+    "companyName": "Kathir enterprises",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "25, Priya street, Manali, Chennai, Tamil Nadu - 600111, Chennai, Tamil Nadu, Pincode: 600111",
+    "billingAddressObj": {
+      "address": "25, Priya street, Manali, Chennai, Tamil Nadu - 600111",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600111"
+    },
+    "deliveryAddress": "25, Priya street, Manali, Chennai, Tamil Nadu - 600111, Chennai, Tamil Nadu, Pincode: 600111",
+    "deliveryAddressObj": {
+      "address": "25, Priya street, Manali, Chennai, Tamil Nadu - 600111",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600111"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Video 2026-09-12 at 4.51.52 PM.mp4",
+      "size": "9.04 MB",
+      "type": "video/mp4",
+      "uploadedAt": "2026-09-12T11:32:58.550Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T11:33:12.738Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 6
+      },
+      {
+        "name": "POLYCAB ONGRID 3.6KW Single Phase",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 2
+      },
+      {
+        "name": "CABLE TIE",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "CABLE TRAY",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212373916_6ck4",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "100mm mini rail (new)",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 280,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 100
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "Universal End Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "locking clamp and square nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "EPDM 80*25",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      },
+      {
+        "name": "Rivet",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 50,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212564224_qhx9",
+        "presetName": "100mm mini rail (new)",
+        "baseQty": 1
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Video 2026-09-12 at 4.51.52 PM.mp4",
+      "proofDocObj": {
+        "name": "WhatsApp Video 2026-09-12 at 4.51.52 PM.mp4",
+        "size": "9.04 MB",
+        "type": "video/mp4",
+        "uploadedAt": "2026-09-12T11:32:58.550Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "POLYCAB ONGRID 3.6KW Single Phase",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "CABLE TIE",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "CABLE TRAY",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "100mm mini rail (new)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "Universal End Clamp",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "locking clamp and square nut",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "EPDM 80*25",
+        "bomQty": 40,
+        "packed": false
+      },
+      {
+        "name": "Rivet",
+        "bomQty": 50,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T11:33:12.739Z",
+    "presetName": "BOS KITS DCR 3 KW (1 Set) + 100mm mini rail (new) (5 Sets)",
+    "presetKitPrice": 131110,
+    "presetSetCount": 6,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789212373916_6ck4",
+        "presetId": "preset_bos_kits___dcr_3_kw",
+        "presetName": "BOS KITS DCR 3 KW",
+        "setCount": 1,
+        "kitPrice": 120000,
+        "gstRate": "5%"
+      },
+      {
+        "groupId": "preset_grp_1789212564224_qhx9",
+        "presetId": "preset_4_100mm_mini_rail__new_",
+        "presetName": "100mm mini rail (new)",
+        "setCount": 5,
+        "kitPrice": 2222,
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 159110,
+    "gstAmount": 13039.799999999996,
+    "cgstAmount": 6519.899999999998,
+    "sgstAmount": 6519.899999999998,
+    "grandTotal": 172149.8
+  },
+  {
+    "id": "BOM-691",
+    "bomCode": "BOM-691",
+    "code": "BOM-691",
+    "sourcePiNo": "PI-00019",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Designer private limited",
+    "companyName": "Designer private limited",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "TN 22 BA 2002",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "RK Transprent(Black).png",
+      "size": "0.19 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T11:07:44.174Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Accounts Verified & Passed to Invoice",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T11:07:56.652Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 10,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 10,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 10,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 60,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 12
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 80,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 80,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789211058603_an9s",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16
+      },
+      {
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "category": "ADANI (DCR)",
+        "uom": "NOS",
+        "qty": 36,
+        "rate": 24000,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 36
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "RK Transprent(Black).png",
+      "proofDocObj": {
+        "name": "RK Transprent(Black).png",
+        "size": "0.19 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T11:07:44.174Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 60,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 80,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 80,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "bomQty": 36,
+        "packed": true,
+        "code": null
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": true,
+      "softCopyReceived": false,
+      "paymentDate": "2026-09-12",
+      "totalAmount": 1019520,
+      "verified": true,
+      "verifiedBy": "Accounts Executive (Venkatesh)",
+      "verifiedByRole": "Accounts Team Lead",
+      "verifiedAt": "12 Sept 2026, 16:42"
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T11:07:56.652Z",
+    "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row) (5 Sets)",
+    "presetKitPrice": 21000,
+    "presetSetCount": 5,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789211058603_an9s",
+        "presetId": "hp_2_2_hp__500_x_1000_",
+        "presetName": "2*2 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 5,
+        "kitPrice": 21000,
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 969000,
+    "gstAmount": 62100,
+    "cgstAmount": 31050,
+    "sgstAmount": 31050,
+    "grandTotal": 1019520,
+    "dispatchPackingMedia": {
+      "photos": [
+        {
+          "id": "pack_photo_1789211367119_3b7x",
+          "name": "Screenshot 2026-09-10 at 4.05.15 PM.png",
+          "size": "0.91 MB",
+          "uploadedAt": "04:39 pm"
+        }
+      ],
+      "videos": [
+        {
+          "id": "pack_video_1789211370681",
+          "name": "sq tube -4.mp4",
+          "size": "46.19 MB",
+          "uploadedAt": "04:39 pm"
+        }
+      ]
+    },
+    "pendingSalesDispatchPayment": false,
+    "reissuedByAccounts": false,
+    "isAccountsDone": false,
+    "c2": "Designer private limited",
+    "c3": "Mohit JV",
+    "c4": "50% Advance + 50% Before Dispatch",
+    "packingProgressText": "0 of 15 Items Packed",
+    "stBg": "#FEF3C7",
+    "stFg": "#B45309",
+    "stBorder": "1px solid #FDE68A",
+    "tabGroup": "PartiallyPacked",
+    "invoiceNo": "INV-2026-691",
+    "paymentDate": "2026-09-12",
+    "proofDoc": "RK Transprent(Black).png",
+    "proofDocData": null
+  },
+  {
+    "id": "BOM-690",
+    "bomCode": "BOM-690",
+    "code": "BOM-690",
+    "sourcePiNo": "PI-00018",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Waaree Energies Ltd",
+    "companyName": "Waaree Energies Ltd",
+    "mobile": "+91 97234 56789",
+    "email": "dharmesh.p@waaree.com",
+    "billingAddress": "Plot 48, GIDC Industrial Estate, Sachin, Surat, Gujarat, Pincode: 394230",
+    "billingAddressObj": {
+      "address": "Plot 48, GIDC Industrial Estate, Sachin",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "394230"
+    },
+    "deliveryAddress": "Plot 48, GIDC Industrial Estate, Sachin, Surat, Gujarat, Pincode: 394230",
+    "deliveryAddressObj": {
+      "address": "Plot 48, GIDC Industrial Estate, Sachin",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "394230"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A2B",
+    "vehicleNo": "TN 0123 AB 0000",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "RK Transprent(Black).png",
+      "size": "0.19 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T10:39:00.626Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "Converted automatically from Proforma Invoice (PI-00018) dated 2026-09-12.",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T10:39:03.453Z",
+    "salesPerson": "Mohit JV",
+    "salesPersonCode": "SE-VRM001",
+    "createdBy": "Mohit JV",
+    "createdById": "SE-VRM001",
+    "items": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 2
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 8
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 4
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "category": "GAL",
+        "uom": "NOS",
+        "qty": 16,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789208907912_ihzs",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "baseQty": 16
+      },
+      {
+        "name": "DEYE HYBRID 40KW - HV - HYBRID Inverter",
+        "category": "DEYE H",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 20000,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 1
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "RK Transprent(Black).png",
+      "proofDocObj": {
+        "name": "RK Transprent(Black).png",
+        "size": "0.19 MB",
+        "type": "image/png",
+        "uploadedAt": "2026-09-12T10:39:00.626Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "Purlin 'HAT' Type - 3600 mm (GAL)",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 16,
+        "packed": false
+      },
+      {
+        "name": "DEYE HYBRID 40KW - HV - HYBRID Inverter",
+        "bomQty": 1,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T10:39:03.453Z",
+    "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row) (1 Set)",
+    "presetKitPrice": 21000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789208907912_ihzs",
+        "presetId": "hp_2_3_hp__500_x_1000_",
+        "presetName": "2*3 HP (500 x 1000) - GAL Hat Purline (2 Row)",
+        "setCount": 1,
+        "kitPrice": 21000,
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 41000,
+    "gstAmount": 4780,
+    "cgstAmount": 2390,
+    "sgstAmount": 2390,
+    "grandTotal": 45780
+  },
+  {
+    "id": "BOM-689",
+    "bomCode": "BOM-689",
+    "code": "BOM-689",
+    "sourcePiNo": "PI-00017",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-13",
+    "customerName": "RENEW ENERGY ",
+    "companyName": "RENEW ENERGY ",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "4, Venkat street, mmc, chennai, Tamil Nadu - 600118, chennai, Tamil Nadu, Pincode: 600118",
+    "billingAddressObj": {
+      "address": "4, Venkat street, mmc, chennai, Tamil Nadu - 600118",
+      "city": "chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600118"
+    },
+    "deliveryAddress": "4, Venkat street, mmc, chennai, Tamil Nadu - 600118, chennai, Tamil Nadu, Pincode: 600118",
+    "deliveryAddressObj": {
+      "address": "4, Venkat street, mmc, chennai, Tamil Nadu - 600118",
+      "city": "chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600118"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "vrl",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "Partial Payment",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "VRMSPI26-271691.pdf",
+      "size": "0.18 MB",
+      "type": "application/pdf",
+      "uploadedAt": "2026-09-12T09:49:17.503Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T09:52:58.935Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 8,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 8
+      },
+      {
+        "name": "POLYCAB ONGRID 4KW Single Phase",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 4,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 4
+      },
+      {
+        "name": "CABLE TIE",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "CABLE TRAY",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "5%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789206492081_x4xd",
+        "presetName": "BOS KITS DCR 4 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "40mm mini rail",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 220,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 100
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "VRMSPI26-271691.pdf",
+      "proofDocObj": {
+        "name": "VRMSPI26-271691.pdf",
+        "size": "0.18 MB",
+        "type": "application/pdf",
+        "uploadedAt": "2026-09-12T09:49:17.503Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "bomQty": 8,
+        "packed": false
+      },
+      {
+        "name": "POLYCAB ONGRID 4KW Single Phase",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "bomQty": 4,
+        "packed": false
+      },
+      {
+        "name": "CABLE TIE",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "CABLE TRAY",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "40mm mini rail",
+        "bomQty": 100,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T09:52:58.935Z",
+    "presetName": "BOS KITS DCR 4 KW (1 Set)",
+    "presetKitPrice": 150000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789206492081_x4xd",
+        "presetId": "preset_bos_kits___dcr_4_kw",
+        "presetName": "BOS KITS DCR 4 KW",
+        "setCount": 1,
+        "kitPrice": 150000,
+        "gstRate": "5%"
+      }
+    ],
+    "subTotal": 172000,
+    "gstAmount": 11460,
+    "cgstAmount": 5730,
+    "sgstAmount": 5730,
+    "grandTotal": 183460
+  },
+  {
+    "id": "BOM-688",
+    "bomCode": "BOM-688",
+    "code": "BOM-688",
+    "sourcePiNo": "PI-00016",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-15",
+    "customerName": "VS AQUA",
+    "companyName": "VS AQUA",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "No - 5, Vijay street, Chennai, Tamil Nadu - 600118, Chennai, Tamil Nadu, Pincode: 600118",
+    "billingAddressObj": {
+      "address": "No - 5, Vijay street, Chennai, Tamil Nadu - 600118",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600118"
+    },
+    "deliveryAddress": "No - 5, Vijay street, Chennai, Tamil Nadu - 600118, Chennai, Tamil Nadu, Pincode: 600118",
+    "deliveryAddressObj": {
+      "address": "No - 5, Vijay street, Chennai, Tamil Nadu - 600118",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600118"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-12 at 2.55.37 PM.jpeg",
+      "size": "0.17 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-12T09:43:16.770Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Sales Confirmed - Sent to Dispatch",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T09:43:25.947Z",
+    "salesPerson": "MOHITH J V",
+    "salesPersonCode": "SE-VRM004",
+    "createdBy": "MOHITH J V",
+    "createdById": "SE-VRM004",
+    "items": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 6,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 6
+      },
+      {
+        "name": "POLYCAB ONGRID 3.6KW Single Phase",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 20
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 100
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 2,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 2
+      },
+      {
+        "name": "CABLE TIE",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 5,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 5
+      },
+      {
+        "name": "CABLE TRAY",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 1,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 1
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "category": "BOS",
+        "uom": "NOS",
+        "qty": 3,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789205645973_e5ul",
+        "presetName": "BOS KITS DCR 3 KW",
+        "baseQty": 3
+      },
+      {
+        "name": "60mm mini rail",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 100,
+        "rate": 190,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": false,
+        "presetGroupId": null,
+        "presetName": null,
+        "baseQty": 100
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-12 at 2.55.37 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-12 at 2.55.37 PM.jpeg",
+        "size": "0.17 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-12T09:43:16.770Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "MODULE - WAREE TOPCON DCR 580wp",
+        "bomQty": 6,
+        "packed": false
+      },
+      {
+        "name": "POLYCAB ONGRID 3.6KW Single Phase",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "ACDB (1-5 KW) With MCB AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "LIGHTNING ARRESTER 16mm",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTH PIT CHAMBER",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "CHEMICAL BAG 10kg",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "DC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Red)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "AC CABLE 4Sqmm. (Black)",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 4Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "EARTHING CABLE 16Sqmm. (Green)",
+        "bomQty": 100,
+        "packed": false
+      },
+      {
+        "name": "MC4 CONNECTOR",
+        "bomQty": 2,
+        "packed": false
+      },
+      {
+        "name": "CABLE TIE",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 4 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "Pin Lugs and Ring Lugs - 6 sqmm",
+        "bomQty": 5,
+        "packed": false
+      },
+      {
+        "name": "CABLE TRAY",
+        "bomQty": 1,
+        "packed": false
+      },
+      {
+        "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
+        "bomQty": 3,
+        "packed": false
+      },
+      {
+        "name": "60mm mini rail",
+        "bomQty": 100,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": true,
+    "stockBlockedAt": "2026-09-12T09:43:25.947Z",
+    "presetName": "BOS KITS DCR 3 KW (1 Set)",
+    "presetKitPrice": 140000,
+    "presetSetCount": 1,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789205645973_e5ul",
+        "presetId": "preset_bos_kits___dcr_3_kw",
+        "presetName": "BOS KITS DCR 3 KW",
+        "setCount": 1,
+        "kitPrice": 140000,
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 159000,
+    "gstAmount": 28619.999999999996,
+    "cgstAmount": 14309.999999999998,
+    "sgstAmount": 14309.999999999998,
+    "grandTotal": 187620
+  },
+  {
+    "id": "BOM-693",
+    "bomCode": "BOM-693",
+    "code": "BOM-693",
+    "sourcePiNo": "PI-00020",
+    "date": "2026-09-12",
+    "deliveryDate": "2026-09-12",
+    "customerName": "Vikram Solar Pvt Ltd",
+    "companyName": "Vikram Solar Pvt Ltd",
+    "mobile": "-",
+    "email": "-",
+    "billingAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai, Tamil Nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal, Chennai, Tamil Nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "No 1427, GNT Road, Nagappa Industrial Estate, Puzhal",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "transportMode": "Transport",
+    "transportScope": "VRM Structures",
+    "transporterName": "A1 Transport",
+    "vehicleNo": "",
+    "lrNo": "",
+    "paymentType": "50% Advance + 50% Before Dispatch",
+    "creditDays": null,
+    "creditDueDate": null,
+    "paymentProofDoc": {
+      "name": "WhatsApp Image 2026-09-12 at 3.34.34 PM.jpeg",
+      "size": "0.21 MB",
+      "type": "image/jpeg",
+      "uploadedAt": "2026-09-12T11:32:51.145Z"
+    },
+    "paymentUpdated": false,
+    "remarks": "",
+    "status": "Cancelled & Stock Restored",
+    "salesConfirmed": true,
+    "salesConfirmedAt": "2026-09-12T11:33:12.951Z",
+    "salesPerson": "Sanjai Kumar",
+    "salesPersonCode": "SE-VRM007",
+    "createdBy": "Sanjai Kumar",
+    "createdById": "SE-VRM007",
+    "items": [
+      {
+        "name": "Universal Mid Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 10,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "Universal End Clamp",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 10,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "locking clamp and square nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "EPDM 80*25",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 20,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      },
+      {
+        "name": "Rivet",
+        "category": "6063T6",
+        "uom": "NOS",
+        "qty": 40,
+        "rate": 0,
+        "gstRate": "18%",
+        "confirmed": true,
+        "isPresetItem": true,
+        "presetGroupId": "preset_grp_1789212377398_k6m9",
+        "presetName": "MINI RAIL 75MM NEW",
+        "baseQty": 1
+      }
+    ],
+    "payments": {
+      "advance50Uploaded": false,
+      "dispatch50Uploaded": false,
+      "advance100Uploaded": false,
+      "net30Uploaded": false,
+      "proofDoc": "WhatsApp Image 2026-09-12 at 3.34.34 PM.jpeg",
+      "proofDocObj": {
+        "name": "WhatsApp Image 2026-09-12 at 3.34.34 PM.jpeg",
+        "size": "0.21 MB",
+        "type": "image/jpeg",
+        "uploadedAt": "2026-09-12T11:32:51.145Z"
+      },
+      "paymentUpdated": false
+    },
+    "dispatchPacking": [
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 10,
+        "packed": false
+      },
+      {
+        "name": "Universal End Clamp",
+        "bomQty": 10,
+        "packed": false
+      },
+      {
+        "name": "locking clamp and square nut",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 M8 Square Nut",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "SS304 Allen Bolt M8*30",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "EPDM 80*25",
+        "bomQty": 20,
+        "packed": false
+      },
+      {
+        "name": "Rivet",
+        "bomQty": 40,
+        "packed": false
+      }
+    ],
+    "accountsVerification": {
+      "paymentStatus": null,
+      "hardCopyReceived": false,
+      "softCopyReceived": false
+    },
+    "invoiceConfirmed": false,
+    "invoiceDeducted": false,
+    "stockBlocked": false,
+    "stockBlockedAt": "2026-09-12T11:33:12.952Z",
+    "presetName": "MINI RAIL 75MM NEW (20 Sets)",
+    "presetKitPrice": 240,
+    "presetSetCount": 20,
+    "presetGroups": [
+      {
+        "groupId": "preset_grp_1789212377398_k6m9",
+        "presetId": "preset_3_mini_rail_75mm_new",
+        "presetName": "MINI RAIL 75MM NEW",
+        "setCount": 20,
+        "kitPrice": 240,
+        "gstRate": "18%"
+      }
+    ],
+    "subTotal": 4800,
+    "gstAmount": 864,
+    "cgstAmount": 432,
+    "sgstAmount": 432,
+    "grandTotal": 5664,
+    "c2": "Vikram Solar Pvt Ltd",
+    "c3": "Sanjai Kumar",
+    "c4": "50% Advance + 50% Before Dispatch",
+    "packingProgressText": "0 of 7 Items Packed",
+    "stBg": "#FFF7ED",
+    "stFg": "#C2410C",
+    "stBorder": "1px solid #FED7AA",
+    "tabGroup": "PendingPacking",
+    "cancelled": true,
+    "cancellationReason": "Wrong profile / cut length selected in BOM",
+    "cancelledBy": "Kalpana",
+    "cancelledAt": "2026-09-12T12:36:23.786Z"
   }
 ]

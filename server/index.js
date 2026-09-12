@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { createClient } from '@supabase/supabase-js';
+import { VRM_PRODUCTS, wordFingerprint, resolveProductCode } from '../src/utils/vrmProductsData.js';
 
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -2747,14 +2748,17 @@ const reconcileServerInventoryWithBoms = async (bomsList = null) => {
     const allocations = new Map();
     boms.forEach(b => {
       const st = String(b?.status || '').toLowerCase();
-      if (!st.includes('cancelled') && !st.includes('stock restored')) {
+      if (!st.includes('cancelled') && !st.includes('stock restored') && st !== 'delivered') {
         (b?.items || []).forEach(it => {
           const q = parseFloat(it?.qty || it?.bomQty || 0) || 0;
           if (q > 0) {
-            const code = String(it?.code || '').toLowerCase().trim();
+            const resCode = resolveProductCode(it).toLowerCase().trim();
+            const code = String(resCode || it?.code || '').toLowerCase().trim();
             const name = String(it?.name || it?.description || '').toLowerCase().trim();
+            const fp = wordFingerprint(name);
             if (code) allocations.set(code, (allocations.get(code) || 0) + q);
             if (name) allocations.set(name, (allocations.get(name) || 0) + q);
+            if (fp) allocations.set(fp, (allocations.get(fp) || 0) + q);
           }
         });
       }
@@ -2769,9 +2773,15 @@ const reconcileServerInventoryWithBoms = async (bomsList = null) => {
     if (Array.isArray(rawMats) && rawMats.length > 0) {
       let changed = false;
       rawMats.forEach(m => {
-        const mCode = String(m?.code || m?.sku || m?.itemId || '').toLowerCase().trim();
+        const mRes = resolveProductCode(m).toLowerCase().trim();
+        const mCode = String(mRes || m?.code || m?.sku || m?.itemId || '').toLowerCase().trim();
         const mName = String(m?.name || '').toLowerCase().trim();
-        const blocked = (mCode && allocations.get(mCode)) || (mName && allocations.get(mName)) || 0;
+        const mFp = wordFingerprint(mName);
+        const blocked = Math.max(
+          (mCode && allocations.get(mCode)) || 0,
+          (mName && allocations.get(mName)) || 0,
+          (mFp && allocations.get(mFp)) || 0
+        );
         const baseline = Math.max(0, parseFloat(m?.openingStock !== undefined ? m.openingStock : (m?.physicalStock !== undefined ? m.physicalStock : 5000)) || 5000);
         const newStock = Math.max(0, baseline - blocked);
         const minL = parseFloat(m?.minLevel || 100) || 100;
@@ -2803,9 +2813,15 @@ const reconcileServerInventoryWithBoms = async (bomsList = null) => {
     if (Array.isArray(items) && items.length > 0) {
       let changed = false;
       items.forEach(it => {
-        const itCode = String(it?.code || it?.sku || it?.itemId || '').toLowerCase().trim();
+        const itRes = resolveProductCode(it).toLowerCase().trim();
+        const itCode = String(itRes || it?.code || it?.sku || it?.itemId || '').toLowerCase().trim();
         const itName = String(it?.name || '').toLowerCase().trim();
-        const blocked = (itCode && allocations.get(itCode)) || (itName && allocations.get(itName)) || 0;
+        const itFp = wordFingerprint(itName);
+        const blocked = Math.max(
+          (itCode && allocations.get(itCode)) || 0,
+          (itName && allocations.get(itName)) || 0,
+          (itFp && allocations.get(itFp)) || 0
+        );
         const baseline = Math.max(0, parseFloat(it?.openingStock !== undefined ? it.openingStock : (it?.physicalStock !== undefined ? it.physicalStock : 5000)) || 5000);
         const newStock = Math.max(0, baseline - blocked);
         const minL = parseFloat(it?.minLevel || 20) || 20;
@@ -2863,6 +2879,16 @@ app.post('/api/boms', async (req, res) => {
           });
         };
         stripServerDataUrls(bom);
+
+        // Ensure all line items have resolved product code for accurate inventory reservation
+        if (Array.isArray(bom.items)) {
+          bom.items.forEach(it => {
+            if (!it.code || it.code === 'VRM-ITEM' || it.code === 'ITEM' || it.code.startsWith('FG-')) {
+              const resCode = resolveProductCode(it);
+              if (resCode) it.code = resCode;
+            }
+          });
+        }
 
         const filePath = getStoreFilePath('bom_store.json');
         let diskList = [];

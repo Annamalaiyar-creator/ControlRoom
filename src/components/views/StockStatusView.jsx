@@ -15,6 +15,7 @@ import { getSafeZohoVendors, getSafeZohoItems } from '../../services/zohoSafeSyn
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../../utils/supabaseDataSync';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
+import { VRM_PRODUCTS, resolveProductCode, wordFingerprint } from '../../utils/vrmProductsData';
 
 
 export default function StockStatusView(props) {
@@ -2268,10 +2269,15 @@ export default function StockStatusView(props) {
                 if (!bStatus.includes('cancelled') && !bStatus.includes('stock restored') && bStatus !== 'delivered') {
                   (b.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
-                    const pCode = String(pItem.code || '').toLowerCase().trim();
-                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
-                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
-                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                    if (qty > 0) {
+                      const resCode = resolveProductCode(pItem).toLowerCase().trim();
+                      const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
+                      const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                      const pFp = wordFingerprint(pName);
+                      if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                      if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                      if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
+                    }
                   });
                 }
               });
@@ -2290,10 +2296,15 @@ export default function StockStatusView(props) {
                 if (piStatus !== 'cancelled' && piStatus !== 'declined' && piStatus !== 'converted to bom' && !pi.convertedToBom) {
                   (pi.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
-                    const pCode = String(pItem.code || '').toLowerCase().trim();
-                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
-                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
-                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                    if (qty > 0) {
+                      const resCode = resolveProductCode(pItem).toLowerCase().trim();
+                      const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
+                      const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                      const pFp = wordFingerprint(pName);
+                      if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                      if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                      if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
+                    }
                   });
                 }
               });
@@ -2310,21 +2321,27 @@ export default function StockStatusView(props) {
 
             const rawMatMap = new Map();
             localRawMats.forEach(m => {
-              const mCode = String(m.code || '').toLowerCase().trim();
+              const mRes = resolveProductCode(m).toLowerCase().trim();
+              const mCode = String(mRes || m.code || '').toLowerCase().trim();
               const mName = String(m.name || '').toLowerCase().trim();
+              const mFp = wordFingerprint(mName);
               if (mCode) rawMatMap.set(mCode, m);
               if (mName) rawMatMap.set(mName, m);
+              if (mFp) rawMatMap.set(mFp, m);
             });
 
             const stockDataset = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
-              const codeKey = String(it.code || it.sku || it.itemId || '').toLowerCase().trim();
+              const itRes = resolveProductCode(it).toLowerCase().trim();
+              const codeKey = String(itRes || it.code || it.sku || it.itemId || '').toLowerCase().trim();
               const nameKey = String(it.name || '').toLowerCase().trim();
-              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
+              const itFp = wordFingerprint(nameKey);
+              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey)) || (itFp && rawMatMap.get(itFp));
 
               const physicalBase = Math.max(0, Number(matchedMat?.physicalStock || matchedMat?.openingStock || it.physicalStock || it.openingStock || 5000));
               const activeBlocked = Math.max(
                 (codeKey && bomReservedMap.get(codeKey)) || 0,
                 (nameKey && bomReservedMap.get(nameKey)) || 0,
+                (itFp && bomReservedMap.get(itFp)) || 0,
                 Number(matchedMat?.reserved || it.reserved || 0)
               );
               let availableQty = Math.max(0, physicalBase - activeBlocked);
@@ -2476,10 +2493,15 @@ export default function StockStatusView(props) {
                 if (!bStatus.includes('cancelled') && !bStatus.includes('stock restored') && bStatus !== 'delivered') {
                   (b.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
-                    const pCode = String(pItem.code || '').toLowerCase().trim();
-                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
-                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
-                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                    if (qty > 0) {
+                      const resCode = resolveProductCode(pItem).toLowerCase().trim();
+                      const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
+                      const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                      const pFp = wordFingerprint(pName);
+                      if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                      if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                      if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
+                    }
                   });
                 }
               });
@@ -2498,10 +2520,15 @@ export default function StockStatusView(props) {
                 if (piStatus !== 'cancelled' && piStatus !== 'declined' && piStatus !== 'converted to bom' && !pi.convertedToBom) {
                   (pi.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
-                    const pCode = String(pItem.code || '').toLowerCase().trim();
-                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
-                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
-                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                    if (qty > 0) {
+                      const resCode = resolveProductCode(pItem).toLowerCase().trim();
+                      const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
+                      const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                      const pFp = wordFingerprint(pName);
+                      if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                      if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                      if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
+                    }
                   });
                 }
               });
@@ -2519,22 +2546,28 @@ export default function StockStatusView(props) {
 
             const rawMatMap = new Map();
             localRawMats.forEach(m => {
-              const mCode = String(m.code || '').toLowerCase().trim();
+              const mRes = resolveProductCode(m).toLowerCase().trim();
+              const mCode = String(mRes || m.code || '').toLowerCase().trim();
               const mName = String(m.name || '').toLowerCase().trim();
+              const mFp = wordFingerprint(mName);
               if (mCode) rawMatMap.set(mCode, m);
               if (mName) rawMatMap.set(mName, m);
+              if (mFp) rawMatMap.set(mFp, m);
             });
 
             // 3. Build comprehensive item list
             const combinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
-              const codeKey = String(it.code || it.sku || it.itemId || '').toLowerCase().trim();
+              const itRes = resolveProductCode(it).toLowerCase().trim();
+              const codeKey = String(itRes || it.code || it.sku || it.itemId || '').toLowerCase().trim();
               const nameKey = String(it.name || '').toLowerCase().trim();
-              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
+              const itFp = wordFingerprint(nameKey);
+              const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey)) || (itFp && rawMatMap.get(itFp));
 
               const physicalBase = Math.max(0, Number(matchedMat?.physicalStock || matchedMat?.openingStock || it.physicalStock || it.openingStock || 5000));
               const activeBlocked = Math.max(
                 (codeKey && bomReservedMap.get(codeKey)) || 0,
                 (nameKey && bomReservedMap.get(nameKey)) || 0,
+                (itFp && bomReservedMap.get(itFp)) || 0,
                 Number(matchedMat?.reserved || it.reserved || 0)
               );
               let availableQty = Math.max(0, physicalBase - activeBlocked);
@@ -2553,7 +2586,7 @@ export default function StockStatusView(props) {
               else if (availableQty <= minLvl) statusText = 'Low Stock';
 
               return {
-                code: it.code || it.sku || it.itemId || 'VRM-ITEM',
+                code: it.code || it.sku || it.itemId || (itRes ? itRes.toUpperCase() : 'VRM-ITEM'),
                 item: it.name,
                 category: it.category || it.material || 'Raw Material',
                 location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),

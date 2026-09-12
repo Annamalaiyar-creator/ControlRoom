@@ -1,4 +1,4 @@
-import { VRM_PRODUCTS } from './vrmProductsData.js';
+import { VRM_PRODUCTS, resolveProductCode, wordFingerprint } from './vrmProductsData.js';
 import { centralInventoryStore } from './centralInventoryStore.js';
 
 /**
@@ -61,10 +61,13 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
         (b.items || []).forEach(pItem => {
           const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
           if (qty > 0) {
-            const pCode = String(pItem.code || '').toLowerCase().trim();
+            const resCode = resolveProductCode(pItem).toLowerCase().trim();
+            const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
             const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+            const pFp = wordFingerprint(pName);
             if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
             if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+            if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
           }
         });
       }
@@ -84,10 +87,13 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
         (pi.items || []).forEach(pItem => {
           const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
           if (qty > 0) {
-            const pCode = String(pItem.code || '').toLowerCase().trim();
+            const resCode = resolveProductCode(pItem).toLowerCase().trim();
+            const pCode = String(resCode || pItem.code || '').toLowerCase().trim();
             const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+            const pFp = wordFingerprint(pName);
             if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
             if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+            if (pFp) bomReservedMap.set(pFp, (bomReservedMap.get(pFp) || 0) + qty);
           }
         });
       }
@@ -98,8 +104,10 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
   const catalogMap = new Map();
 
   (VRM_PRODUCTS || []).forEach(p => {
-    const codeKey = String(p.code || '').toLowerCase().trim();
+    const resCode = resolveProductCode(p).toLowerCase().trim();
+    const codeKey = String(resCode || p.code || '').toLowerCase().trim();
     const nameKey = String(p.name || '').toLowerCase().trim();
+    const fpKey = wordFingerprint(nameKey);
 
     // Determine baseline stock before allocations
     let baseStock = 5000;
@@ -107,6 +115,8 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
       baseStock = stockMap.get(codeKey);
     } else if (nameKey && stockMap.has(nameKey)) {
       baseStock = stockMap.get(nameKey);
+    } else if (fpKey && stockMap.has(fpKey)) {
+      baseStock = stockMap.get(fpKey);
     } else {
       for (const [k, v] of stockMap.entries()) {
         if (k && (k === codeKey || k === nameKey || nameKey.includes(k) || k.includes(nameKey))) {
@@ -117,13 +127,17 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
     }
 
     // Active allocations for this item
-    const blockedQty = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || 0;
+    const blockedQty = Math.max(
+      (codeKey && bomReservedMap.get(codeKey)) || 0,
+      (nameKey && bomReservedMap.get(nameKey)) || 0,
+      (fpKey && bomReservedMap.get(fpKey)) || 0
+    );
     let realStock = Math.max(0, baseStock - blockedQty);
 
     // If raw materials store has explicit stock adjustment, honor the lowest available count
     const rawStock = (codeKey && rawStoreMap.get(codeKey)) !== undefined 
       ? rawStoreMap.get(codeKey) 
-      : (nameKey && rawStoreMap.get(nameKey) !== undefined ? rawStoreMap.get(nameKey) : null);
+      : (nameKey && rawStoreMap.get(nameKey) !== undefined ? rawStoreMap.get(nameKey) : (fpKey && rawStoreMap.get(fpKey) !== undefined ? rawStoreMap.get(fpKey) : null));
     if (rawStock !== null && !isNaN(rawStock)) {
       realStock = Math.min(realStock, Number(rawStock));
     }

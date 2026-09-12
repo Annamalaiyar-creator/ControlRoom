@@ -95,17 +95,17 @@
     "unit": "NOS",
     "uom": "NOS",
     "description": "—",
-    "stock": 5000,
+    "stock": 4997,
     "status": "In Stock",
     "category": "POLYCAB",
     "cat": "Raw Material",
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4997,
     "currentStock": 5000,
     "material": "POLYCAB",
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 3,
+    "blockedForBom": 3
   },
   {
     "id": "4080449000000211961",
@@ -208,17 +208,17 @@
     "unit": "NOS",
     "uom": "NOS",
     "description": "—",
-    "stock": 5000,
+    "stock": 4997,
     "status": "In Stock",
     "category": "POLYCAB",
     "cat": "Raw Material",
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4997,
     "currentStock": 5000,
     "material": "POLYCAB",
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 3,
+    "blockedForBom": 3
   },
   {
     "id": "4080449000000211969",
@@ -398,14 +398,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4940,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4940,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 60,
+    "blockedForBom": 60
   },
   {
     "id": "4080449000000366930",
@@ -424,14 +424,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4940,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4940,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 60,
+    "blockedForBom": 60
   },
   {
     "id": "4080449000000366962",
@@ -736,14 +736,14 @@
     "uom": "NOS",
     "material": "NYLON",
     "category": "NYLON",
-    "stock": 5000,
+    "stock": 4997,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4997,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 3,
+    "blockedForBom": 3
   },
   {
     "id": "4080449000000368146",
@@ -762,14 +762,14 @@
     "uom": "NOS",
     "material": "PVC",
     "category": "PVC",
-    "stock": 5000,
+    "stock": 4997,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4997,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 3,
+    "blockedForBom": 3
   },
   {
     "id": "4080449000000366906",
@@ -788,14 +788,14 @@
     "uom": "NOS",
     "material": "EARTHING GRADE",
     "category": "EARTHING GRADE",
-    "stock": 5000,
+    "stock": 4991,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4991,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 9,
+    "blockedForBom": 9
   },
   {
     "id": "4080449000000366250",
@@ -866,14 +866,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4940,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4940,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 60,
+    "blockedForBom": 60
   },
   {
     "id": "4080449000000366946",
@@ -892,14 +892,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4940,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4940,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 60,
+    "blockedForBom": 60
   },
   {
     "id": "4080449000000366978",
@@ -1230,14 +1230,14 @@
     "uom": "NOS",
     "material": "DEYE H",
     "category": "DEYE H",
-    "stock": 5000,
+    "stock": 4999,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4999,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 1,
+    "blockedForBom": 1
   },
   {
     "id": "4080449000000367386",
@@ -2296,14 +2296,14 @@
     "uom": "NOS",
     "material": "POLYMER",
     "category": "POLYMER",
-    "stock": 5000,
+    "stock": 4991,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4991,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 9,
+    "blockedForBom": 9
   },
   {
     "id": "4080449000000366914",
@@ -2348,14 +2348,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4700,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4700,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 300,
+    "blockedForBom": 300
   },
   {
     "id": "4080449000000366954",
@@ -2374,14 +2374,14 @@
     "uom": "NOS",
     "material": "FRLS",
     "category": "FRLS",
-    "stock": 5000,
+    "stock": 4700,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4700,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 300,
+    "blockedForBom": 300
   },
   {
     "id": "4080449000000366994",
@@ -2426,14 +2426,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4968,
+    "stock": 4920,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4968,
+    "availableStock": 4920,
     "currentStock": 5000,
-    "reserved": 32,
-    "blockedForBom": 32
+    "reserved": 80,
+    "blockedForBom": 80
   },
   {
     "id": "4080449000000366506",
@@ -2452,14 +2452,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4968,
+    "stock": 4920,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4968,
+    "availableStock": 4920,
     "currentStock": 5000,
-    "reserved": 32,
-    "blockedForBom": 32
+    "reserved": 80,
+    "blockedForBom": 80
   },
   {
     "id": "4080449000000366570",
@@ -2556,14 +2556,14 @@
     "uom": "NOS",
     "material": "NR 70160",
     "category": "NR 70160",
-    "stock": 5000,
+    "stock": 4960,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4960,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 40,
+    "blockedForBom": 40
   },
   {
     "id": "4080449000000366890",
@@ -2608,14 +2608,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4920,
+    "stock": 4824,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4920,
+    "availableStock": 4824,
     "currentStock": 5000,
-    "reserved": 80,
-    "blockedForBom": 80
+    "reserved": 176,
+    "blockedForBom": 176
   },
   {
     "id": "4080449000000366818",
@@ -3258,14 +3258,14 @@
     "uom": "NOS",
     "material": "FRP",
     "category": "FRP",
-    "stock": 5000,
+    "stock": 4988,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4988,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 12,
+    "blockedForBom": 12
   },
   {
     "id": "4080449000000366826",
@@ -3440,14 +3440,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4990,
+    "stock": 4978,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4990,
+    "availableStock": 4978,
     "currentStock": 5000,
-    "reserved": 10,
-    "blockedForBom": 10
+    "reserved": 22,
+    "blockedForBom": 22
   },
   {
     "id": "4080449000000366130",
@@ -3648,14 +3648,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4990,
+    "stock": 4978,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4990,
+    "availableStock": 4978,
     "currentStock": 5000,
-    "reserved": 10,
-    "blockedForBom": 10
+    "reserved": 22,
+    "blockedForBom": 22
   },
   {
     "id": "4080449000000366106",
@@ -3726,14 +3726,14 @@
     "uom": "NOS",
     "material": "COPPER BONDED",
     "category": "COPPER BONDED",
-    "stock": 5000,
+    "stock": 4997,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4997,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 3,
+    "blockedForBom": 3
   },
   {
     "id": "4080449000000366490",
@@ -3752,14 +3752,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4995,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4995,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 5,
+    "blockedForBom": 5
   },
   {
     "id": "4080449000000366498",
@@ -3856,14 +3856,14 @@
     "uom": "NOS",
     "material": "ELECTRICAL GRADE",
     "category": "ELECTRICAL GRADE",
-    "stock": 5000,
+    "stock": 4992,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4992,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 8,
+    "blockedForBom": 8
   },
   {
     "id": "4080449000000366522",
@@ -3908,14 +3908,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4960,
+    "stock": 4932,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4960,
+    "availableStock": 4932,
     "currentStock": 5000,
-    "reserved": 40,
-    "blockedForBom": 40
+    "reserved": 68,
+    "blockedForBom": 68
   },
   {
     "id": "4080449000000033187",
@@ -3960,14 +3960,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4900,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4900,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 100,
+    "blockedForBom": 100
   },
   {
     "id": "4080449000000366378",
@@ -3977,7 +3977,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR100O",
-    "status": "In Stock",
+    "status": "Low Stock",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3986,14 +3986,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 60,
     "reorderLevel": 100,
-    "openingStock": 5000,
-    "physicalStock": 5000,
-    "availableStock": 5000,
+    "openingStock": 260,
+    "physicalStock": 260,
+    "availableStock": 60,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 200,
+    "blockedForBom": 200
   },
   {
     "id": "4080449000000367058",
@@ -4012,14 +4012,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4900,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4900,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 100,
+    "blockedForBom": 100
   },
   {
     "id": "4080449000000367066",
@@ -4090,14 +4090,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4900,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4900,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 100,
+    "blockedForBom": 100
   },
   {
     "id": "4080449000000366370",
@@ -4116,14 +4116,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4900,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4900,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 100,
+    "blockedForBom": 100
   },
   {
     "id": "4080449000000366386",
@@ -4168,14 +4168,14 @@
     "uom": "NOS",
     "material": "ADANI (DCR)",
     "category": "ADANI (DCR)",
-    "stock": 5000,
+    "stock": 4928,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4928,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 72,
+    "blockedForBom": 72
   },
   {
     "id": "4080449000000367890",
@@ -4532,14 +4532,14 @@
     "uom": "NOS",
     "material": "WAREE (DCR)",
     "category": "WAREE (DCR)",
-    "stock": 5000,
+    "stock": 4980,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4980,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 20,
+    "blockedForBom": 20
   },
   {
     "id": "4080449000000367994",
@@ -4584,14 +4584,14 @@
     "uom": "NOS",
     "material": "WAREE (DCR)",
     "category": "WAREE (DCR)",
-    "stock": 5000,
+    "stock": 4964,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4964,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 36,
+    "blockedForBom": 36
   },
   {
     "id": "4080449000000368010",
@@ -4896,14 +4896,14 @@
     "uom": "NOS",
     "material": "POLYCAB",
     "category": "POLYCAB",
-    "stock": 5000,
+    "stock": 4998,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4998,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 2,
+    "blockedForBom": 2
   },
   {
     "id": "4080449000000367498",
@@ -5000,14 +5000,14 @@
     "uom": "NOS",
     "material": "POLYCAB",
     "category": "POLYCAB",
-    "stock": 5000,
+    "stock": 4999,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4999,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 1,
+    "blockedForBom": 1
   },
   {
     "id": "4080449000000367626",
@@ -5364,14 +5364,14 @@
     "uom": "NOS",
     "material": "GAL",
     "category": "GAL",
-    "stock": 4992,
+    "stock": 4972,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4992,
+    "availableStock": 4972,
     "currentStock": 5000,
-    "reserved": 8,
-    "blockedForBom": 8
+    "reserved": 28,
+    "blockedForBom": 28
   },
   {
     "id": "4080449000000366274",
@@ -5520,14 +5520,14 @@
     "uom": "NOS",
     "material": "GAL",
     "category": "GAL",
-    "stock": 5000,
+    "stock": 4996,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4996,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 4,
+    "blockedForBom": 4
   },
   {
     "id": "4080449000000366618",
@@ -5754,14 +5754,14 @@
     "uom": "NOS",
     "material": "GAL",
     "category": "GAL",
-    "stock": 4990,
+    "stock": 4978,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4990,
+    "availableStock": 4978,
     "currentStock": 5000,
-    "reserved": 10,
-    "blockedForBom": 10
+    "reserved": 22,
+    "blockedForBom": 22
   },
   {
     "id": "4080449000000366210",
@@ -6274,14 +6274,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4896,
+    "stock": 4772,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4896,
+    "availableStock": 4772,
     "currentStock": 5000,
-    "reserved": 104,
-    "blockedForBom": 104
+    "reserved": 228,
+    "blockedForBom": 228
   },
   {
     "id": "4080449000000366802",
@@ -6326,14 +6326,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 5000,
+    "stock": 4998,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4998,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 2,
+    "blockedForBom": 2
   },
   {
     "id": "4080449000000366682",
@@ -6352,14 +6352,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4960,
+    "stock": 4932,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4960,
+    "availableStock": 4932,
     "currentStock": 5000,
-    "reserved": 40,
-    "blockedForBom": 40
+    "reserved": 68,
+    "blockedForBom": 68
   },
   {
     "id": "4080449000000366706",
@@ -6404,14 +6404,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4888,
+    "stock": 4792,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4888,
+    "availableStock": 4792,
     "currentStock": 5000,
-    "reserved": 112,
-    "blockedForBom": 112
+    "reserved": 208,
+    "blockedForBom": 208
   },
   {
     "id": "4080449000000366786",
@@ -6430,14 +6430,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4980,
+    "stock": 4956,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4980,
+    "availableStock": 4956,
     "currentStock": 5000,
-    "reserved": 20,
-    "blockedForBom": 20
+    "reserved": 44,
+    "blockedForBom": 44
   },
   {
     "id": "4080449000000366714",
@@ -6586,14 +6586,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 5000,
+    "stock": 4995,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4995,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 5,
+    "blockedForBom": 5
   },
   {
     "id": "4080449000000366698",
@@ -7002,14 +7002,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 5000,
+    "stock": 4995,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4995,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 5,
+    "blockedForBom": 5
   },
   {
     "id": "4080449000000366474",
@@ -7028,14 +7028,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4960,
+    "stock": 4927,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4960,
+    "availableStock": 4927,
     "currentStock": 5000,
-    "reserved": 40,
-    "blockedForBom": 40
+    "reserved": 73,
+    "blockedForBom": 73
   },
   {
     "id": "4080449000000368074",
@@ -7219,20 +7219,21 @@
     "physicalStock": 5000,
     "availableStock": 5000,
     "currentStock": 5000,
-    "reserved": 0
+    "reserved": 0,
+    "blockedForBom": 0
   },
   {
     "code": "FG-0234",
     "name": "GI Anchor Bolt M10*100",
     "cat": "GAL",
     "unit": "NOS",
-    "stock": 4920,
-    "reserved": 80,
-    "blockedForBom": 80,
+    "stock": 4824,
+    "reserved": 176,
+    "blockedForBom": 176,
     "minLevel": 10,
     "status": "In Stock",
     "store": "Main Store",
     "lastUpdated": "Blocked for BOM BOM-656",
-    "availableStock": 4920
+    "availableStock": 4824
   }
 ]

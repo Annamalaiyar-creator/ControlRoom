@@ -3425,3 +3425,41 @@ export const VRM_PRODUCTS = [
     "description": ""
   }
 ];
+
+export const wordFingerprint = (str) => {
+  if (!str) return '';
+  const words = str.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(w => w && !['300mm', '350mm', '400mm', 'nos', 'mm'].includes(w));
+  return Array.from(new Set(words)).sort().join('_');
+};
+
+export const resolveProductCode = (item, productsList = VRM_PRODUCTS) => {
+  if (!item) return '';
+  const direct = String(item.code || item.sku || '').trim().toUpperCase();
+  if (direct && direct !== 'VRM-ITEM' && direct !== 'ITEM' && !direct.startsWith('FG-')) {
+    return direct;
+  }
+
+  const rawName = String(item.name || item.description || '').toLowerCase().trim();
+  if (!rawName) return direct || '';
+
+  // 1. Direct name match in products catalog
+  const exact = productsList.find(p => p.name && p.name.toLowerCase().trim() === rawName);
+  if (exact && exact.code) return exact.code.toUpperCase();
+
+  // 2. Word fingerprint match
+  const fp = wordFingerprint(rawName);
+  if (fp) {
+    const fpMatch = productsList.find(p => p.name && wordFingerprint(p.name) === fp);
+    if (fpMatch && fpMatch.code) return fpMatch.code.toUpperCase();
+  }
+
+  // 3. Fallback: check if rawName includes code or code includes in name
+  const subMatch = productsList.find(p => {
+    const pCode = String(p.code || '').toLowerCase();
+    const pName = String(p.name || '').toLowerCase();
+    return (pCode && rawName.includes(pCode)) || (pName && rawName.includes(pName)) || (pName && pName.includes(rawName));
+  });
+  if (subMatch && subMatch.code) return subMatch.code.toUpperCase();
+
+  return direct || '';
+};
