@@ -7,7 +7,7 @@ import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
 import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../utils/supabaseDataSync';
-import { notifyPiCreated, playPorterOrderAlert, speakNotificationVoice } from '../services/notificationService';
+import { notifyPiCreated } from '../services/notificationService';
 
 const defaultSalesPIs = [];
 
@@ -1181,11 +1181,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
           salesPersonCode: newPI.salesPersonCode,
           amount: newPI.amount
         });
-        playPorterOrderAlert();
-        setTimeout(() => {
-          const cleanCust = (newPI.vendor || '').replace(/\b(Pvt|Private|Ltd|Limited|LLP|Inc|Corp)\b/gi, '').trim();
-          speakNotificationVoice(cleanCust ? `${cleanCust}, Proforma Invoice Created!` : 'Proforma Invoice Created!', { rate: 1.12, pitch: 1.05 });
-        }, 320);
       } catch (err) {
         console.warn('PI voice notification error:', err);
       }

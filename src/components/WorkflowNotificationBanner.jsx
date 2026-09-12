@@ -1,21 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Volume2, VolumeX, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
+import { Bell, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead, speakNotificationVoice, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
 
 export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
   const [activeToast, setActiveToast] = useState(null);
   const [progress, setProgress] = useState(100);
-  const [voiceEnabled, setVoiceEnabled] = useState(() => isVoiceNotificationEnabled());
   const timerRef = useRef(null);
   const progressIntervalRef = useRef(null);
 
-  useEffect(() => {
-    const handleVoiceChange = (e) => {
-      if (e && e.detail) setVoiceEnabled(e.detail.enabled);
-    };
-    window.addEventListener('controlroom_voice_setting_changed', handleVoiceChange);
-    return () => window.removeEventListener('controlroom_voice_setting_changed', handleVoiceChange);
-  }, []);
 
   useEffect(() => {
     const handleWorkflowToast = (event) => {
@@ -211,44 +203,7 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
                 {roleBadge}
               </span>
               
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const nextVal = !voiceEnabled;
-                  setVoiceEnabled(nextVal);
-                  setVoiceNotificationEnabled(nextVal);
-                  if (nextVal && activeToast) {
-                    playPorterOrderAlert();
-                    setTimeout(() => {
-                      const cue = getPorterVoiceCue(activeToast, activeToast.metadata);
-                      speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
-                    }, 320);
-                  }
-                }}
-                title={voiceEnabled ? 'Voice Announcement Active (Click to Mute)' : 'Voice Muted (Click to Enable)'}
-                style={{
-                  border: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: voiceEnabled ? '#0E7490' : '#94A3B8',
-                  backgroundColor: voiceEnabled ? '#ECFEFF' : '#F1F5F9',
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {voiceEnabled ? (
-                  <Volume2 size={13} style={{ animation: 'audioPulse 1.4s infinite' }} />
-                ) : (
-                  <VolumeX size={13} />
-                )}
-                <span>{voiceEnabled ? 'Voice ON' : 'Muted'}</span>
-              </button>
+
             </div>
 
             <button

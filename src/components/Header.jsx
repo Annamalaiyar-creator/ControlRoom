@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle, Menu, Volume2, VolumeX } from 'lucide-react';
+import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle, Menu } from 'lucide-react';
 
-import { isRoleTargeted, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
+import { isRoleTargeted, speakNotificationVoice, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
 
 export const filterCompletedBomNotifications = (notificationsList) => {
   if (!Array.isArray(notificationsList) || notificationsList.length === 0) return [];
@@ -132,22 +132,6 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     };
   }, []);
 
-  const [voiceEnabled, setVoiceEnabled] = useState(() => isVoiceNotificationEnabled());
-
-  useEffect(() => {
-    const handleVoiceChange = (e) => {
-      if (e && e.detail) setVoiceEnabled(e.detail.enabled);
-    };
-    window.addEventListener('controlroom_voice_setting_changed', handleVoiceChange);
-    return () => window.removeEventListener('controlroom_voice_setting_changed', handleVoiceChange);
-  }, []);
-
-  const handleToggleVoice = (e) => {
-    if (e) e.stopPropagation();
-    const nextVal = !voiceEnabled;
-    setVoiceEnabled(nextVal);
-    setVoiceNotificationEnabled(nextVal);
-  };
 
   // Filter notifications based on active user login role (or show system-wide alerts)
   const roleNotifications = liveNotifications.filter(n => {
@@ -206,16 +190,6 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
     } catch (err) {}
   };
 
-  const clearAllNotifications = (e) => {
-    if (e) e.stopPropagation();
-    try {
-      localStorage.removeItem('vrm_live_notifications');
-      localStorage.removeItem('controlroom_read_notification_ids');
-      setLiveNotifications([]);
-      setReadIds([]);
-      window.dispatchEvent(new Event('vrm_notifications_updated'));
-    } catch (err) {}
-  };
 
   const markItemAsRead = (item, e) => {
     if (e) e.stopPropagation();
@@ -473,47 +447,12 @@ export default function Header({ activeTab, userRole = 'Procurement Admin', onSw
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {/* Voice Notifications Toggle Button */}
-                  <button
-                    onClick={handleToggleVoice}
-                    title={voiceEnabled ? 'Voice Announcements Active (Click to Mute)' : 'Voice Announcements Muted (Click to Enable)'}
-                    style={{
-                      border: 'none',
-                      backgroundColor: voiceEnabled ? '#ECFEFF' : '#F8FAFC',
-                      color: voiceEnabled ? '#0E7490' : '#94A3B8',
-                      padding: '2px 7px',
-                      borderRadius: '6px',
-                      fontSize: '10.5px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      border: voiceEnabled ? '1px solid #A5F3FC' : '1px solid #E2E8F0'
-                    }}
-                  >
-                    {voiceEnabled ? <Volume2 size={12} color="#0E7490" /> : <VolumeX size={12} color="#94A3B8" />}
-                    <span>{voiceEnabled ? 'Voice ON' : 'Voice OFF'}</span>
-                  </button>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllAsRead}
                       style={{ border: 'none', background: 'none', color: '#0284C7', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
                     >
                       Mark read
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {roleNotifications.length > 0 && (
-                    <button
-                      onClick={clearAllNotifications}
-                      title="Clear all saved notifications"
-                      style={{ border: 'none', background: 'none', color: '#94A3B8', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = '#DC2626'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
-                    >
-                      Clear
                     </button>
                   )}
                 </div>

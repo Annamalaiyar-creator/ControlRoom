@@ -172,30 +172,17 @@ function playPorterChime(ctx) {
 
 /**
  * Global preference for Voice Notifications (Text-to-Speech)
+ * Per requirements: Voice is ALWAYS ON.
  */
 export function isVoiceNotificationEnabled() {
-  if (typeof window === 'undefined') return false;
-  try {
-    const saved = localStorage.getItem('controlroom_voice_notifications_enabled');
-    return saved === null ? true : saved === 'true';
-  } catch (_) {
-    return true;
-  }
+  return true; // Voice is always enabled
 }
 
 export function setVoiceNotificationEnabled(enabled) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem('controlroom_voice_notifications_enabled', String(enabled));
-    if (!enabled && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    } else if (enabled) {
-      playPorterOrderAlert();
-      setTimeout(() => {
-        speakNotificationVoice('Voice alerts on!');
-      }, 300);
-    }
-    window.dispatchEvent(new CustomEvent('controlroom_voice_setting_changed', { detail: { enabled } }));
+    localStorage.setItem('controlroom_voice_notifications_enabled', 'true');
+    window.dispatchEvent(new CustomEvent('controlroom_voice_setting_changed', { detail: { enabled: true } }));
   } catch (_) {}
 }
 
@@ -216,34 +203,49 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
 }
 
 /**
- * Extracts a punchy, Porter-style short voice alert including the customer name
- * (e.g. "Vikram Solar: Order Packed!" or "Tata Power: New Order to Pack!")
+ * Extracts a voice announcement in the format: "[Company Name], [Status]"
+ * (e.g. "Vikram Solar, Order Packed" or "Tata Power, Proforma Invoice Created")
  */
 export function getPorterVoiceCue(titleOrMessage, metadata = {}) {
-  const fullText = ((typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : titleOrMessage) || '').toUpperCase();
+  const fullText = ((typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : titleOrMessage) || '');
+  const upperText = fullText.toUpperCase();
   const step = (metadata && metadata.step) ? String(metadata.step).toUpperCase() : '';
 
-  // 1. Extract and clean customer name
-  let rawCustomer = (metadata && (metadata.customerName || metadata.customer || metadata.vendor)) ||
-                    (typeof titleOrMessage === 'object' && (titleOrMessage.customerName || titleOrMessage.customer || titleOrMessage.vendor)) ||
-                    '';
+  // 1. Extract and clean company / customer / vendor name
+  let rawCompany = '';
+  if (metadata) {
+    rawCompany = metadata.companyName || metadata.customerName || metadata.customer || metadata.company || metadata.client || metadata.clientName || metadata.vendor || metadata.vendorName || '';
+  }
+  if (!rawCompany && typeof titleOrMessage === 'object' && titleOrMessage) {
+    rawCompany = titleOrMessage.companyName || titleOrMessage.customerName || titleOrMessage.customer || titleOrMessage.company || titleOrMessage.client || titleOrMessage.clientName || titleOrMessage.vendor || titleOrMessage.vendorName || '';
+  }
 
-  // If not in metadata or root properties, try extracting from parentheses in message, e.g. "BOM-1042 (Vikram Solar)"
-  if (!rawCustomer) {
-    const rawStr = typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : String(titleOrMessage || '');
-    const parenMatch = rawStr.match(/\(([^)]+)\)/);
+  // If not in metadata, inspect message parentheses: e.g. "BOM-1042 (Vikram Solar)"
+  if (!rawCompany) {
+    const parenMatch = fullText.match(/\(([^)]+)\)/);
     if (parenMatch && parenMatch[1]) {
       const candidate = parenMatch[1].trim();
       if (!candidate.startsWith('BOM-') && !candidate.startsWith('INV-') && !candidate.startsWith('PO-') && !candidate.startsWith('PI-') && candidate.length > 2) {
-        rawCustomer = candidate;
+        rawCompany = candidate;
       }
     }
   }
 
-  // Clean customer name for crisp, natural voice pronunciation (e.g. "Vikram Solar Pvt Ltd" -> "Vikram Solar")
-  let cleanCustomer = '';
-  if (rawCustomer && typeof rawCustomer === 'string') {
-    cleanCustomer = rawCustomer
+  // If not in parentheses, inspect "for [Company]" or "from [Company]"
+  if (!rawCompany) {
+    const forMatch = fullText.match(/\b(?:for|from)\s+([A-Z0-9][A-Za-z0-9\s&]+?)(?:\s+(?:has|is|was|to|\.|—|-|\(|$))/);
+    if (forMatch && forMatch[1]) {
+      const candidate = forMatch[1].trim();
+      if (candidate.length > 2 && candidate.toLowerCase() !== 'dispatch' && candidate.toLowerCase() !== 'accounts') {
+        rawCompany = candidate;
+      }
+    }
+  }
+
+  // Clean company name for crisp, natural voice pronunciation (e.g. "Vikram Solar Pvt Ltd" -> "Vikram Solar")
+  let cleanCompany = '';
+  if (rawCompany && typeof rawCompany === 'string') {
+    cleanCompany = rawCompany
       .replace(/\b(Pvt|Private)\s+(Ltd|Limited)\b/gi, '')
       .replace(/\b(Ltd|Limited|LLP|Inc|Corp)\b/gi, '')
       .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
@@ -251,43 +253,46 @@ export function getPorterVoiceCue(titleOrMessage, metadata = {}) {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (cleanCustomer.toLowerCase() === 'customer' || cleanCustomer.toLowerCase() === 'client' || cleanCustomer.toLowerCase() === 'all') {
-      cleanCustomer = '';
+    const lower = cleanCompany.toLowerCase();
+    if (lower === 'customer' || lower === 'client' || lower === 'all' || lower === 'vendor') {
+      cleanCompany = '';
     }
   }
 
-  // 2. Determine Action Cue
-  let actionCue = 'New Order!';
-  if (step.includes('BOM_SENT_TO_DISPATCH') || fullText.includes('RECEIVED TO PACK') || fullText.includes('NEW BOM RECEIVED') || fullText.includes('RECEIVED TO DISPATCH')) {
-    actionCue = 'New Order to Pack!';
-  } else if (step.includes('BOM_PACKED') || fullText.includes('PACKED AND SENT') || fullText.includes('PACKED & SENT') || fullText.includes('BOM PACKED') || fullText.includes('ORDER PACKED')) {
-    actionCue = 'Order Packed!';
-  } else if (step.includes('ACCOUNTS_VERIFIED') || step.includes('BILLING_NOTIF') || fullText.includes('ACCOUNTS APPROVED') || fullText.includes('PAYMENT APPROVED')) {
-    actionCue = 'Payment Approved!';
-  } else if (step.includes('INVOICE_COMPLETED') || step.includes('DISPATCH_NOTIF') || fullText.includes('INVOICE COMPLETED') || fullText.includes('CLEARED FOR VEHICLE')) {
-    actionCue = 'Order Cleared for Dispatch!';
-  } else if (step.includes('CANCEL') || fullText.includes('CANCEL')) {
-    actionCue = 'Order Cancelled!';
-  } else if (fullText.includes('ACCOUNTS VERIFICATION') || fullText.includes('FOR ACCOUNTS')) {
-    actionCue = 'Payment Verification Needed!';
-  } else if (fullText.includes('READY FOR INVOICE') || fullText.includes('READY FOR INVOICING')) {
-    actionCue = 'Invoice Ready!';
-  } else if (fullText.includes('DISPATCHED') || fullText.includes('VEHICLE LOADED')) {
-    actionCue = 'Order Dispatched!';
-  } else if (fullText.includes('PROFORMA INVOICE') || fullText.includes('CONVERTED TO PI') || fullText.includes('PI CREATED')) {
-    actionCue = 'Proforma Invoice Created!';
-  } else if (fullText.includes('PURCHASE ORDER APPROVED') || fullText.includes('PO APPROVED')) {
-    actionCue = 'Purchase Order Approved!';
-  } else if (fullText.includes('PURCHASE ORDER') || fullText.includes('NEW PO')) {
-    actionCue = 'New Purchase Order!';
-  } else if (fullText.includes('QUOTATION CONVERTED')) {
-    actionCue = 'Quotation Converted!';
-  } else if (fullText.includes('QUOTATION')) {
-    actionCue = 'Quotation Updated!';
-  } else if (fullText.includes('WORK ORDER')) {
-    actionCue = 'New Work Order!';
-  } else if (fullText.includes('NEW BOM') || fullText.includes('NEW ORDER')) {
-    actionCue = 'New Order!';
+  const companyToSpeak = cleanCompany || 'VRM';
+
+  // 2. Determine Status cleanly
+  let status = 'New Order';
+  if (step.includes('BOM_SENT_TO_DISPATCH') || upperText.includes('RECEIVED TO PACK') || upperText.includes('NEW BOM RECEIVED') || upperText.includes('RECEIVED TO DISPATCH')) {
+    status = 'New Order to Pack';
+  } else if (step.includes('BOM_PACKED') || upperText.includes('PACKED AND SENT') || upperText.includes('PACKED & SENT') || upperText.includes('BOM PACKED') || upperText.includes('ORDER PACKED') || upperText.includes('PACKING COMPLETED')) {
+    status = 'Order Packed';
+  } else if (step.includes('ACCOUNTS_VERIFIED') || step.includes('BILLING_NOTIF') || upperText.includes('ACCOUNTS APPROVED') || upperText.includes('PAYMENT APPROVED')) {
+    status = 'Payment Approved';
+  } else if (step.includes('INVOICE_COMPLETED') || step.includes('DISPATCH_NOTIF') || upperText.includes('INVOICE COMPLETED') || upperText.includes('CLEARED FOR VEHICLE')) {
+    status = 'Order Cleared for Dispatch';
+  } else if (step.includes('CANCEL') || upperText.includes('CANCEL')) {
+    status = 'Order Cancelled';
+  } else if (upperText.includes('ACCOUNTS VERIFICATION') || upperText.includes('FOR ACCOUNTS')) {
+    status = 'Payment Verification Needed';
+  } else if (upperText.includes('READY FOR INVOICE') || upperText.includes('READY FOR INVOICING')) {
+    status = 'Invoice Ready';
+  } else if (upperText.includes('DISPATCHED') || upperText.includes('VEHICLE LOADED')) {
+    status = 'Order Dispatched';
+  } else if (upperText.includes('PROFORMA INVOICE') || upperText.includes('CONVERTED TO PI') || upperText.includes('PI CREATED')) {
+    status = 'Proforma Invoice Created';
+  } else if (upperText.includes('PURCHASE ORDER APPROVED') || upperText.includes('PO APPROVED')) {
+    status = 'Purchase Order Approved';
+  } else if (upperText.includes('PURCHASE ORDER') || upperText.includes('NEW PO')) {
+    status = 'New Purchase Order';
+  } else if (upperText.includes('QUOTATION CONVERTED')) {
+    status = 'Quotation Converted';
+  } else if (upperText.includes('QUOTATION')) {
+    status = 'Quotation Created';
+  } else if (upperText.includes('WORK ORDER')) {
+    status = 'New Work Order';
+  } else if (upperText.includes('NEW BOM') || upperText.includes('NEW ORDER')) {
+    status = 'New Order';
   } else {
     // Fallback: Take the first few words of the title cleanly
     const title = (typeof titleOrMessage === 'object' ? titleOrMessage.title : titleOrMessage) || '';
@@ -298,33 +303,27 @@ export function getPorterVoiceCue(titleOrMessage, metadata = {}) {
 
     const words = cleanTitle.split(/\s+/).filter(Boolean);
     if (words.length > 0 && words.length <= 4) {
-      actionCue = words.join(' ') + '!';
+      status = words.join(' ');
     }
   }
 
-  // 3. Return Combined: "[Customer Name]: [Action Cue]!" or "[Action Cue]!"
-  if (cleanCustomer) {
-    return `${cleanCustomer}, ${actionCue}`;
-  }
-
-  return actionCue;
+  // 3. Return Combined: "[Company Name], [Status]"
+  return `${companyToSpeak}, ${status}`;
 }
 
 /**
- * Pronounces a short Porter-style voice cue cleanly using the browser's native Web Speech API.
- * Never reads long paragraphs or addresses.
+ * Pronounces the voice announcement using a clear female / girl voice
+ * format: "[Company Name], [Status]"
  * @param {string} text - The cue to speak (or full text which will be converted to a cue)
  * @param {Object} options - Optional configuration { rate, pitch, volume }
  */
 export function speakNotificationVoice(text, options = {}) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  if (!isVoiceNotificationEnabled()) return;
 
   try {
-    // If long sentence passed, convert to short Porter voice cue
-    let cue = (text && typeof text === 'string' && (text.length > 35 || text.includes('.')))
+    let cue = (text && typeof text === 'string' && (text.length > 40 || text.includes('.')))
       ? getPorterVoiceCue(text, options.metadata)
-      : (text || 'New Order!');
+      : (text || 'VRM, New Order');
 
     window.speechSynthesis.cancel();
 
@@ -339,25 +338,69 @@ export function speakNotificationVoice(text, options = {}) {
 
     const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = 'en-US';
-    utterance.rate = options.rate || 1.12; // Fast, punchy delivery like Porter
-    utterance.pitch = options.pitch || 1.05; // Slightly energized
+    utterance.rate = options.rate || 1.05; // Clear natural speed
+    utterance.pitch = options.pitch || 1.18; // Soft, natural female/girl voice pitch
     utterance.volume = options.volume != null ? options.volume : 1.0;
 
-    // Select the best natural-sounding voice if available
-    const voices = cachedVoices.length > 0 ? cachedVoices : (window.speechSynthesis.getVoices() || []);
+    // Prioritize natural-sounding female / girl voices
+    let voices = cachedVoices.length > 0 ? cachedVoices : [];
+    if (voices.length === 0 && window.speechSynthesis.getVoices) {
+      voices = window.speechSynthesis.getVoices() || [];
+    }
+
     if (voices.length > 0) {
-      const preferred = voices.find(v => 
-        v.lang.startsWith('en') && (
-          v.name.includes('Google') || 
-          v.name.includes('Samantha') || 
-          v.name.includes('Daniel') || 
-          v.name.includes('Natural') || 
-          v.name.includes('Siri') || 
-          v.name.includes('Karen') ||
-          v.name.includes('Zira')
-        )
-      ) || voices.find(v => v.lang.startsWith('en'));
-      if (preferred) utterance.voice = preferred;
+      const femaleKeywords = [
+        'google uk english female',
+        'google us english',
+        'samantha',
+        'victoria',
+        'karen',
+        'zira',
+        'jenny',
+        'aria',
+        'veena',
+        'heera',
+        'neerja',
+        'hazel',
+        'susan',
+        'fiona',
+        'moira',
+        'tessa',
+        'ava',
+        'allison',
+        'serena',
+        'kate',
+        'female',
+        'woman',
+        'girl'
+      ];
+
+      // 1. Search for English female voice
+      let girlVoice = null;
+      for (const kw of femaleKeywords) {
+        girlVoice = voices.find(v => 
+          (v.lang && v.lang.startsWith('en')) && 
+          v.name.toLowerCase().includes(kw)
+        );
+        if (girlVoice) break;
+      }
+
+      // 2. Fallback: Any voice with female/girl in name
+      if (!girlVoice) {
+        girlVoice = voices.find(v => {
+          const nm = v.name.toLowerCase();
+          return nm.includes('female') || nm.includes('girl') || nm.includes('woman');
+        });
+      }
+
+      // 3. Fallback: standard en-US or en voice
+      if (!girlVoice) {
+        girlVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang && v.lang.startsWith('en'));
+      }
+
+      if (girlVoice) {
+        utterance.voice = girlVoice;
+      }
     }
 
     window.speechSynthesis.speak(utterance);
