@@ -2731,6 +2731,112 @@ app.post('/api/reset-all-testing-data', async (req, res) => {
   }
 });
 
+// Reconcile and deduct inventory across all active BOMs
+const reconcileServerInventoryWithBoms = async (bomsList = null) => {
+  try {
+    const bomsPath = getStoreFilePath('bom_store.json');
+    let boms = bomsList;
+    if (!Array.isArray(boms)) {
+      if (fs.existsSync(bomsPath)) {
+        try { boms = JSON.parse(fs.readFileSync(bomsPath, 'utf8')); } catch (_) {}
+      }
+    }
+    if (!Array.isArray(boms)) boms = [];
+
+    // 1. Calculate total active allocations per item
+    const allocations = new Map();
+    boms.forEach(b => {
+      const st = String(b?.status || '').toLowerCase();
+      if (!st.includes('cancelled') && !st.includes('stock restored')) {
+        (b?.items || []).forEach(it => {
+          const q = parseFloat(it?.qty || it?.bomQty || 0) || 0;
+          if (q > 0) {
+            const code = String(it?.code || '').toLowerCase().trim();
+            const name = String(it?.name || it?.description || '').toLowerCase().trim();
+            if (code) allocations.set(code, (allocations.get(code) || 0) + q);
+            if (name) allocations.set(name, (allocations.get(name) || 0) + q);
+          }
+        });
+      }
+    });
+
+    // 2. Update raw_materials_store.json
+    const rawMatsPath = getStoreFilePath('raw_materials_store.json');
+    let rawMats = [];
+    if (fs.existsSync(rawMatsPath)) {
+      try { rawMats = JSON.parse(fs.readFileSync(rawMatsPath, 'utf8')); } catch (_) {}
+    }
+    if (Array.isArray(rawMats) && rawMats.length > 0) {
+      let changed = false;
+      rawMats.forEach(m => {
+        const mCode = String(m?.code || m?.sku || m?.itemId || '').toLowerCase().trim();
+        const mName = String(m?.name || '').toLowerCase().trim();
+        const blocked = (mCode && allocations.get(mCode)) || (mName && allocations.get(mName)) || 0;
+        const baseline = Math.max(0, parseFloat(m?.openingStock !== undefined ? m.openingStock : (m?.physicalStock !== undefined ? m.physicalStock : 5000)) || 5000);
+        const newStock = Math.max(0, baseline - blocked);
+        const minL = parseFloat(m?.minLevel || 100) || 100;
+        const newStatus = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
+
+        if (m.stock !== newStock || m.reserved !== blocked || m.status !== newStatus) {
+          m.stock = newStock;
+          m.availableStock = newStock;
+          m.reserved = blocked;
+          m.blockedForBom = blocked;
+          m.status = newStatus;
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        fs.writeFileSync(rawMatsPath, JSON.stringify(rawMats, null, 2), 'utf8');
+        supabaseMemoryStore.raw_materials_store = rawMats;
+        pushStoreToSupabase('raw_materials_store', rawMats).catch(() => {});
+      }
+    }
+
+    // 3. Update item_store.json
+    const itemsPath = getStoreFilePath('item_store.json');
+    let items = [];
+    if (fs.existsSync(itemsPath)) {
+      try { items = JSON.parse(fs.readFileSync(itemsPath, 'utf8')); } catch (_) {}
+    }
+    if (Array.isArray(items) && items.length > 0) {
+      let changed = false;
+      items.forEach(it => {
+        const itCode = String(it?.code || it?.sku || it?.itemId || '').toLowerCase().trim();
+        const itName = String(it?.name || '').toLowerCase().trim();
+        const blocked = (itCode && allocations.get(itCode)) || (itName && allocations.get(itName)) || 0;
+        const baseline = Math.max(0, parseFloat(it?.openingStock !== undefined ? it.openingStock : (it?.physicalStock !== undefined ? it.physicalStock : 5000)) || 5000);
+        const newStock = Math.max(0, baseline - blocked);
+        const minL = parseFloat(it?.minLevel || 20) || 20;
+        const newStatus = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
+
+        if (it.stock !== newStock || it.reserved !== blocked || it.status !== newStatus) {
+          it.stock = newStock;
+          it.availableStock = newStock;
+          it.reserved = blocked;
+          it.status = newStatus;
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        fs.writeFileSync(itemsPath, JSON.stringify(items, null, 2), 'utf8');
+        supabaseMemoryStore.item_store = items;
+        pushStoreToSupabase('item_store', items).catch(() => {});
+      }
+    }
+    console.log(`[Inventory Reconcile] Reconciled stock for ${allocations.size} allocated items across ${boms.length} BOMs.`);
+  } catch (err) {
+    console.error('[Inventory Reconciliation Error]:', err);
+  }
+};
+
+app.post('/api/inventory/reconcile-boms', async (req, res) => {
+  await reconcileServerInventoryWithBoms();
+  res.json({ success: true, message: 'Server inventory reconciled with active BOMs' });
+});
+
 // Centralized atomic BOM creation/update endpoint - guarantees sequential non-clashing codes
 app.post('/api/boms', async (req, res) => {
   return new Promise((resolveOuter) => {
@@ -2850,6 +2956,13 @@ app.post('/api/boms', async (req, res) => {
         }
 
         console.log(`[BOM Store] BOM ${finalCode} saved immediately to disk (isNew: ${shouldAssignNewCode}). Total: ${mergedList.length}`);
+
+        // Automatically reconcile and deduct inventory in raw_materials_store and item_store
+        try {
+          await reconcileServerInventoryWithBoms(mergedList);
+        } catch (rErr) {
+          console.error('Error reconciling inventory after BOM save:', rErr);
+        }
 
         // Await cloud sync to Supabase before sending response so state is never lost
         try {

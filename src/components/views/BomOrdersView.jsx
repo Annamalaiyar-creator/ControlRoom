@@ -12,6 +12,7 @@ import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPreset
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
+import { centralInventoryStore } from '../../utils/centralInventoryStore';
 import SearchablePresetSelector from '../SearchablePresetSelector';
 import TypeableProductSelect from '../TypeableProductSelect';
 import { is5PctSolarProduct } from '../PerformaInvoiceView';
@@ -596,7 +597,14 @@ export default function BomOrdersView(props) {
   const blockInventoryForBom = (bomItems = [], bomCode = '') => {
     if (!Array.isArray(bomItems) || bomItems.length === 0) return;
     try {
-      // 1. Update controlroom_raw_materials_store
+      // 1. Deduct in Central Inventory Store (Ledger & Reservations)
+      try {
+        centralInventoryStore.deductStockForBOM(bomCode, bomItems, userRole || 'Sales Executive');
+      } catch (cErr) {
+        console.warn('Central store deduction notice:', cErr);
+      }
+
+      // 2. Update controlroom_raw_materials_store
       const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
       let currentMats = [];
       if (rawStoreStr) {
@@ -604,7 +612,7 @@ export default function BomOrdersView(props) {
       }
       if (!Array.isArray(currentMats)) currentMats = [];
 
-      // 2. Update controlroom_items_list
+      // 3. Update controlroom_items_list
       const itemsListStr = localStorage.getItem('controlroom_items_list');
       let currentItems = [];
       if (itemsListStr) {
@@ -675,7 +683,11 @@ export default function BomOrdersView(props) {
       saveCloudStore('raw_materials_store', currentMats);
       window.dispatchEvent(new Event('controlroom_raw_materials_update'));
       window.dispatchEvent(new Event('controlroom_storage_update'));
-      setItemsList(currentMats);
+      window.dispatchEvent(new Event('central_inventory_updated'));
+      setItemsList(getFullProductsCatalogWithStock());
+
+      // Guarantee backend disk reconciliation
+      fetch('/api/inventory/reconcile-boms', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('Error blocking inventory for BOM:', err);
     }
@@ -685,6 +697,13 @@ export default function BomOrdersView(props) {
   const restoreInventoryForBom = (bomItems = [], bomCode = '') => {
     if (!Array.isArray(bomItems) || bomItems.length === 0) return;
     try {
+      // 1. Restore in Central Inventory Store
+      try {
+        centralInventoryStore.restoreStockForBOM(bomCode, bomItems, userRole || 'Sales Executive');
+      } catch (cErr) {
+        console.warn('Central store restore notice:', cErr);
+      }
+
       const rawStoreStr = localStorage.getItem('controlroom_raw_materials_store');
       let currentMats = [];
       if (rawStoreStr) {
@@ -745,7 +764,11 @@ export default function BomOrdersView(props) {
       saveCloudStore('raw_materials_store', currentMats);
       window.dispatchEvent(new Event('controlroom_raw_materials_update'));
       window.dispatchEvent(new Event('controlroom_storage_update'));
-      setItemsList(currentMats);
+      window.dispatchEvent(new Event('central_inventory_updated'));
+      setItemsList(getFullProductsCatalogWithStock());
+
+      // Guarantee backend disk reconciliation
+      fetch('/api/inventory/reconcile-boms', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('Error restoring inventory for BOM:', err);
     }
@@ -1763,8 +1786,11 @@ export default function BomOrdersView(props) {
 
       const newItems = targetPreset.items.map(it => {
         const baseQ = parseFloat(it.qty) || 1;
+        const matchedCatalog = (itemsList || []).find(ci => ci.name && ci.name.toLowerCase().trim() === String(it.name || '').toLowerCase().trim()) || (VRM_PRODUCTS || []).find(vp => vp.name && vp.name.toLowerCase().trim() === String(it.name || '').toLowerCase().trim());
+        const resolvedCode = it.code || (matchedCatalog ? matchedCatalog.code : '');
         return {
           ...it,
+          code: resolvedCode,
           presetGroupId: groupId,
           presetName,
           baseQty: baseQ,
@@ -2690,6 +2716,7 @@ export default function BomOrdersView(props) {
                                 setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
                                   ...mat,
                                   name: pName,
+                                  code: matched ? (matched.code || mat.code || '') : (mat.code || ''),
                                   rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
                                   uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
                                   category: pCat,
@@ -3532,6 +3559,7 @@ export default function BomOrdersView(props) {
                           createdBy: effectiveCreatorName,
                           createdById: effectiveSalesPersonCode,
                           items: (bomMaterialsList || []).map(item => ({
+                            code: item.code || '',
                             name: item.name || 'Custom Item',
                             category: item.category || (item.isPresetItem ? 'Preset Component' : ''),
                             uom: item.uom || 'NOS',
@@ -3554,6 +3582,7 @@ export default function BomOrdersView(props) {
                             paymentUpdated: newBomPaymentType === '100% Paid' && Boolean(newBomPaymentProofDoc)
                           },
                           dispatchPacking: (bomMaterialsList || []).map(item => ({
+                            code: item.code || '',
                             name: item.name || 'Custom Item',
                             bomQty: cleanNum(item.qty, 1),
                             packed: false
@@ -4899,6 +4928,7 @@ export default function BomOrdersView(props) {
                             const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? {
                               ...it,
                               name: pName,
+                              code: matched ? (matched.code || it.code || '') : (it.code || ''),
                               rate: matched ? Number(matched.price || matched.rate || it.rate) : it.rate,
                               uom: matched ? (matched.uom || matched.unit || it.uom) : it.uom,
                               category: pCat,

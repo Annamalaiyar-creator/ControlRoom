@@ -120,10 +120,18 @@ export default function StockStatusView(props) {
   const [previewAddressProofModal, setPreviewAddressProofModal] = useState(null);
   const [bomActionMenuPos, setBomActionMenuPos] = useState({ top: 0, left: 0 });
 
-  const [bomStore, setBomStore] = useState([]);
+  const [bomStore, setBomStore] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_bom_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [];
+  });
 
-  // bomStore saving removed from secondary view
-
+  // bomStore sync on mount and from cloud / storage
   useEffect(() => {
     fetchCloudStore('bom_store', bomStore).then(data => {
       if (data && Array.isArray(data) && data.length > 0) {
@@ -135,7 +143,6 @@ export default function StockStatusView(props) {
             if (savedStr) {
               const parsed = JSON.parse(savedStr);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                // Merge parsed with localCurrent
                 const currentMap = new Map();
                 localCurrent.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
                 parsed.forEach(i => i && currentMap.set(i.bomCode || i.code, i));
@@ -144,7 +151,6 @@ export default function StockStatusView(props) {
             }
           } catch (e) { }
 
-          // Insert cloud data first, then overlay local state so fresh local BOMs ALWAYS overwrite remote data
           data.forEach(item => {
             if (item) {
               const k = item.bomCode || item.code;
@@ -165,7 +171,6 @@ export default function StockStatusView(props) {
           });
           const merged = Array.from(map.values());
           const sanitizedMerged = merged.map(stripDataUrlsFromRecord);
-          
           return sanitizedMerged;
         });
       }
@@ -183,12 +188,19 @@ export default function StockStatusView(props) {
       } catch (e) { }
     };
 
+    // Run sync immediately on mount
+    syncFromStorage();
+
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
+    window.addEventListener('central_inventory_updated', syncFromStorage);
+    window.addEventListener('controlroom_raw_materials_update', syncFromStorage);
 
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
+      window.removeEventListener('central_inventory_updated', syncFromStorage);
+      window.removeEventListener('controlroom_raw_materials_update', syncFromStorage);
     };
   }, []);
 
@@ -2253,7 +2265,7 @@ export default function StockStatusView(props) {
             if (Array.isArray(bomStore)) {
               bomStore.forEach(b => {
                 const bStatus = String(b.status || '').toLowerCase();
-                if (bStatus !== 'cancelled' && bStatus !== 'dispatched' && bStatus !== 'delivered') {
+                if (!bStatus.includes('cancelled') && !bStatus.includes('stock restored') && bStatus !== 'delivered') {
                   (b.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
                     const pCode = String(pItem.code || '').toLowerCase().trim();
@@ -2309,17 +2321,18 @@ export default function StockStatusView(props) {
               const nameKey = String(it.name || '').toLowerCase().trim();
               const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
 
-              let stockVal = 5000;
-              if (matchedMat && matchedMat.stock !== undefined && matchedMat.stock !== null) {
-                stockVal = Math.max(0, Number(matchedMat.stock));
-              } else if (it.stock !== undefined && it.stock !== null) {
-                stockVal = Math.max(0, Number(it.stock));
-              } else if (it.openingStock !== undefined && it.openingStock !== null) {
-                stockVal = Math.max(0, Number(it.openingStock));
+              const physicalBase = Math.max(0, Number(matchedMat?.physicalStock || matchedMat?.openingStock || it.physicalStock || it.openingStock || 5000));
+              const activeBlocked = Math.max(
+                (codeKey && bomReservedMap.get(codeKey)) || 0,
+                (nameKey && bomReservedMap.get(nameKey)) || 0,
+                Number(matchedMat?.reserved || it.reserved || 0)
+              );
+              let availableQty = Math.max(0, physicalBase - activeBlocked);
+              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock)) {
+                availableQty = Math.min(availableQty, Number(matchedMat.stock));
+              } else if (it.stock !== undefined && !isNaN(it.stock)) {
+                availableQty = Math.min(availableQty, Number(it.stock));
               }
-
-              const activeBlocked = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || Number(matchedMat?.reserved || it.reserved || 0);
-              const availableQty = Math.max(0, stockVal - activeBlocked);
               const minLvl = Number(it.reorderLevel || it.minLevel || 50);
 
               let statusText = 'In Stock';
@@ -2460,7 +2473,7 @@ export default function StockStatusView(props) {
             if (Array.isArray(bomStore)) {
               bomStore.forEach(b => {
                 const bStatus = String(b.status || '').toLowerCase();
-                if (bStatus !== 'cancelled' && bStatus !== 'dispatched' && bStatus !== 'delivered') {
+                if (!bStatus.includes('cancelled') && !bStatus.includes('stock restored') && bStatus !== 'delivered') {
                   (b.items || []).forEach(pItem => {
                     const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
                     const pCode = String(pItem.code || '').toLowerCase().trim();
@@ -2518,19 +2531,18 @@ export default function StockStatusView(props) {
               const nameKey = String(it.name || '').toLowerCase().trim();
               const matchedMat = (codeKey && rawMatMap.get(codeKey)) || (nameKey && rawMatMap.get(nameKey));
 
-              // Compute real stock: strictly honor 0 and deductions
-              let stockVal = 5000;
-              if (matchedMat && matchedMat.stock !== undefined && matchedMat.stock !== null) {
-                stockVal = Math.max(0, Number(matchedMat.stock));
-              } else if (it.stock !== undefined && it.stock !== null) {
-                stockVal = Math.max(0, Number(it.stock));
-              } else if (it.openingStock !== undefined && it.openingStock !== null) {
-                stockVal = Math.max(0, Number(it.openingStock));
+              const physicalBase = Math.max(0, Number(matchedMat?.physicalStock || matchedMat?.openingStock || it.physicalStock || it.openingStock || 5000));
+              const activeBlocked = Math.max(
+                (codeKey && bomReservedMap.get(codeKey)) || 0,
+                (nameKey && bomReservedMap.get(nameKey)) || 0,
+                Number(matchedMat?.reserved || it.reserved || 0)
+              );
+              let availableQty = Math.max(0, physicalBase - activeBlocked);
+              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock)) {
+                availableQty = Math.min(availableQty, Number(matchedMat.stock));
+              } else if (it.stock !== undefined && !isNaN(it.stock)) {
+                availableQty = Math.min(availableQty, Number(it.stock));
               }
-
-              // Compute reserved/blocked qty
-              const activeBlocked = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || Number(matchedMat?.reserved || it.reserved || 0);
-              const availableQty = Math.max(0, stockVal - activeBlocked);
 
               const rateVal = Number(it.rate || it.price || 250);
               const totalVal = availableQty * rateVal;

@@ -1,4 +1,4 @@
-import { VRM_PRODUCTS } from './vrmProductsData';
+import { VRM_PRODUCTS } from './vrmProductsData.js';
 
 // Initial Seed Item Master derived strictly from official VRM catalog (All items initialized with 5000 units stock)
 export const INITIAL_CENTRAL_ITEMS = VRM_PRODUCTS.map((p, idx) => ({
@@ -414,7 +414,7 @@ class CentralInventoryStore {
   }
 
   // ----------------------------------------------------
-  // 2. STOCK RESERVATIONS (BOM / PROD ORDER)
+  // 2. STOCK RESERVATIONS & DEDUCTIONS (BOM / PROD ORDER)
   // ----------------------------------------------------
   reserveStockForBOM(refNo, itemsList) {
     itemsList.forEach(item => {
@@ -434,8 +434,110 @@ class CentralInventoryStore {
   }
 
   releaseReservation(refNo, itemCode) {
-    this.reservations = this.reservations.filter(r => !(r.refNo === refNo && r.itemCode === itemCode));
+    this.reservations = this.reservations.filter(r => !(r.refNo === refNo && (!itemCode || r.itemCode === itemCode)));
     this.saveReservations();
+    this.notifyChange();
+  }
+
+  // Deduct Inventory immediately upon BOM Creation or Verification
+  deductStockForBOM(bomCode, itemsList = [], user = 'Production Admin') {
+    if (!Array.isArray(itemsList) || itemsList.length === 0) return;
+    const timestamp = new Date().toISOString();
+
+    itemsList.forEach(pItem => {
+      const qty = parseFloat(pItem.qty || pItem.bomQty || 1) || 0;
+      if (qty <= 0) return;
+      const pCode = String(pItem.code || '').toUpperCase().trim();
+      const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+
+      // Find item in this.items
+      let item = this.items.find(i => {
+        const iCode = String(i.code || '').toUpperCase().trim();
+        const iName = String(i.name || '').toLowerCase().trim();
+        if (pCode && iCode === pCode) return true;
+        if (pName && (iName === pName || iName.includes(pName) || pName.includes(iName))) return true;
+        return false;
+      });
+
+      const targetCode = item ? item.code : (pCode || `ITEM-${Date.now().toString().slice(-4)}`);
+      const targetName = item ? item.name : (pItem.name || 'BOM Item');
+      const targetUnit = (item && item.uom) || pItem.uom || 'Nos';
+
+      if (item) {
+        item.stock = Math.max(0, (parseFloat(item.stock) || 5000) - qty);
+      }
+
+      // Add to reservations
+      this.reservations = this.reservations.filter(r => !(r.refNo === bomCode && r.itemCode === targetCode));
+      this.reservations.push({
+        id: `RES-${bomCode}-${targetCode}-${Date.now()}`,
+        refNo: bomCode,
+        itemCode: targetCode,
+        reservedQty: qty,
+        date: timestamp.split('T')[0],
+        status: 'Active'
+      });
+
+      // Add OUT transaction to ledger
+      const tx = {
+        id: `TX-BOM-OUT-${bomCode}-${targetCode}-${Date.now()}`,
+        type: TX_TYPES.PRODUCTION_ISSUE,
+        refNo: bomCode,
+        dateTime: timestamp,
+        itemCode: targetCode,
+        itemName: targetName,
+        qty: qty,
+        unit: targetUnit,
+        direction: 'OUT',
+        warehouse: (item && item.location) || 'Main Store',
+        user,
+        department: 'Production & Logistics',
+        sourceDoc: `BOM Order: ${bomCode}`,
+        remarks: `Allocated and deducted ${qty} ${targetUnit} for BOM ${bomCode}`
+      };
+      this.transactions.push(tx);
+    });
+
+    this.saveItems();
+    this.saveReservations();
+    this.saveTransactions();
+    this.notifyChange();
+  }
+
+  // Restore / Unblock Inventory when a BOM is Cancelled
+  restoreStockForBOM(bomCode, itemsList = [], user = 'Production Admin') {
+    if (!bomCode) return;
+    const timestamp = new Date().toISOString();
+
+    // Release reservations for this BOM
+    this.releaseReservation(bomCode);
+
+    // Remove any previous OUT transactions for this BOM from transactions ledger
+    this.transactions = this.transactions.filter(t => !(t.refNo === bomCode && t.direction === 'OUT'));
+
+    // If items provided, add back to stock
+    if (Array.isArray(itemsList) && itemsList.length > 0) {
+      itemsList.forEach(pItem => {
+        const qty = parseFloat(pItem.qty || pItem.bomQty || 1) || 0;
+        const pCode = String(pItem.code || '').toUpperCase().trim();
+        const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+
+        let item = this.items.find(i => {
+          const iCode = String(i.code || '').toUpperCase().trim();
+          const iName = String(i.name || '').toLowerCase().trim();
+          if (pCode && iCode === pCode) return true;
+          if (pName && (iName === pName || iName.includes(pName) || pName.includes(iName))) return true;
+          return false;
+        });
+
+        if (item) {
+          item.stock = (parseFloat(item.stock) || 0) + qty;
+        }
+      });
+    }
+
+    this.saveItems();
+    this.saveTransactions();
     this.notifyChange();
   }
 

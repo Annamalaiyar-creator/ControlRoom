@@ -1,5 +1,5 @@
-import { VRM_PRODUCTS } from './vrmProductsData';
-import { centralInventoryStore } from './centralInventoryStore';
+import { VRM_PRODUCTS } from './vrmProductsData.js';
+import { centralInventoryStore } from './centralInventoryStore.js';
 
 /**
  * Product Catalog & Live Stock Service
@@ -9,6 +9,7 @@ import { centralInventoryStore } from './centralInventoryStore';
 export const getFullProductsCatalogWithStock = (directItems = null) => {
   // 1. Build live stock map from Central Inventory Store
   const stockMap = new Map();
+  const rawStoreMap = new Map();
 
   try {
     const centralItems = centralInventoryStore.getInventoryItems();
@@ -35,36 +36,96 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
       const parsed = JSON.parse(rawSaved);
       if (Array.isArray(parsed)) {
         parsed.forEach(rm => {
-          const codeKey = String(rm.code || '').toLowerCase().trim();
+          const codeKey = String(rm.code || rm.sku || rm.itemId || '').toLowerCase().trim();
           const nameKey = String(rm.name || '').toLowerCase().trim();
           const st = Number(rm.stock !== undefined ? rm.stock : (rm.physicalStock || 0));
-          if (codeKey && !stockMap.has(codeKey)) stockMap.set(codeKey, st);
-          if (nameKey && !stockMap.has(nameKey)) stockMap.set(nameKey, st);
+          if (codeKey) rawStoreMap.set(codeKey, st);
+          if (nameKey) rawStoreMap.set(nameKey, st);
         });
       }
     }
   } catch (_) {}
 
-  // 2. Map all 285 VRM standardized products with true stock
+  // 1.5 Calculate active allocations from active BOMs and active Proforma Invoices (PIs)
+  const bomReservedMap = new Map();
+  try {
+    const bomSaved = localStorage.getItem('controlroom_bom_store');
+    let localBOMs = [];
+    if (bomSaved) {
+      const parsed = JSON.parse(bomSaved);
+      if (Array.isArray(parsed)) localBOMs = parsed;
+    }
+    localBOMs.forEach(b => {
+      const bStatus = String(b.status || '').toLowerCase();
+      if (!bStatus.includes('cancelled') && !bStatus.includes('stock restored') && bStatus !== 'delivered') {
+        (b.items || []).forEach(pItem => {
+          const qty = parseFloat(pItem.qty || pItem.bomQty || 0) || 0;
+          if (qty > 0) {
+            const pCode = String(pItem.code || '').toLowerCase().trim();
+            const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+            if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+            if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+          }
+        });
+      }
+    });
+  } catch (_) {}
+
+  try {
+    const piSaved = localStorage.getItem('controlroom_sales_pi_store') || localStorage.getItem('controlroom_procurement_pi_store');
+    let localPIs = [];
+    if (piSaved) {
+      const parsed = JSON.parse(piSaved);
+      if (Array.isArray(parsed)) localPIs = parsed;
+    }
+    localPIs.forEach(pi => {
+      const piStatus = String(pi.status || '').toLowerCase();
+      if (piStatus !== 'cancelled' && piStatus !== 'declined' && piStatus !== 'converted to bom' && !pi.convertedToBom) {
+        (pi.items || []).forEach(pItem => {
+          const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
+          if (qty > 0) {
+            const pCode = String(pItem.code || '').toLowerCase().trim();
+            const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+            if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+            if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+          }
+        });
+      }
+    });
+  } catch (_) {}
+
+  // 2. Map all 285 VRM standardized products with true reduced available stock
   const catalogMap = new Map();
 
   (VRM_PRODUCTS || []).forEach(p => {
     const codeKey = String(p.code || '').toLowerCase().trim();
     const nameKey = String(p.name || '').toLowerCase().trim();
 
-    let realStock = 0;
+    // Determine baseline stock before allocations
+    let baseStock = 5000;
     if (codeKey && stockMap.has(codeKey)) {
-      realStock = stockMap.get(codeKey);
+      baseStock = stockMap.get(codeKey);
     } else if (nameKey && stockMap.has(nameKey)) {
-      realStock = stockMap.get(nameKey);
+      baseStock = stockMap.get(nameKey);
     } else {
-      // Look up partial match
       for (const [k, v] of stockMap.entries()) {
         if (k && (k === codeKey || k === nameKey || nameKey.includes(k) || k.includes(nameKey))) {
-          realStock = v;
+          baseStock = v;
           break;
         }
       }
+    }
+
+    // Active allocations for this item
+    const blockedQty = (codeKey && bomReservedMap.get(codeKey)) || (nameKey && bomReservedMap.get(nameKey)) || 0;
+    let realStock = Math.max(0, baseStock - blockedQty);
+
+    // If raw materials store has explicit stock adjustment, honor the lowest available count
+    const rawStock = (codeKey && rawStoreMap.get(codeKey)) !== undefined 
+      ? rawStoreMap.get(codeKey) 
+      : (nameKey && rawStoreMap.get(nameKey) !== undefined ? rawStoreMap.get(nameKey) : null);
+    if (rawStock !== null && !isNaN(rawStock)) {
+      realStock = Math.min(realStock, Number(rawStock));
     }
 
     catalogMap.set(nameKey, {
@@ -76,7 +137,9 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
       price: String(p.price || p.rate || '0'),
       gstRate: p.gst || '18%',
       stock: realStock,
-      availableStock: realStock
+      availableStock: realStock,
+      physicalStock: baseStock,
+      reservedStock: blockedQty
     });
   });
 
