@@ -19,6 +19,7 @@ import { prodModuleEngine } from '../../utils/productionModuleEngine';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import VRMTaxInvoicePrintTemplate from '../VRMTaxInvoicePrintTemplate';
+import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
 import * as XLSX from 'xlsx';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import StatusBadge from '../StatusBadge';
@@ -301,13 +302,12 @@ export default function ProductionViewsEngine(props) {
   const [newBomStatus, setNewBomStatus] = useState('ACTIVE');
   const [bomFormErrors, setBomFormErrors] = useState({});
 
-  // Permission Check for Cancel BOM (Strictly Dispatch, Accounts, Production, Billing, and Admin)
+  // Permission Check for Cancel BOM (Strictly Dispatch, Production, Billing, and Admin - Exclude Accounts)
   const canCancelBom = [
     'Dispatch Head', 'Dispatch Executive',
-    'Accounts Head', 'Accounts Executive',
     'Production Head', 'Technical Administrator', 'CEO', 'MD', 'Managing Director',
     'Floor Supervisor', 'Billing', 'Invoice Executive'
-  ].includes(userRole);
+  ].includes(userRole) && !String(userRole || '').toLowerCase().includes('accounts');
 
   // Helper to Restore / Unblock Inventory when a BOM is Cancelled
   const restoreInventoryForBom = (bomItems = [], bomCode = '') => {
@@ -2769,70 +2769,97 @@ export default function ProductionViewsEngine(props) {
                       <Download style={{ width: '15px', height: '15px', color: '#475569' }} /> Download
                     </button>
 
-                    {/* Edit Invoice & Save Buttons */}
-                    {isEditingInvoice ? (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          onClick={() => setIsEditingInvoice(false)}
-                          style={{
-                            backgroundColor: '#F1F5F9',
-                            border: '1px solid #CBD5E1',
-                            borderRadius: '8px',
-                            padding: '0 14px',
-                            height: '38px',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            color: '#475569',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <X style={{ width: '15px', height: '15px', color: '#475569' }} /> Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveInvoiceEdits}
-                          style={{
-                            backgroundColor: '#0E7490',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0 18px',
-                            height: '38px',
-                            fontSize: '13px',
-                            fontWeight: '800',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
-                          }}
-                        >
-                          <Save style={{ width: '15px', height: '15px', color: '#FFFFFF' }} /> Save Changes
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleStartEditingInvoice}
+                    {/* Cancel Invoice button */}
+                    {inv.status === 'Cancelled' ? (
+                      <div
                         style={{
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #0E7490',
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
                           borderRadius: '8px',
                           padding: '0 16px',
                           height: '38px',
                           fontSize: '13px',
-                          fontWeight: '700',
-                          color: '#0E7490',
-                          cursor: 'pointer',
+                          fontWeight: '800',
+                          color: '#DC2626',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px'
                         }}
                       >
-                        <Edit3 style={{ width: '15px', height: '15px', color: '#0E7490' }} /> Edit Invoice
+                        <XCircle style={{ width: '15px', height: '15px', color: '#DC2626' }} /> Cancelled
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to cancel Invoice ${invNoText}? This will mark the invoice as Cancelled and return the order status.`)) {
+                            const nowIso = new Date().toISOString();
+                            const targetCode = inv.poNo || inv.code || bomRefText;
+
+                            setViewingInvoiceModal(prev => prev ? {
+                              ...prev,
+                              status: 'Cancelled',
+                              pay: 'Cancelled',
+                              cancelledAt: nowIso
+                            } : prev);
+
+                            setInvoiceList(prev => {
+                              const updatedInvoices = prev.map(item => (item.invNo === inv.invNo || item.code === inv.code || item.bomCode === inv.bomCode) ? {
+                                ...item,
+                                status: 'Cancelled',
+                                pay: 'Cancelled',
+                                cancelledAt: nowIso
+                              } : item);
+                              try {
+                                saveCloudStore("invoice_store", updatedInvoices);
+                              } catch (e) { }
+                              return updatedInvoices;
+                            });
+
+                            setBomStore(prev => prev.map(b => (
+                              b.bomCode === targetCode ||
+                              b.salesOrderNo === targetCode ||
+                              b.code === targetCode ||
+                              (inv.invNo && b.bomCode && inv.invNo.endsWith(b.bomCode.replace('BOM-', '')))
+                            ) ? {
+                              ...b,
+                              status: 'Invoice Cancelled',
+                              invoiceConfirmed: false,
+                              invoiceCancelledAt: nowIso
+                            } : b));
+
+                            try {
+                              addLiveNotification({
+                                title: `Invoice ${invNoText} Cancelled`,
+                                message: `Invoice ${invNoText} for BOM ${bomRefText} has been marked as Cancelled.`,
+                                type: 'alert'
+                              });
+                            } catch (e) { }
+
+                            alert(`Invoice ${invNoText} has been successfully marked as Cancelled.`);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          borderRadius: '8px',
+                          padding: '0 16px',
+                          height: '38px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          color: '#DC2626',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Cancel this invoice"
+                      >
+                        <XCircle style={{ width: '15px', height: '15px', color: '#DC2626' }} /> Cancel
                       </button>
                     )}
+
+                    {/* Invoices are strictly official records and read-only */}
 
                     {/* Confirm Invoice primary button */}
                     {['Invoice Confirmed', 'CLOSED', 'Completed', 'Confirmed', 'Fully Dispatched & Delivered'].includes(inv.status) ? (
@@ -3734,7 +3761,7 @@ export default function ProductionViewsEngine(props) {
 
                         {/* COMPACT ADDRESS & INLINE PROOF IMAGE BELOW ITEMS */}
                         <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Truck style={{ width: '18px', height: '18px' }} />
@@ -3744,6 +3771,76 @@ export default function ProductionViewsEngine(props) {
                                 <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{dAddr}</div>
                               </div>
                             </div>
+
+                            {/* REISSUE BUTTON FOR ADDRESS PROOF */}
+                            <label style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: '#EFF6FF',
+                              border: '1px solid #BFDBFE',
+                              color: '#1D4ED8',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              transition: 'all 0.15s ease'
+                            }} title="Reissue or update address proof document">
+                              <RotateCcw style={{ width: '13px', height: '13px', color: '#1D4ED8' }} />
+                              Reissue
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files && e.target.files[0];
+                                  if (file) {
+                                    compressAndSaveFile(file, (res) => {
+                                      if (res) {
+                                        if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                        const nowIso = new Date().toISOString();
+                                        const targetCode = inv.poNo || inv.invNo || inv.code || (matchingBom && matchingBom.bomCode);
+                                        const prevHistory = addressProofDoc?.history || (addressProofDoc ? [addressProofDoc] : []);
+                                        const updatedDoc = {
+                                          ...res,
+                                          reissuedAt: nowIso,
+                                          reissueReason: 'Reissued from Invoice Desk',
+                                          history: [...prevHistory, { ...res, uploadedAt: nowIso, version: prevHistory.length + 1 }]
+                                        };
+
+                                        setViewingInvoiceModal(prev => prev ? {
+                                          ...prev,
+                                          deliveryAddressProofDoc: updatedDoc,
+                                          status: 'Address Proof Reissued'
+                                        } : prev);
+
+                                        setInvoiceList(prev => {
+                                          const updated = prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
+                                            ...i,
+                                            deliveryAddressProofDoc: updatedDoc,
+                                            status: 'Address Proof Reissued',
+                                            addressProofReissuedAt: nowIso
+                                          } : i);
+                                          try { saveCloudStore("invoice_store", updated); } catch (e) { }
+                                          return updated;
+                                        });
+
+                                        setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.salesOrderNo === targetCode || b.code === targetCode) ? {
+                                          ...b,
+                                          deliveryAddressProofDoc: updatedDoc,
+                                          status: 'Address Proof Reissued',
+                                          addressProofReissuedAt: nowIso
+                                        } : b));
+
+                                        alert(`✅ Address proof has been successfully reissued with: ${res.name || file.name}`);
+                                      }
+                                    });
+                                  }
+                                }}
+                              />
+                            </label>
                           </div>
 
                           {addressProofDoc && (() => {
@@ -3754,9 +3851,11 @@ export default function ProductionViewsEngine(props) {
 
                             return (
                               <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <FileCheck style={{ width: '15px', height: '15px', color: '#166534' }} />
-                                  <span>Delivery Address Proof Document ({proofName}):</span>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <FileCheck style={{ width: '15px', height: '15px', color: '#166534' }} />
+                                    <span>Delivery Address Proof Document ({proofName}):</span>
+                                  </div>
                                 </div>
 
                                 {(() => {
@@ -3897,38 +3996,146 @@ export default function ProductionViewsEngine(props) {
                                 >
                                   <Eye style={{ width: '14px', height: '14px' }} /> View Address Proof
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    const targetCode = inv.poNo || inv.invNo || inv.code || (matchingBom && matchingBom.bomCode);
-                                    const nowIso = new Date().toISOString();
-                                    const timeFormatted = new Date(nowIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' });
+                                <label style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  backgroundColor: '#EFF6FF',
+                                  border: '1px solid #BFDBFE',
+                                  color: '#1D4ED8',
+                                  padding: '8px 14px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                  transition: 'all 0.15s ease'
+                                }} title="Reissue address proof document">
+                                  <RotateCcw style={{ width: '13px', height: '13px', color: '#1D4ED8' }} /> Reissue
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        compressAndSaveFile(file, (res) => {
+                                          if (res) {
+                                            if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                            const nowIso = new Date().toISOString();
+                                            const targetCode = inv.poNo || inv.invNo || inv.code || (matchingBom && matchingBom.bomCode);
+                                            const prevHistory = addressProofDoc?.history || (addressProofDoc ? [addressProofDoc] : []);
+                                            const updatedDoc = {
+                                              ...res,
+                                              reissuedAt: nowIso,
+                                              reissueReason: 'Reissued from Invoice Desk',
+                                              history: [...prevHistory, { ...res, uploadedAt: nowIso, version: prevHistory.length + 1 }]
+                                            };
 
-                                    setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.bomCode === inv.poNo || b.bomCode === inv.code) ? {
-                                      ...b,
-                                      status: 'Address Proof Requested from Sales',
-                                      addressProofReuploadRequested: true,
-                                      reuploadRequestedAt: nowIso,
-                                      reuploadReason: 'Invoice desk requested address proof re-upload'
-                                    } : b));
+                                            setViewingInvoiceModal(prev => prev ? {
+                                              ...prev,
+                                              deliveryAddressProofDoc: updatedDoc,
+                                              status: 'Address Proof Reissued'
+                                            } : prev);
 
-                                    setInvoiceList(prev => prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
-                                      ...i,
-                                      status: 'Address Proof Requested from Sales',
-                                      addressProofReuploadRequested: true,
-                                      reuploadRequestedAt: nowIso
-                                    } : i));
+                                            setInvoiceList(prev => {
+                                              const updated = prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
+                                                ...i,
+                                                deliveryAddressProofDoc: updatedDoc,
+                                                status: 'Address Proof Reissued',
+                                                addressProofReissuedAt: nowIso
+                                              } : i);
+                                              try { saveCloudStore("invoice_store", updated); } catch (e) { }
+                                              return updated;
+                                            });
 
-                                    alert(`📩 Re-upload Request sent to Sales/BOM desk for (${targetCode || 'Order'}).\nStatus updated to 'Address Proof Requested from Sales'.\nTimestamp: ${timeFormatted}`);
-                                  }}
-                                  style={{ border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#DC2626', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                  <RotateCcw style={{ width: '13px', height: '13px' }} /> Request Re-upload
-                                </button>
+                                            setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.salesOrderNo === targetCode || b.code === targetCode) ? {
+                                              ...b,
+                                              deliveryAddressProofDoc: updatedDoc,
+                                              status: 'Address Proof Reissued',
+                                              addressProofReissuedAt: nowIso
+                                            } : b));
+
+                                            alert(`✅ Address proof has been successfully reissued with: ${res.name || file.name}`);
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
                               </div>
                             ) : (
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '10px' }}>
-                                ✓ Verified & Compliant
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '10px' }}>
+                                  ✓ Verified & Compliant
+                                </span>
+                                <label style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  backgroundColor: '#EFF6FF',
+                                  border: '1px solid #BFDBFE',
+                                  color: '#1D4ED8',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                  transition: 'all 0.15s ease'
+                                }} title="Reissue address proof document">
+                                  <RotateCcw style={{ width: '13px', height: '13px', color: '#1D4ED8' }} /> Reissue
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        compressAndSaveFile(file, (res) => {
+                                          if (res) {
+                                            if (res.name && res.dataUrl) saveMediaToCache(res.name, res.dataUrl);
+                                            const nowIso = new Date().toISOString();
+                                            const targetCode = inv.poNo || inv.invNo || inv.code || (matchingBom && matchingBom.bomCode);
+                                            const updatedDoc = {
+                                              ...res,
+                                              reissuedAt: nowIso,
+                                              reissueReason: 'Reissued from Invoice Desk',
+                                              history: [{ ...res, uploadedAt: nowIso, version: 1 }]
+                                            };
+
+                                            setViewingInvoiceModal(prev => prev ? {
+                                              ...prev,
+                                              deliveryAddressProofDoc: updatedDoc,
+                                              status: 'Address Proof Reissued'
+                                            } : prev);
+
+                                            setInvoiceList(prev => {
+                                              const updated = prev.map(i => (i.poNo === targetCode || i.invNo === inv.invNo || i.code === targetCode) ? {
+                                                ...i,
+                                                deliveryAddressProofDoc: updatedDoc,
+                                                status: 'Address Proof Reissued',
+                                                addressProofReissuedAt: nowIso
+                                              } : i);
+                                              try { saveCloudStore("invoice_store", updated); } catch (e) { }
+                                              return updated;
+                                            });
+
+                                            setBomStore(prev => prev.map(b => (b.bomCode === targetCode || b.salesOrderNo === targetCode || b.code === targetCode) ? {
+                                              ...b,
+                                              deliveryAddressProofDoc: updatedDoc,
+                                              status: 'Address Proof Reissued',
+                                              addressProofReissuedAt: nowIso
+                                            } : b));
+
+                                            alert(`✅ Address proof has been successfully reissued with: ${res.name || file.name}`);
+                                          }
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -11649,7 +11856,7 @@ export default function ProductionViewsEngine(props) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                    {canCancelBom && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
+                    {canCancelBom && !String(userRole || '').toLowerCase().includes('accounts') && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
                       <button
                         onClick={() => handleCancelBomOrder(accountsVerificationModal)}
                         style={{
@@ -11904,6 +12111,198 @@ export default function ProductionViewsEngine(props) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Payment Proof Document & Remittance Slip Image Inspection */}
+                    {(() => {
+                      const rawProof = accountsVerificationModal.paymentProofDoc ||
+                        accountsVerificationModal.payments?.proofDocObj ||
+                        accountsVerificationModal.payments?.proofDoc ||
+                        accountsVerificationModal.proofDoc ||
+                        accountsVerificationModal.salesPoDetails?.proofDocObj;
+                      const docName = typeof rawProof === 'string' ? rawProof : rawProof?.name || accountsVerificationModal.paymentProofDocName || 'Payment_Proof_Receipt.jpg';
+                      let pDocDataUrl = (typeof rawProof === 'string' && rawProof.startsWith('data:'))
+                        ? rawProof
+                        : (rawProof?.dataUrl || rawProof?.fileData || rawProof?.url || accountsVerificationModal.proofDocData || accountsVerificationModal.payments?.proofDocData || null);
+                      if (!pDocDataUrl && docName) {
+                        pDocDataUrl = getMediaFromCache(docName);
+                      }
+                      if (!pDocDataUrl && accountsVerificationModal.deliveryAddressProofDoc?.dataUrl) {
+                        pDocDataUrl = accountsVerificationModal.deliveryAddressProofDoc.dataUrl;
+                      }
+
+                      return (
+                        <div style={{
+                          marginTop: '4px',
+                          paddingTop: '16px',
+                          borderTop: '1px solid #F1F5F9'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                            <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                              <Image size={15} style={{ color: '#2563EB' }} /> Payment Proof Document & Remittance Slip
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => setViewingProofDocModal(accountsVerificationModal)}
+                                style={{
+                                  backgroundColor: '#EFF6FF',
+                                  border: '1px solid #BFDBFE',
+                                  color: '#1D4ED8',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  padding: '4px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <Eye size={12} /> View Full Size
+                              </button>
+                              {pDocDataUrl && (
+                                <a
+                                  href={pDocDataUrl}
+                                  download={docName || 'payment_proof.jpg'}
+                                  style={{
+                                    backgroundColor: '#F8FAFC',
+                                    border: '1px solid #CBD5E1',
+                                    color: '#334155',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <Download size={12} /> Download
+                                </a>
+                              )}
+                            </div>
+                          </div>
+
+                          {pDocDataUrl ? (
+                            <div style={{
+                              backgroundColor: '#F8FAFC',
+                              border: '1.5px dashed #CBD5E1',
+                              borderRadius: '12px',
+                              padding: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '16px',
+                              flexWrap: 'wrap'
+                            }}>
+                              <div
+                                onClick={() => setViewingProofDocModal(accountsVerificationModal)}
+                                style={{
+                                  cursor: 'pointer',
+                                  width: '140px',
+                                  height: '95px',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  border: '1px solid #E2E8F0',
+                                  backgroundColor: '#FFFFFF',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                                  flexShrink: 0
+                                }}
+                                title="Click to view full payment slip"
+                              >
+                                <img
+                                  src={pDocDataUrl}
+                                  alt="Payment Proof"
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+
+                              <div style={{ flex: 1, minWidth: '220px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span>{docName}</span>
+                                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#166534', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #BBF7D0' }}>
+                                    ✓ Attached by Sales
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', lineHeight: '1.4' }}>
+                                  Official payment proof document submitted during order placement. Click thumbnail or "View Full Size" to inspect the transaction reference number, remittance amount, and bank stamp.
+                                </div>
+                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#475569' }}>
+                                  <span><strong>Payment Terms:</strong> {payTypeText}</span>
+                                  <span>•</span>
+                                  <span><strong>BOM Reference:</strong> {bomCodeText}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{
+                              backgroundColor: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '12px',
+                              padding: '12px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              flexWrap: 'wrap'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284C7' }}>
+                                  <Receipt size={20} />
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>{docName || 'Electronic Payment Remittance Record'}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748B' }}>NEFT / RTGS settlement record linked to {bomCodeText}</div>
+                                </div>
+                              </div>
+                              {!isAlreadyCompleted && (
+                                <label style={{
+                                  backgroundColor: '#FFFFFF',
+                                  border: '1px solid #CBD5E1',
+                                  borderRadius: '8px',
+                                  padding: '6px 12px',
+                                  fontSize: '11.5px',
+                                  fontWeight: '700',
+                                  color: '#334155',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}>
+                                  <UploadCloud size={14} color="#0E7490" /> Upload / Replace Slip
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      try {
+                                        const res = await compressAndSaveFile(file);
+                                        setAccountsVerificationModal(prev => prev ? ({
+                                          ...prev,
+                                          paymentProofDoc: res,
+                                          proofDocData: res.dataUrl || null,
+                                          payments: { ...(prev.payments || {}), proofDoc: res.name, proofDocData: res.dataUrl }
+                                        }) : null);
+                                      } catch (err) {
+                                        console.error('Failed to attach payment slip:', err);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -12023,189 +12422,25 @@ export default function ProductionViewsEngine(props) {
                         </div>
                       </div>
 
-                      {/* ─── VIEW 1: AUTHENTIC PAPER BOM DOCUMENT SHEET (HARD COPY VIEW) ─── */}
+                      {/* ─── VIEW 1: AUTHENTIC VRM BILL OF MATERIALS PRINT SHEET ─── */}
                       {accountsBomViewMode === 'paper' ? (
-                        <div style={{ padding: '24px', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'center' }}>
-                          <div style={{
-                            maxWidth: '900px',
-                            width: '100%',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '12px',
-                            border: '1px solid #CBD5E1',
-                            padding: '36px 40px',
-                            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
-                            position: 'relative'
-                          }}>
-                            {/* Watermark/Stamp if hard copy verified */}
-                            <div style={{
-                              position: 'absolute',
-                              top: '36px',
-                              right: '40px',
-                              border: hardCopy ? '3px dashed #166534' : '3px dashed #D97706',
-                              borderRadius: '8px',
-                              padding: '6px 14px',
-                              color: hardCopy ? '#166534' : '#D97706',
-                              fontWeight: '900',
-                              fontSize: '12px',
-                              letterSpacing: '1px',
-                              textTransform: 'uppercase',
-                              transform: 'rotate(-4deg)',
-                              backgroundColor: hardCopy ? 'rgba(240, 253, 244, 0.85)' : 'rgba(254, 243, 199, 0.85)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '2px'
-                            }}>
-                              <span>{hardCopy ? 'HARD COPY RECEIVED' : 'HARD COPY PENDING'}</span>
-                              <span style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.5px' }}>
-                                {hardCopy ? 'ACCOUNTS DESK VERIFIED' : 'DISPATCH DESK TRANSIT'}
-                              </span>
-                            </div>
-
-                            {/* Document Header */}
-                            <div style={{ borderBottom: '2px solid #0F172A', paddingBottom: '16px', marginBottom: '20px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>
-                                  CONTROLROOM INDUSTRIAL MANUFACTURING PVT LTD
-                                </span>
-                              </div>
-                              <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
-                                Works: Plot 14, Phase II, Nagappa Industrial Estate, Puzhal, Chennai – 600066, Tamil Nadu, India<br />
-                                GSTIN: 33AAACC4451R1ZV • Email: dispatch@controlroom.io • Phone: +91 (044) 2854-9900
-                              </div>
-                            </div>
-
-                            {/* Document Title Banner */}
-                            <div style={{
-                              backgroundColor: '#F1F5F9',
-                              padding: '10px 16px',
-                              borderRadius: '6px',
-                              marginBottom: '20px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}>
-                              <span style={{ fontSize: '13px', fontWeight: '900', color: '#0F172A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                BILL OF MATERIALS & GOODS DISPATCH MEMO (HARD COPY)
-                              </span>
-                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563EB' }}>
-                                DOC REF: {bomCodeText}
-                              </span>
-                            </div>
-
-                            {/* Meta 2-column info */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', fontSize: '12px' }}>
-                              <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                                  CUSTOMER / BILLED TO
-                                </div>
-                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>{custNameText}</div>
-                                <div style={{ color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
-                                  {accountsVerificationModal.deliveryAddress || 'Plot 14, Nagappa Industrial Estate, Puzhal, Chennai – 600066.'}
-                                </div>
-                                <div style={{ marginTop: '6px', color: '#64748B' }}>
-                                  Payment Terms: <strong style={{ color: '#0F172A' }}>{payTypeText}</strong>
-                                </div>
-                              </div>
-
-                              <div style={{ backgroundColor: '#FAFBFC', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                                  DISPATCH & VOUCHER DETAILS
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', color: '#475569' }}>
-                                  <span style={{ fontWeight: '700' }}>BOM Number:</span>
-                                  <span style={{ fontWeight: '800', color: '#0F172A' }}>{bomCodeText}</span>
-                                  <span style={{ fontWeight: '700' }}>Date of Dispatch:</span>
-                                  <span>17-Aug-2026</span>
-                                  <span style={{ fontWeight: '700' }}>Dispatch Vehicle:</span>
-                                  <span>TN-05-DZ-4419 (Direct Truck)</span>
-                                  <span style={{ fontWeight: '700' }}>Dispatch Inspector:</span>
-                                  <span>Arun (Dispatch Team Head)</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Document Items Table */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '20px' }}>
-                              <thead>
-                                <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF' }}>
-                                  <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '11px' }}>S.No</th>
-                                  <th style={{ padding: '10px 12px', width: '90px', fontSize: '11px' }}>Part Code</th>
-                                  <th style={{ padding: '10px 12px', fontSize: '11px' }}>Item Description & Specification</th>
-                                  <th style={{ padding: '10px 12px', width: '70px', textAlign: 'center', fontSize: '11px' }}>BOM Qty</th>
-                                  <th style={{ padding: '10px 12px', width: '50px', textAlign: 'center', fontSize: '11px' }}>UoM</th>
-                                  <th style={{ padding: '10px 12px', width: '90px', textAlign: 'right', fontSize: '11px' }}>Rate (₹)</th>
-                                  <th style={{ padding: '10px 12px', width: '100px', textAlign: 'right', fontSize: '11px' }}>Amount (₹)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {dynamicAccItems.map((it, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B', fontWeight: '700' }}>{idx + 1}</td>
-                                    <td style={{ padding: '10px 12px', fontWeight: '800', color: '#2563EB' }}>{it.code}</td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
-                                      <div style={{ fontSize: '11px', color: '#64748B' }}>{it.desc}</div>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0F172A' }}>{it.qty}</td>
-                                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748B' }}>{it.uom}</td>
-                                    <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{it.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>{it.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-
-                            {/* Calculation Summary & Signatures */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', borderTop: '2px solid #0F172A', paddingTop: '16px', fontSize: '12px' }}>
-                              <div>
-                                <div style={{ fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>Declaration & Terms:</div>
-                                <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 16px 0', lineHeight: '1.4' }}>
-                                  We declare that this Bill of Materials accurately represents the physical goods inspected and packed for dispatch. Verified physical hard copy is filed in Accounts & Logistics records.
-                                </p>
-
-                                {/* Signatures */}
-                                <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-                                  <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Dispatch Head Sign</span>
-                                    <div style={{ fontSize: '10px', color: '#166534', fontWeight: '800', marginTop: '2px' }}>Arun (Dispatch Verified)</div>
-                                  </div>
-                                  <div style={{ flex: 1, borderTop: '1px solid #94A3B8', paddingTop: '6px', textAlign: 'center' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569' }}>Accounts Officer Sign</span>
-                                    <div style={{ fontSize: '10px', color: hardCopy ? '#166534' : '#D97706', fontWeight: '800', marginTop: '2px' }}>
-                                      {hardCopy ? 'Received & Verified' : 'Pending Signature'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Financial Totals */}
-                              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
-                                  <span>Taxable Subtotal:</span>
-                                  <strong style={{ color: '#0F172A' }}>₹ {accSubTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#475569' }}>
-                                  <span>CGST @ 9%:</span>
-                                  <span>₹ {accCgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#475569' }}>
-                                  <span>SGST @ 9%:</span>
-                                  <span>₹ {accSgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                                <div style={{
-                                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                  borderTop: '2px solid #0F172A', paddingTop: '10px',
-                                  fontSize: '15px', fontWeight: '900', color: '#0F172A'
-                                }}>
-                                  <span>Grand Total:</span>
-                                  <span style={{ color: '#166534' }}>
-                                    ₹ {(orderValue > 0 ? orderValue : accGrandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                        <div style={{ padding: '24px', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
+                          <VRMBomPrintSheet
+                            bomData={{
+                              ...accountsVerificationModal,
+                              items: (dynamicAccItems && dynamicAccItems.length > 0)
+                                ? dynamicAccItems.map(it => ({
+                                    code: it.code,
+                                    name: it.name,
+                                    category: it.desc,
+                                    qty: it.qty,
+                                    uom: it.uom,
+                                    rate: it.rate,
+                                    gstRate: '18%'
+                                  }))
+                                : (accountsVerificationModal.items || [])
+                            }}
+                          />
                         </div>
                       ) : (
                         /* ─── VIEW 2: INTERACTIVE BOM TABLE VIEW ─── */
@@ -12267,10 +12502,10 @@ export default function ProductionViewsEngine(props) {
                         alignItems: 'center'
                       }}>
                         <span style={{ fontSize: '13px', color: '#64748B' }}>
-                          Showing 5 verified BOM line items
+                          Showing {dynamicAccItems.length} verified BOM line items
                         </span>
                         <span style={{ fontSize: '13px', color: '#475569' }}>
-                          Total Verified Order Value: <strong style={{ color: '#0F172A', fontSize: '14px', fontWeight: '900' }}>₹ {orderValue > 0 ? orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '52,061.60'}</strong>
+                          Total Verified Order Value: <strong style={{ color: '#0F172A', fontSize: '14px', fontWeight: '900' }}>₹ {(orderValue > 0 ? orderValue : accGrandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                         </span>
                       </div>
                     </div>
@@ -12288,7 +12523,7 @@ export default function ProductionViewsEngine(props) {
                       Confirm payment date, total amount, and customer payment status to complete accounts clearance.
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {canCancelBom && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
+                      {canCancelBom && !String(userRole || '').toLowerCase().includes('accounts') && accountsVerificationModal.status !== 'Cancelled & Stock Restored' && (
                         <button
                           onClick={() => handleCancelBomOrder(accountsVerificationModal)}
                           style={{
@@ -12325,12 +12560,24 @@ export default function ProductionViewsEngine(props) {
 
                 {/* ─── RECORDED PAYMENT PROOF DOCUMENT VIEWER MODAL ─── */}
                 {viewingProofDocModal && (() => {
-                  const pDoc = viewingProofDocModal.payments?.proofDoc || 'Uploaded_Payment_Receipt.pdf';
-                  const docName = typeof pDoc === 'string' ? pDoc : pDoc?.name || 'Payment_Proof_Receipt.pdf';
-                  const pDocDataUrl = typeof pDoc === 'object' && pDoc?.dataUrl ? pDoc.dataUrl : null;
+                  const rawProof = viewingProofDocModal.paymentProofDoc ||
+                    viewingProofDocModal.payments?.proofDocObj ||
+                    viewingProofDocModal.payments?.proofDoc ||
+                    viewingProofDocModal.proofDoc ||
+                    viewingProofDocModal.salesPoDetails?.proofDocObj;
+                  const docName = typeof rawProof === 'string' ? rawProof : rawProof?.name || viewingProofDocModal.paymentProofDocName || 'Payment_Proof_Receipt.jpg';
+                  let pDocDataUrl = (typeof rawProof === 'string' && rawProof.startsWith('data:'))
+                    ? rawProof
+                    : (rawProof?.dataUrl || rawProof?.fileData || rawProof?.url || viewingProofDocModal.proofDocData || viewingProofDocModal.payments?.proofDocData || null);
+                  if (!pDocDataUrl && docName) {
+                    pDocDataUrl = getMediaFromCache(docName);
+                  }
+                  if (!pDocDataUrl && viewingProofDocModal.deliveryAddressProofDoc?.dataUrl) {
+                    pDocDataUrl = viewingProofDocModal.deliveryAddressProofDoc.dataUrl;
+                  }
                   const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || 'BOM-2026';
                   const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || custNameText;
-                  const amtVal = parseFloat(viewingProofDocModal.grandTotal || orderValue || 52061.60);
+                  const amtVal = parseFloat(viewingProofDocModal.grandTotal || orderValue || 0);
                   const pType = viewingProofDocModal.paymentType || payTypeText || '100% Advance';
 
                   return (
@@ -15665,7 +15912,7 @@ export default function ProductionViewsEngine(props) {
                     <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
                   </span>
 
-                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && (() => {
+                  {userRole !== 'CEO' && userRole !== 'MD' && userRole !== 'Managing Director' && activeTab !== 'Invoice Management' && (() => {
                     const firstCode = selectedRows[0];
                     const targetRow = (filteredRows || []).find(r => r.code === firstCode || r.id === firstCode || r.bomCode === firstCode) || { code: firstCode };
                     const isCancelledRow = Boolean(
@@ -18374,7 +18621,7 @@ export default function ProductionViewsEngine(props) {
         }
         const bCode = viewingProofDocModal.bomCode || viewingProofDocModal.code || viewingProofDocModal.poNo || 'BOM-2026';
         const cName = viewingProofDocModal.customerName || viewingProofDocModal.companyName || viewingProofDocModal.vendor || 'Customer';
-        const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 52061.60);
+        const amtVal = parseFloat(viewingProofDocModal.grandTotal || viewingProofDocModal.invAmt || 0);
         const pType = viewingProofDocModal.paymentType || '100% Advance';
 
         return (
