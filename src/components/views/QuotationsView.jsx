@@ -2241,7 +2241,9 @@ export default function QuotationsView(props) {
                             </td>
                             <td style={{ padding: '14px 16px', color: '#2563eb', fontWeight: 'bold' }}>{row.id}</td>
                             <td style={{ padding: '14px 16px', color: '#475569' }}>{row.date}</td>
-                            <td style={{ padding: '14px 16px', color: '#64748b' }}>{row.validUntil}</td>
+                            <td style={{ padding: '14px 16px', color: '#64748b' }}>
+                              {['Accepted', 'Converted to PI', 'Rejected', 'Completed'].includes(row.status) ? '—' : row.validUntil}
+                            </td>
                             <td style={{ padding: '14px 16px', color: '#1e293b', fontWeight: '600' }}>{row.amount}</td>
                             <td style={{ padding: '14px 16px' }}>
                               {renderStatusBadge(row.status)}
@@ -2416,10 +2418,12 @@ export default function QuotationsView(props) {
                       <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Date</span>
                       <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingQuotation.date}</strong>
                     </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Valid Until</span>
-                      <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingQuotation.validUntil}</strong>
-                    </div>
+                    {!['Accepted', 'Converted to PI', 'Rejected', 'Completed'].includes(viewingQuotation.status) && (
+                      <div>
+                        <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Valid Until</span>
+                        <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingQuotation.validUntil}</strong>
+                      </div>
+                    )}
                     <div>
                       <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Amount</span>
                       <strong style={{ fontSize: '14px', color: '#1E293B' }}>{viewingQuotation.amount}</strong>

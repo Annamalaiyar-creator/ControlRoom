@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Printer,
   Download,
@@ -31,7 +32,7 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   companyTagline: '',
   showLogo: true,
   customLogoUrl: null, // Custom uploaded logo base64
-  logoHeight: 52,
+  logoHeight: 56, // Fixed constant size
   showCompanyName: false,
   showCompanyTagline: false,
   showContactInfo: true,
@@ -44,7 +45,7 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   companyAddressLine1: '1427, GNT Road, Nagappa Industrial Estate, Puzhal',
   companyAddressLine2: 'Chennai, Tamil Nadu - 600066, India',
   companyGstin: '33AAGCV4262N1ZZ',
-  companyCin: 'U28112TN2020PTC135489',
+  companyCin: '',
   companyPhone: '+91 98847 20789',
   companyEmail: 'sales@vrmstructures.com',
   companyWebsite: 'www.vrmstructures.com',
@@ -129,13 +130,13 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   // Stamp / Seal Customization
   showSignatoryStamp: true,
   stampMode: 'vector', // 'vector' | 'custom' | 'none'
-  stampSize: 125, // Width in px (40 - 250)
+  stampSize: 230, // Width in px (enlarged fixed size)
   customStampUrl: null, // Custom uploaded stamp image base64
   stampText: 'VRM STRUCTURES INDIA',
   stampLocation: 'CHENNAI - AUTHORIZED',
 
   // Signature Customization
-  signatureMode: 'vector', // 'vector' | 'custom' | 'blank'
+  signatureMode: 'none', // 'none' | 'vector' | 'custom' | 'blank'
   customSignatureUrl: null, // Custom uploaded handwritten signature base64
   forCompanyText: 'For VRM Structures India Pvt Ltd',
   signatoryTitle: 'Authorized Signatory',
@@ -551,20 +552,20 @@ export function VRMProformaInvoicePrintSheet({
               }}
               title={`Remove ${label} from print/PDF`}
               style={{
-                opacity: hovered ? 1 : 0,
-                visibility: hovered ? 'visible' : 'hidden',
+                opacity: hovered ? 1 : 0.65,
+                visibility: 'visible',
                 transition: 'opacity 0.15s ease',
                 backgroundColor: '#EF4444',
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '50%',
-                width: '16px',
-                height: '16px',
+                width: '15px',
+                height: '15px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '10px',
-                fontWeight: '800',
+                fontSize: '9px',
+                fontWeight: '900',
                 cursor: 'pointer',
                 padding: 0,
                 boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
@@ -836,21 +837,83 @@ export function VRMProformaInvoicePrintSheet({
     >
       <style>
         {`
+          @page {
+            size: A4 portrait;
+            margin: 12mm 14mm 12mm 14mm !important; /* 4-side clean margin on every printed page */
+          }
+
           @media print {
-            body * { visibility: hidden; }
-            .no-print { display: none !important; }
-            #${id}, #${id} * { visibility: visible; }
-            #${id} {
-              position: absolute;
-              left: 0;
-              top: 0;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              height: auto !important;
+              min-height: 100% !important;
+              overflow: visible !important;
+              background: #ffffff !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* Hide background app root and non-print tools */
+            #root,
+            .no-print,
+            .vrm-floating-action-toolbar,
+            .TemplateCustomizerDrawer {
+              display: none !important;
+            }
+
+            /* Remove fixed overlay constraints so pages flow naturally */
+            .vrm-print-portal-overlay {
+              position: static !important;
+              display: block !important;
+              width: 100% !important;
+              height: auto !important;
+              min-height: auto !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: transparent !important;
+              backdrop-filter: none !important;
+              z-index: auto !important;
+            }
+
+            .vrm-print-workspace {
+              position: static !important;
+              display: block !important;
               width: 100% !important;
               max-width: 100% !important;
-              box-shadow: none !important;
-              padding: 10mm 14mm !important;
               margin: 0 !important;
-              border-radius: 0 !important;
+              padding: 0 !important;
             }
+
+            .vrm-print-sheet-container {
+              position: static !important;
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            /* Printable Sheet: Flows across Page 1, Page 2, etc. */
+            #${id} {
+              position: static !important;
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-height: auto !important;
+              height: auto !important;
+              overflow: visible !important;
+              box-shadow: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: none !important;
+              border-radius: 0 !important;
+              background: #ffffff !important;
+            }
+
             .editable-template-field {
               border: none !important;
               border-bottom: none !important;
@@ -858,12 +921,38 @@ export function VRMProformaInvoicePrintSheet({
               padding: 0 !important;
               outline: none !important;
             }
-            @page {
-              size: A4 portrait;
-              margin: 10mm;
+
+            /* Multi-page table pagination */
+            table {
+              page-break-inside: auto !important;
+              break-inside: auto !important;
+              width: 100% !important;
             }
+
+            thead {
+              display: table-header-group !important;
+            }
+
+            tfoot {
+              display: table-footer-group !important;
+            }
+
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+
+            /* Prevent splitting critical blocks like totals, bank details, and stamp */
+            .avoid-break {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
             .page-break {
-              page-break-before: always;
+              page-break-before: always !important;
+              break-before: always !important;
             }
           }
           .editable-template-field {
@@ -973,12 +1062,12 @@ export function VRMProformaInvoicePrintSheet({
                     title="Company Logo"
                   >
                     <img
-                      src={cfg.customLogoUrl || '/vrm_logo.png'}
+                      src={cfg.customLogoUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_logo')) || '/vrm_logo.png'}
                       alt={cfg.companyName}
                       style={{
-                        height: `${cfg.logoHeight || 52}px`,
-                        maxHeight: '300px',
-                        maxWidth: `${Math.max(220, (cfg.logoHeight || 52) * 3)}px`,
+                        height: '56px',
+                        width: 'auto',
+                        maxWidth: '220px',
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
@@ -1053,7 +1142,7 @@ export function VRMProformaInvoicePrintSheet({
                     <RemovableBlock
                       visible={cfg.showCinGst}
                       settingKey="showCinGst"
-                      title="Company GSTIN & CIN"
+                      title="Company GSTIN"
                       style={{ marginTop: '3px' }}
                     >
                       <strong style={{ color: '#0F172A' }}>GSTIN:</strong>{' '}
@@ -1062,14 +1151,20 @@ export function VRMProformaInvoicePrintSheet({
                         fallback="33AAGCV4262N1ZZ"
                         onSave={(v) => onUpdateSetting?.({ companyGstin: v })}
                         style={{ fontFamily: 'monospace', fontWeight: '700' }}
-                      />{' '}
-                      &nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>CIN:</strong>{' '}
-                      <EditableText
-                        value={cfg.companyCin}
-                        fallback="U28112TN2020PTC135489"
-                        onSave={(v) => onUpdateSetting?.({ companyCin: v })}
-                        style={{ fontFamily: 'monospace', fontWeight: '700' }}
                       />
+                      {cfg.companyCin ? (
+                        <>
+                          {' '}&nbsp;|&nbsp; <strong style={{ color: '#0F172A' }}>CIN:</strong>{' '}
+                          <EditableText
+                            value={cfg.companyCin}
+                            fallback=""
+                            onSave={(v) => onUpdateSetting?.({ companyCin: v })}
+                            onRemove={() => onUpdateSetting?.({ companyCin: '' })}
+                            removeLabel="Company CIN"
+                            style={{ fontFamily: 'monospace', fontWeight: '700' }}
+                          />
+                        </>
+                      ) : null}
                     </RemovableBlock>
                   )}
                   {cfg.showCompanyPhoneEmail !== false && (
@@ -1171,7 +1266,7 @@ export function VRMProformaInvoicePrintSheet({
                       onSaveValue={(v) => onUpdatePiData?.({ piDate: v })}
                     />
                   )}
-                  {cfg.showValidUntil !== false && (
+                  {cfg.showValidUntil !== false && !Boolean(pi.convertedToBom) && pi.status !== 'Converted to BOM' && pi.status !== 'Cancelled' && (
                     <RemovableMetaRow
                       visible={cfg.showValidUntil !== false}
                       settingKey="showValidUntil"
@@ -1549,95 +1644,28 @@ export function VRMProformaInvoicePrintSheet({
                     </td>
                   )}
                   <td style={{ padding: '10px 10px', borderRight: '1px solid #E2E8F0' }}>
-                    {it.isPresetItem && it.isFirstInGroup && (
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
-                        borderRadius: '6px', padding: '2px 8px', fontSize: '10.5px', fontWeight: '800',
-                        marginBottom: '6px', textTransform: 'uppercase'
-                      }}>
-                        📦 Preset Kit: {it.presetName || 'Solar MMS Kit'} ({it.setCount || 1} Set{it.setCount > 1 ? 's' : ''})
-                      </div>
-                    )}
                     <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '11.5px' }}>
-                      <EditableText
-                        value={it.name}
-                        fallback="Item Name"
-                        onSave={(v) => {
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], name: v, item_name: v };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
+                      {it.name}
                     </div>
-                    {cfg.showItemDescription && (
+                    {cfg.showItemDescription && it.description && (
                       <div style={{ fontSize: '10px', color: '#475569', marginTop: '3px', whiteSpace: 'pre-line', lineHeight: '1.35' }}>
-                        <EditableText
-                          value={it.description}
-                          fallback="Add item description..."
-                          multiline={true}
-                          onSave={(v) => {
-                            if (onUpdatePiData && pi.items) {
-                              const updated = [...pi.items];
-                              updated[idx] = { ...updated[idx], description: v };
-                              onUpdatePiData({ items: updated });
-                            }
-                          }}
-                          onRemove={() => {
-                            onUpdateSetting?.({ showItemDescription: false });
-                            onElementRemoved?.('showItemDescription', 'Item Description');
-                          }}
-                          removeLabel="Item Description"
-                        />
+                        {it.description}
                       </div>
                     )}
                   </td>
                   {cfg.showHsn && (
-                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontFamily: 'monospace', color: '#334155' }}>
-                      <EditableText
-                        value={it.hsn}
-                        fallback="73089090"
-                        onSave={(v) => {
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], hsn: v };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
+                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontFamily: 'monospace', color: '#334155', fontSize: '11px' }}>
+                      {it.hsn || '—'}
                     </td>
                   )}
                   {cfg.showQty !== false && (
-                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontWeight: '700', color: '#0F172A' }}>
-                      <EditableText
-                        value={String(it.qty)}
-                        fallback="1"
-                        onSave={(v) => {
-                          const num = parseFloat(v) || 1;
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], qty: num, quantity: num };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
+                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', fontWeight: '700', color: '#0F172A', fontSize: '11.5px' }}>
+                      {it.qty}
                     </td>
                   )}
                   {cfg.showUom && (
-                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#475569' }}>
-                      <EditableText
-                        value={it.uom}
-                        fallback="Nos"
-                        onSave={(v) => {
-                          if (onUpdatePiData && pi.items) {
-                            const updated = [...pi.items];
-                            updated[idx] = { ...updated[idx], uom: v, unit: v };
-                            onUpdatePiData({ items: updated });
-                          }
-                        }}
-                      />
+                    <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#475569', fontSize: '11px' }}>
+                      {it.uom || 'NOS'}
                     </td>
                   )}
                   {cfg.showRateCol !== false && (
@@ -1662,19 +1690,8 @@ export function VRMProformaInvoicePrintSheet({
                         </td>
                       ) : null
                     ) : (
-                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', color: '#0F172A' }}>
-                        <EditableText
-                          value={String(it.rate)}
-                          fallback="0.00"
-                          onSave={(v) => {
-                            const num = parseFloat(v) || 0;
-                            if (onUpdatePiData && pi.items) {
-                              const updated = [...pi.items];
-                              updated[idx] = { ...updated[idx], rate: num, unitValue: num };
-                              onUpdatePiData({ items: updated });
-                            }
-                          }}
-                        />
+                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', color: '#0F172A', fontSize: '11px', fontWeight: '600' }}>
+                        {Number(it.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     )
                   )}
@@ -1686,19 +1703,8 @@ export function VRMProformaInvoicePrintSheet({
                         </td>
                       ) : null
                     ) : (
-                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B' }}>
-                        <EditableText
-                          value={it.discPct ? `${it.discPct}%` : '0%'}
-                          fallback="0%"
-                          onSave={(v) => {
-                            const num = parseFloat(v.replace('%', '')) || 0;
-                            if (onUpdatePiData && pi.items) {
-                              const updated = [...pi.items];
-                              updated[idx] = { ...updated[idx], discPct: num, discountPct: num };
-                              onUpdatePiData({ items: updated });
-                            }
-                          }}
-                        />
+                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B', fontSize: '11px' }}>
+                        {it.discPct ? `${it.discPct}%` : '—'}
                       </td>
                     )
                   )}
@@ -1721,8 +1727,8 @@ export function VRMProformaInvoicePrintSheet({
                         </td>
                       ) : null
                     ) : (
-                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '600', color: '#0F172A' }}>
-                        {it.taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td style={{ padding: '10px 8px', borderRight: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '600', color: '#0F172A', fontSize: '11px' }}>
+                        {Number(it.taxable || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     )
                   )}
@@ -1745,19 +1751,8 @@ export function VRMProformaInvoicePrintSheet({
                         </td>
                       ) : null
                     ) : (
-                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: accent, fontWeight: '600' }}>
-                        <EditableText
-                          value={`${it.gRate}%`}
-                          fallback="18%"
-                          onSave={(v) => {
-                            const num = parseFloat(v.replace('%', '')) || 18;
-                            if (onUpdatePiData && pi.items) {
-                              const updated = [...pi.items];
-                              updated[idx] = { ...updated[idx], gRate: num, gstRate: `${num}%` };
-                              onUpdatePiData({ items: updated });
-                            }
-                          }}
-                        />
+                      <td style={{ padding: '10px 6px', borderRight: '1px solid #E2E8F0', textAlign: 'center', color: accent, fontWeight: '600', fontSize: '11px' }}>
+                        {it.gRate ? `${it.gRate}%` : '18%'}
                       </td>
                     )
                   )}
@@ -1779,8 +1774,8 @@ export function VRMProformaInvoicePrintSheet({
                         </td>
                       ) : null
                     ) : (
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '700', color: accent }}>
-                        {it.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '700', color: accent, fontSize: '11px' }}>
+                        {Number(it.lineTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     )
                   )}
@@ -1791,7 +1786,7 @@ export function VRMProformaInvoicePrintSheet({
         </div>
 
         {/* 4. TOTAL IN WORDS & CALCULATION SUMMARY */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', borderTop: `1.5px solid ${accent}`, backgroundColor: '#FFFFFF' }}>
+        <div className="avoid-break" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', borderTop: `1.5px solid ${accent}`, backgroundColor: '#FFFFFF' }}>
           {/* LEFT: WORDS + BANK DETAILS + TERMS */}
           <div style={{ padding: '14px 18px', borderRight: '1px solid #CBD5E1' }}>
             {cfg.showTotalInWords && (
@@ -2062,7 +2057,7 @@ export function VRMProformaInvoicePrintSheet({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     textAlign: 'center',
-                    minHeight: '135px',
+                    minHeight: '155px',
                     backgroundColor: '#FAFAFA'
                   }}
                 >
@@ -2086,25 +2081,30 @@ export function VRMProformaInvoicePrintSheet({
                     gap: '12px',
                     margin: '6px 0',
                     position: 'relative',
-                    minHeight: '50px'
+                    minHeight: '60px'
                   }}>
                     {/* STAMP DISPLAY */}
-                    {cfg.stampMode === 'custom' && cfg.customStampUrl ? (
-                      <img
-                        src={cfg.customStampUrl}
-                        alt="Company Stamp"
-                        style={{
-                          maxHeight: `${Math.round((cfg.stampSize || 125) * 0.45)}px`,
-                          maxWidth: `${cfg.stampSize || 125}px`,
-                          objectFit: 'contain'
-                        }}
-                      />
+                    {cfg.stampMode === 'custom' && (cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp'))) ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <img
+                          src={cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp'))}
+                          alt="Company Stamp"
+                          style={{
+                            height: '110px',
+                            width: '230px',
+                            maxWidth: '240px',
+                            maxHeight: '115px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </div>
                     ) : cfg.stampMode === 'vector' ? (
-                      <div style={{ textAlign: 'center' }}>
+                      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <svg
-                          width={cfg.stampSize || 125}
-                          height={Math.round((cfg.stampSize || 125) * (46 / 125))}
+                          width={230}
+                          height={85}
                           viewBox="0 0 125 46"
+                          style={{ width: '230px', height: '85px' }}
                         >
                           <ellipse cx="62" cy="23" rx="54" ry="19" stroke={accent} strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
                           <text x="62" y="19" textAnchor="middle" fill={accent} fontSize="6.5" fontWeight="bold">{cfg.stampText || 'VRM STRUCTURES INDIA'}</text>
@@ -2112,59 +2112,106 @@ export function VRMProformaInvoicePrintSheet({
                           <path d="M 38 24 Q 60 14 90 22" stroke={accent} strokeWidth="1.5" fill="none" />
                         </svg>
                         {isEditable && (
-                          <div style={{ fontSize: '9px', marginTop: '2px' }}>
-                            <EditableText
-                              value={cfg.stampText}
-                              fallback="VRM STRUCTURES INDIA"
-                              onSave={(v) => onUpdateSetting?.({ stampText: v })}
-                            />
-                            {' - '}
-                            <EditableText
-                              value={cfg.stampLocation}
-                              fallback="CHENNAI - AUTHORIZED"
-                              onSave={(v) => onUpdateSetting?.({ stampLocation: v })}
-                            />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                            <div style={{ fontSize: '9px' }}>
+                              <EditableText
+                                value={cfg.stampText}
+                                fallback="VRM STRUCTURES INDIA"
+                                onSave={(v) => onUpdateSetting?.({ stampText: v })}
+                              />
+                              {' - '}
+                              <EditableText
+                                value={cfg.stampLocation}
+                                fallback="CHENNAI - AUTHORIZED"
+                                onSave={(v) => onUpdateSetting?.({ stampLocation: v })}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
                     ) : null}
 
                     {/* SIGNATURE DISPLAY */}
-                    {cfg.signatureMode === 'custom' && cfg.customSignatureUrl ? (
-                      <img
-                        src={cfg.customSignatureUrl}
-                        alt="Authorized Signature"
-                        style={{
-                          maxHeight: '44px',
-                          maxWidth: '120px',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    ) : cfg.signatureMode === 'vector' ? (
-                      <svg width="105" height="28" viewBox="0 0 105 28">
-                        <path d="M 10 20 Q 30 5 55 18 T 95 12" stroke={accent} strokeWidth="1.8" fill="none" />
-                      </svg>
-                    ) : cfg.signatureMode === 'blank' ? (
-                      <div style={{ width: '100px', borderBottom: '1px dashed #94A3B8', height: '24px' }} />
-                    ) : null}
+                    {cfg.signatureMode && cfg.signatureMode !== 'none' && (
+                      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                        {cfg.signatureMode === 'custom' && cfg.customSignatureUrl ? (
+                          <img
+                            src={cfg.customSignatureUrl}
+                            alt="Authorized Signature"
+                            style={{
+                              maxHeight: '44px',
+                              maxWidth: '120px',
+                              objectFit: 'contain'
+                            }}
+                          />
+                        ) : cfg.signatureMode === 'vector' ? (
+                          <svg width="105" height="28" viewBox="0 0 105 28">
+                            <path d="M 10 20 Q 30 5 55 18 T 95 12" stroke={accent} strokeWidth="1.8" fill="none" />
+                          </svg>
+                        ) : cfg.signatureMode === 'blank' ? (
+                          <div style={{ width: '100px', borderBottom: '1px dashed #94A3B8', height: '24px' }} />
+                        ) : null}
+                        {isEditable && (
+                          <button
+                            type="button"
+                            className="no-print"
+                            onClick={() => {
+                              onUpdateSetting?.({ signatureMode: 'none' });
+                              onElementRemoved?.('signatureMode', 'Authorized Signature');
+                            }}
+                            title="Remove Authorized Signature"
+                            style={{
+                              position: 'absolute',
+                              top: '-8px',
+                              right: '-10px',
+                              backgroundColor: '#EF4444',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '16px',
+                              height: '16px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              padding: 0,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                              zIndex: 10
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* SIGNATORY NAME & TITLE */}
                   <div>
-                    <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#0F172A', marginBottom: '1px' }}>
-                      <EditableText
-                        value={cfg.signatoryName}
-                        fallback="Authorized Name"
-                        onSave={(v) => onUpdateSetting?.({ signatoryName: v })}
-                      />
-                    </div>
-                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#475569' }}>
-                      <EditableText
-                        value={cfg.signatoryTitle}
-                        fallback="Authorized Signatory"
-                        onSave={(v) => onUpdateSetting?.({ signatoryTitle: v })}
-                      />
-                    </div>
+                    {cfg.signatoryName ? (
+                      <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#0F172A', marginBottom: '1px' }}>
+                        <EditableText
+                          value={cfg.signatoryName}
+                          fallback=""
+                          onSave={(v) => onUpdateSetting?.({ signatoryName: v })}
+                          onRemove={() => onUpdateSetting?.({ signatoryName: '' })}
+                          removeLabel="Signatory Name"
+                        />
+                      </div>
+                    ) : null}
+                    {cfg.signatoryTitle !== '' && (
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#475569' }}>
+                        <EditableText
+                          value={cfg.signatoryTitle}
+                          fallback="Authorized Signatory"
+                          onSave={(v) => onUpdateSetting?.({ signatoryTitle: v })}
+                          onRemove={() => onUpdateSetting?.({ signatoryTitle: '' })}
+                          removeLabel="Authorized Signatory"
+                        />
+                      </div>
+                    )}
                   </div>
 
                 </RemovableBlock>
@@ -2233,7 +2280,10 @@ function TemplateCustomizerDrawer({
     try {
       setIsUploadingLogo(true);
       const dataUrl = await compressImageFile(file, 450, 0.85);
-      onUpdateSettings({ customLogoUrl: dataUrl, showLogo: true });
+      try {
+        localStorage.setItem('vrm_constant_logo', dataUrl);
+      } catch (err) {}
+      onUpdateSettings({ customLogoUrl: dataUrl, showLogo: true, logoHeight: 56 });
     } catch (err) {
       alert('Failed to upload logo: ' + err.message);
     } finally {
@@ -2248,7 +2298,10 @@ function TemplateCustomizerDrawer({
     try {
       setIsUploadingStamp(true);
       const dataUrl = await compressImageFile(file, 350, 0.85);
-      onUpdateSettings({ customStampUrl: dataUrl, stampMode: 'custom', showSignatoryStamp: true });
+      try {
+        localStorage.setItem('vrm_constant_stamp', dataUrl);
+      } catch (err) {}
+      onUpdateSettings({ customStampUrl: dataUrl, stampMode: 'custom', showSignatoryStamp: true, stampSize: 230 });
     } catch (err) {
       alert('Failed to upload stamp: ' + err.message);
     } finally {
@@ -2462,17 +2515,22 @@ function TemplateCustomizerDrawer({
                     )}
                   </div>
 
-                  {/* Logo Height Slider */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: '#64748B' }}>
-                    <span>Size ({settings.logoHeight || 52}px)</span>
-                    <input
-                      type="range"
-                      min="35"
-                      max="75"
-                      value={settings.logoHeight || 52}
-                      onChange={(e) => onUpdateSettings({ logoHeight: Number(e.target.value) })}
-                      style={{ width: '130px', accentColor: settings.accentColor, cursor: 'pointer' }}
-                    />
+                  {/* Fixed Logo Size (Locked) */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '11px',
+                    color: '#64748B',
+                    backgroundColor: '#FFFFFF',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0'
+                  }}>
+                    <span style={{ fontWeight: '600' }}>Logo Dimensions:</span>
+                    <span style={{ fontWeight: '700', color: '#0E7490', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      🔒 Fixed Standard (56px)
+                    </span>
                   </div>
                 </div>
               )}
@@ -2736,6 +2794,27 @@ function TemplateCustomizerDrawer({
                       </div>
                     </div>
                   )}
+
+                  {/* Fixed Stamp Size (Locked) */}
+                  {settings.stampMode !== 'none' && (
+                    <div style={{
+                      marginTop: '6px',
+                      padding: '8px 10px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '11px',
+                      color: '#64748B'
+                    }}>
+                      <span style={{ fontWeight: '600' }}>Stamp Dimensions:</span>
+                      <span style={{ fontWeight: '700', color: '#0E7490', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🔒 Fixed Standard (230px)
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2746,17 +2825,37 @@ function TemplateCustomizerDrawer({
                 <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <PenTool size={14} style={{ color: '#0E7490' }} /> Authorized Signature
                 </span>
+                {settings.signatureMode && settings.signatureMode !== 'none' && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSettings({ signatureMode: 'none' })}
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      color: '#EF4444',
+                      backgroundColor: '#FEE2E2',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '2px 6px',
+                      cursor: 'pointer'
+                    }}
+                    title="Remove Authorized Signature"
+                  >
+                    ✕ Remove
+                  </button>
+                )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Signature Mode Switcher */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
                   {[
-                    { id: 'vector', label: 'Digital Stroke' },
-                    { id: 'custom', label: 'Upload Sign' },
-                    { id: 'blank', label: 'Blank Line' }
+                    { id: 'none', label: 'None' },
+                    { id: 'vector', label: 'Digital' },
+                    { id: 'custom', label: 'Upload' },
+                    { id: 'blank', label: 'Line' }
                   ].map(mode => {
-                    const isSel = settings.signatureMode === mode.id;
+                    const isSel = (settings.signatureMode || 'none') === mode.id;
                     return (
                       <button
                         key={mode.id}
@@ -2767,7 +2866,7 @@ function TemplateCustomizerDrawer({
                           border: isSel ? `2px solid ${settings.accentColor}` : '1px solid #CBD5E1',
                           backgroundColor: isSel ? '#FFFFFF' : '#F1F5F9',
                           color: isSel ? settings.accentColor : '#475569',
-                          fontSize: '10.5px',
+                          fontSize: '10px',
                           fontWeight: isSel ? '700' : '600',
                           cursor: 'pointer'
                         }}
@@ -2902,11 +3001,41 @@ function TemplateCustomizerDrawer({
             </div>
 
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
+              <span>Rate (₹) Column</span>
+              <input
+                type="checkbox"
+                checked={settings.showRateCol !== false}
+                onChange={(e) => onUpdateSettings({ showRateCol: e.target.checked })}
+                style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
               <span>HSN / SAC Code Column</span>
               <input
                 type="checkbox"
                 checked={settings.showHsn}
                 onChange={(e) => onUpdateSettings({ showHsn: e.target.checked })}
+                style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
+              <span>Taxable Value (₹) Column</span>
+              <input
+                type="checkbox"
+                checked={settings.showTaxableCol !== false}
+                onChange={(e) => onUpdateSettings({ showTaxableCol: e.target.checked })}
+                style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
+              <span>Quantity Column</span>
+              <input
+                type="checkbox"
+                checked={settings.showQty !== false}
+                onChange={(e) => onUpdateSettings({ showQty: e.target.checked })}
                 style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
               />
             </label>
@@ -2922,11 +3051,11 @@ function TemplateCustomizerDrawer({
             </label>
 
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
-              <span>Item Technical Descriptions</span>
+              <span>Total / Amount (₹) Column</span>
               <input
                 type="checkbox"
-                checked={settings.showItemDescription}
-                onChange={(e) => onUpdateSettings({ showItemDescription: e.target.checked })}
+                checked={settings.showTotalCol !== false}
+                onChange={(e) => onUpdateSettings({ showTotalCol: e.target.checked })}
                 style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
               />
             </label>
@@ -2947,6 +3076,26 @@ function TemplateCustomizerDrawer({
                 type="checkbox"
                 checked={settings.showGstCol}
                 onChange={(e) => onUpdateSettings({ showGstCol: e.target.checked })}
+                style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
+              <span>S.No Column</span>
+              <input
+                type="checkbox"
+                checked={settings.showSnoCol !== false}
+                onChange={(e) => onUpdateSettings({ showSnoCol: e.target.checked })}
+                style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#0F172A', fontWeight: '600' }}>
+              <span>Item Technical Descriptions</span>
+              <input
+                type="checkbox"
+                checked={settings.showItemDescription}
+                onChange={(e) => onUpdateSettings({ showItemDescription: e.target.checked })}
                 style={{ accentColor: settings.accentColor, cursor: 'pointer' }}
               />
             </label>
@@ -3171,22 +3320,54 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
   const [templateSettings, setTemplateSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('vrm_pi_template_customization');
+      const constantLogo = localStorage.getItem('vrm_constant_logo');
+      const constantStamp = localStorage.getItem('vrm_constant_stamp');
+
+      let initial = { ...DEFAULT_PI_TEMPLATE_SETTINGS };
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.companyName === 'VRM Structures India Pvt Ltd') parsed.companyName = '';
         if (parsed.companyTagline === 'Engineered Solar Mounting Structures & Solutions') parsed.companyTagline = '';
+        if (parsed.companyCin === 'U28112TN2020PTC135489') parsed.companyCin = '';
+        if (parsed.signatureMode === 'vector' && !parsed.customSignatureUrl) parsed.signatureMode = 'none';
         parsed.showCompanyName = false;
         parsed.showCompanyTagline = false;
-        return { ...DEFAULT_PI_TEMPLATE_SETTINGS, ...parsed };
+        initial = { ...initial, ...parsed };
       }
+      if (constantLogo) {
+        initial.customLogoUrl = constantLogo;
+        initial.showLogo = true;
+      }
+      if (constantStamp) {
+        initial.customStampUrl = constantStamp;
+        initial.stampMode = 'custom';
+        initial.showSignatoryStamp = true;
+      }
+      // Fixed constant dimensions
+      initial.logoHeight = 56;
+      initial.stampSize = 230;
+      return initial;
     } catch (e) {}
-    return DEFAULT_PI_TEMPLATE_SETTINGS;
+    return { ...DEFAULT_PI_TEMPLATE_SETTINGS, logoHeight: 56, stampSize: 230 };
   });
 
   if (!piData) return null;
 
   const handleUpdateSettings = (updates) => {
-    setTemplateSettings(prev => ({ ...prev, ...updates }));
+    setTemplateSettings(prev => {
+      const next = {
+        ...prev,
+        ...updates,
+        logoHeight: 56, // Constant locked size
+        stampSize: 230  // Constant locked size
+      };
+      try {
+        localStorage.setItem('vrm_pi_template_customization', JSON.stringify(next));
+        if (next.customLogoUrl) localStorage.setItem('vrm_constant_logo', next.customLogoUrl);
+        if (next.customStampUrl) localStorage.setItem('vrm_constant_stamp', next.customStampUrl);
+      } catch (e) {}
+      return next;
+    });
   };
 
   const handleElementRemoved = (key, label) => {
@@ -3205,15 +3386,27 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
   const handleSaveAsDefault = () => {
     try {
       localStorage.setItem('vrm_pi_template_customization', JSON.stringify(templateSettings));
+      if (templateSettings.customLogoUrl) localStorage.setItem('vrm_constant_logo', templateSettings.customLogoUrl);
+      if (templateSettings.customStampUrl) localStorage.setItem('vrm_constant_stamp', templateSettings.customStampUrl);
     } catch (e) {
       console.warn('Could not persist template settings:', e);
     }
   };
 
   const handleResetDefaults = () => {
-    setTemplateSettings(DEFAULT_PI_TEMPLATE_SETTINGS);
+    const constantLogo = localStorage.getItem('vrm_constant_logo') || templateSettings.customLogoUrl;
+    const constantStamp = localStorage.getItem('vrm_constant_stamp') || templateSettings.customStampUrl;
+    const reset = {
+      ...DEFAULT_PI_TEMPLATE_SETTINGS,
+      customLogoUrl: constantLogo || null,
+      customStampUrl: constantStamp || null,
+      stampMode: constantStamp ? 'custom' : 'vector',
+      logoHeight: 56,
+      stampSize: 230
+    };
+    setTemplateSettings(reset);
     try {
-      localStorage.removeItem('vrm_pi_template_customization');
+      localStorage.setItem('vrm_pi_template_customization', JSON.stringify(reset));
     } catch (e) {}
   };
 
@@ -3270,8 +3463,9 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
     }
   };
 
-  return (
+  const modalContent = (
     <div
+      className="vrm-print-portal-overlay"
       style={{
         position: 'fixed',
         top: 0,
@@ -3290,7 +3484,7 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
     >
       {/* TOP FLOATING ACTION TOOLBAR */}
       <div
-        className="no-print"
+        className="no-print vrm-floating-action-toolbar"
         style={{
           width: '100%',
           maxWidth: showCustomizer ? '1260px' : '850px',
@@ -3410,6 +3604,7 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
 
       {/* WORKSPACE AREA: SHEET + OPTIONAL SIDE-BY-SIDE CUSTOMIZER */}
       <div
+        className="vrm-print-workspace"
         style={{
           display: 'flex',
           justifyContent: 'center',
@@ -3421,7 +3616,7 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         }}
       >
         {/* LIVE PRINTABLE DOCUMENT SHEET */}
-        <div style={{ flex: 1, minWidth: '0' }}>
+        <div className="vrm-print-sheet-container" style={{ flex: 1, minWidth: '0' }}>
           <VRMProformaInvoicePrintSheet
             piData={currentPiData}
             settings={templateSettings}
@@ -3490,4 +3685,8 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
       )}
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

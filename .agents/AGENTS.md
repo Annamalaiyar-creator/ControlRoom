@@ -27,7 +27,8 @@
      - Standard tables MUST include row selection checkboxes (`accent-color: #0E7490`).
      - Selected rows MUST highlight in soft teal tint (`#ECFEFF`) with a `4px solid #0E7490` vertical left border accent line on the first cell.
    - **Floating Bottom Action Bar**:
-     - When 1 or more rows are selected, a floating pill action bar MUST appear fixed at bottom center (`position: fixed`, `bottom: 24px`, `left: 50%`, `transform: translateX(-50%)`) showing: `X Selected | ✏️ Edit Info | 🗑️ Delete | ••• | ✕`.
+     - When 1 or more rows are selected, a floating pill action bar MUST appear fixed at bottom center (`position: fixed`, `bottom: 24px`, `left: 50%`, `transform: translateX(-50%)`, `borderRadius: 50px`, `flexDirection: row`, `flexWrap: nowrap`, `whiteSpace: nowrap`) showing ALL actions in a **SINGLE LINE**.
+     - Do NOT use a 3-dot (•••) menu. All secondary actions (View Details, Print/Export PDF, etc.) MUST be displayed as direct, visible buttons in the floating toolbar row (e.g. `X Selected | 👁️ View Details | ✏️ Edit Info | 🖨️ Export / Print PDF | 🗑️ Delete | ✕`). Note: Duplicate / Clone is NOT needed in BOM, PI, or Quotations.
    - **Pagination Footer Layout**:
      - **Left Side**: `Showing per page [5, 10]` rows-per-page selector (restricted strictly to 5 and 10) + `Showing X to Y of Z entries` text.
      - **Right Side**: Page number buttons (`<< < 1 2 3 > >>`) with active page highlighted in `#0E7490`, placed on the right side directly adjacent to **`Go to page [ ]`** input and **`Go ›`** button.

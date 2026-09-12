@@ -15630,13 +15630,19 @@ export default function ProductionViewsEngine(props) {
                   transform: 'translateX(-50%)',
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #E2E8F0',
-                  borderRadius: '16px',
-                  boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  borderRadius: '50px',
+                  boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                   padding: '8px 16px',
                   display: 'flex',
+                  flexDirection: 'row',
+                  flexWrap: 'nowrap',
                   alignItems: 'center',
-                  gap: '10px',
+                  whiteSpace: 'nowrap',
+                  gap: '8px',
                   zIndex: 10000,
+                  width: 'max-content',
+                  maxWidth: 'calc(100vw - 32px)',
+                  overflowX: 'auto',
                   fontFamily: "'Plus Jakarta Sans', sans-serif"
                 }}>
                   <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
@@ -15826,146 +15832,108 @@ export default function ProductionViewsEngine(props) {
                     </button>
                   )}
 
-                  {/* Dots / More Actions Button & Popup Menu */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setShowFloatingMoreMenu(!showFloatingMoreMenu)}
-                      title="More actions"
-                      style={{
-                        backgroundColor: showFloatingMoreMenu ? '#F1F5F9' : '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        color: '#64748B',
-                        borderRadius: '10px',
-                        padding: '6px 10px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <MoreHorizontal size={14} />
-                    </button>
+                  {/* View Details */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (selectedRows && selectedRows.length > 1) {
+                        alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                        return;
+                      }
+                      const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+                      const targetRow = codeVal
+                        ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
+                        : (filteredRows && filteredRows[0] ? filteredRows[0] : { code: 'CR-001', name: 'Sample Record' });
+                      setQuickPreviewRecord(targetRow);
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                  </button>
 
-                    {showFloatingMoreMenu && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '44px',
-                        right: '0',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                        minWidth: '170px',
-                        padding: '6px',
-                        zIndex: 10001,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px'
-                      }}>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (selectedRows && selectedRows.length > 1) {
-                              alert("You can't open details for multiple files at once. Please select a single item to view details.");
-                              setShowFloatingMoreMenu(false);
-                              return;
-                            }
-                            const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
-                            const targetRow = codeVal
-                              ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
-                              : (filteredRows && filteredRows[0] ? filteredRows[0] : { code: 'CR-001', name: 'Sample Record' });
-                            setQuickPreviewRecord(targetRow);
-                            setShowFloatingMoreMenu(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: 'none',
-                            background: 'transparent',
-                            textAlign: 'left',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: '#1E293B',
-                            cursor: 'pointer',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            position: 'relative',
-                            zIndex: 10002
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                        </button>
+                  {/* View Payment Details */}
+                  <button
+                    onClick={() => {
+                      const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
+                      const targetRow = codeVal
+                        ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => b.bomCode === codeVal))
+                        : ((bomStore || [])[0] || (filteredRows || [])[0]);
 
-                        <button
-                          onClick={() => {
-                            const codeVal = (selectedRows && selectedRows.length > 0) ? selectedRows[0] : null;
-                            const targetRow = codeVal
-                              ? ((filteredRows || []).find(r => r.code === codeVal || r.id === codeVal || r.bomCode === codeVal) || (bomStore || []).find(b => b.bomCode === codeVal))
-                              : ((bomStore || [])[0] || (filteredRows || [])[0]);
+                      if (targetRow) {
+                        setUploadPaymentModal(targetRow);
+                      } else {
+                        alert('Please select a BOM order to view payment details.');
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <CreditCard size={14} style={{ color: '#2563EB' }} /> Payment Details
+                  </button>
 
-                            if (targetRow) {
-                              setUploadPaymentModal(targetRow);
-                            } else {
-                              alert('Please select a BOM order to view payment details.');
-                            }
-                            setShowFloatingMoreMenu(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: 'none',
-                            background: 'transparent',
-                            textAlign: 'left',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: '#1E293B',
-                            cursor: 'pointer',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <CreditCard size={14} style={{ color: '#2563EB' }} /> View Payment Details
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            window.print();
-                            setShowFloatingMoreMenu(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: 'none',
-                            background: 'transparent',
-                            textAlign: 'left',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: '#1E293B',
-                            cursor: 'pointer',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <Printer size={14} style={{ color: '#059669' }} /> Export and Print
-                        </button>
-
-                      </div>
-                    )}
-                  </div>
+                  {/* Export and Print */}
+                  <button
+                    onClick={() => {
+                      window.print();
+                    }}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      color: '#1E293B',
+                      borderRadius: '10px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    <Printer size={14} style={{ color: '#059669' }} /> Export &amp; Print
+                  </button>
 
                   <button
                     onClick={() => {

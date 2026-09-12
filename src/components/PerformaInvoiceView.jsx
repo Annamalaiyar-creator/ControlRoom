@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock, Printer, Palette } from 'lucide-react';
+import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock, Printer, Palette, Copy, AlertCircle } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import SearchablePresetSelector from './SearchablePresetSelector';
 import VRMProformaInvoicePrintTemplate from './VRMProformaInvoicePrintTemplate';
@@ -97,7 +97,7 @@ const normalizePiRecord = (item) => {
   return item;
 };
 
-export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procurement Head', onNavigateTab }) {
+export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procurement Head', onNavigateTab, targetPiNo, clearTargetPi }) {
   const isSalesRole = userRole === 'Sales Head' || userRole === 'Sales Executive';
   const storageKey = isSalesRole ? 'controlroom_sales_pi_store' : 'controlroom_procurement_pi_store';
 
@@ -106,6 +106,50 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [printModalPi, setPrintModalPi] = useState(null); // For official Print & PDF template
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [validationAlert, setValidationAlert] = useState(null); // Interactive Missing Fields popup modal
+
+  const [bomList, setBomList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('controlroom_bom_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  useEffect(() => {
+    const refreshBoms = () => {
+      try {
+        const saved = localStorage.getItem('controlroom_bom_store');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setBomList(parsed);
+        }
+      } catch (e) {}
+    };
+
+    fetch('/api/boms')
+      .then(r => r.ok ? r.json() : null)
+      .then(res => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setBomList(res.data);
+          try {
+            localStorage.setItem('controlroom_bom_store', JSON.stringify(res.data));
+          } catch (_) {}
+        }
+      })
+      .catch(() => {});
+
+    window.addEventListener('controlroom_bom_store_updated', refreshBoms);
+    window.addEventListener('controlroom_storage_update', refreshBoms);
+    window.addEventListener('storage', refreshBoms);
+    return () => {
+      window.removeEventListener('controlroom_bom_store_updated', refreshBoms);
+      window.removeEventListener('controlroom_storage_update', refreshBoms);
+      window.removeEventListener('storage', refreshBoms);
+    };
+  }, []);
 
   const [piList, setPiList] = useState(() => {
     try {
@@ -127,6 +171,46 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     } catch (e) {}
     return (isSalesRole ? defaultSalesPIs : defaultProcurementPIs).map(normalizePiRecord);
   });
+
+  // Handle targetPiNo navigation
+  useEffect(() => {
+    if (targetPiNo && Array.isArray(piList) && piList.length > 0) {
+      const t = String(targetPiNo).trim().toLowerCase();
+      const match = piList.find(p => 
+        (p.piNo && p.piNo.toLowerCase() === t) ||
+        (p.estimate_number && p.estimate_number.toLowerCase() === t) ||
+        (p.id && String(p.id).toLowerCase() === t)
+      );
+      if (match) {
+        setSelectedPi(match);
+        setSearchQuery(targetPiNo);
+        if (typeof clearTargetPi === 'function') clearTargetPi();
+      }
+    }
+  }, [targetPiNo, piList]);
+
+  // Two-way helper to find all BOMs generated from this PI
+  const getConvertedBomsForPi = (pi) => {
+    if (!pi) return [];
+    const piNum = (pi.piNo || pi.estimate_number || pi.id || '').trim().toLowerCase();
+    const explicitCode = (pi.convertedBomNo || pi.convertedBomCode || '').trim();
+
+    const matches = (bomList || []).filter(b => {
+      if (!b) return false;
+      const sPi = (b.sourcePiNo || b.piNo || '').trim().toLowerCase();
+      if (piNum && sPi && (sPi === piNum || sPi.includes(piNum) || piNum.includes(sPi))) return true;
+      if (explicitCode) {
+        const bCode = (b.bomCode || b.code || b.id || '').trim().toLowerCase();
+        if (bCode === explicitCode.toLowerCase()) return true;
+      }
+      return false;
+    });
+
+    if (matches.length === 0 && explicitCode) {
+      return [{ bomCode: explicitCode, code: explicitCode, id: explicitCode, status: 'Sales Confirmed' }];
+    }
+    return matches;
+  };
 
   const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
   const currentEmpName = (localStorage.getItem('controlroom_logged_user_name') || '').trim();
@@ -153,10 +237,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
     return raw.filter(pi => {
       if (!pi) return false;
-      const spCode = (pi.salesPersonCode || pi.createdById || '').trim().toUpperCase();
+      const spCode = String(pi.salesPersonCode || pi.createdById || '').trim().toUpperCase();
       if (curCode && spCode && spCode === curCode) return true;
 
-      const spName = (pi.salesPerson || pi.salesperson || pi.salesRep || pi.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      const spName = String(pi.salesPerson || pi.salesperson || pi.salesRep || pi.createdBy || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
       if (curName && spName) {
         if (spName === curName) return true;
         const cleanSp = spName.replace(/\s+/g, '');
@@ -164,7 +248,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         if (cleanSp === cleanCur || cleanSp.includes(cleanCur) || cleanCur.includes(cleanSp)) return true;
       }
 
-      if (curEmail && (pi.salesPersonEmail || pi.email || '').toLowerCase() === curEmail) return true;
+      if (curEmail && String(pi.salesPersonEmail || pi.email || '').toLowerCase() === curEmail) return true;
       return false;
     });
   }, [piList, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
@@ -255,6 +339,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     const billingObj = { street: bStreet, address: bStreet, city: bCity, state: bState, pincode: bPin };
     const deliveryObj = { street: dStreet, address: dStreet, city: dCity, state: dState, pincode: dPin };
 
+    const pGroups = pi.presetGroups || {};
+    const pGroupList = Array.isArray(pGroups) ? pGroups : Object.values(pGroups);
+    const pName = pi.presetName || (pGroupList.length > 0 ? pGroupList.map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') : null);
+    const pKitPrice = pi.presetKitPrice != null ? pi.presetKitPrice : (pi.kitSubtotal != null ? pi.kitSubtotal : null);
+    const pSetCount = pi.presetSetCount || (pGroupList.length > 0 ? pGroupList.reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) : 1);
+
     const conversionData = {
       sourcePiNo: pi.piNo,
       customerName: pi.vendor || pi.customerName || '',
@@ -282,19 +372,41 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       transportScope: pi.transportScope || 'VRM Structures',
       paymentTerms: pi.paymentTerms || '',
       creditDays: pi.creditDays || '',
-      presetGroups: pi.presetGroups || {},
+      presetGroups: pGroups,
+      presetName: pName,
+      presetKitPrice: pKitPrice,
+      presetSetCount: pSetCount,
+      kitSubtotal: pi.kitSubtotal || null,
+      subtotal: pi.subtotal || null,
+      grandTotal: pi.grandTotal || null,
       salesPerson: pi.salesPerson || pi.salesperson || pi.salesRep || getEffectiveSalesPerson(),
       salesPersonCode: pi.salesPersonCode || currentEmpId,
       createdBy: pi.createdBy || getEffectiveSalesPerson(),
       createdById: pi.createdById || currentEmpId,
-      items: (pi.items && pi.items.length > 0) ? pi.items : [
+      items: (pi.items && pi.items.length > 0) ? pi.items.map(it => {
+        const isPreset = Boolean(it.isPresetItem);
+        return {
+          ...it,
+          name: it.name || 'Structural Steel Beams',
+          category: it.category || (isPreset ? 'Preset Component' : 'Custom Material'),
+          uom: it.uom || 'NOS',
+          qty: String(it.qty || '1'),
+          baseQty: it.baseQty != null ? it.baseQty : (parseFloat(it.qty) || 1),
+          rate: isPreset ? '0' : String(it.rate !== undefined && it.rate !== null && it.rate !== '' ? it.rate : '0'),
+          gstRate: it.gstRate || '18%',
+          isPresetItem: isPreset,
+          presetGroupId: it.presetGroupId || null,
+          presetName: it.presetName || null
+        };
+      }) : [
         {
           name: pi.productName || 'Structural Steel Beams',
           category: 'PI Converted Materials',
           uom: 'NOS',
           qty: String(qty),
           rate: String(rate),
-          gstRate: '18%'
+          gstRate: '18%',
+          isPresetItem: false
         }
       ],
       remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
@@ -337,6 +449,11 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [activeDropdownIdx, setActiveDropdownIdx] = useState(null); // Active 3-dot dropdown index
 
   const [selectedPIs, setSelectedPIs] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [piTab, setPiTab] = useState('All');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleSelectAll = (e, items) => {
     if (e.target.checked) {
@@ -353,11 +470,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       setSelectedPIs([...selectedPIs, piNo]);
     }
   };
-
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [piTab, setPiTab] = useState('All');
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -438,7 +550,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [signedPiDoc, setSignedPiDoc] = useState(null);
   const [piNumber, setPiNumber] = useState('');
   const [piDate, setPiDate] = useState(new Date().toISOString().split('T')[0]);
-  const [validUntilDate, setValidUntilDate] = useState('');
+  const [validUntilDate, setValidUntilDate] = useState(() => new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
   const [salesPerson, setSalesPerson] = useState(getActiveUserName());
   const [vendorName, setVendorName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
@@ -773,7 +885,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setIsUploading(false);
     setPiNumber('Auto-Assigned');
     setPiDate(new Date().toISOString().split('T')[0]);
-    setValidUntilDate('');
+    setValidUntilDate(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
     setVendorName('');
     setContactPerson('');
     setPhone('');
@@ -903,6 +1015,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       }
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (validUntilDate && validUntilDate < todayStr) {
+      missingList.push({
+        field: 'Payment Due / Valid Until Date',
+        message: 'Valid Until date cannot be in the past or a finished date.',
+        targetId: 'pi-field-validUntil'
+      });
+    }
+
     return {
       isValid: missingList.length === 0,
       missingList
@@ -915,9 +1036,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     const validation = validatePiForm(false);
     if (!validation.isValid) {
       setValidationAlert({
-        title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-        message: 'Please complete the following required details to finalize this Proforma Invoice:',
-        missingList: validation.missingList
+        fields: validation.missingList.map(m => typeof m === 'object' ? m.field : m),
+        firstTargetId: validation.missingList[0]?.targetId
       });
       return;
     }
@@ -929,13 +1049,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     if (e) e.preventDefault();
     if (!vendorName || !vendorName.trim()) {
       setValidationAlert({
-        title: '⚠️ Missing Customer Name',
-        message: 'Please enter Customer / Company Name before saving as a draft.',
-        missingList: [{
-          field: 'Customer / Company Name',
-          message: 'Please specify the customer or company name.',
-          targetId: 'pi-field-vendorName'
-        }]
+        fields: ['Customer / Company Name'],
+        firstTargetId: 'pi-field-vendorName'
       });
       return;
     }
@@ -1056,6 +1171,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setEditIdx(idx);
     setPiNumber(pi.piNo || '');
     if (pi.piDate) setPiDate(pi.piDate);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const incomingValidUntil = pi.validUntilDate || pi.expDate || pi.validUntil || '';
+    if (incomingValidUntil && incomingValidUntil >= todayStr) {
+      setValidUntilDate(incomingValidUntil);
+    } else {
+      setValidUntilDate(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
+    }
     setVendorName(pi.vendor || pi.customerName || '');
     setContactPerson(pi.contactPerson || '');
     setPhone(pi.phone || '');
@@ -1220,13 +1342,20 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const uniqueStatuses = ['All', ...new Set(visiblePIList.map(pi => pi.status))];
         const filteredPIList = (visiblePIList || []).filter(pi => {
           if (!pi) return false;
-          const searchLower = (searchQuery || '').toLowerCase();
-          const matchesSearch = (pi.piNo || '').toLowerCase().includes(searchLower) ||
-            (pi.vendor || '').toLowerCase().includes(searchLower) ||
-            (pi.gstNo || '').toLowerCase().includes(searchLower) ||
-            (pi.productName || '').toLowerCase().includes(searchLower);
+          const matchedBoms = getConvertedBomsForPi(pi);
+          const hasSavedBom = matchedBoms.length > 0;
+          const bomCodesStr = matchedBoms.map(b => b.bomCode || b.code || b.id).join(' ').toLowerCase();
+
+          const searchLower = String(searchQuery || '').toLowerCase().trim();
+          const matchesSearch = !searchLower ||
+            String(pi.piNo || '').toLowerCase().includes(searchLower) ||
+            String(pi.vendor || pi.customerName || '').toLowerCase().includes(searchLower) ||
+            String(pi.gstNo || '').toLowerCase().includes(searchLower) ||
+            String(pi.productName || '').toLowerCase().includes(searchLower) ||
+            bomCodesStr.includes(searchLower);
+
           const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-          const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom);
+          const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom) || hasSavedBom;
           const matchesStatus = statusFilter === 'All'
             || (statusFilter === 'Issued' && (currentStatus === 'Issued' || isConverted))
             || (statusFilter === 'Converted to BOM' && isConverted)
@@ -1364,9 +1493,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
                   { id: 'Issued', label: 'Issued / Active', count: visiblePIList.filter(pi => {
                     const st = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-                    return st === 'Issued' || st === 'Converted to BOM' || Boolean(pi.convertedToBom);
+                    return st === 'Issued' || st === 'Converted to BOM' || Boolean(pi.convertedToBom) || getConvertedBomsForPi(pi).length > 0;
                   }).length },
-                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM' || Boolean(pi.convertedToBom)).length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => pi.status === 'Converted to BOM' || Boolean(pi.convertedToBom) || getConvertedBomsForPi(pi).length > 0).length },
                   { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
@@ -1435,15 +1564,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       return currentRows.map((pi, idx) => {
                         const isChecked = selectedPIs.includes(pi.piNo);
 
+                        const matchedBoms = getConvertedBomsForPi(pi);
+                        const hasSavedBom = matchedBoms.length > 0;
+                        const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
+                        const isConverted = currentStatus === 'Converted to BOM' || Boolean(pi.convertedToBom) || hasSavedBom;
+
                         let statusBg = '#eff6ff';
                         let statusFg = '#2563eb';
-                        const currentStatus = (pi.status === 'Pending Approval' || pi.status === 'Approved') ? 'Issued' : (pi.status || 'Issued');
-                        if (currentStatus === 'Issued') {
-                          statusBg = '#f0fdf4';
-                          statusFg = '#16a34a';
-                        } else if (currentStatus === 'Converted to BOM') {
+                        let displayStatus = currentStatus;
+
+                        if (hasSavedBom) {
                           statusBg = '#ecfdf5';
                           statusFg = '#059669';
+                          displayStatus = 'Converted to BOM';
+                        } else if (isConverted) {
+                          statusBg = '#fffbeb';
+                          statusFg = '#d97706';
+                          displayStatus = 'Conversion Pending';
+                        } else if (currentStatus === 'Issued') {
+                          statusBg = '#f0fdf4';
+                          statusFg = '#16a34a';
                         } else if (currentStatus === 'Cancelled') {
                           statusBg = '#fef2f2';
                           statusFg = '#b91c1c';
@@ -1491,12 +1631,81 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             <td style={{ padding: '12px 14px', color: '#64748B' }}>{pi.piDate}</td>
                             <td style={{ padding: '12px 14px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>{pi.amount}</td>
                             
-                            {/* Pill status badge with bullet dot */}
+                            {/* Pill status badge with bullet dot & clickable BOM link */}
                             <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                              <span style={{ backgroundColor: statusBg, color: statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusFg }}></span>
-                                {currentStatus}
-                              </span>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ backgroundColor: statusBg, color: statusFg, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusFg }}></span>
+                                  {displayStatus}
+                                </span>
+                                {hasSavedBom && (
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    {matchedBoms.map((b, bIdx) => {
+                                      const bCode = b.bomCode || b.code || b.id;
+                                      return (
+                                        <button
+                                          key={bIdx}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                                              detail: { tab: 'Sales BOM', targetBom: bCode } 
+                                            }));
+                                            if (typeof onNavigateTab === 'function') {
+                                              onNavigateTab('Sales BOM');
+                                            }
+                                          }}
+                                          title={`View ${bCode} in Sales BOM`}
+                                          style={{
+                                            backgroundColor: '#0E7490',
+                                            color: '#FFFFFF',
+                                            border: 'none',
+                                            fontSize: '11px',
+                                            fontWeight: '800',
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            boxShadow: '0 1px 3px rgba(14,116,144,0.3)',
+                                            transition: 'transform 0.1s ease'
+                                          }}
+                                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
+                                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                          📦 {bCode} ↗
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {!hasSavedBom && isConverted && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleConvertToBom(pi);
+                                    }}
+                                    title="Complete and save BOM order for this PI"
+                                    style={{
+                                      backgroundColor: '#F59E0B',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      fontSize: '10.5px',
+                                      fontWeight: '800',
+                                      padding: '2px 8px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                  >
+                                    Complete BOM →
+                                  </button>
+                                )}
+                              </div>
                             </td>
 
                             {/* Actions column removed per user request */}
@@ -1612,6 +1821,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
 
             {/* Floating Selection Toolbar (exact reference design) */}
+            {/* Floating Selection Toolbar (Single line, direct action buttons, no 3-dot menu) */}
             {selectedPIs.length > 0 && (
               <div style={{
                 position: 'fixed',
@@ -1620,20 +1830,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 transform: 'translateX(-50%)',
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E2E8F0',
-                borderRadius: '16px',
-                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                borderRadius: '50px',
+                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 padding: '8px 16px',
                 display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
                 alignItems: 'center',
-                gap: '10px',
+                whiteSpace: 'nowrap',
+                gap: '8px',
                 zIndex: 10000,
+                width: 'max-content',
+                maxWidth: 'calc(100vw - 32px)',
+                overflowX: 'auto',
                 fontFamily: "'Plus Jakarta Sans', sans-serif"
               }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedPIs.length}</strong> Selected
                 </span>
 
-                {/* Direct View Details button */}
+                {/* View Details */}
                 <button
                   onClick={() => {
                     if (selectedPIs.length > 1) {
@@ -1655,6 +1871,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                     transition: 'all 0.15s ease'
                   }}
@@ -1664,11 +1882,75 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   <Eye size={14} style={{ color: '#0E7490' }} /> View Details
                 </button>
 
-                {/* Direct Convert to BOM button */}
+                {/* Convert to BOM / View BOM button */}
                 {(() => {
                   const target = selectedPIs.length === 1 ? piList.find(p => p.piNo === selectedPIs[0]) : null;
-                  const canConvert = target && target.status !== 'Cancelled' && target.status !== 'Converted to BOM';
-                  if (!canConvert) return null;
+                  if (!target || target.status === 'Cancelled') return null;
+                  const matchedBoms = getConvertedBomsForPi(target);
+                  const hasSavedBom = matchedBoms.length > 0;
+                  const isConverted = target.status === 'Converted to BOM' || Boolean(target.convertedToBom) || hasSavedBom;
+
+                  if (hasSavedBom) {
+                    const firstBomCode = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
+                    return (
+                      <button
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                            detail: { tab: 'Sales BOM', targetBom: firstBomCode } 
+                          }));
+                          if (typeof onNavigateTab === 'function') {
+                            onNavigateTab('Sales BOM');
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#059669',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 4px rgba(5, 150, 105, 0.3)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Layers size={14} style={{ color: '#FFFFFF' }} /> View {firstBomCode} ↗
+                      </button>
+                    );
+                  }
+
+                  if (isConverted) {
+                    return (
+                      <button
+                        onClick={() => handleConvertToBom(target)}
+                        style={{
+                          backgroundColor: '#D97706',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 4px rgba(217, 119, 6, 0.3)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Layers size={14} style={{ color: '#FFFFFF' }} /> Complete BOM
+                      </button>
+                    );
+                  }
 
                   return (
                     <button
@@ -1685,17 +1967,20 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                         boxShadow: '0 2px 4px rgba(79, 70, 229, 0.3)',
                         transition: 'all 0.15s ease'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4338CA'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4F46E5'}
                     >
-                      <Layers size={14} style={{ color: '#FFFFFF' }} /> Convert to BOM →
+                      <Layers size={14} style={{ color: '#FFFFFF' }} /> Convert to BOM
                     </button>
                   );
                 })()}
 
+                {/* Edit Info */}
                 {(() => {
                   const targetPiNo = selectedPIs[0];
                   const targetPi = targetPiNo ? piList.find(p => p.piNo === targetPiNo) : null;
@@ -1734,6 +2019,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                         transition: 'all 0.15s ease'
                       }}
@@ -1745,6 +2032,42 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   );
                 })()}
 
+                {/* Export / Print PDF */}
+                <button
+                  onClick={() => {
+                    const target = (selectedPIs && selectedPIs.length > 0)
+                      ? (piList.find(p => p.piNo === selectedPIs[0]) || { piNo: selectedPIs[0], vendor: 'Customer Reference' })
+                      : null;
+                    if (target) {
+                      setPrintModalPi(target);
+                    } else {
+                      window.print();
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Printer size={14} style={{ color: '#0E7490' }} /> Export / Print PDF
+                </button>
+
+                {/* Delete */}
                 <button
                   onClick={() => {
                     if (window.confirm(`Are you sure you want to delete ${selectedPIs.length} selected PI(s)?`)) {
@@ -1763,6 +2086,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                     transition: 'all 0.15s ease'
                   }}
@@ -1772,139 +2097,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
                 </button>
 
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setShowFloatingMenu(!showFloatingMenu)}
-                    title="More actions"
-                    style={{
-                      backgroundColor: showFloatingMenu ? '#F1F5F9' : '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#64748B',
-                      borderRadius: '10px',
-                      padding: '6px 10px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <MoreHorizontal size={14} />
-                  </button>
-
-                  {showFloatingMenu && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '44px',
-                      right: '0',
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                      minWidth: '170px',
-                      padding: '6px',
-                      zIndex: 10001,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px'
-                    }}>
-                      <button
-                        onClick={() => {
-                          if (selectedPIs && selectedPIs.length > 1) {
-                            alert("You can't open details for multiple files at once. Please select a single item to view details.");
-                            setShowFloatingMenu(false);
-                            return;
-                          }
-                          const target = (selectedPIs && selectedPIs.length > 0)
-                            ? (piList.find(p => p.piNo === selectedPIs[0]) || { piNo: selectedPIs[0], vendor: 'Customer Reference' })
-                            : (piList[0] || null);
-                          if (target) setSelectedPi(target);
-                          setShowFloatingMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          alert(`Cloned ${selectedPIs.length} selected PI record(s).`);
-                          setShowFloatingMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Layers size={14} style={{ color: '#2563EB' }} /> Duplicate / Clone
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          const target = (selectedPIs && selectedPIs.length > 0)
-                            ? (piList.find(p => p.piNo === selectedPIs[0]) || { piNo: selectedPIs[0], vendor: 'Customer Reference' })
-                            : null;
-                          if (target) {
-                            setPrintModalPi(target);
-                          } else {
-                            window.print();
-                          }
-                          setShowFloatingMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Printer size={14} style={{ color: '#0E7490' }} /> Export / Print PDF Template
-                      </button>
-
-                    </div>
-                  )}
-                </div>
-
+                {/* Deselect All */}
                 <button
                   onClick={() => setSelectedPIs([])}
                   title="Deselect all"
@@ -1918,7 +2111,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '6px',
-                    marginLeft: '2px'
+                    marginLeft: '2px',
+                    flexShrink: 0
                   }}
                 >
                   <X size={16} />
@@ -2046,9 +2240,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     Payment Due / Valid Until Date
                   </label>
                   <input
+                    id="pi-field-validUntil"
                     type="date"
                     value={validUntilDate}
-                    onChange={(e) => setValidUntilDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      if (val && val < todayStr) {
+                        setValidUntilDate(todayStr);
+                      } else {
+                        setValidUntilDate(val);
+                      }
+                    }}
                     style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
@@ -3084,7 +3288,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const subtotalVal = Number(selectedPi.unitValue) || piItemsList.reduce((acc, it) => acc + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
         const grandTotalVal = parseFloat(String(selectedPi.amount || 0).replace(/[^0-9.]/g, '')) || (subtotalVal * 1.18);
         const totalGstVal = Math.max(0, grandTotalVal - subtotalVal);
-        const isConverted = selectedPi.status === 'Converted to BOM' || selectedPi.convertedToBom;
+        const matchedBoms = getConvertedBomsForPi(selectedPi);
+        const hasSavedBom = matchedBoms.length > 0;
+        const isConverted = selectedPi.status === 'Converted to BOM' || Boolean(selectedPi.convertedToBom) || hasSavedBom;
 
         return (
           <div
@@ -3136,7 +3342,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       )}
                     </div>
                     <span style={{ fontSize: '12px', color: '#64748B' }}>
-                      Created: <strong>{selectedPi.piDate || selectedPi.date || '—'}</strong> | Valid Until: <strong>{selectedPi.validUntilDate || selectedPi.validUntil || '15 Days'}</strong>
+                      Created: <strong>{selectedPi.piDate || selectedPi.date || '—'}</strong>
+                      {!isConverted && selectedPi.status !== 'Converted to BOM' && selectedPi.status !== 'Cancelled' && (
+                        <> | Valid Until: <strong>{selectedPi.validUntilDate || selectedPi.validUntil || '15 Days'}</strong></>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -3172,6 +3381,145 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
               {/* Scrollable Modal Content */}
               <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* 0. PROMINENT CONVERTED BOM STATUS BANNER */}
+                {hasSavedBom && (
+                  <div style={{
+                    backgroundColor: '#ECFDF5',
+                    border: '1.5px solid #6EE7B7',
+                    borderRadius: '14px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#059669', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                        📦
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#065F46' }}>
+                          Converted to Bill of Materials (BOM)
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#047857', marginTop: '2px' }}>
+                          Assigned BOM Code(s): <strong>{matchedBoms.map(b => b.bomCode || b.code || b.id).join(', ')}</strong>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {matchedBoms.map((b, idx) => {
+                        const bCode = b.bomCode || b.code || b.id;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedPi(null);
+                              window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                                detail: { tab: 'Sales BOM', targetBom: bCode } 
+                              }));
+                              if (typeof onNavigateTab === 'function') {
+                                onNavigateTab('Sales BOM');
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#059669',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 6px rgba(5,150,105,0.25)'
+                            }}
+                          >
+                            <Layers size={14} /> Open {bCode} in Sales BOM ↗
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!hasSavedBom && isConverted && (
+                  <div style={{
+                    backgroundColor: '#FFFBEB',
+                    border: '1.5px solid #FCD34D',
+                    borderRadius: '14px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#D97706', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                        ⏳
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#92400E' }}>
+                          Conversion Initiated — Pending BOM Order Creation
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#B45309', marginTop: '2px' }}>
+                          This Proforma Invoice was marked for conversion, but the BOM order hasn't been saved to the database yet.
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = selectedPi;
+                          setSelectedPi(null);
+                          handleConvertToBom(p);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#D97706',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        Complete BOM Creation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const uncovertedRecord = { ...selectedPi, status: 'Issued', convertedToBom: false };
+                          const updatedList = piList.map(item => item.piNo === selectedPi.piNo ? uncovertedRecord : item);
+                          updatePiList(updatedList);
+                          setSelectedPi(uncovertedRecord);
+                        }}
+                        style={{
+                          padding: '8px 14px',
+                          backgroundColor: '#FFFFFF',
+                          color: '#78350F',
+                          border: '1px solid #D97706',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Revert to Issued
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* 1. Customer & Contact Details Card */}
                 <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px' }}>
@@ -3427,7 +3775,37 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     </button>
                   )}
 
-                  {!isConverted && selectedPi.status !== 'Cancelled' && (
+                  {hasSavedBom ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstBom = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
+                        setSelectedPi(null);
+                        window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                          detail: { tab: 'Sales BOM', targetBom: firstBom } 
+                        }));
+                        if (typeof onNavigateTab === 'function') {
+                          onNavigateTab('Sales BOM');
+                        }
+                      }}
+                      style={{
+                        padding: '10px 22px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        backgroundColor: '#059669',
+                        color: '#FFFFFF',
+                        fontSize: '13px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(5,150,105,0.3)'
+                      }}
+                    >
+                      <Layers size={16} /> View {matchedBoms[0]?.bomCode || 'BOM'} Order ↗
+                    </button>
+                  ) : (!hasSavedBom && isConverted) ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -3439,7 +3817,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         padding: '10px 22px',
                         borderRadius: '10px',
                         border: 'none',
-                        backgroundColor: '#4F46E5',
+                        backgroundColor: '#D97706',
                         color: '#FFFFFF',
                         fontSize: '13px',
                         fontWeight: '800',
@@ -3447,11 +3825,38 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '8px',
-                        boxShadow: '0 4px 12px rgba(79,70,229,0.3)'
+                        boxShadow: '0 4px 12px rgba(217,119,6,0.3)'
                       }}
                     >
-                      <Layers size={16} /> Convert to BOM →
+                      <Layers size={16} /> Complete BOM Creation
                     </button>
+                  ) : (
+                    selectedPi.status !== 'Cancelled' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pi = selectedPi;
+                          setSelectedPi(null);
+                          handleConvertToBom(pi);
+                        }}
+                        style={{
+                          padding: '10px 22px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          backgroundColor: '#4F46E5',
+                          color: '#FFFFFF',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(79,70,229,0.3)'
+                        }}
+                      >
+                        <Layers size={16} /> Convert to BOM →
+                      </button>
+                    )
                   )}
                 </div>
               </div>
@@ -3460,118 +3865,35 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         );
       })()}
 
-      {/* ==================== MISSING REQUIRED FIELDS POPUP MODAL ==================== */}
+      {/* ==================== CUSTOM MANDATORY VALIDATION MODAL (MATCHING PO CREATION POPUP) ==================== */}
       {validationAlert && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-            padding: '20px'
-          }}
-          onClick={() => setValidationAlert(null)}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '20px',
-              maxWidth: '520px',
-              width: '100%',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '1px solid #E2E8F0',
-              overflow: 'hidden'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ padding: '20px 24px', backgroundColor: '#FEF3C7', borderBottom: '1px solid #FDE68A', display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#FDE68A', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <AlertTriangle size={22} />
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', width: '460px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', flexShrink: 0 }}>
+                <AlertCircle size={24} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#92400E' }}>
-                  {validationAlert.title}
-                </h3>
-                <p style={{ margin: '3px 0 0 0', fontSize: '12.5px', color: '#B45309' }}>
-                  {validationAlert.message}
-                </p>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Mandatory Fields Required</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
               </div>
             </div>
-
-            <div style={{ padding: '20px 24px', maxHeight: '340px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {(validationAlert.missingList || []).map((item, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      setValidationAlert(null);
-                      if (item.targetId) {
-                        setTimeout(() => {
-                          const el = document.getElementById(item.targetId);
-                          if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            el.focus?.();
-                          }
-                        }, 100);
-                      }
-                    }}
-                    style={{
-                      padding: '12px 14px',
-                      backgroundColor: '#FFFBEB',
-                      borderRadius: '10px',
-                      border: '1px solid #FDE68A',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px',
-                      cursor: item.targetId ? 'pointer' : 'default'
-                    }}
-                  >
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#D97706', marginTop: '6px', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#92400E' }}>
-                        {item.field}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#78350F', marginTop: '2px' }}>
-                        {item.message}
-                      </div>
-                    </div>
-                  </div>
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {(validationAlert.fields || []).map((field, idx) => (
+                  <li key={idx}><strong>{field}</strong></li>
                 ))}
-              </div>
+              </ul>
             </div>
-
-            <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
               <button
-                type="button"
-                onClick={() => setValidationAlert(null)}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
                 onClick={() => {
-                  const firstTarget = validationAlert.missingList?.[0]?.targetId;
+                  const targetId = validationAlert.firstTargetId;
                   setValidationAlert(null);
-                  if (firstTarget) {
+                  if (targetId) {
                     setTimeout(() => {
-                      const el = document.getElementById(firstTarget);
+                      const el = document.getElementById(targetId);
                       if (el) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         el.focus?.();
@@ -3579,19 +3901,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     }, 100);
                   }
                 }}
-                style={{
-                  padding: '9px 22px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: '#0E7490',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(14, 116, 144, 0.3)'
-                }}
+                style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
               >
-                Review & Fill Details →
+                OK, I'll fill it
               </button>
             </div>
           </div>

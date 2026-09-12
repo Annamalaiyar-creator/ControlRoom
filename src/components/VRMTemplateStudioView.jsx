@@ -70,8 +70,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         ...DEFAULT_PI_TEMPLATE_SETTINGS,
         documentTitle: 'PROFORMA INVOICE',
         accentColor: '#0E7490',
-        logoHeight: 65,
-        stampSize: 125,
+        logoHeight: 56,
+        stampSize: 230,
         showHsn: true,
         showRateCol: true,
         showTaxableCol: true,
@@ -91,8 +91,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         ...DEFAULT_PI_TEMPLATE_SETTINGS,
         documentTitle: 'PROFORMA INVOICE',
         accentColor: '#0E7490',
-        logoHeight: 65,
-        stampSize: 125,
+        logoHeight: 56,
+        stampSize: 230,
         showRateCol: false,
         showTaxableCol: false,
         showGstCol: false,
@@ -116,8 +116,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         dateLabel: 'Quote Date:',
         validUntilLabel: 'Proposal Validity:',
         accentColor: '#1E3A8A', // Royal Navy for Quotes
-        logoHeight: 70,
-        stampSize: 125,
+        logoHeight: 56,
+        stampSize: 230,
         showPaymentTerms: true,
         showPlaceOfSupply: true,
         showSalesExecutive: true,
@@ -137,8 +137,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         dateLabel: 'Date:',
         validUntilLabel: 'Offer Valid Till:',
         accentColor: '#0E7490',
-        logoHeight: 65,
-        stampSize: 125,
+        logoHeight: 56,
+        stampSize: 230,
         showRateCol: false,
         showTaxableCol: false,
         showGstCol: false,
@@ -160,8 +160,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         dateLabel: 'Release Date:',
         validUntilLabel: 'Rev Date:',
         accentColor: '#1E293B', // Charcoal Slate for Engineering
-        logoHeight: 60,
-        stampSize: 120,
+        logoHeight: 56,
+        stampSize: 230,
         colHeaderDesc: 'Structural Component & Profile Specification',
         showHsn: true,
         showUom: true,
@@ -181,8 +181,8 @@ const DEFAULT_MULTI_TEMPLATES = {
         docNoLabel: 'Schedule No:',
         dateLabel: 'Release Date:',
         accentColor: '#059669', // Emerald Green
-        logoHeight: 60,
-        stampSize: 120,
+        logoHeight: 56,
+        stampSize: 230,
         colHeaderDesc: 'Assembly Profile & Hardware Item',
         showHsn: true,
         showUom: true,
@@ -422,6 +422,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
               const s = { ...t.settings };
               if (s.companyName === 'VRM Structures India Pvt Ltd') s.companyName = '';
               if (s.companyTagline === 'Engineered Solar Mounting Structures & Solutions') s.companyTagline = '';
+              if (s.companyCin === 'U28112TN2020PTC135489') s.companyCin = '';
+              if (s.signatureMode === 'vector' && !s.customSignatureUrl) s.signatureMode = 'none';
               s.showCompanyName = false;
               s.showCompanyTagline = false;
               return { ...t, settings: s };
@@ -441,6 +443,8 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     const s = def ? { ...def.settings } : { ...DEFAULT_PI_TEMPLATE_SETTINGS };
     if (s.companyName === 'VRM Structures India Pvt Ltd') s.companyName = '';
     if (s.companyTagline === 'Engineered Solar Mounting Structures & Solutions') s.companyTagline = '';
+    if (s.companyCin === 'U28112TN2020PTC135489') s.companyCin = '';
+    if (s.signatureMode === 'vector' && !s.customSignatureUrl) s.signatureMode = 'none';
     s.showCompanyName = false;
     s.showCompanyTagline = false;
     return s;
@@ -1547,40 +1551,22 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                     </div>
                   </div>
 
-                  {/* Logo Size Slider (Up to 300px) */}
+                  {/* Fixed Logo Size (Locked) */}
                   <div style={{
-                    padding: '14px',
+                    padding: '12px 14px',
                     backgroundColor: '#F8FAFC',
                     borderRadius: '8px',
                     border: '1px solid #E2E8F0',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
-                        Logo Height:
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: '900', color: activeAccent }}>
-                        {currentSettings.logoHeight || 52} px
-                      </span>
-                    </div>
-
-                    <input
-                      type="range"
-                      min={30}
-                      max={300}
-                      step={5}
-                      value={currentSettings.logoHeight || 52}
-                      onChange={(e) => updateSetting({ logoHeight: parseInt(e.target.value, 10) })}
-                      style={{ accentColor: activeAccent, width: '100%', cursor: 'pointer' }}
-                    />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
-                      <span>Compact (30px)</span>
-                      <span>Standard (65px)</span>
-                      <span>Large (300px)</span>
-                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>
+                      Logo Dimensions:
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: activeAccent, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      🔒 Fixed Standard (56px)
+                    </span>
                   </div>
 
                   {/* Upload Custom Logo Button */}
@@ -1655,44 +1641,26 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                       Company Stamp & Seal Size
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748B' }}>
-                      Adjust stamp dimensions (up to 250px) or upload custom stamp.
+                      Adjust stamp dimensions (up to 300px) or upload custom stamp.
                     </div>
                   </div>
 
-                  {/* Stamp Size Slider (Up to 250px) */}
+                  {/* Fixed Stamp Size (Locked) */}
                   <div style={{
-                    padding: '14px',
+                    padding: '12px 14px',
                     backgroundColor: '#F8FAFC',
                     borderRadius: '8px',
                     border: '1px solid #E2E8F0',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
-                        Stamp Size Width:
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: '900', color: activeAccent }}>
-                        {currentSettings.stampSize || 125} px
-                      </span>
-                    </div>
-
-                    <input
-                      type="range"
-                      min={40}
-                      max={250}
-                      step={5}
-                      value={currentSettings.stampSize || 125}
-                      onChange={(e) => updateSetting({ stampSize: parseInt(e.target.value, 10) })}
-                      style={{ accentColor: activeAccent, width: '100%', cursor: 'pointer' }}
-                    />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
-                      <span>40px</span>
-                      <span>Standard (125px)</span>
-                      <span>Extra Large (250px)</span>
-                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>
+                      Stamp Dimensions:
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: activeAccent, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      🔒 Fixed Standard (230px)
+                    </span>
                   </div>
 
                   {/* Stamp Mode (Vector vs Custom Upload) */}

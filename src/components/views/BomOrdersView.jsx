@@ -200,6 +200,7 @@ export default function BomOrdersView(props) {
   const [newBomTransportScope, setNewBomTransportScope] = useState('VRM Structures');
   const [newBomLrNo, setNewBomLrNo] = useState('');
   const [formErrors, setFormErrors] = useState({});
+  const [validationErrorModal, setValidationErrorModal] = useState(null);
 
   // Create BOM Loading & Mutex Anti-Duplicate State
   const [isSubmittingBom, setIsSubmittingBom] = useState(false);
@@ -220,6 +221,24 @@ export default function BomOrdersView(props) {
         field: 'Customer Name',
         message: 'Please select or enter the customer name from the list.',
         targetId: 'field-newBomProductName'
+      });
+    }
+
+    // 2. Billing Address
+    if (!newBomBillingStreet || !newBomBillingStreet.trim()) {
+      errors.billingStreet = 'Billing Street Address is required';
+      missingList.push({
+        field: 'Billing Street Address',
+        message: 'Please enter the billing street address.',
+        targetId: 'field-newBomBillingStreet'
+      });
+    }
+    if (!newBomBillingCity || !newBomBillingCity.trim()) {
+      errors.billingCity = 'Billing City is required';
+      missingList.push({
+        field: 'Billing City',
+        message: 'Please enter the billing city.',
+        targetId: 'field-newBomBillingCity'
       });
     }
 
@@ -907,16 +926,96 @@ export default function BomOrdersView(props) {
       setNewBomDeliveryCity(dCity);
       setNewBomDeliveryState(dState);
       setNewBomDeliveryPincode(dPin);
+      // Restore Preset Groups and kit configurations
+      let restoredPresetGroups = {};
+      if (pendingPi.presetGroups) {
+        if (Array.isArray(pendingPi.presetGroups)) {
+          pendingPi.presetGroups.forEach((g, idx) => {
+            if (g && (g.groupId || g.presetId || g.presetName)) {
+              const gid = g.groupId || `preset_${Date.now()}_${idx}`;
+              restoredPresetGroups[gid] = {
+                groupId: gid,
+                presetId: g.presetId || gid,
+                presetName: g.presetName || 'Preset Kit',
+                setCount: parseInt(g.setCount) || 1,
+                kitPrice: g.kitPrice != null ? String(g.kitPrice) : '',
+                gstRate: g.gstRate || '18%'
+              };
+            }
+          });
+        } else if (typeof pendingPi.presetGroups === 'object') {
+          Object.keys(pendingPi.presetGroups).forEach(gid => {
+            const g = pendingPi.presetGroups[gid];
+            if (g) {
+              restoredPresetGroups[gid] = {
+                groupId: gid,
+                presetId: g.presetId || gid,
+                presetName: g.presetName || 'Preset Kit',
+                setCount: parseInt(g.setCount) || 1,
+                kitPrice: g.kitPrice != null ? String(g.kitPrice) : '',
+                gstRate: g.gstRate || '18%'
+              };
+            }
+          });
+        }
+      }
+
+      // If preset items exist in items list but presetGroups was empty, reconstruct preset group from items metadata
+      if (Object.keys(restoredPresetGroups).length === 0 && Array.isArray(pendingPi.items)) {
+        pendingPi.items.forEach(it => {
+          if (it.isPresetItem && (it.presetGroupId || it.presetName)) {
+            const gid = it.presetGroupId || 'legacy_default';
+            if (!restoredPresetGroups[gid]) {
+              restoredPresetGroups[gid] = {
+                groupId: gid,
+                presetId: gid,
+                presetName: it.presetName || pendingPi.presetName || 'Preset Kit',
+                setCount: parseInt(pendingPi.presetSetCount) || 1,
+                kitPrice: pendingPi.presetKitPrice != null ? String(pendingPi.presetKitPrice) : (pendingPi.kitSubtotal != null ? String(pendingPi.kitSubtotal) : ''),
+                gstRate: it.gstRate || '18%'
+              };
+            }
+          }
+        });
+      }
+
+      setPresetGroups(restoredPresetGroups);
+
+      // Set primary preset state values
+      const firstPresetGroup = Object.values(restoredPresetGroups)[0];
+      if (firstPresetGroup) {
+        setSelectedPreset(firstPresetGroup.presetName || firstPresetGroup.presetId);
+        setPresetKitPrice(firstPresetGroup.kitPrice != null ? String(firstPresetGroup.kitPrice) : '');
+        setPresetSetCount(firstPresetGroup.setCount || 1);
+      } else if (pendingPi.presetName) {
+        setSelectedPreset(pendingPi.presetName);
+        if (pendingPi.presetKitPrice) setPresetKitPrice(String(pendingPi.presetKitPrice));
+        if (pendingPi.presetSetCount) setPresetSetCount(pendingPi.presetSetCount);
+      } else {
+        setSelectedPreset('');
+        setPresetKitPrice('');
+        setPresetSetCount(1);
+      }
+
+      // Map items: preserve preset components with rate 0 and custom single items with actual rates
       if (Array.isArray(pendingPi.items) && pendingPi.items.length > 0) {
-        setBomMaterialsList(pendingPi.items.map(it => ({
-          name: it.name || 'Structural Steel Beams',
-          category: it.category || 'PI Converted Goods',
-          uom: it.uom || 'NOS',
-          qty: String(it.qty || '1'),
-          wastage: '0%',
-          rate: String(it.rate || '1000'),
-          gstRate: it.gstRate || '18%'
-        })));
+        setBomMaterialsList(pendingPi.items.map(it => {
+          const isPreset = Boolean(it.isPresetItem || (it.presetGroupId && restoredPresetGroups[it.presetGroupId]));
+          const rateVal = isPreset ? '0' : String(it.rate !== undefined && it.rate !== null && it.rate !== '' ? it.rate : '0');
+          return {
+            name: it.name || 'Structural Steel Beams',
+            category: it.category || (isPreset ? 'Preset Component' : 'PI Converted Goods'),
+            uom: it.uom || 'NOS',
+            qty: String(it.qty || '1'),
+            baseQty: it.baseQty != null ? it.baseQty : (parseFloat(it.qty) || 1),
+            wastage: it.wastage || '0%',
+            rate: rateVal,
+            gstRate: it.gstRate || '18%',
+            isPresetItem: isPreset,
+            presetGroupId: it.presetGroupId || (isPreset && firstPresetGroup ? firstPresetGroup.groupId : null),
+            presetName: it.presetName || (isPreset && firstPresetGroup ? firstPresetGroup.presetName : null)
+          };
+        }));
       }
       if (pendingPi.sourcePiNo || pendingPi.piNo) {
         setNewBomSourcePiNo(pendingPi.sourcePiNo || pendingPi.piNo);
@@ -950,6 +1049,29 @@ export default function BomOrdersView(props) {
       window.removeEventListener('controlroom_convert_pi_bom', handleCustomConvert);
     };
   }, [convertingPiData]);
+
+  // Support direct navigation to a targeted BOM from PI View or external events
+  useEffect(() => {
+    if (props.targetBomCode && Array.isArray(bomStore) && bomStore.length > 0) {
+      const codeToFind = String(props.targetBomCode).trim().toLowerCase();
+      const target = bomStore.find(b => 
+        (b.bomCode && b.bomCode.toLowerCase() === codeToFind) ||
+        (b.code && b.code.toLowerCase() === codeToFind) ||
+        (b.id && String(b.id).toLowerCase() === codeToFind)
+      );
+      if (target) {
+        setSearchQueryText(target.bomCode || target.code || props.targetBomCode);
+        setConfirmingBomModal({ ...target, isEditMode: false });
+        if (typeof props.clearTargetBom === 'function') props.clearTargetBom();
+      }
+    }
+  }, [props.targetBomCode, bomStore]);
+
+  useEffect(() => {
+    if (props.targetPiNo) {
+      setSearchQueryText(String(props.targetPiNo));
+    }
+  }, [props.targetPiNo]);
 
   // Direct Create BOM disabled per workflow policy (BOM MUST originate from an issued Proforma Invoice)
   const handleOpenCreateBom = async () => {
@@ -1047,6 +1169,7 @@ export default function BomOrdersView(props) {
           if (!sp) return defaultSalesPersonName;
           return sp;
         })(),
+        sourcePiNo: b.sourcePiNo || b.piNo || null,
         c4: b.paymentType || '100% Advance',
         c5: formatCurrency(b.grandTotal),
         status: isAddressRequested ? 'Address Proof Requested from Sales' : (b.status || 'Pending Sales Confirmation'),
@@ -1061,6 +1184,7 @@ export default function BomOrdersView(props) {
   const filteredRows = (pageConfig.rows || []).filter(r => {
     const matchesSearch = !searchQueryText ||
       (r.code && r.code.toLowerCase().includes(searchQueryText.toLowerCase())) ||
+      (r.sourcePiNo && String(r.sourcePiNo).toLowerCase().includes(searchQueryText.toLowerCase())) ||
       (r.c2 && r.c2.toLowerCase().includes(searchQueryText.toLowerCase())) ||
       (r.c3 && r.c3.toLowerCase().includes(searchQueryText.toLowerCase())) ||
       (r.customerName && r.customerName.toLowerCase().includes(searchQueryText.toLowerCase()));
@@ -1738,12 +1862,9 @@ export default function BomOrdersView(props) {
                 if (isSubmittingBom) return;
                 const validation = validateBomForm(true);
                 if (!validation.isValid) {
-                  showCustomAlert({
-                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-                    message: 'Please complete the highlighted details before saving as draft:',
-                    type: 'warning',
-                    details: validation.missingList,
-                    targetFieldId: validation.missingList[0]?.targetId
+                  setValidationErrorModal({
+                    fields: validation.missingList.map(m => typeof m === 'object' ? m.field : m),
+                    firstTargetId: validation.missingList[0]?.targetId
                   });
                   return;
                 }
@@ -1760,12 +1881,9 @@ export default function BomOrdersView(props) {
                 if (isSubmittingBom) return;
                 const validation = validateBomForm(false);
                 if (!validation.isValid) {
-                  showCustomAlert({
-                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-                    message: 'Please complete the highlighted details before creating this BOM order:',
-                    type: 'warning',
-                    details: validation.missingList,
-                    targetFieldId: validation.missingList[0]?.targetId
+                  setValidationErrorModal({
+                    fields: validation.missingList.map(m => typeof m === 'object' ? m.field : m),
+                    firstTargetId: validation.missingList[0]?.targetId
                   });
                   return;
                 }
@@ -3235,12 +3353,9 @@ export default function BomOrdersView(props) {
                 if (isSubmittingBom) return;
                 const validation = validateBomForm(true);
                 if (!validation.isValid) {
-                  showCustomAlert({
-                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-                    message: 'Please complete the highlighted details before saving as draft:',
-                    type: 'warning',
-                    details: validation.missingList,
-                    targetFieldId: validation.missingList[0]?.targetId
+                  setValidationErrorModal({
+                    fields: validation.missingList.map(m => typeof m === 'object' ? m.field : m),
+                    firstTargetId: validation.missingList[0]?.targetId
                   });
                   return;
                 }
@@ -3256,12 +3371,9 @@ export default function BomOrdersView(props) {
                 if (isSubmittingBom) return;
                 const validation = validateBomForm(false);
                 if (!validation.isValid) {
-                  showCustomAlert({
-                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-                    message: 'Please complete the highlighted details before creating this BOM order:',
-                    type: 'warning',
-                    details: validation.missingList,
-                    targetFieldId: validation.missingList[0]?.targetId
+                  setValidationErrorModal({
+                    fields: validation.missingList.map(m => typeof m === 'object' ? m.field : m),
+                    firstTargetId: validation.missingList[0]?.targetId
                   });
                   return;
                 }
@@ -3432,12 +3544,16 @@ export default function BomOrdersView(props) {
                           createdById: effectiveSalesPersonCode,
                           items: (bomMaterialsList || []).map(item => ({
                             name: item.name || 'Custom Item',
-                            category: item.category || '',
+                            category: item.category || (item.isPresetItem ? 'Preset Component' : ''),
                             uom: item.uom || 'NOS',
                             qty: cleanNum(item.qty, 1),
-                            rate: cleanNum(item.rate, 0),
+                            rate: item.isPresetItem ? 0 : cleanNum(item.rate, 0),
                             gstRate: item.gstRate || '18%',
-                            confirmed: !isDraft
+                            confirmed: !isDraft,
+                            isPresetItem: Boolean(item.isPresetItem),
+                            presetGroupId: item.presetGroupId || null,
+                            presetName: item.presetName || null,
+                            baseQty: item.baseQty != null ? cleanNum(item.baseQty, 1) : null
                           })),
                           payments: {
                             advance50Uploaded: false,
@@ -3463,9 +3579,15 @@ export default function BomOrdersView(props) {
                           stockBlocked: !isDraft,
                           stockBlockedAt: !isDraft ? new Date().toISOString() : null,
                           presetName: Object.values(presetGroups).map(g => `${g.presetName} (${g.setCount} Set${g.setCount > 1 ? 's' : ''})`).join(' + ') || selectedPreset || null,
-                          presetKitPrice: totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null),
+                          presetKitPrice: (Object.values(presetGroups).length === 1 && Object.values(presetGroups)[0]?.kitPrice)
+                            ? cleanNum(Object.values(presetGroups)[0].kitPrice, null)
+                            : (totals.kitSubtotal || ((selectedPreset && presetKitPrice !== '') ? cleanNum(presetKitPrice, null) : null)),
                           presetSetCount: Object.values(presetGroups).reduce((s, g) => s + (parseInt(g.setCount) || 1), 0) || (selectedPreset ? (parseInt(presetSetCount) || 1) : null),
-                          presetGroups: Object.values(presetGroups),
+                          presetGroups: Object.values(presetGroups).map(g => ({
+                            ...g,
+                            kitPrice: cleanNum(g.kitPrice, 0),
+                            setCount: parseInt(g.setCount) || 1
+                          })),
                           subTotal: cleanNum(totals.sub, 0),
                           gstAmount: cleanNum(totals.gst, 0),
                           cgstAmount: cleanNum(totals.cgst, 0),
@@ -3552,6 +3674,46 @@ export default function BomOrdersView(props) {
                           localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
                         } catch (_) {}
 
+                        // If converted from a Proforma Invoice, update the PI stores so PI knows its BOM number
+                        if (sanitizedNewBom.sourcePiNo) {
+                          try {
+                            const piNum = String(sanitizedNewBom.sourcePiNo).trim();
+                            const updatePiRecords = (storeKey) => {
+                              try {
+                                const raw = localStorage.getItem(storeKey);
+                                if (raw) {
+                                  const list = JSON.parse(raw);
+                                  if (Array.isArray(list)) {
+                                    const updated = list.map(item => {
+                                      const iNum = String(item.piNo || item.estimate_number || item.id || '').trim();
+                                      if (iNum.toLowerCase() === piNum.toLowerCase()) {
+                                        return {
+                                          ...item,
+                                          status: 'Converted to BOM',
+                                          statusType: 'converted',
+                                          convertedToBom: true,
+                                          convertedBomNo: finalAssignedCode,
+                                          convertedBomCode: finalAssignedCode,
+                                          convertedAt: new Date().toISOString()
+                                        };
+                                      }
+                                      return item;
+                                    });
+                                    localStorage.setItem(storeKey, JSON.stringify(updated));
+                                  }
+                                }
+                              } catch (_) {}
+                            };
+                            updatePiRecords('controlroom_sales_pi_store');
+                            updatePiRecords('controlroom_procurement_pi_store');
+                            window.dispatchEvent(new CustomEvent('controlroom_pi_store_updated', { 
+                              detail: { piNo: piNum, bomCode: finalAssignedCode } 
+                            }));
+                          } catch (e) {
+                            console.error('Error updating PI records with BOM code:', e);
+                          }
+                        }
+
                         try {
                           window.dispatchEvent(new CustomEvent('controlroom_bom_store_updated', { detail: { bom: sanitizedNewBom } }));
                           window.dispatchEvent(new Event('controlroom_storage_update'));
@@ -3572,9 +3734,13 @@ export default function BomOrdersView(props) {
                             customerName: sanitizedNewBom.companyName || sanitizedNewBom.customerName,
                             salesPerson: sanitizedNewBom.salesPerson
                           });
-                          alert(`✅ BOM (${finalAssignedCode}) successfully created and sent to Dispatch for packing!`);
+                          alert(sanitizedNewBom.sourcePiNo
+                            ? `✅ BOM (${finalAssignedCode}) successfully created from Proforma Invoice (${sanitizedNewBom.sourcePiNo}) and sent to Dispatch for packing!`
+                            : `✅ BOM (${finalAssignedCode}) successfully created and sent to Dispatch for packing!`);
                         } else {
-                          alert(`📝 BOM (${finalAssignedCode}) saved as Draft.`);
+                          alert(sanitizedNewBom.sourcePiNo
+                            ? `📝 BOM (${finalAssignedCode}) saved as Draft from Proforma Invoice (${sanitizedNewBom.sourcePiNo}).`
+                            : `📝 BOM (${finalAssignedCode}) saved as Draft.`);
                         }
 
                         setNewBomPaymentProofDoc(null);
@@ -3768,6 +3934,50 @@ export default function BomOrdersView(props) {
                   ? 'Review verified bill of materials, product breakdown, and order specifications.'
                   : 'Review & modify company details, billing/delivery addresses, payment terms, or product specifications before final dispatch.')}
             </span>
+            {confirmingBomModal.sourcePiNo && (
+              <div style={{
+                marginTop: '10px',
+                backgroundColor: '#ECFEFF',
+                border: '1px solid #A5F3FC',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '12px', color: '#0E7490', fontWeight: '700' }}>
+                  🔗 Converted from Proforma Invoice: <strong>{confirmingBomModal.sourcePiNo}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const piTarget = confirmingBomModal.sourcePiNo;
+                    setConfirmingBomModal(null);
+                    window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                      detail: { tab: 'Proforma Invoice', targetPi: piTarget } 
+                    }));
+                    if (typeof props.onChangeTab === 'function') {
+                      props.onChangeTab('Proforma Invoice');
+                    }
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #0E7490',
+                    backgroundColor: '#FFFFFF',
+                    color: '#0E7490',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  View PI ({confirmingBomModal.sourcePiNo}) ↗
+                </button>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -5128,7 +5338,39 @@ export default function BomOrdersView(props) {
                       }}
                       style={{ padding: '12px 14px', fontWeight: 'bold', color: '#2563EB', cursor: 'pointer' }}
                     >
-                      {row.code}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span>{row.code}</span>
+                        {row.sourcePiNo && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                                detail: { tab: 'Proforma Invoice', targetPi: row.sourcePiNo } 
+                              }));
+                              if (typeof props.onChangeTab === 'function') {
+                                props.onChangeTab('Proforma Invoice');
+                              }
+                            }}
+                            title={`Converted from Proforma Invoice ${row.sourcePiNo} - Click to view PI`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              color: '#0E7490',
+                              backgroundColor: '#ECFEFF',
+                              border: '1px solid #A5F3FC',
+                              borderRadius: '4px',
+                              padding: '1px 6px',
+                              width: 'fit-content',
+                              cursor: 'pointer',
+                              fontWeight: '700'
+                            }}
+                          >
+                            🔗 PI: {row.sourcePiNo} ↗
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td
                       onClick={() => {
@@ -6681,6 +6923,51 @@ export default function BomOrdersView(props) {
                 }}
               >
                 <XCircle size={15} /> Confirm & Cancel BOM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM MANDATORY VALIDATION MODAL (MATCHING PO CREATION POPUP) */}
+      {validationErrorModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', width: '460px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', flexShrink: 0 }}>
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Mandatory Fields Required</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
+              </div>
+            </div>
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {(validationErrorModal.fields || []).map((field, idx) => (
+                  <li key={idx}><strong>{field}</strong></li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <button
+                onClick={() => {
+                  const targetId = validationErrorModal.firstTargetId;
+                  setValidationErrorModal(null);
+                  if (targetId) {
+                    setTimeout(() => {
+                      const el = document.getElementById(targetId);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.focus?.();
+                      }
+                    }, 100);
+                  }
+                }}
+                style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
+              >
+                OK, I'll fill it
               </button>
             </div>
           </div>

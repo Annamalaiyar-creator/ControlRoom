@@ -2964,7 +2964,7 @@ export default function VendorManagementView(props) {
               </>
             )}
 
-            {/* Floating Selection Toolbar for Vendor Management */}
+            {/* Floating Selection Toolbar for Vendor Management (Single line, direct action buttons, no 3-dot menu) */}
             {selectedVendors.length > 0 && (
               <div style={{
                 position: 'fixed',
@@ -2973,19 +2973,64 @@ export default function VendorManagementView(props) {
                 transform: 'translateX(-50%)',
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E2E8F0',
-                borderRadius: '16px',
-                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                borderRadius: '50px',
+                boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 padding: '8px 16px',
                 display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
                 alignItems: 'center',
-                gap: '10px',
+                whiteSpace: 'nowrap',
+                gap: '8px',
                 zIndex: 10000,
+                width: 'max-content',
+                maxWidth: 'calc(100vw - 32px)',
+                overflowX: 'auto',
                 fontFamily: "'Plus Jakarta Sans', sans-serif"
               }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedVendors.length}</strong> Selected
                 </span>
 
+                {/* View Details */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (selectedVendors && selectedVendors.length > 1) {
+                      alert("You can't open details for multiple files at once. Please select a single item to view details.");
+                      return;
+                    }
+                    const codeVal = (selectedVendors && selectedVendors.length > 0) ? selectedVendors[0] : null;
+                    const targetRow = codeVal
+                      ? ((vendorList || []).find(r => r.code === codeVal || r.id === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
+                      : (vendorList && vendorList[0] ? vendorList[0] : { code: 'VEND-001', name: 'Sample Vendor' });
+                    setQuickPreviewRecord(targetRow);
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                </button>
+
+                {/* Edit Info */}
                 <button
                   onClick={() => {
                     if (selectedVendors.length > 1) {
@@ -3008,6 +3053,8 @@ export default function VendorManagementView(props) {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                     transition: 'all 0.15s ease'
                   }}
@@ -3017,6 +3064,67 @@ export default function VendorManagementView(props) {
                   <Edit3 size={14} style={{ color: '#64748B' }} /> Edit Info
                 </button>
 
+                {/* Clone / Duplicate */}
+                <button
+                  onClick={() => {
+                    if (selectedVendors.length === 1) {
+                      alert(`Cloned #${selectedVendors[0]} as a new duplicate draft.`);
+                    } else {
+                      alert(`Cloned ${selectedVendors.length} selected items.`);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Copy size={14} style={{ color: '#2563EB' }} /> Clone / Duplicate
+                </button>
+
+                {/* Export / Print PDF */}
+                <button
+                  onClick={() => {
+                    window.print();
+                  }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    color: '#1E293B',
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
+                </button>
+
+                {/* Delete */}
                 <button
                   onClick={() => {
                     if (window.confirm(`Are you sure you want to delete ${selectedVendors.length} selected vendor(s)?`)) {
@@ -3037,6 +3145,8 @@ export default function VendorManagementView(props) {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                     transition: 'all 0.15s ease'
                   }}
@@ -3046,167 +3156,7 @@ export default function VendorManagementView(props) {
                   <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
                 </button>
 
-                {/* Dots / More Actions Button & Popup Menu */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setShowFloatingMoreMenu(!showFloatingMoreMenu)}
-                    title="More actions"
-                    style={{
-                      backgroundColor: showFloatingMoreMenu ? '#F1F5F9' : '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      color: '#64748B',
-                      borderRadius: '10px',
-                      padding: '6px 10px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <MoreHorizontal size={14} />
-                  </button>
-
-                  {showFloatingMoreMenu && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '44px',
-                      right: '0',
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                      minWidth: '170px',
-                      padding: '6px',
-                      zIndex: 10001,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px'
-                    }}>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (selectedVendors && selectedVendors.length > 1) {
-                            alert("You can't open details for multiple files at once. Please select a single item to view details.");
-                            setShowFloatingMoreMenu(false);
-                            return;
-                          }
-                          const codeVal = (selectedVendors && selectedVendors.length > 0) ? selectedVendors[0] : null;
-                          const targetRow = codeVal
-                            ? ((vendorList || []).find(r => r.code === codeVal || r.id === codeVal) || { code: codeVal, name: `Record #${codeVal}` })
-                            : (vendorList && vendorList[0] ? vendorList[0] : { code: 'VEND-001', name: 'Sample Vendor' });
-                          setQuickPreviewRecord(targetRow);
-                          setShowFloatingMoreMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          position: 'relative',
-                          zIndex: 10002
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Eye size={14} style={{ color: '#0E7490' }} /> View Details
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (selectedVendors.length === 1) {
-                            alert(`Cloned #${selectedVendors[0]} as a new duplicate draft.`);
-                          } else {
-                            alert(`Cloned ${selectedVendors.length} selected items.`);
-                          }
-                          setShowFloatingMoreMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Copy size={14} style={{ color: '#2563EB' }} /> Clone / Duplicate
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          window.print();
-                          setShowFloatingMoreMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Printer size={14} style={{ color: '#475569' }} /> Print Selected
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          alert(`Exported ${selectedVendors.length} vendor record(s) to CSV/PDF.`);
-                          setShowFloatingMoreMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#1E293B',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Download size={14} style={{ color: '#059669' }} /> Export / Print PDF
-                      </button>
-                    </div>
-                  )}
-                </div>
-
+                {/* Deselect All */}
                 <button
                   onClick={() => {
                     setSelectedVendors([]);
@@ -3223,7 +3173,8 @@ export default function VendorManagementView(props) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px'
+                    borderRadius: '6px',
+                    flexShrink: 0
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'}
                   onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}

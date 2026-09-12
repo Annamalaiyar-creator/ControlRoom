@@ -2467,16 +2467,22 @@ export default function MaterialReorderView(props) {
               transform: 'translateX(-50%)',
               backgroundColor: '#FFFFFF',
               border: '1px solid #E2E8F0',
-              borderRadius: '16px',
-              boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              borderRadius: '50px',
+              boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
               padding: '8px 16px',
               display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
               alignItems: 'center',
-              gap: '10px',
+              whiteSpace: 'nowrap',
+              gap: '8px',
               zIndex: 10000,
+              width: 'max-content',
+              maxWidth: 'calc(100vw - 32px)',
+              overflowX: 'auto',
               fontFamily: "'Plus Jakarta Sans', sans-serif"
             }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedReorders.length}</strong> Selected
               </span>
 
@@ -2495,107 +2501,77 @@ export default function MaterialReorderView(props) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                 }}
               >
                 + {selectedReorders.length === 1 ? 'Create PO' : 'Create Bulk PO'}
               </button>
 
-              {/* 3-Dot Menu Dropdown containing Edit and Delete */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setReorder3DotMenuId(reorder3DotMenuId ? null : 'floating-menu')}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    color: '#475569',
-                    borderRadius: '10px',
-                    padding: '6px 10px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  •••
-                </button>
+              {/* Edit Info */}
+              <button
+                onClick={() => {
+                  const firstItem = reorderAlerts.find(r => selectedReorders.includes(r.id));
+                  if (firstItem) setEditingReorderItem({ ...firstItem });
+                }}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  color: '#1E293B',
+                  borderRadius: '10px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+              >
+                <Edit3 size={14} style={{ color: '#0E7490' }} /> Edit Info
+              </button>
 
-                {reorder3DotMenuId === 'floating-menu' && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '100%',
-                    right: '0',
-                    marginBottom: '8px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '10px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
-                    width: '140px',
-                    padding: '4px 0',
-                    zIndex: 10001
-                  }}>
-                    <button
-                      onClick={() => {
-                        const firstItem = reorderAlerts.find(r => selectedReorders.includes(r.id));
-                        if (firstItem) setEditingReorderItem({ ...firstItem });
-                        setReorder3DotMenuId(null);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px 14px',
-                        textAlign: 'left',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: '#334155',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Edit3 size={14} style={{ color: '#0E7490' }} /> Edit Info
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete ${selectedReorders.length} selected item(s)?`)) {
-                          setReorderAlerts(prev => prev.filter(r => !selectedReorders.includes(r.id)));
-                          setSelectedReorders([]);
-                        }
-                        setReorder3DotMenuId(null);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px 14px',
-                        textAlign: 'left',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: '#DC2626',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
-                    </button>
-                  </div>
-                )}
-              </div>
+              {/* Delete */}
+              <button
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete ${selectedReorders.length} selected item(s)?`)) {
+                    setReorderAlerts(prev => prev.filter(r => !selectedReorders.includes(r.id)));
+                    setSelectedReorders([]);
+                  }
+                }}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  color: '#DC2626',
+                  borderRadius: '10px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+              >
+                <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
+              </button>
 
               <button
                 onClick={() => {
                   setSelectedReorders([]);
-                  setReorder3DotMenuId(null);
                 }}
                 title="Deselect all"
                 style={{
@@ -2607,7 +2583,8 @@ export default function MaterialReorderView(props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'}
                 onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}

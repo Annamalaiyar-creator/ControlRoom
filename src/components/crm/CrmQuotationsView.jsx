@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FileText, Plus, Search, Eye, Share2, MessageSquare, Download, Check,
   Building2, Printer, X, DollarSign, Calendar, Tag, ChevronRight,
@@ -308,6 +309,22 @@ export default function CrmQuotationsView({
   const [terms, setTerms] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
 
+  // Bank Account Copy helper state
+  const [copiedBankField, setCopiedBankField] = useState(null);
+
+  const handleCopyBankDetail = (text, fieldName) => {
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+    } catch (_) {}
+    setCopiedBankField(fieldName);
+    showToast(`${fieldName} copied to clipboard!`);
+    setTimeout(() => {
+      setCopiedBankField(null);
+    }, 2000);
+  };
+
   // Normalizing quotations
   const normalizedQuotes = useMemo(() => {
     if (!Array.isArray(quotations)) return [];
@@ -428,7 +445,8 @@ export default function CrmQuotationsView({
         (r.code && r.code.toLowerCase().includes(qText)) ||
         (r.customer && r.customer.toLowerCase().includes(qText)) ||
         (r.structure && r.structure.toLowerCase().includes(qText)) ||
-        (r.salesRep && r.salesRep.toLowerCase().includes(qText));
+        (r.salesRep && r.salesRep.toLowerCase().includes(qText)) ||
+        (r.convertedPiNo && r.convertedPiNo.toLowerCase().includes(qText));
 
       const matchesDate = !filterDateVal || (r.date && r.date.startsWith(filterDateVal));
 
@@ -720,7 +738,11 @@ export default function CrmQuotationsView({
   const handleStartEditQuote = (quote) => {
     setQuoteCode(quote.quoteNumber || quote.code || quote.id);
     setQuoteDate(quote.date || (quote.createdAt ? quote.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]));
-    setValidUntilDate(quote.validUntil || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const initialValidUntil = (quote.validUntil && quote.validUntil >= todayStr)
+      ? quote.validUntil
+      : new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    setValidUntilDate(initialValidUntil);
     setDeliveryDate(quote.deliveryDate || new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0]);
     setCustomerName(quote.customerName || quote.customer || quote.companyName || '');
     setContactPerson(quote.contactPerson || '');
@@ -816,6 +838,12 @@ export default function CrmQuotationsView({
         missing.push({ name: 'Valid Product / Item in Quotation Scope', targetId: 'quote-field-items' });
       }
     }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!validUntilDate || !validUntilDate.trim()) {
+      missing.push({ name: 'Valid Until Date', targetId: 'quote-field-validUntil' });
+    } else if (validUntilDate < todayStr) {
+      missing.push({ name: 'Valid Until Date cannot be in the past or a finished date', targetId: 'quote-field-validUntil' });
+    }
 
     return {
       isValid: missing.length === 0,
@@ -828,10 +856,8 @@ export default function CrmQuotationsView({
     const validation = validateQuotationForm();
     if (!validation.isValid) {
       setValidationAlert({
-        title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-        message: 'Please complete the highlighted details before saving this Quotation:',
-        details: validation.missingList,
-        targetFieldId: validation.missingList[0]?.targetId
+        fields: validation.missingList.map(m => typeof m === 'object' ? (m.name || m.field) : m),
+        firstTargetId: validation.missingList[0]?.targetId
       });
       return;
     }
@@ -949,14 +975,26 @@ export default function CrmQuotationsView({
       salesPersonCode: repCode,
       createdBy: repName,
       createdById: repCode,
-      items: (quote.items || []).map(it => ({
-        name: it.name || it.description,
-        category: it.category || 'MMS Scope',
-        uom: it.uom || it.unit || 'NOS',
-        qty: String(it.qty || 1),
-        rate: String(it.rate || 0),
-        gstRate: it.gstRate || '18%'
-      })),
+      items: (quote.items || []).map(it => {
+        const isPreset = Boolean(it.isPresetItem);
+        return {
+          name: it.name || it.description,
+          category: it.category || (isPreset ? 'Preset Component' : 'MMS Scope'),
+          uom: it.uom || it.unit || 'NOS',
+          qty: String(it.qty || 1),
+          baseQty: it.baseQty != null ? it.baseQty : (parseFloat(it.qty) || 1),
+          rate: isPreset ? '0' : String(it.rate || 0),
+          gstRate: it.gstRate || '18%',
+          isPresetItem: isPreset,
+          presetGroupId: it.presetGroupId || null,
+          presetName: it.presetName || null
+        };
+      }),
+      presetGroups: quote.presetGroups || {},
+      presetName: quote.presetName || null,
+      presetKitPrice: quote.presetKitPrice || quote.kitSubtotal || null,
+      presetSetCount: quote.presetSetCount || null,
+      kitSubtotal: quote.kitSubtotal || null,
       notes: `Generated automatically from Quotation ${quote.code || quote.quoteNumber}. Unlimited revisions kept in quotation history.`
     };
 
@@ -1203,12 +1241,29 @@ export default function CrmQuotationsView({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>Quote Date</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748B', marginBottom: '6px' }}>
+                Quote Date
+              </label>
               <input
                 type="date"
                 value={quoteDate}
-                onChange={(e) => setQuoteDate(e.target.value)}
-                style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#334155', backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none' }}
+                readOnly
+                disabled
+                title="Quote date is automatically recorded and cannot be modified"
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  padding: '0 14px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#64748B',
+                  backgroundColor: '#F1F5F9',
+                  cursor: 'not-allowed',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
               />
             </div>
             <div>
@@ -1216,10 +1271,19 @@ export default function CrmQuotationsView({
                 Valid Until <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
+                id="quote-field-validUntil"
                 type="date"
                 value={validUntilDate}
-                min={quoteDate}
-                onChange={(e) => setValidUntilDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  if (val && val < todayStr) {
+                    setValidUntilDate(todayStr);
+                  } else {
+                    setValidUntilDate(val);
+                  }
+                }}
                 style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
@@ -1591,7 +1655,7 @@ export default function CrmQuotationsView({
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '8%', textAlign: 'center' }}>Qty <span style={{ color: '#EF4444' }}>*</span></th>
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>Price (₹)</th>
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', textAlign: 'center' }}>GST Rate</th>
-                    {hasAnyPreset && <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', color: '#0E7490', backgroundColor: '#ECFEFF' }}>Preset Amt (₹)</th>}
+                    {quoteItems.some(it => it.isPresetItem) && <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%', color: '#0E7490', backgroundColor: '#ECFEFF' }}>Preset Amt (₹)</th>}
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Taxable (₹)</th>
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '11%', textAlign: 'right' }}>Total (₹)</th>
                     <th style={{ padding: '12px 10px', fontWeight: '700', width: '4%', textAlign: 'center' }}>Action</th>
@@ -1600,49 +1664,37 @@ export default function CrmQuotationsView({
                 <tbody>
                   {quoteItems.length === 0 ? (
                     <tr>
-                      <td colSpan={hasAnyPreset ? 10 : 9} style={{ padding: '48px 16px', textAlign: 'center', color: '#94A3B8' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                          <Boxes size={28} style={{ color: '#CBD5E1' }} />
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B' }}>No products or materials in quotation</span>
-                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>Select an engineering Preset above or click "+ Add Product / Item" to author quotation lines</span>
-                        </div>
+                      <td colSpan={quoteItems.some(it => it.isPresetItem) ? 10 : 9} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>
+                        No items added yet. Pick a preset above or click <strong>+ Add Product / Item</strong> below.
                       </td>
                     </tr>
                   ) : (
-                    quoteItems.map((item, i) => {
-                      const isChecked = selectedItemIndexes.includes(i);
-                      const isPresetItem = Boolean(item.isPresetItem);
-                      const groupId = item.presetGroupId;
-                      const currentGroup = groupId ? (presetGroups[groupId] || { kitPrice: '', setCount: 1, presetName: item.presetName }) : null;
-
-                      let isFirstInGroup = false;
-                      let groupCount = 0;
-                      if (isPresetItem && groupId) {
-                        const itemsInGroup = quoteItems.filter(it => it.presetGroupId === groupId);
-                        groupCount = itemsInGroup.length;
-                        isFirstInGroup = quoteItems.findIndex(it => it.presetGroupId === groupId) === i;
-                      }
-
+                    (() => {
+                      const hasAnyPreset = quoteItems.some(it => it.isPresetItem);
+                      return quoteItems.map((item, i) => {
                       const q = parseFloat(item.qty) || 0;
                       const r = parseFloat(item.rate) || 0;
-                      const taxable = isPresetItem ? 0 : q * r;
+                      const taxable = q * r;
                       const gstPct = parseFloat(String(item.gstRate || '18%').replace('%', '')) || 18;
-                      const itemTotal = taxable + (taxable * (gstPct / 100));
+                      const gstAmt = taxable * (gstPct / 100);
+                      const rowTot = taxable + gstAmt;
+                      const isChecked = selectedItemIndexes.includes(i);
+
+                      const isPresetItem = Boolean(item.isPresetItem);
+                      const groupId = item.presetGroupId || (isPresetItem ? 'legacy_default' : null);
+                      const groupItems = isPresetItem ? quoteItems.filter(it => (it.presetGroupId || 'legacy_default') === groupId) : [];
+                      const isFirstInGroup = isPresetItem && quoteItems.findIndex(it => (it.presetGroupId || 'legacy_default') === groupId) === i;
+                      const groupCount = groupItems.length;
+                      const currentGroup = (groupId && presetGroups[groupId]) || {
+                        groupId: groupId || 'legacy_default',
+                        presetName: item.presetName || selectedPreset || 'Preset Kit',
+                        setCount: 1,
+                        kitPrice: ''
+                      };
 
                       return (
-                        <tr
-                          key={i}
-                          style={{
-                            borderBottom: '1px solid #F1F5F9',
-                            backgroundColor: isChecked ? '#ECFEFF' : (isPresetItem ? '#F8FAFC' : 'transparent'),
-                            transition: 'background-color 0.15s ease'
-                          }}
-                        >
-                          <td style={{
-                            padding: '12px 14px',
-                            textAlign: 'center',
-                            borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent'
-                          }}>
+                        <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#ECFEFF' : (i % 2 === 1 ? '#FAFBFC' : 'white') }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent' }}>
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -1653,12 +1705,13 @@ export default function CrmQuotationsView({
                               style={{ accentColor: '#0E7490', cursor: 'pointer' }}
                             />
                           </td>
-                          <td style={{ padding: '12px 10px' }}>
+                          <td style={{ padding: '10px 10px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {/* Line 1: Product / Item Name */}
                               <div style={{ position: 'relative' }}>
                                 <input
                                   type="text"
-                                  list={`quote-product-list-${i}`}
+                                  list={`product-list-${i}`}
                                   placeholder="Type or select product / item..."
                                   value={item.name || ''}
                                   onChange={(e) => {
@@ -1672,9 +1725,9 @@ export default function CrmQuotationsView({
                                       category: matched ? (matched.category || matched.description || mat.category) : mat.category
                                     } : mat));
                                   }}
-                                  style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                                  style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: 'text' }}
                                 />
-                                <datalist id={`quote-product-list-${i}`}>
+                                <datalist id={`product-list-${i}`}>
                                   {(itemsList || []).map((prod, pidx) => {
                                     const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
                                     const isOutOfStock = st <= 0;
@@ -1687,6 +1740,7 @@ export default function CrmQuotationsView({
                                   })}
                                 </datalist>
                               </div>
+                              {/* Line 2: Description */}
                               <input
                                 type="text"
                                 placeholder="Description..."
@@ -1695,23 +1749,23 @@ export default function CrmQuotationsView({
                                   const val = e.target.value;
                                   setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
                                 }}
-                                style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                                style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC', cursor: 'text' }}
                               />
                             </div>
                           </td>
                           <td style={{ padding: '12px 10px' }}>
                             <input
                               type="text"
-                              list={`quote-uom-list-${i}`}
+                              list={`uom-list-${i}`}
                               placeholder="UOM"
                               value={item.uom || 'NOS'}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
                               }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600', cursor: 'text' }}
                             />
-                            <datalist id={`quote-uom-list-${i}`}>
+                            <datalist id={`uom-list-${i}`}>
                               <option value="NOS" />
                               <option value="SET" />
                               <option value="KG" />
@@ -1731,7 +1785,7 @@ export default function CrmQuotationsView({
                                 const val = e.target.value;
                                 setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                               }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white', cursor: 'text' }}
                             />
                           </td>
                           <td style={{ padding: '12px 10px' }}>
@@ -1746,25 +1800,25 @@ export default function CrmQuotationsView({
                                   const val = e.target.value;
                                   setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
                                 }}
-                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box' }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white', cursor: 'text' }}
                               />
                             )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                          <select
-                            value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                            }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
-                          >
-                            <option value="18%">18% GST</option>
-                            <option value="12%">12% GST</option>
-                            <option value="5%">5% GST</option>
-                            <option value="0%">0% Exempt</option>
-                          </select>
-                        </td>
+                            <select
+                              value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                            >
+                              <option value="18%">18% GST</option>
+                              <option value="12%">12% GST</option>
+                              <option value="5%">5% GST</option>
+                              <option value="0%">0% Exempt</option>
+                            </select>
+                          </td>
                           {hasAnyPreset && (() => {
                             if (isPresetItem) {
                               if (isFirstInGroup) {
@@ -1792,16 +1846,16 @@ export default function CrmQuotationsView({
                                           maxWidth: '120px',
                                           display: 'block'
                                         }}
-                                        title={currentGroup?.presetName}
+                                        title={currentGroup.presetName}
                                       >
-                                        {currentGroup?.presetName}
+                                        {currentGroup.presetName}
                                       </span>
 
                                       <div style={{ position: 'relative', width: '100%' }}>
                                         <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
                                         <input
                                           type="number"
-                                          value={currentGroup?.kitPrice || ''}
+                                          value={currentGroup.kitPrice}
                                           placeholder="0.00"
                                           onFocus={(e) => e.target.select()}
                                           onChange={(e) => {
@@ -1818,7 +1872,7 @@ export default function CrmQuotationsView({
                                             border: '2px solid #818CF8', padding: '0 10px 0 26px',
                                             fontSize: '15px', fontWeight: '800', color: '#312E81',
                                             textAlign: 'right', outline: 'none', boxSizing: 'border-box',
-                                            backgroundColor: 'white'
+                                            backgroundColor: 'white', cursor: 'text'
                                           }}
                                         />
                                       </div>
@@ -1831,7 +1885,7 @@ export default function CrmQuotationsView({
                                           type="number"
                                           min="0"
                                           max="999"
-                                          value={currentGroup?.setCount !== undefined && currentGroup?.setCount !== null ? currentGroup.setCount : ''}
+                                          value={currentGroup.setCount !== undefined && currentGroup.setCount !== null ? currentGroup.setCount : ''}
                                           onFocus={(e) => e.target.select()}
                                           onChange={(e) => {
                                             const rawVal = e.target.value;
@@ -1860,52 +1914,68 @@ export default function CrmQuotationsView({
                                               return mat;
                                             }));
                                           }}
+                                          onBlur={() => {
+                                            const current = currentGroup.setCount;
+                                            const finalCount = (current === '' || isNaN(parseInt(current)) || parseInt(current) < 0) ? 1 : Math.max(0, parseInt(current));
+                                            if (groupId) {
+                                              setPresetGroups(prev => ({
+                                                ...prev,
+                                                [groupId]: { ...(prev[groupId] || currentGroup), setCount: finalCount }
+                                              }));
+                                            }
+                                            setQuoteItems(prev => prev.map(mat => {
+                                              if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                                return { ...mat, qty: String(Math.round(mat.baseQty * finalCount)) };
+                                              }
+                                              return mat;
+                                            }));
+                                          }}
                                           style={{
                                             width: '42px', height: '26px', borderRadius: '6px',
                                             border: '1.5px solid #818CF8', fontSize: '13px',
                                             fontWeight: '800', color: '#312E81', textAlign: 'center',
-                                            padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box'
+                                            padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box', cursor: 'text'
                                           }}
                                           title="Sets multiplier for this preset"
                                         />
                                         <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
-                                          set{(parseInt(currentGroup?.setCount) || 1) !== 1 ? 's' : ''}
+                                          set{(parseInt(currentGroup.setCount) || 1) !== 1 ? 's' : ''}
                                         </span>
                                       </div>
 
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                         <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
-                                         <select
-                                           value={currentGroup?.gstRate || item.gstRate || '18%'}
-                                           onChange={(e) => {
-                                             const val = e.target.value;
-                                             if (groupId) {
-                                               setPresetGroups(prev => ({
-                                                 ...prev,
-                                                 [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
-                                               }));
-                                             }
-                                             setQuoteItems(prev => prev.map((mat, idx) =>
-                                               ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
-                                                 ? { ...mat, gstRate: val }
-                                                 : mat
-                                             ));
-                                           }}
-                                           style={{
-                                             height: '24px', borderRadius: '6px',
-                                             border: '1.5px solid #818CF8', padding: '0 4px',
-                                             fontSize: '11px', fontWeight: '800',
-                                             color: '#312E81', backgroundColor: '#FFFFFF',
-                                             outline: 'none', cursor: 'pointer'
-                                           }}
-                                           title="Change GST Rate for this preset"
-                                         >
-                                           <option value="18%">18%</option>
-                                           <option value="12%">12%</option>
-                                           <option value="5%">5%</option>
-                                           <option value="0%">0%</option>
-                                         </select>
-                                       </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                        <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
+                                        <select
+                                          value={currentGroup.gstRate || item.gstRate || '18%'}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (groupId) {
+                                              setPresetGroups(prev => ({
+                                                ...prev,
+                                                [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                              }));
+                                            }
+                                            setQuoteItems(prev => prev.map((mat, idx) =>
+                                              ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                                ? { ...mat, gstRate: val }
+                                                : mat
+                                            ));
+                                          }}
+                                          style={{
+                                            height: '24px', borderRadius: '6px',
+                                            border: '1.5px solid #818CF8', padding: '0 4px',
+                                            fontSize: '11px', fontWeight: '800',
+                                            color: '#312E81', backgroundColor: '#FFFFFF',
+                                            outline: 'none', cursor: 'pointer'
+                                          }}
+                                          title="Change GST Rate for this preset"
+                                        >
+                                          <option value="18%">18%</option>
+                                          <option value="12%">12%</option>
+                                          <option value="5%">5%</option>
+                                          <option value="0%">0%</option>
+                                        </select>
+                                      </div>
 
                                       {groupId && (
                                         <button
@@ -1922,43 +1992,50 @@ export default function CrmQuotationsView({
                                             borderRadius: '4px',
                                             marginTop: '2px'
                                           }}
-                                          title={`Remove entire ${currentGroup?.presetName} preset`}
+                                          title={`Remove entire ${currentGroup.presetName} preset`}
                                         >
-                                          ✕ Remove Preset
+                                          Remove Kit
                                         </button>
                                       )}
                                     </div>
                                   </td>
                                 );
+                              } else {
+                                return null;
                               }
-                              return null;
+                            } else {
+                              return <td style={{ padding: '12px 10px', textAlign: 'center' }}><span style={{ fontSize: '11px', color: '#CBD5E1' }}>—</span></td>;
                             }
-                            return (
-                              <td style={{ padding: '12px 10px', textAlign: 'center', color: '#94A3B8', fontSize: '11px' }}>
-                                —
-                              </td>
-                            );
                           })()}
-                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: isPresetItem ? '#94A3B8' : '#334155' }}>
-                            {isPresetItem ? <span style={{ fontSize: '11px', fontStyle: 'italic' }}>Kit Inc.</span> : `₹${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          <td style={{ padding: '12px 10px', color: '#475569', textAlign: 'right', fontWeight: '600' }}>
+                            {isPresetItem ? (
+                              <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                            ) : (
+                              `₹${taxable.toFixed(2)}`
+                            )}
                           </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: isPresetItem ? '#94A3B8' : '#0F172A' }}>
-                            {isPresetItem ? <span style={{ fontSize: '11px', fontStyle: 'italic' }}>Kit Inc.</span> : `₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          <td style={{ padding: '12px 10px', fontWeight: 'bold', color: '#0F172A', textAlign: 'right' }}>
+                            {isPresetItem ? (
+                              <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                            ) : (
+                              `₹${rowTot.toFixed(2)}`
+                            )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                             <button
                               type="button"
                               onClick={() => handleRemoveMaterialRow(i)}
-                              style={{ border: 'none', background: '#FEE2E2', color: '#DC2626', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                               title="Delete Item"
                             >
-                              <Trash2 style={{ width: '13px', height: '13px' }} />
+                              <Trash2 style={{ width: '15px', height: '15px' }} />
                             </button>
                           </td>
                         </tr>
                       );
-                    })
-                  )}
+                    });
+                  })()
+                )}
                 </tbody>
               </table>
             </div>
@@ -1967,19 +2044,7 @@ export default function CrmQuotationsView({
               <button
                 type="button"
                 onClick={handleAddMaterialRow}
-                style={{
-                  border: '1px solid #A5F3FC',
-                  background: '#ECFEFF',
-                  color: '#0E7490',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
+                style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <Plus style={{ width: '15px', height: '15px' }} />
                 Add Product / Item
@@ -2126,108 +2191,193 @@ export default function CrmQuotationsView({
               }}
             />
 
-            {/* Bank Details Card */}
-            <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Landmark size={14} style={{ color: '#0284C7' }} /> Our Company Bank Account Details
-                </span>
-                <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#E0F2FE', color: '#0284C7', padding: '2px 8px', borderRadius: '6px' }}>
-                  Official Settlement Account
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '11px', color: '#0F172A', marginTop: '4px' }}>
-                <div><strong>Beneficiary:</strong> VRM Structures India Private Limited</div>
-                <div><strong>Bank Name:</strong> HDFC Bank</div>
-                <div><strong>Account Number:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0369A1' }}>50200031629272</span></div>
-                <div><strong>IFSC Code:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0369A1' }}>HDFC0000574</span></div>
-                <div><strong>Branch:</strong> Kodambakkam, Chennai</div>
-                <div><strong>Account Type:</strong> Current Account</div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* SECTION 5: FINANCIAL SUMMARY & COMMERCIAL TOTALS */}
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
-              5
-            </div>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              FINANCIAL SUMMARY & COMMERCIAL TOTALS
-            </h3>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ padding: '16px 18px', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <CheckCircle size={20} style={{ color: '#0E7490', flexShrink: 0, marginTop: '2px' }} />
-                <span style={{ fontSize: '12px', color: '#0F766E', lineHeight: '1.6' }}>
-                  All material line items, quantities, and GST tax calculations conform with standard commercial quotation rules. This approved proposal can be converted directly into a Proforma Invoice (PI) or Production Sales BOM with a single click.
+        {/* SIDE-BY-SIDE SECTIONS: 5 (OUR COMPANY BANK ACCOUNT DETAILS) & 6 (FINANCIAL SUMMARY & COMMERCIAL TOTALS) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', alignItems: 'stretch' }}>
+          
+          {/* SECTION 5: OUR COMPANY BANK ACCOUNT DETAILS */}
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '16px'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                    5
+                  </div>
+                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Landmark size={16} style={{ color: '#0E7490' }} /> OUR COMPANY BANK ACCOUNT DETAILS
+                  </h3>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#ECFEFF', color: '#0E7490', border: '1px solid #A5F3FC', padding: '3px 9px', borderRadius: '6px' }}>
+                  RTGS / NEFT / IMPS
                 </span>
               </div>
+
+              {/* Dedicated Banking Card Layout */}
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Beneficiary Name Banner */}
+                <div style={{ paddingBottom: '10px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Beneficiary Name</div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>VRM Structures India Private Limited</div>
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <ShieldCheck size={13} /> Verified
+                  </span>
+                </div>
+
+                {/* Bank Name & Account Type Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Bank Name</div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>HDFC Bank Ltd</div>
+                  </div>
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Account Type</div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>Current Account</div>
+                  </div>
+                </div>
+
+                {/* Account Number & IFSC with Copy Buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#0284C7', fontWeight: '700', textTransform: 'uppercase' }}>Account Number</div>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#0369A1', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>50200031629272</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyBankDetail('50200031629272', 'Account Number')}
+                      title="Copy Account Number"
+                      style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      {copiedBankField === 'Account Number' ? <Check size={14} color="#059669" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+
+                  <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#0284C7', fontWeight: '700', textTransform: 'uppercase' }}>IFSC Code</div>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#0369A1', fontFamily: 'monospace', letterSpacing: '0.5px', marginTop: '2px' }}>HDFC0000574</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyBankDetail('HDFC0000574', 'IFSC Code')}
+                      title="Copy IFSC Code"
+                      style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      {copiedBankField === 'IFSC Code' ? <Check size={14} color="#059669" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Branch Location */}
+                <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span><strong>Branch:</strong> Kodambakkam, Chennai</span>
+                  <span style={{ color: '#64748B', fontSize: '10px' }}>Settlement: INR (₹)</span>
+                </div>
+              </div>
             </div>
 
-            {/* Subtotals & GST Tax Calculation Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', fontSize: '13px' }}>
-              {totals.kitSubtotal > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
-                  <span style={{ fontWeight: '700' }}>Preset Kits Subtotal</span>
-                  <strong style={{ color: '#0E7490' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B' }}>
-                <span>Taxable Subtotal (Before GST)</span>
-                <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
-                <span>CGST (9%)</span>
-                <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#64748B', fontSize: '12px' }}>
-                <span>SGST (9%)</span>
-                <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
-                <span>Total Applicable GST (18%)</span>
-                <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '320px', color: '#0F172A', fontSize: '17px', fontWeight: '800', borderTop: '1px solid #E2E8F0', paddingTop: '10px', marginTop: '4px' }}>
-                <span>Grand Total (Incl. GST)</span>
-                <span style={{ color: '#0E7490' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
+            <div style={{ fontSize: '11px', color: '#64748B', padding: '10px 12px', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle size={15} style={{ color: '#0E7490', flexShrink: 0 }} />
+              <span>Please transfer advance & milestone payments directly to this verified company account.</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '20px', marginTop: '10px' }}>
-            <button
-              type="button"
-              onClick={() => setQuoteConfirmModal('cancel')}
-              style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const validation = validateQuotationForm();
-                if (!validation.isValid) {
-                  setValidationAlert({
-                    title: `⚠️ Missing Required Details (${validation.missingList.length} field${validation.missingList.length > 1 ? 's' : ''})`,
-                    message: 'Please complete the highlighted details before creating or saving this Quotation:',
-                    details: validation.missingList,
-                    targetFieldId: validation.missingList[0]?.targetId
-                  });
-                  return;
-                }
-                setQuoteConfirmModal('create');
-              }}
-              style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <CheckCircle style={{ width: '16px', height: '16px' }} />
-              <span>{editingQuoteId ? 'Save & Send Revision →' : 'Create Quotation →'}</span>
-            </button>
+          {/* SECTION 6: FINANCIAL SUMMARY & COMMERCIAL TOTALS */}
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '20px'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                  6
+                </div>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  FINANCIAL SUMMARY & COMMERCIAL TOTALS
+                </h3>
+              </div>
+
+              {/* Subtotals Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                {totals.kitSubtotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '8px 12px', borderRadius: '8px' }}>
+                    <span style={{ fontWeight: '700' }}>Preset Kits Subtotal</span>
+                    <strong style={{ color: '#0E7490' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
+                  <span>Taxable Subtotal (Before GST)</span>
+                  <strong style={{ color: '#0F172A' }}>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B', fontSize: '12px' }}>
+                  <span>CGST (9%)</span>
+                  <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B', fontSize: '12px' }}>
+                  <span>SGST (9%)</span>
+                  <span style={{ color: '#475569', fontWeight: '600' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '8px 12px', borderRadius: '8px' }}>
+                  <span>Total Applicable GST (18%)</span>
+                  <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0F172A', fontSize: '18px', fontWeight: '800', borderTop: '2px solid #E2E8F0', paddingTop: '12px', marginTop: '4px' }}>
+                  <span>Grand Total (Incl. GST)</span>
+                  <span style={{ color: '#0E7490' }}>₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setQuoteConfirmModal('cancel')}
+                style={{ border: '1px solid #CBD5E1', background: 'white', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const validation = validateQuotationForm();
+                  if (!validation.isValid) {
+                    setValidationAlert({
+                      fields: validation.missingList.map(m => typeof m === 'object' ? (m.name || m.field) : m),
+                      firstTargetId: validation.missingList[0]?.targetId
+                    });
+                    return;
+                  }
+                  setQuoteConfirmModal('create');
+                }}
+                style={{ border: 'none', background: '#10B981', color: 'white', padding: '10px 24px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <CheckCircle style={{ width: '16px', height: '16px' }} />
+                <span>{editingQuoteId ? 'Save & Send Revision →' : 'Create Quotation →'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2288,60 +2438,45 @@ export default function CrmQuotationsView({
           </div>
         )}
 
-        {/* Interactive Missing Fields Validation Popup */}
+        {/* CUSTOM MANDATORY VALIDATION MODAL (MATCHING PO CREATION POPUP) */}
         {validationAlert && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 11000 }}>
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', maxWidth: '460px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #CBD5E1' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <AlertTriangle style={{ width: '22px', height: '22px' }} />
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', width: '460px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', flexShrink: 0 }}>
+                  <AlertCircle size={24} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0F172A' }}>
-                    {validationAlert.title}
-                  </h3>
-                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
-                    {validationAlert.message}
-                  </p>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Mandatory Fields Required</h3>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
                 </div>
               </div>
-
-              {validationAlert.details && validationAlert.details.length > 0 && (
-                <div style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px', maxHeight: '200px', overflowY: 'auto' }}>
-                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#9F1239', fontWeight: '600', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {validationAlert.details.map((f, i) => (
-                      <li key={i}>{f.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {(validationAlert.fields || []).map((field, idx) => (
+                    <li key={idx}><strong>{field}</strong></li>
+                  ))}
+                </ul>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                 <button
-                  type="button"
-                  onClick={() => setValidationAlert(null)}
-                  style={{ border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
-                    const targetId = validationAlert.targetFieldId;
+                    const targetId = validationAlert.firstTargetId;
                     setValidationAlert(null);
                     if (targetId) {
                       setTimeout(() => {
                         const el = document.getElementById(targetId);
                         if (el) {
                           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          el.focus();
+                          el.focus?.();
                         }
                       }, 100);
                     }
                   }}
-                  style={{ border: 'none', backgroundColor: '#0E7490', color: 'white', padding: '9px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(14,116,144,0.35)' }}
+                  style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 22px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)' }}
                 >
-                  Review & Fill Details →
+                  OK, I'll fill it
                 </button>
               </div>
             </div>
@@ -2603,21 +2738,54 @@ export default function CrmQuotationsView({
                         onClick={() => setSelectedQuote(row)}
                         style={{ padding: '12px 14px', textAlign: 'center' }}
                       >
-                        <span style={{
-                          backgroundColor: row.stBg,
-                          color: row.stFg,
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          border: row.stBorder
-                        }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
-                          {row.status}
-                        </span>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                          <span style={{
+                            backgroundColor: row.stBg,
+                            color: row.stFg,
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            border: row.stBorder
+                          }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: row.stFg }}></span>
+                            {row.status}
+                          </span>
+                          {row.convertedPiNo && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                                  detail: { tab: 'Performa Invoice', targetPi: row.convertedPiNo } 
+                                }));
+                                if (typeof onNavigateTab === 'function') {
+                                  onNavigateTab('Performa Invoice');
+                                }
+                              }}
+                              title={`Converted to Proforma Invoice ${row.convertedPiNo} - Click to view PI`}
+                              style={{
+                                backgroundColor: '#0E7490',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                fontSize: '10.5px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                boxShadow: '0 1px 2px rgba(14,116,144,0.3)'
+                              }}
+                            >
+                              🔗 {row.convertedPiNo} ↗
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -2738,16 +2906,22 @@ export default function CrmQuotationsView({
           transform: 'translateX(-50%)',
           backgroundColor: '#FFFFFF',
           border: '1px solid #E2E8F0',
-          borderRadius: '16px',
+          borderRadius: '50px',
           boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
           padding: '8px 16px',
           display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
           alignItems: 'center',
-          gap: '10px',
+          whiteSpace: 'nowrap',
+          gap: '8px',
           zIndex: 10000,
+          width: 'max-content',
+          maxWidth: 'calc(100vw - 32px)',
+          overflowX: 'auto',
           fontFamily: "'DM Sans', sans-serif"
         }}>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedRows.length}</strong> Selected
           </span>
 
@@ -2772,7 +2946,9 @@ export default function CrmQuotationsView({
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             <Eye size={14} style={{ color: '#0E7490' }} /> View
@@ -2799,7 +2975,9 @@ export default function CrmQuotationsView({
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             <Edit3 size={14} style={{ color: '#2563EB' }} /> Edit / Revise
@@ -2826,7 +3004,9 @@ export default function CrmQuotationsView({
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             <Send size={14} style={{ color: '#16A34A' }} /> Send Quote
@@ -2854,6 +3034,8 @@ export default function CrmQuotationsView({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
             }}
           >
@@ -2880,13 +3062,15 @@ export default function CrmQuotationsView({
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             <Trash2 size={14} style={{ color: '#DC2626' }} /> Delete
           </button>
 
-          <div style={{ height: '18px', width: '1px', backgroundColor: '#E2E8F0', margin: '0 2px' }} />
+          <div style={{ height: '18px', width: '1px', backgroundColor: '#E2E8F0', margin: '0 2px', flexShrink: 0 }} />
 
           <button
             onClick={() => setSelectedRows([])}
@@ -2899,7 +3083,8 @@ export default function CrmQuotationsView({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '6px'
+              borderRadius: '6px',
+              flexShrink: 0
             }}
             title="Deselect all"
           >
@@ -2909,18 +3094,21 @@ export default function CrmQuotationsView({
       )}
 
       {/* 7. QUOTATION PREVIEW & DETAIL MODAL (WITH CONVERT TO PI BUTTON) */}
-      {selectedQuote && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-          padding: '20px'
-        }}>
+      {selectedQuote && typeof document !== 'undefined' && createPortal(
+        <div
+          className="quote-modal-overlay"
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+        >
           <div
             id="quotation-printable-modal"
             style={{
@@ -2936,26 +3124,74 @@ export default function CrmQuotationsView({
             }}
           >
             <style>{`
+              @page {
+                size: A4 portrait;
+                margin: 12mm 14mm 12mm 14mm !important; /* 4-side clean margin on every page */
+              }
               @media print {
-                body * {
-                  visibility: hidden !important;
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  height: auto !important;
+                  min-height: 100% !important;
+                  overflow: visible !important;
+                  background: #ffffff !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
                 }
-                #quotation-printable-modal, #quotation-printable-modal * {
-                  visibility: visible !important;
+                #root,
+                .no-print,
+                .quote-modal-overlay > .no-print {
+                  display: none !important;
+                }
+                .quote-modal-overlay {
+                  position: static !important;
+                  display: block !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  min-height: auto !important;
+                  overflow: visible !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: transparent !important;
+                  backdrop-filter: none !important;
+                  z-index: auto !important;
                 }
                 #quotation-printable-modal {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
+                  position: static !important;
+                  display: block !important;
                   width: 100% !important;
                   max-width: 100% !important;
+                  max-height: none !important;
+                  height: auto !important;
+                  overflow: visible !important;
                   margin: 0 !important;
-                  padding: 16px !important;
+                  padding: 0 !important;
                   box-shadow: none !important;
                   border: none !important;
+                  border-radius: 0 !important;
+                  background: #ffffff !important;
                 }
-                .no-print {
-                  display: none !important;
+                table {
+                  page-break-inside: auto !important;
+                  break-inside: auto !important;
+                  width: 100% !important;
+                }
+                thead {
+                  display: table-header-group !important;
+                }
+                tfoot {
+                  display: table-footer-group !important;
+                }
+                tr {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  page-break-after: auto !important;
+                  break-after: auto !important;
+                }
+                .avoid-break {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
                 }
               }
             `}</style>
@@ -3114,30 +3350,8 @@ export default function CrmQuotationsView({
               );
             })()}
 
-            {/* Total Breakdown */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-              <div style={{ width: '300px', fontSize: '13px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
-                  <span>Taxable Subtotal:</span>
-                  <strong style={{ color: '#0F172A' }}>₹ {Number(selectedQuote.taxableAmount || selectedQuote.subtotal || selectedQuote.numericTotal).toLocaleString()}</strong>
-                </div>
-                {selectedQuote.gstTotal ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
-                    <span>Applicable GST (18%):</span>
-                    <strong style={{ color: '#0F172A' }}>₹ {Number(selectedQuote.gstTotal).toLocaleString()}</strong>
-                  </div>
-                ) : null}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #E2E8F0', marginTop: '6px' }}>
-                  <span style={{ fontWeight: '800', color: '#0F172A', fontSize: '15px' }}>Grand Total:</span>
-                  <strong style={{ fontWeight: '800', color: '#0E7490', fontSize: '16px' }}>
-                    {selectedQuote.formattedTotal || `₹ ${Number(selectedQuote.grandTotal || selectedQuote.totalAmount).toLocaleString()}`}
-                  </strong>
-                </div>
-              </div>
-            </div>
-
             {/* Terms and Conditions Preview (Dynamic PO Style) */}
-            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px' }}>
+            <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   TERMS AND CONDITIONS
@@ -3174,23 +3388,111 @@ export default function CrmQuotationsView({
               )}
             </div>
 
-            {/* Company Bank Account Details Card in Preview */}
-            <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '12px', padding: '14px 18px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Landmark size={14} style={{ color: '#0284C7' }} /> COMPANY BANK ACCOUNT DETAILS (FOR PAYMENTS & ADVANCE)
-                </h4>
-                <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#E0F2FE', color: '#0284C7', padding: '2px 8px', borderRadius: '6px' }}>
-                  HDFC Bank RTGS/NEFT/IMPS
-                </span>
+            {/* SIDE-BY-SIDE: BANK ACCOUNT DETAILS (LEFT) & FINANCIAL SUMMARY TOTALS (RIGHT) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: '24px', alignItems: 'stretch' }}>
+              
+              {/* Company Bank Account Details Card in Preview */}
+              <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #BAE6FD', borderRadius: '12px', padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Landmark size={15} style={{ color: '#0284C7' }} /> COMPANY BANK ACCOUNT DETAILS
+                    </h4>
+                    <span style={{ fontSize: '10px', fontWeight: '700', backgroundColor: '#E0F2FE', color: '#0284C7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BAE6FD' }}>
+                      RTGS / NEFT / IMPS
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748B', fontWeight: '600' }}>Beneficiary Name:</span>
+                      <strong style={{ color: '#0F172A' }}>VRM Structures India Private Limited</strong>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 10px' }}>
+                        <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600' }}>Bank Name:</div>
+                        <strong style={{ color: '#0F172A', fontSize: '12px' }}>HDFC Bank Ltd</strong>
+                      </div>
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 10px' }}>
+                        <div style={{ color: '#64748B', fontSize: '10px', fontWeight: '600' }}>Account Type:</div>
+                        <strong style={{ color: '#0F172A', fontSize: '12px' }}>Current Account</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ color: '#0284C7', fontSize: '10px', fontWeight: '700' }}>Account Number:</div>
+                          <strong style={{ color: '#0369A1', fontFamily: 'monospace', fontSize: '13px' }}>50200031629272</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyBankDetail('50200031629272', 'Account Number')}
+                          title="Copy Account Number"
+                          style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '4px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          {copiedBankField === 'Account Number' ? <Check size={12} color="#059669" /> : <Copy size={12} />}
+                        </button>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ color: '#0284C7', fontSize: '10px', fontWeight: '700' }}>IFSC Code:</div>
+                          <strong style={{ color: '#0369A1', fontFamily: 'monospace', fontSize: '13px' }}>HDFC0000574</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyBankDetail('HDFC0000574', 'IFSC Code')}
+                          title="Copy IFSC Code"
+                          style={{ border: '1px solid #BAE6FD', backgroundColor: '#F0F9FF', color: '#0284C7', padding: '4px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          {copiedBankField === 'IFSC Code' ? <Check size={12} color="#059669" /> : <Copy size={12} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 10px', color: '#475569', fontSize: '11px' }}>
+                      <strong>Branch:</strong> Kodambakkam, Chennai
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '10.5px', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck size={14} style={{ color: '#0284C7', flexShrink: 0 }} />
+                  <span>Official Verified Account for Advance & Settlement Payments</span>
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '11px', color: '#0F172A' }}>
-                <div><strong>Beneficiary:</strong> VRM Structures India Private Limited</div>
-                <div><strong>Bank Name:</strong> HDFC Bank</div>
-                <div><strong>Account Number:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0369A1' }}>50200031629272</span></div>
-                <div><strong>IFSC Code:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0369A1' }}>HDFC0000574</span></div>
-                <div><strong>Branch:</strong> Kodambakkam, Chennai</div>
-                <div><strong>Account Type:</strong> Current Account</div>
+
+              {/* Financial Summary & Commercial Totals Card on Right */}
+              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '800', color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    FINANCIAL SUMMARY & COMMERCIAL TOTALS
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#64748B' }}>
+                      <span>Taxable Subtotal:</span>
+                      <strong style={{ color: '#0F172A' }}>₹ {Number(selectedQuote.taxableAmount || selectedQuote.subtotal || selectedQuote.numericTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    {selectedQuote.gstTotal ? (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#64748B' }}>
+                        <span>Applicable GST (18%):</span>
+                        <strong style={{ color: '#0F172A' }}>₹ {Number(selectedQuote.gstTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                    ) : null}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #E2E8F0', marginTop: '6px' }}>
+                      <span style={{ fontWeight: '800', color: '#0F172A', fontSize: '14px' }}>Grand Total (Incl. GST):</span>
+                      <strong style={{ fontWeight: '800', color: '#0E7490', fontSize: '17px' }}>
+                        {selectedQuote.formattedTotal || `₹ ${Number(selectedQuote.grandTotal || selectedQuote.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '12px', padding: '8px 10px', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', borderRadius: '8px', fontSize: '11px', color: '#0F766E' }}>
+                  Rates quoted are inclusive of engineering & manufacturing scope as detailed above.
+                </div>
               </div>
             </div>
 
@@ -3237,7 +3539,8 @@ export default function CrmQuotationsView({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 8. EDITABLE QUOTATION SENDING TEMPLATE MODAL */}

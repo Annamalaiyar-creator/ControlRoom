@@ -171,12 +171,32 @@ function App() {
 
   const [targetPoNo, setTargetPoNo] = useState(null);
   const [targetPoTab, setTargetPoTab] = useState(null);
+  const [targetBomCode, setTargetBomCode] = useState(null);
+  const [targetPiNo, setTargetPiNo] = useState(null);
   const [convertingPiData, setConvertingPiData] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [itemsList, setItemsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  useEffect(() => {
+    const handleCustomNavigate = (e) => {
+      if (!e || !e.detail) return;
+      if (typeof e.detail === 'string') {
+        handleTabChange(e.detail);
+      } else if (typeof e.detail === 'object') {
+        const { tab, targetPo, targetBom, targetPi, poTabTarget } = e.detail;
+        if (targetPo) setTargetPoNo(targetPo);
+        if (targetBom) setTargetBomCode(targetBom);
+        if (targetPi) setTargetPiNo(targetPi);
+        if (poTabTarget) setTargetPoTab(poTabTarget);
+        if (tab) handleTabChange(tab, targetPo, poTabTarget);
+      }
+    };
+    window.addEventListener('controlroom_navigate_tab', handleCustomNavigate);
+    return () => window.removeEventListener('controlroom_navigate_tab', handleCustomNavigate);
+  }, []);
 
   const handleRoleSwitch = (newRole) => {
     setUserRole(newRole);
@@ -394,6 +414,8 @@ function App() {
             <PerformaInvoiceView 
               userRole={userRole}
               onNavigateTab={handleTabChange}
+              targetPiNo={targetPiNo}
+              clearTargetPi={() => setTargetPiNo(null)}
               onConvertToBom={(piData) => {
                 setConvertingPiData(piData);
                 handleTabChange('Sales BOM');
@@ -423,6 +445,9 @@ function App() {
               userRole={userRole} 
               convertingPiData={convertingPiData}
               onClearConvertingPiData={() => setConvertingPiData(null)}
+              targetBomCode={targetBomCode}
+              clearTargetBom={() => setTargetBomCode(null)}
+              targetPiNo={targetPiNo}
             />
           ) : (activeTab === 'Dashboard' && (userRole === 'Sales Executive' || userRole === 'Sales Head')) ? (
             <SalesExecutiveDashboardView userRole={userRole} onNavigateTab={handleTabChange} />
