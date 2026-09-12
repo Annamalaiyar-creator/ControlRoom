@@ -10533,7 +10533,9 @@ export default function ProductionViewsEngine(props) {
                   bomCode: targetBomCode,
                   customerName: resolvedCustomer,
                   salesPerson: resolvedSalesPerson,
-                  salesPersonCode: resolvedSalesPersonCode
+                  salesPersonCode: resolvedSalesPersonCode,
+                  createdBy: resolvedSalesPerson,
+                  createdById: resolvedSalesPersonCode
                 });
 
                 setTimeout(() => {

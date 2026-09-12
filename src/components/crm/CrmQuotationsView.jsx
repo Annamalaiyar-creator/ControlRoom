@@ -156,6 +156,27 @@ VRM Structures India Pvt Ltd`
   }
 ];
 
+export const is5PctSolarProduct = (name = '', cat = '') => {
+  const text = `${name} ${cat}`.toLowerCase();
+  return (
+    text.includes('inverter') ||
+    text.includes('solar panel') ||
+    text.includes('solar module') ||
+    text.includes('pv module') ||
+    text.includes('panel') ||
+    text.includes('module') ||
+    text.includes('topcon') ||
+    text.includes('bifacial') ||
+    text.includes('monocrystalline') ||
+    text.includes('polycrystalline') ||
+    text.includes('dcr') ||
+    text.includes('ongrid') ||
+    text.includes('offgrid') ||
+    text.includes('hybrid inverter') ||
+    text.includes('waaree')
+  );
+};
+
 export default function CrmQuotationsView({
   quotations = [],
   onSaveQuotation,
@@ -250,6 +271,19 @@ export default function CrmQuotationsView({
       window.removeEventListener('storage', refreshCatalog);
     };
   }, []);
+
+  const getItemStock = (itemName, itemCode) => {
+    if (!itemName && !itemCode) return null;
+    const cleanName = (itemName || '').toLowerCase().trim();
+    const cleanCode = (itemCode || '').toLowerCase().trim();
+    const found = (itemsList || []).find(p => 
+      (cleanCode && (p.code || '').toLowerCase().trim() === cleanCode) ||
+      (cleanName && (p.name || '').toLowerCase().trim() === cleanName) ||
+      (cleanName && (p.name || '').toLowerCase().includes(cleanName))
+    );
+    if (!found) return null;
+    return Number(found.stock !== undefined ? found.stock : (found.availableStock !== undefined ? found.availableStock : 0));
+  };
 
   // Resolve currently logged in account user's name dynamically (matching Header & auth state)
   const getActiveUserName = () => {
@@ -598,7 +632,7 @@ export default function CrmQuotationsView({
         baseQty: baseQ,
         qty: String(Math.round(baseQ * multiplier)),
         rate: '0',
-        gstRate: it.gstRate || initialGstRate,
+        gstRate: is5PctSolarProduct(it.name, it.category || it.specs) ? '5%' : (it.gstRate || initialGstRate),
         isPresetItem: true
       };
     });
@@ -1722,79 +1756,122 @@ export default function CrmQuotationsView({
                                   placeholder="Type or select product / item..."
                                   value={item.name || ''}
                                   onChange={(e) => {
-                                    const val = e.target.value;
-                                    const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                                    setQuoteItems(prev => prev.map((mat, idx) => idx === i ? {
-                                      ...mat,
-                                      name: matched ? matched.name : val,
-                                      rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                      uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                      category: matched ? (matched.category || matched.description || mat.category) : mat.category
-                                    } : mat));
-                                  }}
-                                  style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: 'text' }}
-                                />
-                                <datalist id={`product-list-${i}`}>
-                                  {(itemsList || []).map((prod, pidx) => {
-                                    const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
-                                    const isOutOfStock = st <= 0;
-                                    const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
-                                    return (
-                                      <option key={pidx} value={prod.name}>
-                                        {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                      </option>
-                                    );
-                                  })}
-                                </datalist>
-                              </div>
-                              {/* Line 2: Description */}
-                              <input
-                                type="text"
-                                placeholder="Description..."
-                                value={item.category || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
-                                }}
-                                style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC', cursor: 'text' }}
-                              />
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 10px' }}>
-                            <input
-                              type="text"
-                              list={`uom-list-${i}`}
-                              placeholder="UOM"
-                              value={item.uom || 'NOS'}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
-                              }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600', cursor: 'text' }}
-                            />
-                            <datalist id={`uom-list-${i}`}>
-                              <option value="NOS" />
-                              <option value="SET" />
-                              <option value="KG" />
-                              <option value="MTR" />
-                              <option value="PCS" />
-                              <option value="BOX" />
-                              <option value="PKT" />
-                              <option value="PAIR" />
-                            </datalist>
-                          </td>
-                          <td style={{ padding: '12px 10px' }}>
-                            <input
-                              type="number"
-                              value={item.qty}
-                              placeholder="0"
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
-                              }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white', cursor: 'text' }}
-                            />
-                          </td>
+                                     const val = e.target.value;
+                                     const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
+                                     const pName = matched ? matched.name : val;
+                                     const pCat = matched ? (matched.category || matched.description || mat.category) : mat.category;
+                                     const isSolar5 = is5PctSolarProduct(pName, pCat);
+                                     setQuoteItems(prev => prev.map((mat, idx) => idx === i ? {
+                                       ...mat,
+                                       name: pName,
+                                       rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                       uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                       category: pCat,
+                                       gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
+                                     } : mat));
+                                   }}
+                                   style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: 'text' }}
+                                 />
+                                 <datalist id={`product-list-${i}`}>
+                                   {(itemsList || []).map((prod, pidx) => {
+                                     const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
+                                     const isOutOfStock = st <= 0;
+                                     const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
+                                     return (
+                                       <option key={pidx} value={prod.name}>
+                                         {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
+                                       </option>
+                                     );
+                                   })}
+                                 </datalist>
+                               </div>
+                               {/* Line 2: Description */}
+                               <input
+                                 type="text"
+                                 placeholder="Description..."
+                                 value={item.category || ''}
+                                 onChange={(e) => {
+                                   const val = e.target.value;
+                                   setQuoteItems(prev => prev.map((mat, idx) => {
+                                     if (idx !== i) return mat;
+                                     const isSolar5 = is5PctSolarProduct(mat.name, val);
+                                     return {
+                                       ...mat,
+                                       category: val,
+                                       gstRate: isSolar5 ? '5%' : mat.gstRate
+                                     };
+                                   }));
+                                 }}
+                                 style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC', cursor: 'text' }}
+                               />
+                             </div>
+                           </td>
+                           <td style={{ padding: '12px 10px' }}>
+                             <input
+                               type="text"
+                               list={`uom-list-${i}`}
+                               placeholder="UOM"
+                               value={item.uom || 'NOS'}
+                               onChange={(e) => {
+                                 const val = e.target.value;
+                                 setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
+                               }}
+                               style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600', cursor: 'text' }}
+                             />
+                             <datalist id={`uom-list-${i}`}>
+                               <option value="NOS" />
+                               <option value="SET" />
+                               <option value="KG" />
+                               <option value="MTR" />
+                               <option value="PCS" />
+                               <option value="BOX" />
+                               <option value="PKT" />
+                               <option value="PAIR" />
+                             </datalist>
+                           </td>
+                           <td style={{ padding: '8px 10px', verticalAlign: 'middle' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                               {(() => {
+                                 const avail = getItemStock(item.name, item.code);
+                                 if (avail === null) {
+                                   return (
+                                     <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', letterSpacing: '0.2px' }}>
+                                       Stock: —
+                                     </span>
+                                   );
+                                 }
+                                 const isOut = avail <= 0;
+                                 return (
+                                   <span
+                                     title={`Available Stock: ${avail.toLocaleString()}`}
+                                     style={{
+                                       fontSize: '10.5px',
+                                       fontWeight: '800',
+                                       padding: '1px 7px',
+                                       borderRadius: '10px',
+                                       backgroundColor: isOut ? '#FEF2F2' : '#ECFDF5',
+                                       color: isOut ? '#DC2626' : '#059669',
+                                       border: isOut ? '1px solid #FECACA' : '1px solid #A7F3D0',
+                                       whiteSpace: 'nowrap',
+                                       lineHeight: '1.3'
+                                     }}
+                                   >
+                                     Stock: {avail.toLocaleString()}
+                                   </span>
+                                 );
+                               })()}
+                               <input
+                                 type="number"
+                                 value={item.qty}
+                                 placeholder="0"
+                                 onChange={(e) => {
+                                   const val = e.target.value;
+                                   setQuoteItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
+                                 }}
+                                 style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white', cursor: 'text', fontWeight: '600' }}
+                               />
+                             </div>
+                           </td>
                           <td style={{ padding: '12px 10px' }}>
                             {isPresetItem ? (
                               <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>

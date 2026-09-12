@@ -496,6 +496,21 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         // Dispatch local event in this tab
         window.dispatchEvent(new CustomEvent('vrm_workflow_toast', { detail: notif }));
         window.dispatchEvent(new Event('vrm_notifications_updated'));
+
+        // Play alert audio and voice if targeted to this active tab's session
+        try {
+          const currentRole = (typeof window !== 'undefined' && window.localStorage)
+            ? (localStorage.getItem('controlroom_user_role') || '')
+            : '';
+          const isTargeted = isRoleTargeted(currentRole, notif.targetRoles, notif.metadata);
+          if (isTargeted) {
+            playPorterOrderAlert();
+            setTimeout(() => {
+              const cue = getPorterVoiceCue(notif, notif.metadata);
+              speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+            }, 320);
+          }
+        } catch (_) {}
       }
     };
   } catch (e) {
@@ -658,23 +673,26 @@ export function notifyBomSentToDispatch({ bomCode, customerName, salesPerson }) 
  * 2. Accounts team receives notification: "BOM [BOM ID] is packed and ready for Accounts verification"
  * Clicking redirects to 'Accounts Verification' or 'BOM Orders'.
  */
-export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesPerson, salesPersonCode }) {
+export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesPerson, salesPersonCode, createdBy, createdById }) {
   const safeCustomer = customerName || 'Customer';
-  const cleanSalesPerson = (salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
+  const resolvedSalesPerson = (salesPerson || createdBy || '').replace(/\s*\([^)]*\)/g, '').trim();
+  const resolvedCode = salesPersonCode || createdById || '';
 
   // Target list specifically for the salesperson who created this BOM:
   // Includes their exact name/ID, as well as Sales Executive and Sales Head
   const salesTargets = [
-    cleanSalesPerson,
-    salesPersonCode,
+    resolvedSalesPerson,
+    resolvedCode,
     'Sales Executive',
-    'Sales Head'
+    'Sales Head',
+    'CEO',
+    'Managing Director'
   ].filter(Boolean);
 
   // 2a. Notification specifically for the Sales Person who created the BOM
   sendWorkflowNotification({
-    title: `📦 BOM Packed & Sent to Accounts`,
-    message: `BOM ${bomCode} (${safeCustomer}) has been packed and proceeded to Accounts verification.`,
+    title: `📦 BOM Packing Completed`,
+    message: `BOM ${bomCode} (${safeCustomer}) created by ${resolvedSalesPerson || 'Sales'} has been fully packed and proceeded to Accounts verification.`,
     targetTab: 'BOM Orders',
     targetRoles: salesTargets,
     type: 'success',
@@ -682,8 +700,9 @@ export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesP
     metadata: {
       bomCode,
       customerName: safeCustomer,
-      salesPerson: cleanSalesPerson || 'Sales Executive',
-      salesPersonCode: salesPersonCode || '',
+      salesPerson: resolvedSalesPerson || 'Sales Executive',
+      salesPersonCode: resolvedCode,
+      createdBy: resolvedSalesPerson,
       step: 'BOM_PACKED'
     }
   });
@@ -700,11 +719,51 @@ export function notifyBomPackedAndSentToAccounts({ bomCode, customerName, salesP
       metadata: {
         bomCode,
         customerName: safeCustomer,
-        salesPerson: cleanSalesPerson,
+        salesPerson: resolvedSalesPerson,
         step: 'BOM_PACKED_ACCOUNTS_NOTIF'
       }
     });
   }, 1600);
+}
+
+/**
+ * STEP 2.5: Proforma Invoice Created Notification
+ * Voice alert: "[Customer Name], Proforma Invoice Created!"
+ * Triggered whenever a sales person creates a Proforma Invoice.
+ */
+export function notifyPiCreated({ piNo, customerName, salesPerson, salesPersonCode, amount }) {
+  const safeCustomer = customerName || 'Customer';
+  const cleanSalesPerson = (salesPerson || '').replace(/\s*\([^)]*\)/g, '').trim();
+  const amtText = amount ? ` (${amount})` : '';
+
+  const salesTargets = [
+    cleanSalesPerson,
+    salesPersonCode,
+    'Sales Executive',
+    'Sales Head',
+    'Procurement Admin',
+    'Accounts Head',
+    'Accounts Executive',
+    'CEO',
+    'Managing Director',
+    'Technical Administrator'
+  ].filter(Boolean);
+
+  return sendWorkflowNotification({
+    title: `📑 Proforma Invoice Created`,
+    message: `Proforma Invoice ${piNo} for ${safeCustomer}${amtText} has been created by ${cleanSalesPerson || 'Sales'}.`,
+    targetTab: 'Proforma Invoice',
+    targetRoles: salesTargets,
+    type: 'success',
+    soundType: 'success',
+    metadata: {
+      piNo,
+      customerName: safeCustomer,
+      salesPerson: cleanSalesPerson,
+      salesPersonCode: salesPersonCode || '',
+      step: 'PI_CREATED'
+    }
+  });
 }
 
 /**

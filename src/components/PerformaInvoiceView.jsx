@@ -7,10 +7,32 @@ import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
 import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../utils/supabaseDataSync';
+import { notifyPiCreated, playPorterOrderAlert, speakNotificationVoice } from '../services/notificationService';
 
 const defaultSalesPIs = [];
 
 const defaultProcurementPIs = [];
+
+export const is5PctSolarProduct = (name = '', cat = '') => {
+  const text = `${name} ${cat}`.toLowerCase();
+  return (
+    text.includes('inverter') ||
+    text.includes('solar panel') ||
+    text.includes('solar module') ||
+    text.includes('pv module') ||
+    text.includes('panel') ||
+    text.includes('module') ||
+    text.includes('topcon') ||
+    text.includes('bifacial') ||
+    text.includes('monocrystalline') ||
+    text.includes('polycrystalline') ||
+    text.includes('dcr') ||
+    text.includes('ongrid') ||
+    text.includes('offgrid') ||
+    text.includes('hybrid inverter') ||
+    text.includes('waaree')
+  );
+};
 
 const normalizePiRecord = (item) => {
   if (!item) return item;
@@ -532,6 +554,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     };
   }, []);
 
+  const getItemStock = (itemName, itemCode) => {
+    if (!itemName && !itemCode) return null;
+    const cleanName = (itemName || '').toLowerCase().trim();
+    const cleanCode = (itemCode || '').toLowerCase().trim();
+    const found = (itemsList || []).find(p => 
+      (cleanCode && (p.code || '').toLowerCase().trim() === cleanCode) ||
+      (cleanName && (p.name || '').toLowerCase().trim() === cleanName) ||
+      (cleanName && (p.name || '').toLowerCase().includes(cleanName))
+    );
+    if (!found) return null;
+    return Number(found.stock !== undefined ? found.stock : (found.availableStock !== undefined ? found.availableStock : 0));
+  };
+
   // Form Fields State
   const [pdfFile, setPdfFile] = useState(null);
   const [signedPiDoc, setSignedPiDoc] = useState(null);
@@ -821,7 +856,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         baseQty: baseQ,
         qty: String(Math.round(baseQ * multiplier)),
         rate: '0',
-        gstRate: isDcrBosKit ? '5%' : (it.gstRate || initialGstRate),
+        gstRate: (isDcrBosKit || is5PctSolarProduct(it.name, it.category || it.specs)) ? '5%' : (it.gstRate || initialGstRate),
         isPresetItem: true
       };
     });
@@ -1138,6 +1173,22 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       setEditIdx(null);
     } else {
       updatedList = [newPI, ...piList];
+      try {
+        notifyPiCreated({
+          piNo: newPI.piNo,
+          customerName: newPI.vendor,
+          salesPerson: newPI.salesPerson,
+          salesPersonCode: newPI.salesPersonCode,
+          amount: newPI.amount
+        });
+        playPorterOrderAlert();
+        setTimeout(() => {
+          const cleanCust = (newPI.vendor || '').replace(/\b(Pvt|Private|Ltd|Limited|LLP|Inc|Corp)\b/gi, '').trim();
+          speakNotificationVoice(cleanCust ? `${cleanCust}, Proforma Invoice Created!` : 'Proforma Invoice Created!', { rate: 1.12, pitch: 1.05 });
+        }, 320);
+      } catch (err) {
+        console.warn('PI voice notification error:', err);
+      }
     }
     updatePiList(updatedList);
 
@@ -2867,12 +2918,16 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
+                                      const pName = matched ? matched.name : val;
+                                      const pCat = matched ? (matched.category || matched.description || mat.category) : mat.category;
+                                      const isSolar5 = is5PctSolarProduct(pName, pCat);
                                       setPiItems(prev => prev.map((mat, idx) => idx === i ? {
                                         ...mat,
-                                        name: matched ? matched.name : val,
+                                        name: pName,
                                         rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
                                         uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                        category: matched ? (matched.category || matched.description || mat.category) : mat.category
+                                        category: pCat,
+                                        gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
                                       } : mat));
                                     }}
                                     style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
@@ -2896,7 +2951,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                   value={item.category || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
-                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                    setPiItems(prev => prev.map((mat, idx) => {
+                                      if (idx !== i) return mat;
+                                      const isSolar5 = is5PctSolarProduct(mat.name, val);
+                                      return {
+                                        ...mat,
+                                        category: val,
+                                        gstRate: isSolar5 ? '5%' : mat.gstRate
+                                      };
+                                    }));
                                   }}
                                   style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
                                 />
@@ -2925,17 +2988,48 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                 <option value="PAIR" />
                               </datalist>
                             </td>
-                            <td style={{ padding: '12px 10px' }}>
-                              <input
-                                type="number"
-                                value={item.qty}
-                                placeholder="0"
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
-                                }}
-                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
-                              />
+                            <td style={{ padding: '8px 10px', verticalAlign: 'middle' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                {(() => {
+                                  const avail = getItemStock(item.name, item.code);
+                                  if (avail === null) {
+                                    return (
+                                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8', letterSpacing: '0.2px' }}>
+                                        Stock: —
+                                      </span>
+                                    );
+                                  }
+                                  const isOut = avail <= 0;
+                                  return (
+                                    <span
+                                      title={`Available Stock: ${avail.toLocaleString()}`}
+                                      style={{
+                                        fontSize: '10.5px',
+                                        fontWeight: '800',
+                                        padding: '1px 7px',
+                                        borderRadius: '10px',
+                                        backgroundColor: isOut ? '#FEF2F2' : '#ECFDF5',
+                                        color: isOut ? '#DC2626' : '#059669',
+                                        border: isOut ? '1px solid #FECACA' : '1px solid #A7F3D0',
+                                        whiteSpace: 'nowrap',
+                                        lineHeight: '1.3'
+                                      }}
+                                    >
+                                      Stock: {avail.toLocaleString()}
+                                    </span>
+                                  );
+                                })()}
+                                <input
+                                  type="number"
+                                  value={item.qty}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
+                                  }}
+                                  style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
+                                />
+                              </div>
                             </td>
                             <td style={{ padding: '12px 10px' }}>
                               {isPresetItem ? (
@@ -3143,7 +3237,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             })()}
                             <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>
                               {isPresetItem ? (
-                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>(In Kit Price)</span>
+                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>—</span>
                               ) : (
                                 `₹${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                               )}
@@ -3645,6 +3739,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     </button>
                   )}
                   <button
+                    type="button"
+                    onClick={() => {
+                      const idx = piList.findIndex(p => p.piNo === selectedPi.piNo);
+                      handleStartEdit(selectedPi, idx >= 0 ? idx : 0);
+                      setSelectedPi(null);
+                    }}
+                    title="Edit full Proforma Invoice details"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      backgroundColor: '#0E7490',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Edit3 size={14} /> Edit Info
+                  </button>
+                  <button
                     onClick={() => setPrintModalPi(selectedPi)}
                     title="Open Print & PDF Template"
                     style={{
@@ -3740,8 +3858,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   </div>
                 )}
 
-
-
                 {/* 1. Customer & Contact Details Card */}
                 <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
@@ -3772,8 +3888,13 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       <strong style={{ fontSize: '13px', color: '#0E7490', fontFamily: 'monospace' }}>{selectedPi.gstNo || 'Unregistered'}</strong>
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Sales Engineer</span>
-                      <strong style={{ fontSize: '13px', color: '#334155' }}>{selectedPi.salesPerson || '—'}</strong>
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Sales Executive / Code</span>
+                      <strong style={{ fontSize: '13px', color: '#334155' }}>
+                        {selectedPi.salesPerson || '—'} {selectedPi.salesPersonCode ? `(${selectedPi.salesPersonCode})` : ''}
+                      </strong>
+                      {selectedPi.salesPersonEmail && (
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{selectedPi.salesPersonEmail}</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -3842,6 +3963,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Transporter / Vehicle</span>
                     <span style={{ fontSize: '12.5px', color: '#334155' }}>{[selectedPi.transporterName, selectedPi.vehicleNo].filter(Boolean).join(' - ') || 'To be arranged'}</span>
                   </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Transport Scope</span>
+                    <strong style={{ fontSize: '12.5px', color: '#0F172A' }}>{selectedPi.transportScope || 'VRM Structures'}</strong>
+                  </div>
                   {selectedPi.remarks && (
                     <div style={{ gridColumn: '1 / -1' }}>
                       <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>Remarks / Notes</span>
@@ -3849,6 +3974,38 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     </div>
                   )}
                 </div>
+
+                {/* 3b. Preset Kits Section (if presets used) */}
+                {Object.keys(presetGroupsMap).length > 0 && (
+                  <div style={{ backgroundColor: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '14px', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <Boxes size={16} color="#15803D" />
+                      <strong style={{ fontSize: '13px', color: '#14532D', textTransform: 'uppercase' }}>
+                        Configured Preset Proposal Kits ({Object.keys(presetGroupsMap).length})
+                      </strong>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                      {Object.values(presetGroupsMap).map((grp, gIdx) => {
+                        const uPrice = parseFloat(grp.kitPrice) || 0;
+                        const sCount = parseInt(grp.setCount) || 1;
+                        const gTotal = uPrice * sCount;
+                        return (
+                          <div key={gIdx} style={{ backgroundColor: '#FFFFFF', border: '1px solid #86EFAC', borderRadius: '10px', padding: '12px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: '#166534' }}>{grp.presetName}</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginTop: '6px' }}>
+                              <span>Quantity: <strong>{sCount} Set{sCount > 1 ? 's' : ''}</strong></span>
+                              <span>GST: <strong>{grp.gstRate || '18%'}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#374151', marginTop: '4px' }}>
+                              <span>Kit Rate: <strong>₹{uPrice.toLocaleString('en-IN')}</strong></span>
+                              <span>Total: <strong style={{ color: '#15803D' }}>₹{gTotal.toLocaleString('en-IN')}</strong></span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* 4. Complete Invoice Line Items & Presets */}
                 <div style={{ border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden' }}>
@@ -3869,12 +4026,14 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', textAlign: 'left' }}>
-                        <th style={{ padding: '10px 14px' }}>#</th>
-                        <th style={{ padding: '10px 14px' }}>Item Description</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'center' }}>Qty</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>Unit Rate (₹)</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'center' }}>GST Rate</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Amount (₹)</th>
+                        <th style={{ padding: '10px 12px' }}>#</th>
+                        <th style={{ padding: '10px 12px' }}>Item Description</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Live Stock</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Unit Rate (₹)</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Taxable Value (₹)</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>GST Rate</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Total (₹)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3883,33 +4042,62 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           const isPreset = Boolean(it.isPresetItem || it.presetGroupId || (!it.rate && subtotalVal > 0));
                           const itQty = parseFloat(it.qty) || 1;
                           const itRate = parseFloat(it.rate) || 0;
-                          const itAmt = isPreset ? null : (itQty * itRate);
+                          const itTaxable = isPreset ? 0 : (itQty * itRate);
+                          const itGstPct = parseFloat(String(it.gstRate || '18').replace('%', '')) || 18;
+                          const itAmt = isPreset ? null : (itTaxable + (itTaxable * (itGstPct / 100)));
 
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                              <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: '600' }}>{idx + 1}</td>
-                              <td style={{ padding: '10px 14px', color: '#0F172A', fontWeight: '700' }}>
+                              <td style={{ padding: '10px 12px', color: '#64748B', fontWeight: '600' }}>{idx + 1}</td>
+                              <td style={{ padding: '10px 12px', color: '#0F172A', fontWeight: '700' }}>
                                 <div>{it.name || 'Component Item'}</div>
                                 {it.category && <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 'normal' }}>{it.category}</span>}
                               </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'center', color: '#334155', fontWeight: '600' }}>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                {(() => {
+                                  const avail = getItemStock(it.name, it.code);
+                                  if (avail === null) return <span style={{ color: '#94A3B8' }}>—</span>;
+                                  const isOut = avail <= 0;
+                                  return (
+                                    <span style={{
+                                      fontSize: '10px',
+                                      fontWeight: '800',
+                                      padding: '1px 6px',
+                                      borderRadius: '8px',
+                                      backgroundColor: isOut ? '#FEF2F2' : '#ECFDF5',
+                                      color: isOut ? '#DC2626' : '#059669',
+                                      border: isOut ? '1px solid #FECACA' : '1px solid #A7F3D0'
+                                    }}>
+                                      {avail.toLocaleString()}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center', color: '#334155', fontWeight: '600' }}>
                                 {itQty} {it.uom || 'NOS'}
                               </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>
                                 {isPreset ? (
-                                  <span style={{ fontSize: '11px', color: '#0E7490', fontStyle: 'italic', fontWeight: '600' }}>Included in Preset Kit</span>
+                                  <span style={{ fontSize: '11px', color: '#0E7490', fontStyle: 'italic', fontWeight: '600' }}>In Kit</span>
                                 ) : (
                                   `₹ ${itRate.toLocaleString('en-IN')}`
                                 )}
                               </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'center', color: '#4338CA', fontWeight: '700' }}>
-                                {it.gstRate || '18%'}
-                              </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', color: '#334155', fontWeight: '600' }}>
                                 {isPreset ? (
                                   <span style={{ fontSize: '11px', color: '#64748B' }}>—</span>
                                 ) : (
-                                  `₹ ${(itAmt || 0).toLocaleString('en-IN')}`
+                                  `₹ ${itTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center', color: '#4338CA', fontWeight: '700' }}>
+                                {it.gstRate || '18%'}
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>
+                                {isPreset ? (
+                                  <span style={{ fontSize: '11px', color: '#64748B' }}>—</span>
+                                ) : (
+                                  `₹ ${(itAmt || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                                 )}
                               </td>
                             </tr>
@@ -3919,23 +4107,71 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         <tr>
                           <td style={{ padding: '12px 14px', color: '#64748B' }}>1</td>
                           <td style={{ padding: '12px 14px', color: '#0F172A', fontWeight: '700' }}>{selectedPi.productName || 'Solar Structure MMS Kit'}</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>—</td>
                           <td style={{ padding: '12px 14px', textAlign: 'center', color: '#334155' }}>{selectedPi.quantity || 1} Set</td>
                           <td style={{ padding: '12px 14px', textAlign: 'right', color: '#475569' }}>₹ {subtotalVal.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', color: '#334155' }}>₹ {subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td style={{ padding: '12px 14px', textAlign: 'center', color: '#4338CA' }}>18%</td>
-                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>₹ {subtotalVal.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0E7490' }}>₹ {subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
 
+                {/* 4b. Attached Document / Signed PI Doc (if present) */}
+                {(selectedPi.signedPiDoc || selectedPi.pdfName || selectedPi.pdfFile) && (
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #CBD5E1', borderRadius: '14px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileCheck size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                          {selectedPi.signedPiDoc?.name || selectedPi.pdfName || 'Signed Proforma Invoice Document'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                          {selectedPi.signedPiDoc?.size ? `${Math.round(selectedPi.signedPiDoc.size / 1024)} KB • ` : ''}
+                          Official Verified Attachment
+                        </div>
+                      </div>
+                    </div>
+                    {selectedPi.signedPiDoc?.dataUrl && (
+                      <a
+                        href={selectedPi.signedPiDoc.dataUrl}
+                        download={selectedPi.signedPiDoc.name || 'signed_pi.pdf'}
+                        style={{
+                          padding: '7px 14px',
+                          backgroundColor: '#0E7490',
+                          color: '#FFFFFF',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Download size={14} /> Download Document
+                      </a>
+                    )}
+                  </div>
+                )}
+
                 {/* 5. Financial Summary Grid */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
-                  <div style={{ width: '360px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div style={{ width: '380px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
                       <span>Taxable Product Value:</span>
                       <strong style={{ color: '#0F172A' }}>₹ {subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
+                    {selectedPi.kitSubtotal > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                        <span>Preset Kits Subtotal:</span>
+                        <strong style={{ color: '#0F172A' }}>₹ {Number(selectedPi.kitSubtotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      </div>
+                    )}
                     {modalGstTiers.length > 0 ? (
                       modalGstTiers.map(tier => (
                         <div key={tier.rate} style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
@@ -3980,6 +4216,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idx = piList.findIndex(p => p.piNo === selectedPi.piNo);
+                      handleStartEdit(selectedPi, idx >= 0 ? idx : 0);
+                      setSelectedPi(null);
+                    }}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: '#0E7490',
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Edit3 size={15} /> Edit Info
+                  </button>
+
                   {selectedPi.status !== 'Cancelled' && !isConverted && (
                     <button
                       type="button"
