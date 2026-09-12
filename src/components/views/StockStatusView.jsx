@@ -14,6 +14,7 @@ import POTrendChart from '../POTrendChart';
 import { getSafeZohoVendors, getSafeZohoItems } from '../../services/zohoSafeSync';
 import { fetchCloudStore, saveCloudStore, subscribeToCloudStore } from '../../utils/supabaseDataSync';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile } from '../../utils/otherViewsShared';
+import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 
 
 export default function StockStatusView(props) {
@@ -1212,7 +1213,13 @@ export default function StockStatusView(props) {
   const [editingRfp, setEditingRfp] = useState(null);
 
   // Items Action States
-  const [itemsList, setItemsList] = useState([]);
+  const [itemsList, setItemsList] = useState(() => {
+    try {
+      const full = getFullProductsCatalogWithStock();
+      if (Array.isArray(full) && full.length > 0) return full;
+    } catch (_) {}
+    return [];
+  });
   const [activeItemActionMenu, setActiveItemActionMenu] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
@@ -1264,10 +1271,16 @@ export default function StockStatusView(props) {
         if (isMounted && Array.isArray(zohoItems) && zohoItems.length > 0) {
           setItemsList(prev => {
             const itemMap = new Map();
-            (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
+            (prev || []).forEach(it => {
+              const key = it.code || it.sku || it.itemId || it.id || it.name;
+              if (key) itemMap.set(String(key).toLowerCase().trim(), it);
+            });
             zohoItems.forEach(it => {
               const key = it.code || it.sku || it.itemId || it.id || it.name;
-              if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
+              if (key) {
+                const k = String(key).toLowerCase().trim();
+                itemMap.set(k, { ...itemMap.get(k), ...it });
+              }
             });
             return Array.from(itemMap.values());
           });
@@ -1278,10 +1291,16 @@ export default function StockStatusView(props) {
             if (isMounted && Array.isArray(zItems) && zItems.length > 0) {
               setItemsList(prev => {
                 const itemMap = new Map();
-                (prev || []).forEach(it => itemMap.set(it.code || it.sku || it.itemId || it.id || it.name, it));
+                (prev || []).forEach(it => {
+                  const key = it.code || it.sku || it.itemId || it.id || it.name;
+                  if (key) itemMap.set(String(key).toLowerCase().trim(), it);
+                });
                 zItems.forEach(it => {
                   const key = it.code || it.sku || it.itemId || it.id || it.name;
-                  if (key) itemMap.set(key, { ...itemMap.get(key), ...it });
+                  if (key) {
+                    const k = String(key).toLowerCase().trim();
+                    itemMap.set(k, { ...itemMap.get(k), ...it });
+                  }
                 });
                 return Array.from(itemMap.values());
               });
@@ -2229,7 +2248,7 @@ export default function StockStatusView(props) {
             let lowStockCount = 0;
             let outOfStockCount = 0;
 
-            // 1. Calculate reserved quantities from active BOMs
+            // 1. Calculate reserved quantities from active BOMs and active Proforma Invoices (PIs)
             const bomReservedMap = new Map();
             if (Array.isArray(bomStore)) {
               bomStore.forEach(b => {
@@ -2245,6 +2264,28 @@ export default function StockStatusView(props) {
                 }
               });
             }
+
+            // Also reserve stock for active Proforma Invoices that are not cancelled or converted to BOM
+            try {
+              const piSaved = localStorage.getItem('controlroom_sales_pi_store') || localStorage.getItem('controlroom_procurement_pi_store');
+              let localPIs = [];
+              if (piSaved) {
+                const parsed = JSON.parse(piSaved);
+                if (Array.isArray(parsed)) localPIs = parsed;
+              }
+              localPIs.forEach(pi => {
+                const piStatus = String(pi.status || '').toLowerCase();
+                if (piStatus !== 'cancelled' && piStatus !== 'declined' && piStatus !== 'converted to bom' && !pi.convertedToBom) {
+                  (pi.items || []).forEach(pItem => {
+                    const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
+                    const pCode = String(pItem.code || '').toLowerCase().trim();
+                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                  });
+                }
+              });
+            } catch (_) {}
 
             let localRawMats = [];
             try {
@@ -2414,7 +2455,7 @@ export default function StockStatusView(props) {
           {(() => {
             const isSalesUser = userRole === 'Sales Executive' || userRole === 'Sales Head' || String(userRole || '').toLowerCase().includes('sales');
 
-            // 1. Calculate reserved quantities from active BOMs
+            // 1. Calculate reserved quantities from active BOMs and active Proforma Invoices (PIs)
             const bomReservedMap = new Map();
             if (Array.isArray(bomStore)) {
               bomStore.forEach(b => {
@@ -2430,6 +2471,28 @@ export default function StockStatusView(props) {
                 }
               });
             }
+
+            // Also reserve stock for active Proforma Invoices that are not cancelled or converted to BOM
+            try {
+              const piSaved = localStorage.getItem('controlroom_sales_pi_store') || localStorage.getItem('controlroom_procurement_pi_store');
+              let localPIs = [];
+              if (piSaved) {
+                const parsed = JSON.parse(piSaved);
+                if (Array.isArray(parsed)) localPIs = parsed;
+              }
+              localPIs.forEach(pi => {
+                const piStatus = String(pi.status || '').toLowerCase();
+                if (piStatus !== 'cancelled' && piStatus !== 'declined' && piStatus !== 'converted to bom' && !pi.convertedToBom) {
+                  (pi.items || []).forEach(pItem => {
+                    const qty = parseFloat(pItem.qty || pItem.quantity || 0) || 0;
+                    const pCode = String(pItem.code || '').toLowerCase().trim();
+                    const pName = String(pItem.name || pItem.description || '').toLowerCase().trim();
+                    if (pCode) bomReservedMap.set(pCode, (bomReservedMap.get(pCode) || 0) + qty);
+                    if (pName) bomReservedMap.set(pName, (bomReservedMap.get(pName) || 0) + qty);
+                  });
+                }
+              });
+            } catch (_) {}
 
             // 2. Read latest raw materials store for overrides
             let localRawMats = [];
