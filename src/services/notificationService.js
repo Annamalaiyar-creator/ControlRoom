@@ -216,51 +216,98 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
 }
 
 /**
- * Extracts a punchy, Porter-style short voice alert (2-4 words)
- * without reading long descriptions, customer names, or paragraphs.
+ * Extracts a punchy, Porter-style short voice alert including the customer name
+ * (e.g. "Vikram Solar: Order Packed!" or "Tata Power: New Order to Pack!")
  */
 export function getPorterVoiceCue(titleOrMessage, metadata = {}) {
   const fullText = ((typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : titleOrMessage) || '').toUpperCase();
   const step = (metadata && metadata.step) ? String(metadata.step).toUpperCase() : '';
 
-  // 1. Exact step checks from workflow dispatch
-  if (step.includes('BOM_SENT_TO_DISPATCH')) return 'New Order to Pack!';
-  if (step.includes('BOM_PACKED')) return 'Order Packed!';
-  if (step.includes('ACCOUNTS_VERIFIED') || step.includes('BILLING_NOTIF')) return 'Payment Approved! Ready for Invoice!';
-  if (step.includes('INVOICE_COMPLETED') || step.includes('DISPATCH_NOTIF')) return 'Order Cleared for Dispatch!';
-  if (step.includes('CANCEL')) return 'Order Cancelled!';
+  // 1. Extract and clean customer name
+  let rawCustomer = (metadata && (metadata.customerName || metadata.customer || metadata.vendor)) ||
+                    (typeof titleOrMessage === 'object' && (titleOrMessage.customerName || titleOrMessage.customer || titleOrMessage.vendor)) ||
+                    '';
 
-  // 2. High-priority text pattern match
-  if (fullText.includes('CANCEL')) return 'Order Cancelled!';
-  if (fullText.includes('RECEIVED TO PACK') || fullText.includes('NEW BOM RECEIVED') || fullText.includes('RECEIVED TO DISPATCH')) return 'New Order to Pack!';
-  if (fullText.includes('PACKED AND SENT') || fullText.includes('PACKED & SENT') || fullText.includes('BOM PACKED')) return 'Order Packed!';
-  if (fullText.includes('ACCOUNTS VERIFICATION') || fullText.includes('FOR ACCOUNTS')) return 'Payment Verification Needed!';
-  if (fullText.includes('ACCOUNTS APPROVED') || fullText.includes('ACCOUNTS VERIFIED') || fullText.includes('PAYMENT APPROVED')) return 'Payment Approved!';
-  if (fullText.includes('READY FOR INVOICE') || fullText.includes('READY FOR INVOICING')) return 'Invoice Ready!';
-  if (fullText.includes('INVOICE COMPLETED') || fullText.includes('READY TO DISPATCH') || fullText.includes('CLEARED FOR VEHICLE')) return 'Order Cleared for Dispatch!';
-  if (fullText.includes('DISPATCHED') || fullText.includes('VEHICLE LOADED')) return 'Order Dispatched!';
-  if (fullText.includes('PROFORMA INVOICE') || fullText.includes('CONVERTED TO PI') || fullText.includes('PI CREATED')) return 'Proforma Invoice Created!';
-  if (fullText.includes('PURCHASE ORDER APPROVED') || fullText.includes('PO APPROVED')) return 'Purchase Order Approved!';
-  if (fullText.includes('PURCHASE ORDER') || fullText.includes('NEW PO')) return 'New Purchase Order!';
-  if (fullText.includes('QUOTATION CONVERTED')) return 'Quotation Converted!';
-  if (fullText.includes('QUOTATION')) return 'Quotation Updated!';
-  if (fullText.includes('WORK ORDER')) return 'New Work Order!';
-  if (fullText.includes('NEW BOM') || fullText.includes('NEW ORDER')) return 'New Order!';
-  if (fullText.includes('APPROVED')) return 'Action Approved!';
-
-  // 3. Fallback: Take the first few words of the title cleanly
-  const title = (typeof titleOrMessage === 'object' ? titleOrMessage.title : titleOrMessage) || '';
-  const cleanTitle = title
-    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
-    .replace(/[–—_#*:()!]/g, ' ')
-    .trim();
-
-  const words = cleanTitle.split(/\s+/).filter(Boolean);
-  if (words.length > 0 && words.length <= 4) {
-    return words.join(' ') + '!';
+  // If not in metadata or root properties, try extracting from parentheses in message, e.g. "BOM-1042 (Vikram Solar)"
+  if (!rawCustomer) {
+    const rawStr = typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : String(titleOrMessage || '');
+    const parenMatch = rawStr.match(/\(([^)]+)\)/);
+    if (parenMatch && parenMatch[1]) {
+      const candidate = parenMatch[1].trim();
+      if (!candidate.startsWith('BOM-') && !candidate.startsWith('INV-') && !candidate.startsWith('PO-') && !candidate.startsWith('PI-') && candidate.length > 2) {
+        rawCustomer = candidate;
+      }
+    }
   }
 
-  return 'New Order Alert!';
+  // Clean customer name for crisp, natural voice pronunciation (e.g. "Vikram Solar Pvt Ltd" -> "Vikram Solar")
+  let cleanCustomer = '';
+  if (rawCustomer && typeof rawCustomer === 'string') {
+    cleanCustomer = rawCustomer
+      .replace(/\b(Pvt|Private)\s+(Ltd|Limited)\b/gi, '')
+      .replace(/\b(Ltd|Limited|LLP|Inc|Corp)\b/gi, '')
+      .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+      .replace(/[–—_#*:()!]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleanCustomer.toLowerCase() === 'customer' || cleanCustomer.toLowerCase() === 'client' || cleanCustomer.toLowerCase() === 'all') {
+      cleanCustomer = '';
+    }
+  }
+
+  // 2. Determine Action Cue
+  let actionCue = 'New Order!';
+  if (step.includes('BOM_SENT_TO_DISPATCH') || fullText.includes('RECEIVED TO PACK') || fullText.includes('NEW BOM RECEIVED') || fullText.includes('RECEIVED TO DISPATCH')) {
+    actionCue = 'New Order to Pack!';
+  } else if (step.includes('BOM_PACKED') || fullText.includes('PACKED AND SENT') || fullText.includes('PACKED & SENT') || fullText.includes('BOM PACKED') || fullText.includes('ORDER PACKED')) {
+    actionCue = 'Order Packed!';
+  } else if (step.includes('ACCOUNTS_VERIFIED') || step.includes('BILLING_NOTIF') || fullText.includes('ACCOUNTS APPROVED') || fullText.includes('PAYMENT APPROVED')) {
+    actionCue = 'Payment Approved!';
+  } else if (step.includes('INVOICE_COMPLETED') || step.includes('DISPATCH_NOTIF') || fullText.includes('INVOICE COMPLETED') || fullText.includes('CLEARED FOR VEHICLE')) {
+    actionCue = 'Order Cleared for Dispatch!';
+  } else if (step.includes('CANCEL') || fullText.includes('CANCEL')) {
+    actionCue = 'Order Cancelled!';
+  } else if (fullText.includes('ACCOUNTS VERIFICATION') || fullText.includes('FOR ACCOUNTS')) {
+    actionCue = 'Payment Verification Needed!';
+  } else if (fullText.includes('READY FOR INVOICE') || fullText.includes('READY FOR INVOICING')) {
+    actionCue = 'Invoice Ready!';
+  } else if (fullText.includes('DISPATCHED') || fullText.includes('VEHICLE LOADED')) {
+    actionCue = 'Order Dispatched!';
+  } else if (fullText.includes('PROFORMA INVOICE') || fullText.includes('CONVERTED TO PI') || fullText.includes('PI CREATED')) {
+    actionCue = 'Proforma Invoice Created!';
+  } else if (fullText.includes('PURCHASE ORDER APPROVED') || fullText.includes('PO APPROVED')) {
+    actionCue = 'Purchase Order Approved!';
+  } else if (fullText.includes('PURCHASE ORDER') || fullText.includes('NEW PO')) {
+    actionCue = 'New Purchase Order!';
+  } else if (fullText.includes('QUOTATION CONVERTED')) {
+    actionCue = 'Quotation Converted!';
+  } else if (fullText.includes('QUOTATION')) {
+    actionCue = 'Quotation Updated!';
+  } else if (fullText.includes('WORK ORDER')) {
+    actionCue = 'New Work Order!';
+  } else if (fullText.includes('NEW BOM') || fullText.includes('NEW ORDER')) {
+    actionCue = 'New Order!';
+  } else {
+    // Fallback: Take the first few words of the title cleanly
+    const title = (typeof titleOrMessage === 'object' ? titleOrMessage.title : titleOrMessage) || '';
+    const cleanTitle = title
+      .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+      .replace(/[–—_#*:()!]/g, ' ')
+      .trim();
+
+    const words = cleanTitle.split(/\s+/).filter(Boolean);
+    if (words.length > 0 && words.length <= 4) {
+      actionCue = words.join(' ') + '!';
+    }
+  }
+
+  // 3. Return Combined: "[Customer Name]: [Action Cue]!" or "[Action Cue]!"
+  if (cleanCustomer) {
+    return `${cleanCustomer}, ${actionCue}`;
+  }
+
+  return actionCue;
 }
 
 /**
