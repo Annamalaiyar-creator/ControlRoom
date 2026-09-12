@@ -123,6 +123,53 @@ function playMelody(ctx, soundType) {
     osc.stop(now + time + duration + 0.05);
   });
 }
+
+/**
+ * Synthesizes an iconic Porter / delivery-app style upbeat order alert tone.
+ * High clarity, vibrant 3-tone ascending chime (G5 -> C6 -> E6).
+ */
+export function playPorterOrderAlert() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => playPorterChime(ctx)).catch(() => {});
+    } else {
+      playPorterChime(ctx);
+    }
+  } catch (e) {
+    console.warn('Error playing Porter order alert:', e);
+  }
+}
+
+function playPorterChime(ctx) {
+  const now = ctx.currentTime;
+  const masterGain = ctx.createGain();
+  masterGain.connect(ctx.destination);
+  masterGain.gain.setValueAtTime(0.48, now);
+
+  // Iconic Porter / logistics style energetic 3-beat chime
+  const notes = [
+    { freq: 783.99, time: 0.0,  duration: 0.12, type: 'triangle' },
+    { freq: 1046.5, time: 0.11, duration: 0.15, type: 'sine' },
+    { freq: 1318.5, time: 0.24, duration: 0.40, type: 'sine' }
+  ];
+
+  notes.forEach(({ freq, time, duration, type }) => {
+    const osc = ctx.createOscillator();
+    const noteGain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, now + time);
+    noteGain.gain.setValueAtTime(0.001, now + time);
+    noteGain.gain.exponentialRampToValueAtTime(0.9, now + time + 0.015);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, now + time + duration);
+    osc.connect(noteGain);
+    noteGain.connect(masterGain);
+    osc.start(now + time);
+    osc.stop(now + time + duration + 0.05);
+  });
+}
+
 /**
  * Global preference for Voice Notifications (Text-to-Speech)
  */
@@ -143,7 +190,10 @@ export function setVoiceNotificationEnabled(enabled) {
     if (!enabled && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     } else if (enabled) {
-      speakNotificationVoice('Voice notifications enabled.');
+      playPorterOrderAlert();
+      setTimeout(() => {
+        speakNotificationVoice('Voice alerts on!');
+      }, 300);
     }
     window.dispatchEvent(new CustomEvent('controlroom_voice_setting_changed', { detail: { enabled } }));
   } catch (_) {}
@@ -166,9 +216,57 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
 }
 
 /**
- * Pronounces a notification cleanly using the browser's native Web Speech Synthesis API.
- * Cleans emojis and expands technical abbreviations (B-O-M, P-I, P-O, Rupees, etc.)
- * @param {string} text - The text to speak
+ * Extracts a punchy, Porter-style short voice alert (2-4 words)
+ * without reading long descriptions, customer names, or paragraphs.
+ */
+export function getPorterVoiceCue(titleOrMessage, metadata = {}) {
+  const fullText = ((typeof titleOrMessage === 'object' ? `${titleOrMessage.title || ''} ${titleOrMessage.message || ''}` : titleOrMessage) || '').toUpperCase();
+  const step = (metadata && metadata.step) ? String(metadata.step).toUpperCase() : '';
+
+  // 1. Exact step checks from workflow dispatch
+  if (step.includes('BOM_SENT_TO_DISPATCH')) return 'New Order to Pack!';
+  if (step.includes('BOM_PACKED')) return 'Order Packed!';
+  if (step.includes('ACCOUNTS_VERIFIED') || step.includes('BILLING_NOTIF')) return 'Payment Approved! Ready for Invoice!';
+  if (step.includes('INVOICE_COMPLETED') || step.includes('DISPATCH_NOTIF')) return 'Order Cleared for Dispatch!';
+  if (step.includes('CANCEL')) return 'Order Cancelled!';
+
+  // 2. High-priority text pattern match
+  if (fullText.includes('CANCEL')) return 'Order Cancelled!';
+  if (fullText.includes('RECEIVED TO PACK') || fullText.includes('NEW BOM RECEIVED') || fullText.includes('RECEIVED TO DISPATCH')) return 'New Order to Pack!';
+  if (fullText.includes('PACKED AND SENT') || fullText.includes('PACKED & SENT') || fullText.includes('BOM PACKED')) return 'Order Packed!';
+  if (fullText.includes('ACCOUNTS VERIFICATION') || fullText.includes('FOR ACCOUNTS')) return 'Payment Verification Needed!';
+  if (fullText.includes('ACCOUNTS APPROVED') || fullText.includes('ACCOUNTS VERIFIED') || fullText.includes('PAYMENT APPROVED')) return 'Payment Approved!';
+  if (fullText.includes('READY FOR INVOICE') || fullText.includes('READY FOR INVOICING')) return 'Invoice Ready!';
+  if (fullText.includes('INVOICE COMPLETED') || fullText.includes('READY TO DISPATCH') || fullText.includes('CLEARED FOR VEHICLE')) return 'Order Cleared for Dispatch!';
+  if (fullText.includes('DISPATCHED') || fullText.includes('VEHICLE LOADED')) return 'Order Dispatched!';
+  if (fullText.includes('PROFORMA INVOICE') || fullText.includes('CONVERTED TO PI') || fullText.includes('PI CREATED')) return 'Proforma Invoice Created!';
+  if (fullText.includes('PURCHASE ORDER APPROVED') || fullText.includes('PO APPROVED')) return 'Purchase Order Approved!';
+  if (fullText.includes('PURCHASE ORDER') || fullText.includes('NEW PO')) return 'New Purchase Order!';
+  if (fullText.includes('QUOTATION CONVERTED')) return 'Quotation Converted!';
+  if (fullText.includes('QUOTATION')) return 'Quotation Updated!';
+  if (fullText.includes('WORK ORDER')) return 'New Work Order!';
+  if (fullText.includes('NEW BOM') || fullText.includes('NEW ORDER')) return 'New Order!';
+  if (fullText.includes('APPROVED')) return 'Action Approved!';
+
+  // 3. Fallback: Take the first few words of the title cleanly
+  const title = (typeof titleOrMessage === 'object' ? titleOrMessage.title : titleOrMessage) || '';
+  const cleanTitle = title
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+    .replace(/[–—_#*:()!]/g, ' ')
+    .trim();
+
+  const words = cleanTitle.split(/\s+/).filter(Boolean);
+  if (words.length > 0 && words.length <= 4) {
+    return words.join(' ') + '!';
+  }
+
+  return 'New Order Alert!';
+}
+
+/**
+ * Pronounces a short Porter-style voice cue cleanly using the browser's native Web Speech API.
+ * Never reads long paragraphs or addresses.
+ * @param {string} text - The cue to speak (or full text which will be converted to a cue)
  * @param {Object} options - Optional configuration { rate, pitch, volume }
  */
 export function speakNotificationVoice(text, options = {}) {
@@ -176,40 +274,26 @@ export function speakNotificationVoice(text, options = {}) {
   if (!isVoiceNotificationEnabled()) return;
 
   try {
-    // Cancel previous utterance to avoid queue buildup
+    // If long sentence passed, convert to short Porter voice cue
+    let cue = (text && typeof text === 'string' && (text.length > 35 || text.includes('.')))
+      ? getPorterVoiceCue(text, options.metadata)
+      : (text || 'New Order!');
+
     window.speechSynthesis.cancel();
 
-    // Sanitize message for natural pronunciation
-    let spoken = (text || '')
-      // Strip emojis
+    // Final clean
+    const spoken = cue
       .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
-      // Expand acronyms for natural spelling
-      .replace(/\bBOM\b/g, 'B O M')
-      .replace(/\bPI\b/g, 'P I')
-      .replace(/\bPO\b/g, 'P O')
-      .replace(/\bDC\b/g, 'Delivery Challan')
-      .replace(/\b₹\s*([0-9,]+)/g, '$1 rupees')
-      .replace(/\bGST\b/g, 'G S T')
-      .replace(/\bMMS\b/g, 'M M S')
-      .replace(/\bHDG\b/g, 'H D G')
-      .replace(/\bkg\b/gi, 'kilograms')
-      .replace(/\bNOS\b/gi, 'numbers')
-      .replace(/\bPvt\s+Ltd\b/gi, 'Private Limited')
       .replace(/[–—_#*]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
     if (!spoken) return;
 
-    // Limit length to keep spoken alert punchy and responsive
-    if (spoken.length > 150) {
-      spoken = spoken.slice(0, 147) + '...';
-    }
-
     const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = 'en-US';
-    utterance.rate = options.rate || 1.05;
-    utterance.pitch = options.pitch || 1.0;
+    utterance.rate = options.rate || 1.12; // Fast, punchy delivery like Porter
+    utterance.pitch = options.pitch || 1.05; // Slightly energized
     utterance.volume = options.volume != null ? options.volume : 1.0;
 
     // Select the best natural-sounding voice if available
@@ -356,16 +440,14 @@ export function sendWorkflowNotification({
     console.error('Error saving live notification:', e);
   }
 
-  // 2. Play sound immediately in this window
-  playWorkflowNotificationSound(soundType);
+  // 2. Play iconic Porter-style order alert chime
+  playPorterOrderAlert();
 
-  // 2b. Speak natural voice announcement right after chime
+  // 2b. Speak short, punchy Porter-style voice cue (e.g. "New Order to Pack!", "Order Packed!")
   setTimeout(() => {
-    const textToSpeak = notification.title
-      ? `${notification.title}. ${notification.message || ''}`
-      : (notification.message || '');
-    speakNotificationVoice(textToSpeak);
-  }, 250);
+    const cue = getPorterVoiceCue(notification, notification.metadata);
+    speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+  }, 320);
 
   // 3. Emit local event for current tab toast
   if (typeof window !== 'undefined') {

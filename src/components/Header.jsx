@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, HelpCircle, ChevronDown, LogOut, Check, RotateCcw, CheckCircle2, ArrowRight, Code, FileCheck, CheckCircle, Menu, Volume2, VolumeX } from 'lucide-react';
 
-import { isRoleTargeted, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled } from '../services/notificationService';
+import { isRoleTargeted, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
 
 export const filterCompletedBomNotifications = (notificationsList) => {
   if (!Array.isArray(notificationsList) || notificationsList.length === 0) return [];
@@ -69,11 +69,12 @@ export const addLiveNotification = (notif) => {
     localStorage.setItem('vrm_live_notifications', JSON.stringify(updated));
     window.dispatchEvent(new Event('vrm_notifications_updated'));
 
-    // Speak announcement via browser voice synthesis
-    const speechText = notifWithId.title 
-      ? `${notifWithId.title}. ${notifWithId.message || ''}` 
-      : (notifWithId.message || '');
-    speakNotificationVoice(speechText);
+    // Play Porter order alert chime and speak short punchy voice cue
+    playPorterOrderAlert();
+    setTimeout(() => {
+      const cue = getPorterVoiceCue(notifWithId);
+      speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+    }, 320);
   } catch (e) {
     console.error('Error adding live notification:', e);
   }

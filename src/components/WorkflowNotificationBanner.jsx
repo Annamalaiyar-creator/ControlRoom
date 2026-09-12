@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Volume2, VolumeX, ArrowRight, X, Package, CreditCard, Receipt, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled } from '../services/notificationService';
+import { isRoleTargeted, playWorkflowNotificationSound, markNotificationAsRead, speakNotificationVoice, isVoiceNotificationEnabled, setVoiceNotificationEnabled, playPorterOrderAlert, getPorterVoiceCue } from '../services/notificationService';
 
 export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
   const [activeToast, setActiveToast] = useState(null);
@@ -210,7 +210,11 @@ export default function WorkflowNotificationBanner({ userRole, onNavigate }) {
                   setVoiceEnabled(nextVal);
                   setVoiceNotificationEnabled(nextVal);
                   if (nextVal && activeToast) {
-                    speakNotificationVoice(`${activeToast.title}. ${activeToast.message || ''}`);
+                    playPorterOrderAlert();
+                    setTimeout(() => {
+                      const cue = getPorterVoiceCue(activeToast, activeToast.metadata);
+                      speakNotificationVoice(cue, { rate: 1.12, pitch: 1.05 });
+                    }, 320);
                   }
                 }}
                 title={voiceEnabled ? 'Voice Announcement Active (Click to Mute)' : 'Voice Muted (Click to Enable)'}
