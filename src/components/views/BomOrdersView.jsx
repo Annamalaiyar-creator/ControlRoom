@@ -866,7 +866,7 @@ export default function BomOrdersView(props) {
         setNewBomSalesPerson(getEffectiveSalesPerson());
       }
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
-      if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
+      setNewBomRemarks('');
       if (pendingPi.paymentTerms) setNewBomPaymentType(pendingPi.paymentTerms);
       if (pendingPi.creditDays) setNewBomCreditDays(pendingPi.creditDays);
       if (pendingPi.transportMode) setNewBomTransportMode(pendingPi.transportMode);

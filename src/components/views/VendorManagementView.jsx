@@ -264,7 +264,7 @@ export default function VendorManagementView(props) {
       const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
       setNewBomCode(`BOM-${nextNum}`);
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
-      if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
+      setNewBomRemarks('');
       if (Array.isArray(pendingPi.items) && pendingPi.items.length > 0) {
         setBomMaterialsList(pendingPi.items.map(it => ({
           name: it.name || 'Structural Steel Beams',
@@ -285,7 +285,7 @@ export default function VendorManagementView(props) {
         const nextNum = (bomStore || []).length + 550 + Math.floor(Math.random() * 50);
         setNewBomCode(`BOM-${nextNum}`);
         if (e.detail.customerName) setNewBomProductName(e.detail.customerName);
-        if (e.detail.remarks) setNewBomRemarks(e.detail.remarks);
+        setNewBomRemarks('');
         if (Array.isArray(e.detail.items) && e.detail.items.length > 0) {
           setBomMaterialsList(e.detail.items.map(it => ({
             name: it.name || 'Structural Steel Beams',

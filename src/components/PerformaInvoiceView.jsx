@@ -426,7 +426,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
           isPresetItem: false
         }
       ],
-      remarks: `Converted automatically from Proforma Invoice (${pi.piNo}) dated ${pi.piDate || 'N/A'}.`
+      remarks: ''
     };
 
     try {

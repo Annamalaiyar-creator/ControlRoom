@@ -763,7 +763,7 @@ export default function ProductionViewsEngine(props) {
       setShowBOMForm(true);
       setNewBomCode('');
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
-      if (pendingPi.remarks) setNewBomRemarks(pendingPi.remarks);
+      setNewBomRemarks('');
 
       // Address mapping from PI
       const bObj = pendingPi.billingAddressObj || {};
@@ -818,7 +818,7 @@ export default function ProductionViewsEngine(props) {
         setShowBOMForm(true);
         setNewBomCode('');
         if (detail.customerName) setNewBomProductName(detail.customerName);
-        if (detail.remarks) setNewBomRemarks(detail.remarks);
+        setNewBomRemarks('');
 
         const bObj = detail.billingAddressObj || {};
         const bStreet = detail.billingStreet || (typeof detail.billingAddress === 'string' ? detail.billingAddress : '') || bObj.address || '';
