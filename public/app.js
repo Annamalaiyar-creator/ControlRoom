@@ -914,15 +914,60 @@ const server = http.createServer(async (req, res) => {
 
           try {
             const token = await getZohoAccessToken();
+            const pGroups = body.presetGroups || {};
+            const groupEntries = Array.isArray(pGroups) ? pGroups : Object.values(pGroups);
+            const hasPresetGroups = groupEntries.length > 0;
+            const line_items = [];
+
+            if (hasPresetGroups) {
+              groupEntries.forEach(grp => {
+                if (!grp) return;
+                const setCount = parseFloat(grp.setCount) || 1;
+                const unitPrice = parseFloat(grp.kitPrice != null ? grp.kitPrice : grp.price) || 0;
+                line_items.push({
+                  name: grp.presetName || grp.name || body.presetName || 'Solar Mounting Structure Preset Kit',
+                  rate: unitPrice,
+                  quantity: setCount,
+                  description: `Preset Structure Kit - ${setCount} Set(s)`
+                });
+              });
+            } else if (body.presetName && (body.presetKitPrice != null || body.kitSubtotal != null)) {
+              const setCount = parseFloat(body.presetSetCount) || 1;
+              const unitPrice = parseFloat(body.presetKitPrice != null ? body.presetKitPrice : body.kitSubtotal) || 0;
+              line_items.push({
+                name: body.presetName,
+                rate: unitPrice,
+                quantity: setCount,
+                description: `Preset Structure Kit - ${setCount} Set(s)`
+              });
+            }
+
+            (body.items || []).forEach(it => {
+              const isPreset = Boolean(it.isPresetItem || it.category === 'Preset Component');
+              if (hasPresetGroups || body.presetName) {
+                if (isPreset) return;
+              }
+              line_items.push({
+                name: it.name || it.productName || 'Solar Structure Component',
+                rate: Number(it.rate != null ? it.rate : (it.unitValue || 0)),
+                quantity: Number(it.qty || it.quantity || 1),
+                description: it.description || it.category || 'Separate Product Scope'
+              });
+            });
+
+            if (line_items.length === 0) {
+              line_items.push({
+                name: body.productName || 'Solar Mounting Structure Kit',
+                rate: Number(body.subtotal || 1000),
+                quantity: 1
+              });
+            }
+
             const zohoPayload = {
               customer_id: body.customerId || '4080449000000039008',
               estimate_number: body.piNo || undefined,
               date: body.piDate || new Date().toISOString().split('T')[0],
-              line_items: (body.items || []).map(it => ({
-                name: it.name || it.productName || 'Solar Module Mounting Structures',
-                rate: Number(it.rate || it.unitValue || 100),
-                quantity: Number(it.qty || it.quantity || 1)
-              }))
+              line_items
             };
             const zohoRes = await callZoho('POST', '/books/v3/estimates', zohoPayload, token);
             if (zohoRes && zohoRes.estimate) {

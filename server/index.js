@@ -3521,23 +3521,63 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
     }
     if (!customerId) customerId = '4080449000000033179'; // Fallback to verified Zoho customer
 
-    const lineItems = (req.body.items || []).map(it => {
+    // Build Zoho line items: Preset Kits appear as single line items with their Set Price,
+    // while custom/separate products appear as distinct separate line items.
+    const lineItems = [];
+    const pGroups = req.body.presetGroups || {};
+    const groupEntries = Array.isArray(pGroups) ? pGroups : Object.values(pGroups);
+    const hasPresetGroups = groupEntries.length > 0;
+
+    // 1. Add Preset Kits as single consolidated line items with their set price
+    if (hasPresetGroups) {
+      groupEntries.forEach(grp => {
+        if (!grp) return;
+        const setCount = parseFloat(grp.setCount) || 1;
+        const unitPrice = parseFloat(grp.kitPrice != null ? grp.kitPrice : grp.price) || 0;
+        const name = grp.presetName || grp.name || req.body.presetName || 'Solar Mounting Structure Preset Kit';
+        lineItems.push({
+          name: name,
+          rate: unitPrice,
+          quantity: setCount,
+          description: `Preset Structure Kit - ${setCount} Set(s) complete assembly`
+        });
+      });
+    } else if (req.body.presetName && (req.body.presetKitPrice != null || req.body.kitSubtotal != null)) {
+      const setCount = parseFloat(req.body.presetSetCount) || 1;
+      const unitPrice = parseFloat(req.body.presetKitPrice != null ? req.body.presetKitPrice : req.body.kitSubtotal) || 0;
+      lineItems.push({
+        name: req.body.presetName,
+        rate: unitPrice,
+        quantity: setCount,
+        description: `Preset Structure Kit - ${setCount} Set(s) complete assembly`
+      });
+    }
+
+    // 2. Add Separate / Custom products (non-preset components)
+    (req.body.items || []).forEach(it => {
+      const isPreset = Boolean(it.isPresetItem || it.category === 'Preset Component');
+      // If a preset was added above, skip preset sub-components (screws, clamps, rails)
+      if (hasPresetGroups || req.body.presetName) {
+        if (isPreset) return;
+      }
       const q = parseFloat(it.qty || it.quantity) || 1;
-      let r = parseFloat(it.rate || it.unitValue);
-      if (isNaN(r) || r <= 0) r = 100;
-      return {
-        name: it.name || it.productName || 'Solar Module Mounting Structures',
+      let r = parseFloat(it.rate != null ? it.rate : it.unitValue);
+      if (isNaN(r)) r = 0;
+      lineItems.push({
+        name: it.name || it.productName || 'Solar Structure Component',
         rate: r,
         quantity: q,
-        description: it.description || it.category || 'Engineering structure line item'
-      };
+        description: it.description || it.category || 'Separate Product Scope'
+      });
     });
 
+    // 3. Fallback if no items were created
     if (lineItems.length === 0) {
       lineItems.push({
         name: req.body.productName || 'Solar Mounting Structure Kit',
         rate: parseFloat(req.body.subtotal) || 1000,
-        quantity: 1
+        quantity: 1,
+        description: 'Standard Order Scope'
       });
     }
 
