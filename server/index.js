@@ -3395,16 +3395,44 @@ app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res)
 
 app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res) => {
   let localEstimates = [];
-  const p = getStoreFilePath('proforma_invoice_store.json');
+  const pProforma = getStoreFilePath('proforma_invoice_store.json');
+  const pSales = getStoreFilePath('sales_pi_store.json');
+
   try {
-    if (fs.existsSync(p)) localEstimates = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (fs.existsSync(pProforma)) localEstimates = JSON.parse(fs.readFileSync(pProforma, 'utf8'));
   } catch (_) {}
 
-  const newPI = { ...req.body, id: req.body.id || `PI-${Date.now()}` };
-  const updated = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
-  try { fs.writeFileSync(p, JSON.stringify(updated, null, 2), 'utf8'); } catch (_) {}
+  const newPI = {
+    ...req.body,
+    id: req.body.id || req.body.piNo || `PI-${Date.now()}`,
+    zohoSynced: false,
+    zohoSyncError: null
+  };
 
-  if (!zohoSession.connected) return res.json({ success: true, estimate: newPI });
+  // 1. Immediately persist to BOTH local stores before any Zoho HTTPS network calls
+  const updatedProforma = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+  try {
+    fs.writeFileSync(pProforma, JSON.stringify(updatedProforma, null, 2), 'utf8');
+  } catch (_) {}
+
+  try {
+    let salesEstimates = [];
+    if (fs.existsSync(pSales)) {
+      try { salesEstimates = JSON.parse(fs.readFileSync(pSales, 'utf8')); } catch (_) {}
+    }
+    const updatedSales = [newPI, ...salesEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+    fs.writeFileSync(pSales, JSON.stringify(updatedSales, null, 2), 'utf8');
+  } catch (_) {}
+
+  pushStoreToSupabase('proforma_invoice_store', updatedProforma);
+  pushStoreToSupabase('sales_pi_store', updatedProforma);
+
+  if (!zohoSession.connected) {
+    return res.json({ success: true, estimate: newPI, zohoSynced: false, notice: 'Zoho not connected' });
+  }
+
+  let zohoEstimateCreated = null;
+  let zohoErrorMsg = null;
 
   try {
     const accessToken = await getZohoAccessToken();
@@ -3431,6 +3459,7 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
           r.on('error', () => resolve(null));
           r.end();
         });
+
         if (contactRes && Array.isArray(contactRes.contacts) && contactRes.contacts.length > 0) {
           customerId = contactRes.contacts[0].contact_id;
         } else {
@@ -3471,7 +3500,8 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
 
     const lineItems = (req.body.items || []).map(it => {
       const q = parseFloat(it.qty || it.quantity) || 1;
-      const r = parseFloat(it.rate || it.unitValue) || 100;
+      let r = parseFloat(it.rate || it.unitValue);
+      if (isNaN(r) || r <= 0) r = 100;
       return {
         name: it.name || it.productName || 'Solar Module Mounting Structures',
         rate: r,
@@ -3516,7 +3546,7 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
         resp.on('data', c => d += c);
         resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
       });
-      r.on('error', () => resolve(null));
+      r.on('error', (e) => resolve({ code: -1, message: e.message }));
       r.write(postData);
       r.end();
     });
@@ -3524,8 +3554,13 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
     if (zohoRes && (zohoRes.estimate || zohoRes.code === 0)) {
       const createdEst = zohoRes.estimate;
       if (createdEst) {
+        zohoEstimateCreated = createdEst;
         newPI.zohoEstimateId = createdEst.estimate_id;
         newPI.piNo = createdEst.estimate_number || newPI.piNo;
+        newPI.zohoSynced = true;
+        newPI.zohoSyncError = null;
+        newPI.zohoModule = 'Quotes';
+
         // Mark as Sent in Zoho Books so it is directly Issued/active
         try {
           await new Promise((resolve) => {
@@ -3541,18 +3576,43 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
           });
         } catch (_) {}
       }
-      try {
-        const reUpdated = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
-        fs.writeFileSync(p, JSON.stringify(reUpdated, null, 2), 'utf8');
-      } catch (_) {}
     } else {
+      zohoErrorMsg = zohoRes?.message || 'Zoho estimate creation rejected';
+      newPI.zohoSynced = false;
+      newPI.zohoSyncError = zohoErrorMsg;
       console.warn('[ZOHO ESTIMATE REJECTED]', zohoRes);
     }
   } catch (err) {
+    zohoErrorMsg = err.message;
+    newPI.zohoSynced = false;
+    newPI.zohoSyncError = err.message;
     console.warn('[ZOHO ESTIMATE POST NOTICE]', err);
   }
 
-  res.json({ success: true, estimate: newPI });
+  // 2. Persist enriched newPI (with verified zohoEstimateId) to BOTH stores
+  try {
+    const finalProforma = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+    fs.writeFileSync(pProforma, JSON.stringify(finalProforma, null, 2), 'utf8');
+
+    let finalSales = [];
+    if (fs.existsSync(pSales)) {
+      try { finalSales = JSON.parse(fs.readFileSync(pSales, 'utf8')); } catch (_) {}
+    }
+    finalSales = [newPI, ...finalSales.filter(pi => pi.piNo !== newPI.piNo)];
+    fs.writeFileSync(pSales, JSON.stringify(finalSales, null, 2), 'utf8');
+
+    pushStoreToSupabase('proforma_invoice_store', finalProforma);
+    pushStoreToSupabase('sales_pi_store', finalSales);
+  } catch (_) {}
+
+  res.json({
+    success: true,
+    estimate: newPI,
+    zohoSynced: Boolean(newPI.zohoEstimateId),
+    zohoEstimateId: newPI.zohoEstimateId || null,
+    zohoModule: 'Quotes',
+    zohoError: zohoErrorMsg
+  });
 });
 
 // Delivery Challans endpoints

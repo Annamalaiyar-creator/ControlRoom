@@ -12,7 +12,7 @@ import SearchablePresetSelector from '../SearchablePresetSelector';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
-import { saveCloudStore, fetchCloudStore } from '../../utils/supabaseDataSync';
+import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../../utils/supabaseDataSync';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -998,11 +998,18 @@ export default function CrmQuotationsView({
       notes: `Generated automatically from Quotation ${quote.code || quote.quoteNumber}. Unlimited revisions kept in quotation history.`
     };
 
-    // 3. Save to sales PI store in Supabase and local cache
+    // 3. Save to sales PI store in Supabase and local cache immediately
     const updatedPIs = [newPI, ...existingPIs.filter(p => p.piNo !== piNumber)];
     localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(updatedPIs));
+    localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(updatedPIs));
     try {
-      saveCloudStore('sales_pi_store', updatedPIs);
+      saveCloudStoreImmediate('sales_pi_store', updatedPIs);
+      saveCloudStoreImmediate('proforma_invoice_store', updatedPIs);
+      fetch('/api/zoho/estimates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPI)
+      }).catch(() => {});
       window.dispatchEvent(new Event('controlroom_storage_update'));
     } catch (e) {}
 
