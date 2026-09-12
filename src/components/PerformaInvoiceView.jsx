@@ -1256,17 +1256,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
   // Pre-populates the fields to edit a Performa Invoice
   const handleStartEdit = (pi, idx) => {
-    if (pi.status === 'Converted to BOM' || pi.convertedToBom) {
-      setValidationAlert({
-        title: '🔒 Proforma Invoice Locked',
-        message: 'This Proforma Invoice has already been converted into a Bill of Materials (BOM) order and is locked from further edits.',
-        missingList: [{
-          field: 'Converted to BOM Order',
-          message: `PI #${pi.piNo || ''} is locked to preserve contractual and production integrity with Dispatch.`
-        }]
-      });
-      return;
-    }
     setEditIdx(idx);
     setPiNumber(pi.piNo || '');
     if (pi.piDate) setPiDate(pi.piDate);
@@ -1290,19 +1279,45 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setTransporterName(pi.transporterName || '');
     setVehicleNo(pi.vehicleNo || '');
     setTransportScope(pi.transportScope || 'VRM Structures');
-    if (pi.billingAddress) {
-      setBillingStreet(pi.billingAddress.street || '');
-      setBillingCity(pi.billingAddress.city || '');
-      setBillingState(pi.billingAddress.state || '');
-      setBillingPincode(pi.billingAddress.pincode || '');
+
+    // Robust Billing Address extraction (handles object, string, or direct properties)
+    const bAddr = pi.billingAddress || pi.billingAddressObj || {};
+    if (typeof bAddr === 'object') {
+      setBillingStreet(bAddr.street || bAddr.address || pi.billingStreet || '');
+      setBillingCity(bAddr.city || pi.billingCity || '');
+      setBillingState(bAddr.state || pi.billingState || '');
+      setBillingPincode(bAddr.pincode || bAddr.pin || pi.billingPincode || '');
+    } else if (typeof bAddr === 'string') {
+      setBillingStreet(bAddr || pi.billingStreet || '');
+      setBillingCity(pi.billingCity || '');
+      setBillingState(pi.billingState || '');
+      setBillingPincode(pi.billingPincode || '');
+    } else {
+      setBillingStreet(pi.billingStreet || '');
+      setBillingCity(pi.billingCity || '');
+      setBillingState(pi.billingState || '');
+      setBillingPincode(pi.billingPincode || '');
     }
-    if (pi.deliveryAddress) {
-      setDeliveryStreet(pi.deliveryAddress.street || '');
-      setDeliveryCity(pi.deliveryAddress.city || '');
-      setDeliveryState(pi.deliveryAddress.state || '');
-      setDeliveryPincode(pi.deliveryAddress.pincode || '');
-      setSameAsBilling(pi.sameAsBilling !== undefined ? pi.sameAsBilling : false);
+
+    // Robust Delivery Address extraction
+    const dAddr = pi.deliveryAddress || pi.deliveryAddressObj || {};
+    if (typeof dAddr === 'object') {
+      setDeliveryStreet(dAddr.street || dAddr.address || pi.deliveryStreet || '');
+      setDeliveryCity(dAddr.city || pi.deliveryCity || '');
+      setDeliveryState(dAddr.state || pi.deliveryState || '');
+      setDeliveryPincode(dAddr.pincode || dAddr.pin || pi.deliveryPincode || '');
+    } else if (typeof dAddr === 'string') {
+      setDeliveryStreet(dAddr || pi.deliveryStreet || '');
+      setDeliveryCity(pi.deliveryCity || '');
+      setDeliveryState(pi.deliveryState || '');
+      setDeliveryPincode(pi.deliveryPincode || '');
+    } else {
+      setDeliveryStreet(pi.deliveryStreet || '');
+      setDeliveryCity(pi.deliveryCity || '');
+      setDeliveryState(pi.deliveryState || '');
+      setDeliveryPincode(pi.deliveryPincode || '');
     }
+    setSameAsBilling(pi.sameAsBilling !== undefined ? pi.sameAsBilling : (!pi.deliveryStreet && !pi.deliveryAddress));
     if (pi.presetGroups) {
       setPresetGroups(pi.presetGroups);
     } else {
@@ -2116,38 +2131,26 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 {(() => {
                   const targetPiNo = selectedPIs[0];
                   const targetPi = targetPiNo ? piList.find(p => p.piNo === targetPiNo) : null;
-                  const isConverted = targetPi && (targetPi.status === 'Converted to BOM' || targetPi.convertedToBom);
 
                   return (
                     <button
                       onClick={() => {
                         if (selectedPIs.length > 1) {
-                          alert('You cannot edit multiple items at once.');
+                          alert('You cannot edit multiple items at once. Please select 1 item.');
                         } else if (selectedPIs.length === 1) {
-                          if (isConverted) {
-                            setValidationAlert({
-                              title: '🔒 Proforma Invoice Locked',
-                              message: 'This Proforma Invoice has already been converted to a Bill of Materials (BOM) order and cannot be edited.',
-                              missingList: [{
-                                field: 'Converted to BOM Order',
-                                message: `PI #${targetPi?.piNo || targetPiNo} is locked to preserve contractual and production integrity.`
-                              }]
-                            });
-                            return;
-                          }
                           const idx = piList.findIndex(p => p.piNo === targetPiNo);
                           handleStartEdit(targetPi || { piNo: targetPiNo }, idx >= 0 ? idx : 0);
                         }
                       }}
                       style={{
-                        backgroundColor: isConverted ? '#F8FAFC' : '#FFFFFF',
+                        backgroundColor: '#FFFFFF',
                         border: '1px solid #E2E8F0',
-                        color: isConverted ? '#94A3B8' : '#1E293B',
+                        color: '#1E293B',
                         borderRadius: '10px',
                         padding: '6px 14px',
                         fontSize: '12px',
                         fontWeight: '700',
-                        cursor: isConverted ? 'not-allowed' : 'pointer',
+                        cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -2156,10 +2159,10 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                         transition: 'all 0.15s ease'
                       }}
-                      title={isConverted ? 'Cannot edit PI that has already been converted to BOM' : 'Edit Info'}
+                      title="Edit Info"
                     >
-                      <Edit3 size={14} style={{ color: isConverted ? '#94A3B8' : '#64748B' }} />
-                      {isConverted ? 'Locked (Converted)' : 'Edit Info'}
+                      <Edit3 size={14} style={{ color: '#0E7490' }} />
+                      Edit Info
                     </button>
                   );
                 })()}
@@ -4209,16 +4212,23 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 <AlertCircle size={24} />
               </div>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>Mandatory Fields Required</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Please complete all required fields to move forward.</p>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0F172A', margin: 0 }}>
+                  {validationAlert.title || 'Mandatory Fields Required'}
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                  {validationAlert.message || 'Please complete all required fields to move forward.'}
+                </p>
               </div>
             </div>
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>You did not fill out the following mandatory box(es):</span>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>
+                {validationAlert.note || 'You did not fill out the following mandatory box(es):'}
+              </span>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#DC2626', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {(validationAlert.fields || []).map((field, idx) => (
-                  <li key={idx}><strong>{field}</strong></li>
-                ))}
+                {(validationAlert.fields || validationAlert.missingList || []).map((item, idx) => {
+                  const label = typeof item === 'object' ? (item.field || item.name || item.message || JSON.stringify(item)) : item;
+                  return <li key={idx}><strong>{label}</strong></li>;
+                })}
               </ul>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
