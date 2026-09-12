@@ -804,7 +804,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     }
 
     const presetName = targetPreset.label || presetId;
-    const initialGstRate = targetPreset.gstRate || targetPreset.gst || '18%';
+    const isDcrBosKit = targetPreset.category === 'DCR BOS Solar Kits' || targetPreset.category === 'BOS Solar Kits' || (targetPreset.label && targetPreset.label.includes('BOS KITS'));
+    const initialGstRate = isDcrBosKit ? '5%' : (targetPreset.gstRate || targetPreset.gst || '18%');
 
     setPresetGroups(prev => ({
       ...prev,
@@ -827,7 +828,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         baseQty: baseQ,
         qty: String(Math.round(baseQ * multiplier)),
         rate: '0',
-        gstRate: it.gstRate || initialGstRate,
+        gstRate: isDcrBosKit ? '5%' : (it.gstRate || initialGstRate),
         isPresetItem: true
       };
     });

@@ -27,6 +27,7 @@ import { ShoppingCart, Factory, Shield, User, ArrowRight, Receipt, RefreshCw } f
 import { useEffect, Component } from 'react';
 import { heartbeatActiveSession, registerActiveSession, revokeSession } from './services/sessionService';
 import { getSafeZohoPOs, getSafeZohoItems } from './services/zohoSafeSync';
+import { fetchMasterBranding } from './services/brandingService';
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -270,7 +271,8 @@ function App() {
       try {
         const [poData, itemsData] = await Promise.all([
           getSafeZohoPOs(),
-          getSafeZohoItems()
+          getSafeZohoItems(),
+          fetchMasterBranding()
         ]);
         
         if (Array.isArray(poData)) {

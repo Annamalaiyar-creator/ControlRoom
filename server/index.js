@@ -175,6 +175,7 @@ const loadLocalWorkOrders = () => {
       syncStoreWithSupabase('bom_store', []),
       syncStoreWithSupabase('employees_store', []),
       syncStoreWithSupabase('invoice_store', []),
+      syncStoreWithSupabase('company_branding_store', {}),
       syncStoreWithSupabase('workorder_store', initialWOs)
     ]);
     console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');

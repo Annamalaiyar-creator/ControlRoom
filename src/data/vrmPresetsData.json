@@ -19282,7 +19282,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "POLYCAB ONGRID 3.6KW Single Phase",
@@ -19290,7 +19290,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (1-5 KW) With MCB AND SPD",
@@ -19298,7 +19298,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
@@ -19306,7 +19306,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "LIGHTNING ARRESTER 16mm",
@@ -19314,7 +19314,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTH PIT CHAMBER",
@@ -19322,7 +19322,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CHEMICAL BAG 10kg",
@@ -19330,7 +19330,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 4Sqmm. (Red)",
@@ -19338,7 +19338,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 4Sqmm. (Black)",
@@ -19346,7 +19346,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 4Sqmm. (Red)",
@@ -19354,7 +19354,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 4Sqmm. (Black)",
@@ -19362,7 +19362,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 4Sqmm. (Green)",
@@ -19370,7 +19370,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 16Sqmm. (Green)",
@@ -19378,7 +19378,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC4 CONNECTOR",
@@ -19386,7 +19386,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TIE",
@@ -19394,7 +19394,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -19402,7 +19402,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -19410,7 +19410,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TRAY",
@@ -19418,7 +19418,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -19426,9 +19426,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "preset_bos_kits___dcr_4_kw": {
     "id": "preset_bos_kits___dcr_4_kw",
@@ -19441,7 +19443,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "POLYCAB ONGRID 4KW Single Phase",
@@ -19449,7 +19451,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (1-5 KW) With MCB AND SPD",
@@ -19457,7 +19459,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
@@ -19465,7 +19467,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "LIGHTNING ARRESTER 16mm",
@@ -19473,7 +19475,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -19481,7 +19483,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
@@ -19489,7 +19491,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTH PIT CHAMBER",
@@ -19497,7 +19499,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CHEMICAL BAG 10kg",
@@ -19505,7 +19507,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 4Sqmm. (Red)",
@@ -19513,7 +19515,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 4Sqmm. (Black)",
@@ -19521,7 +19523,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 4Sqmm. (Red)",
@@ -19529,7 +19531,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 4Sqmm. (Black)",
@@ -19537,7 +19539,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 16Sqmm. (Green)",
@@ -19545,7 +19547,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 4Sqmm. (Green)",
@@ -19553,7 +19555,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC4 CONNECTOR",
@@ -19561,7 +19563,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TIE",
@@ -19569,7 +19571,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -19577,7 +19579,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -19585,7 +19587,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TRAY",
@@ -19593,9 +19595,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "preset_bos_kits__dcr_5_kw": {
     "id": "preset_bos_kits__dcr_5_kw",
@@ -19608,7 +19612,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "POLYCAB ONGRID 5KW Single Phase",
@@ -19616,7 +19620,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (1-5 KW) With MCB AND SPD",
@@ -19624,7 +19628,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (1-5 KW) With MCB, FUSE AND SPD",
@@ -19632,7 +19636,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (5-10 KW) With MCB AND SPD",
@@ -19640,7 +19644,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (5-10 KW) With MCB, FUSE AND SPD",
@@ -19648,7 +19652,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "LIGHTNING ARRESTER 16mm",
@@ -19656,7 +19660,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -19664,7 +19668,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
@@ -19672,7 +19676,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTH PIT CHAMBER",
@@ -19680,7 +19684,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CHEMICAL BAG 10kg",
@@ -19688,7 +19692,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 6Sqmm. (Red)",
@@ -19696,7 +19700,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DC CABLE 6Sqmm. (Black)",
@@ -19704,7 +19708,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 6Sqmm. (Red)",
@@ -19712,7 +19716,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "AC CABLE 6Sqmm. (Black)",
@@ -19720,7 +19724,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 16Sqmm. (Green)",
@@ -19728,7 +19732,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHING CABLE 6Sqmm. (Green)",
@@ -19736,7 +19740,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC4 CONNECTOR",
@@ -19744,7 +19748,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TIE",
@@ -19752,7 +19756,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -19760,7 +19764,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -19768,7 +19772,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE TRAY",
@@ -19776,9 +19780,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "preset_bos_kits__dcr_6_kw": {
     "id": "preset_bos_kits__dcr_6_kw",
@@ -19791,7 +19797,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Inverter - Polycab make 5 Kw 1 Ph",
@@ -19799,7 +19805,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (5-10 KW) WITH MCB AND SPD",
@@ -19807,7 +19813,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
@@ -19815,7 +19821,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Lightning Arrestor - 16mm (Terrabond)",
@@ -19823,7 +19829,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -19831,7 +19837,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
@@ -19839,7 +19845,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Earth Pit Chamber",
@@ -19847,7 +19853,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Chemical Bag -10 kg",
@@ -19855,7 +19861,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
@@ -19863,7 +19869,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
@@ -19871,7 +19877,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
@@ -19879,7 +19885,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
@@ -19887,7 +19893,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
@@ -19895,7 +19901,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
@@ -19903,7 +19909,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
@@ -19911,7 +19917,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC 4 Connector",
@@ -19919,7 +19925,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tie",
@@ -19927,7 +19933,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -19935,7 +19941,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -19943,7 +19949,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tray",
@@ -19951,9 +19957,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "preset_bos_kits__dcr_8_kw": {
     "id": "preset_bos_kits__dcr_8_kw",
@@ -19966,7 +19974,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Inverter - Polycab make 5 Kw 1 Ph",
@@ -19974,7 +19982,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (5-10 KW) WITH MCB AND SPD",
@@ -19982,7 +19990,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
@@ -19990,7 +19998,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Lightning Arrestor - 16mm (Terrabond)",
@@ -19998,7 +20006,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -20006,7 +20014,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
@@ -20014,7 +20022,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Earth Pit Chamber",
@@ -20022,7 +20030,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Chemical Bag -10 kg",
@@ -20030,7 +20038,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
@@ -20038,7 +20046,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
@@ -20046,7 +20054,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
@@ -20054,7 +20062,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
@@ -20062,7 +20070,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
@@ -20070,7 +20078,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
@@ -20078,7 +20086,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
@@ -20086,7 +20094,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC 4 Connector",
@@ -20094,7 +20102,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tie",
@@ -20102,7 +20110,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -20110,7 +20118,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -20118,7 +20126,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tray",
@@ -20126,9 +20134,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "preset_bos_kits__dcr_10_kw": {
     "id": "preset_bos_kits__dcr_10_kw",
@@ -20141,7 +20151,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Inverter - Polycab make 5 Kw 1 Ph",
@@ -20149,7 +20159,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "ACDB (5-10 KW) WITH MCB AND SPD",
@@ -20157,7 +20167,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "DCDB (5-10 KW) WITH MCB, FUSE AND SPD",
@@ -20165,7 +20175,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Lightning Arrestor - 16mm (Terrabond)",
@@ -20173,7 +20183,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 1 meter",
@@ -20181,7 +20191,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "EARTHROD COPPER BONDED 17.2mm - 2 METER",
@@ -20189,7 +20199,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Earth Pit Chamber",
@@ -20197,7 +20207,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Chemical Bag -10 kg",
@@ -20205,7 +20215,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Red",
@@ -20213,7 +20223,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make DC CABLEs 6 Sqmm - Black",
@@ -20221,7 +20231,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Red",
@@ -20229,7 +20239,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make AC CABLEs 6 Sqmm - Black",
@@ -20237,7 +20247,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 16 Sqmm - Green",
@@ -20245,7 +20255,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 6 Sqmm - Green",
@@ -20253,7 +20263,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Polycab make Earthing CABLEs 4 Sqmm - Green",
@@ -20261,7 +20271,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "MC 4 Connector",
@@ -20269,7 +20279,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tie",
@@ -20277,7 +20287,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 4 sqmm",
@@ -20285,7 +20295,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "Pin Lugs and Ring Lugs - 6 sqmm",
@@ -20293,7 +20303,7 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       },
       {
         "name": "CABLE Tray",
@@ -20301,9 +20311,11 @@
         "uom": "NOS",
         "category": "BOS",
         "rate": "0.0",
-        "gstRate": "18%"
+        "gstRate": "5%"
       }
-    ]
+    ],
+    "gstRate": "5%",
+    "gst": "5%"
   },
   "hp_2_2_hp__500_x_1000_": {
     "id": "hp_2_2_hp__500_x_1000_",

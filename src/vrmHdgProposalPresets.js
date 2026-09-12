@@ -17,6 +17,23 @@ export const VRM_HDG_PRESETS = basePresets;
 // Cache basePresets lookup for fast access
 const basePresetsMap = basePresets || {};
 
+// Normalizer helper to enforce 5% GST default for DCR BOS Solar Proposal Kits
+const normalizePresetGst = (preset) => {
+  if (!preset) return preset;
+  const isDcrBos = (preset.category && (preset.category === 'DCR BOS Solar Kits' || preset.category === 'BOS Solar Kits' || preset.category.includes('DCR BOS'))) ||
+                   (preset.label && preset.label.includes('BOS KITS'));
+  if (isDcrBos) {
+    const updatedItems = Array.isArray(preset.items) ? preset.items.map(it => ({ ...it, gstRate: '5%' })) : [];
+    return {
+      ...preset,
+      gstRate: '5%',
+      gst: '5%',
+      items: updatedItems
+    };
+  }
+  return preset;
+};
+
 /**
  * Get all active presets including custom/edited presets stored in localStorage or cloud
  */
@@ -46,8 +63,13 @@ export function getAllActivePresets() {
     console.error("Error reading controlroom_presets_store", e);
   }
 
-  // Combine standard base presets (all 270 items) and custom created presets
-  return { ...basePresetsMap, ...customMap };
+  // Combine standard base presets and custom created presets, normalizing DCR BOS to 5% GST
+  const combined = { ...basePresetsMap, ...customMap };
+  const normalized = {};
+  Object.keys(combined).forEach(key => {
+    normalized[key] = normalizePresetGst(combined[key]);
+  });
+  return normalized;
 }
 
 /**

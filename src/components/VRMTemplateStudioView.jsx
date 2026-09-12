@@ -40,6 +40,8 @@ import {
   VRMProformaInvoicePrintSheet,
   DEFAULT_PI_TEMPLATE_SETTINGS
 } from './VRMProformaInvoicePrintTemplate';
+import { fetchMasterBranding, getCachedBranding, saveCompanyBranding, subscribeBrandingUpdates } from '../services/brandingService';
+import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 
 // 12 Curated Preset Swatches
 const COLOR_PRESETS = [
@@ -486,11 +488,58 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
   const logoInputRef = useRef(null);
   const stampInputRef = useRef(null);
 
-  // Save store changes to localStorage
+  // Pull latest master company branding and cloud templates on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterBranding().then(master => {
+      if (isMounted && master && typeof master === 'object') {
+        setCurrentSettings(prev => ({
+          ...prev,
+          ...(master.logoUrl && { customLogoUrl: master.logoUrl }),
+          ...(master.customStampUrl !== undefined && { customStampUrl: master.customStampUrl }),
+          ...(master.stampMode && { stampMode: master.stampMode }),
+          ...(master.stampSize && { stampSize: master.stampSize }),
+          ...(master.stampText && { stampText: master.stampText }),
+          ...(master.stampLocation && { stampLocation: master.stampLocation }),
+          ...(master.showSignatoryStamp !== undefined && { showSignatoryStamp: master.showSignatoryStamp })
+        }));
+      }
+    });
+
+    const unsub = subscribeBrandingUpdates(b => {
+      if (isMounted && b && typeof b === 'object') {
+        setCurrentSettings(prev => ({
+          ...prev,
+          ...(b.logoUrl && { customLogoUrl: b.logoUrl }),
+          ...(b.customStampUrl !== undefined && { customStampUrl: b.customStampUrl }),
+          ...(b.stampMode && { stampMode: b.stampMode }),
+          ...(b.stampSize && { stampSize: b.stampSize }),
+          ...(b.stampText && { stampText: b.stampText }),
+          ...(b.stampLocation && { stampLocation: b.stampLocation }),
+          ...(b.showSignatoryStamp !== undefined && { showSignatoryStamp: b.showSignatoryStamp })
+        }));
+      }
+    });
+
+    // Also fetch cloud templates store
+    fetchCloudStore('templates_store', null).then(cloudTmpl => {
+      if (isMounted && cloudTmpl && typeof cloudTmpl === 'object') {
+        setTemplatesStore(prev => ({ ...prev, ...cloudTmpl }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsub();
+    };
+  }, []);
+
+  // Save store changes to localStorage AND cloud database
   const persistStore = (newStore) => {
     setTemplatesStore(newStore);
     try {
       localStorage.setItem('vrm_multi_templates_v2', JSON.stringify(newStore));
+      saveCloudStore('templates_store', newStore);
     } catch (e) {
       console.warn('Failed to save templates store to localStorage:', e);
     }
@@ -513,9 +562,35 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     }
   };
 
-  // Update setting in working draft
+  // Update setting in working draft and auto-sync branding across all logins
   const updateSetting = (updates) => {
-    setCurrentSettings(prev => ({ ...prev, ...updates }));
+    setCurrentSettings(prev => {
+      const next = { ...prev, ...updates };
+
+      if (
+        updates.customStampUrl !== undefined ||
+        updates.customLogoUrl !== undefined ||
+        updates.stampMode !== undefined ||
+        updates.stampSize !== undefined ||
+        updates.stampText !== undefined ||
+        updates.stampLocation !== undefined ||
+        updates.showSignatoryStamp !== undefined ||
+        updates.logoHeight !== undefined
+      ) {
+        saveCompanyBranding({
+          ...(updates.customStampUrl !== undefined && { customStampUrl: updates.customStampUrl }),
+          ...(updates.customLogoUrl !== undefined && { logoUrl: updates.customLogoUrl }),
+          ...(updates.stampMode !== undefined && { stampMode: updates.stampMode }),
+          ...(updates.stampSize !== undefined && { stampSize: updates.stampSize }),
+          ...(updates.stampText !== undefined && { stampText: updates.stampText }),
+          ...(updates.stampLocation !== undefined && { stampLocation: updates.stampLocation }),
+          ...(updates.showSignatoryStamp !== undefined && { showSignatoryStamp: updates.showSignatoryStamp }),
+          ...(updates.logoHeight !== undefined && { logoHeight: updates.logoHeight })
+        });
+      }
+
+      return next;
+    });
   };
 
   // Triggered when a section or column is removed in the editor

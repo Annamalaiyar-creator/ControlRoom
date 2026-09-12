@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, X } from 'lucide-react';
+import { getCachedBranding, fetchMasterBranding, subscribeBrandingUpdates } from '../services/brandingService';
 
 export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
+  const [branding, setBranding] = useState(getCachedBranding);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterBranding().then(b => {
+      if (isMounted && b) setBranding(b);
+    });
+    const unsub = subscribeBrandingUpdates(b => {
+      if (isMounted && b) setBranding(b);
+    });
+    return () => {
+      isMounted = false;
+      unsub();
+    };
+  }, []);
+
   if (!invoiceData) return null;
 
   const inv = invoiceData;
@@ -142,9 +159,10 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                         {/* Official VRM Structures Logo Image */}
                         <div style={{ marginBottom: '8px' }}>
                           <img
-                            src="/vrm_logo.png"
+                            src={branding.logoUrl || '/vrm_logo.png'}
                             alt="VRM Structures Logo"
                             style={{ height: '55px', maxWidth: '240px', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.src = '/vrm_logo.png'; }}
                           />
                         </div>
                         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#003366', marginTop: '4px' }}>
@@ -346,20 +364,32 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                 </table>
 
                 {/* AUTHORIZED SIGNATORY STAMP BOX */}
-                <div style={{ padding: '16px', textAlign: 'center', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ padding: '16px', textAlign: 'center', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#000000' }}>
-                    VRM Structures India Pvt Ltd
+                    {branding.forCompanyText || 'VRM Structures India Pvt Ltd'}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
-                    <svg width="150" height="55" viewBox="0 0 150 55">
-                      <circle cx="75" cy="27" r="24" stroke="#003366" strokeWidth="1.5" strokeDasharray="3 3"/>
-                      <text x="75" y="20" textAnchor="middle" fill="#003366" fontSize="7.5" fontWeight="bold">VRM STRUCTURES INDIA</text>
-                      <text x="75" y="36" textAnchor="middle" fill="#003366" fontSize="7.5">CHENNAI</text>
-                      <path d="M 40 30 Q 65 10 110 25" stroke="#0047AB" strokeWidth="2" fill="none" />
-                    </svg>
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%', minHeight: '70px', alignItems: 'center' }}>
+                    {branding.stampMode === 'custom' && branding.customStampUrl ? (
+                      <img
+                        src={branding.customStampUrl}
+                        alt="Company Stamp"
+                        style={{
+                          maxHeight: '85px',
+                          maxWidth: '210px',
+                          objectFit: 'contain'
+                        }}
+                      />
+                    ) : (
+                      <svg width="180" height="65" viewBox="0 0 150 55">
+                        <circle cx="75" cy="27" r="24" stroke="#003366" strokeWidth="1.5" strokeDasharray="3 3"/>
+                        <text x="75" y="20" textAnchor="middle" fill="#003366" fontSize="7.5" fontWeight="bold">{branding.stampText || 'VRM STRUCTURES INDIA'}</text>
+                        <text x="75" y="36" textAnchor="middle" fill="#003366" fontSize="7.5">{branding.stampLocation || 'CHENNAI'}</text>
+                        <path d="M 40 30 Q 65 10 110 25" stroke="#0047AB" strokeWidth="2" fill="none" />
+                      </svg>
+                    )}
                   </div>
                   <div style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#000000' }}>
-                    Authorized Signatory
+                    {branding.signatoryTitle || 'Authorized Signatory'}
                   </div>
                 </div>
 

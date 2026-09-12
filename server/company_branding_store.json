@@ -1,0 +1,17 @@
+{
+  "logoUrl": "/vrm_logo.png",
+  "logoHeight": 56,
+  "showLogo": true,
+  "stampMode": "vector",
+  "customStampUrl": null,
+  "stampSize": 230,
+  "showSignatoryStamp": true,
+  "stampText": "VRM STRUCTURES INDIA",
+  "stampLocation": "CHENNAI - AUTHORIZED",
+  "forCompanyText": "For VRM Structures India Pvt Ltd",
+  "signatoryTitle": "Authorized Signatory",
+  "signatoryName": "",
+  "signatureMode": "none",
+  "customSignatureUrl": null,
+  "lastUpdated": "2026-09-12T15:19:00.000Z"
+}

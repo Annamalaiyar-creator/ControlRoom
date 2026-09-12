@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, X, Download } from 'lucide-react';
+import { getCachedBranding, fetchMasterBranding, subscribeBrandingUpdates } from '../services/brandingService';
 
 function numberToWordsINR(num) {
   if (num === null || num === undefined || isNaN(num) || num === 0) return 'Zero Rupees Only';
@@ -21,6 +22,22 @@ function numberToWordsINR(num) {
 }
 
 export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
+  const [branding, setBranding] = useState(getCachedBranding);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterBranding().then(b => {
+      if (isMounted && b) setBranding(b);
+    });
+    const unsub = subscribeBrandingUpdates(b => {
+      if (isMounted && b) setBranding(b);
+    });
+    return () => {
+      isMounted = false;
+      unsub();
+    };
+  }, []);
+
   if (!bomData) return null;
 
   const b = bomData;
@@ -137,9 +154,10 @@ export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
               <td style={{ width: '58%', verticalAlign: 'top', paddingRight: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
                   <img
-                    src="/vrm_logo.png"
+                    src={branding.logoUrl || '/vrm_logo.png'}
                     alt="VRM Structures Logo"
                     style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }}
+                    onError={(e) => { e.currentTarget.src = '/vrm_logo.png'; }}
                   />
                   <div>
                     <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0E7490', letterSpacing: '-0.2px' }}>
@@ -424,11 +442,32 @@ export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
 
         {/* 6. SIGNATURES & FOOTER */}
         <div className="print-avoid-break" style={{ borderTop: '2px solid #CBD5E1', paddingTop: '16px', marginTop: '22px', display: 'flex', justifyContent: 'flex-end', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-          <div style={{ textAlign: 'center', width: '220px' }}>
-            <div style={{ height: '55px' }} />
-            <div style={{ borderTop: '1.5px dashed #94A3B8', paddingTop: '6px' }}>
-              <strong style={{ color: '#0F172A', fontSize: '11.5px', display: 'block' }}>For VRM Structures India Pvt Ltd</strong>
-              <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '4px' }}>Authorized Signatory</div>
+          <div style={{ textAlign: 'center', minWidth: '230px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {branding.showSignatoryStamp && (
+              <div style={{ minHeight: '65px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
+                {branding.stampMode === 'custom' && branding.customStampUrl ? (
+                  <img
+                    src={branding.customStampUrl}
+                    alt="Company Stamp"
+                    style={{
+                      maxHeight: '75px',
+                      maxWidth: '200px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                ) : (
+                  <svg width="170" height="60" viewBox="0 0 125 46">
+                    <ellipse cx="62" cy="23" rx="54" ry="19" stroke="#0E7490" strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
+                    <text x="62" y="19" textAnchor="middle" fill="#0E7490" fontSize="6.5" fontWeight="bold">{branding.stampText || 'VRM STRUCTURES INDIA'}</text>
+                    <text x="62" y="30" textAnchor="middle" fill="#0E7490" fontSize="5.5">{branding.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
+                    <path d="M 38 24 Q 60 14 90 22" stroke="#0E7490" strokeWidth="1.5" fill="none" />
+                  </svg>
+                )}
+              </div>
+            )}
+            <div style={{ borderTop: '1.5px dashed #94A3B8', paddingTop: '6px', width: '100%' }}>
+              <strong style={{ color: '#0F172A', fontSize: '11.5px', display: 'block' }}>{branding.forCompanyText || 'For VRM Structures India Pvt Ltd'}</strong>
+              <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '4px' }}>{branding.signatoryTitle || 'Authorized Signatory'}</div>
             </div>
           </div>
         </div>

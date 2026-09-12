@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { fetchMasterBranding, getCachedBranding, saveCompanyBranding, subscribeBrandingUpdates } from '../services/brandingService';
 import {
   Printer,
   Download,
@@ -3316,12 +3317,11 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
   const [undoToast, setUndoToast] = useState(null);
   const undoTimeoutRef = useRef(null);
 
-  // Load saved preferences or fall back to defaults
+  // Load saved preferences or fall back to defaults synced with master company branding
   const [templateSettings, setTemplateSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('vrm_pi_template_customization');
-      const constantLogo = localStorage.getItem('vrm_constant_logo');
-      const constantStamp = localStorage.getItem('vrm_constant_stamp');
+      const branding = getCachedBranding();
 
       let initial = { ...DEFAULT_PI_TEMPLATE_SETTINGS };
       if (saved) {
@@ -3338,15 +3338,28 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         parsed.showCompanyTagline = false;
         initial = { ...initial, ...parsed };
       }
-      if (constantLogo) {
-        initial.customLogoUrl = constantLogo;
-        initial.showLogo = true;
+
+      // Merge master company branding (logo, stamp, signatory details)
+      if (branding) {
+        if (branding.logoUrl) {
+          initial.customLogoUrl = branding.logoUrl;
+          initial.showLogo = branding.showLogo !== undefined ? branding.showLogo : true;
+        }
+        if (branding.customStampUrl) {
+          initial.customStampUrl = branding.customStampUrl;
+          initial.stampMode = branding.stampMode || 'custom';
+          initial.showSignatoryStamp = true;
+        }
+        if (branding.stampText) initial.stampText = branding.stampText;
+        if (branding.stampLocation) initial.stampLocation = branding.stampLocation;
+        if (branding.stampSize) initial.stampSize = branding.stampSize;
+        if (branding.logoHeight) initial.logoHeight = branding.logoHeight;
+        if (branding.forCompanyText) initial.forCompanyText = branding.forCompanyText;
+        if (branding.signatoryTitle) initial.signatoryTitle = branding.signatoryTitle;
+        if (branding.signatureMode) initial.signatureMode = branding.signatureMode;
+        if (branding.customSignatureUrl) initial.customSignatureUrl = branding.customSignatureUrl;
       }
-      if (constantStamp) {
-        initial.customStampUrl = constantStamp;
-        initial.stampMode = 'custom';
-        initial.showSignatoryStamp = true;
-      }
+
       // Fixed constant dimensions
       initial.logoHeight = 56;
       initial.stampSize = 230;
@@ -3354,6 +3367,53 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
     } catch (e) {}
     return { ...DEFAULT_PI_TEMPLATE_SETTINGS, logoHeight: 56, stampSize: 230 };
   });
+
+  // Pull latest master company branding from backend on mount and subscribe to multi-tab updates
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterBranding().then(master => {
+      if (isMounted && master && typeof master === 'object') {
+        setTemplateSettings(prev => ({
+          ...prev,
+          ...(master.logoUrl && { customLogoUrl: master.logoUrl }),
+          ...(master.customStampUrl !== undefined && { customStampUrl: master.customStampUrl }),
+          ...(master.stampMode && { stampMode: master.stampMode }),
+          ...(master.stampSize && { stampSize: master.stampSize }),
+          ...(master.stampText && { stampText: master.stampText }),
+          ...(master.stampLocation && { stampLocation: master.stampLocation }),
+          ...(master.showSignatoryStamp !== undefined && { showSignatoryStamp: master.showSignatoryStamp }),
+          ...(master.forCompanyText && { forCompanyText: master.forCompanyText }),
+          ...(master.signatoryTitle && { signatoryTitle: master.signatoryTitle }),
+          ...(master.signatureMode && { signatureMode: master.signatureMode }),
+          ...(master.customSignatureUrl !== undefined && { customSignatureUrl: master.customSignatureUrl })
+        }));
+      }
+    });
+
+    const unsub = subscribeBrandingUpdates(b => {
+      if (isMounted && b && typeof b === 'object') {
+        setTemplateSettings(prev => ({
+          ...prev,
+          ...(b.logoUrl && { customLogoUrl: b.logoUrl }),
+          ...(b.customStampUrl !== undefined && { customStampUrl: b.customStampUrl }),
+          ...(b.stampMode && { stampMode: b.stampMode }),
+          ...(b.stampSize && { stampSize: b.stampSize }),
+          ...(b.stampText && { stampText: b.stampText }),
+          ...(b.stampLocation && { stampLocation: b.stampLocation }),
+          ...(b.showSignatoryStamp !== undefined && { showSignatoryStamp: b.showSignatoryStamp }),
+          ...(b.forCompanyText && { forCompanyText: b.forCompanyText }),
+          ...(b.signatoryTitle && { signatoryTitle: b.signatoryTitle }),
+          ...(b.signatureMode && { signatureMode: b.signatureMode }),
+          ...(b.customSignatureUrl !== undefined && { customSignatureUrl: b.customSignatureUrl })
+        }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsub();
+    };
+  }, []);
 
   if (!piData) return null;
 
@@ -3370,6 +3430,36 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         if (next.customLogoUrl) localStorage.setItem('vrm_constant_logo', next.customLogoUrl);
         if (next.customStampUrl) localStorage.setItem('vrm_constant_stamp', next.customStampUrl);
       } catch (e) {}
+
+      // Automatically sync branding changes to backend server so all other logins immediately inherit
+      if (
+        updates.customStampUrl !== undefined ||
+        updates.customLogoUrl !== undefined ||
+        updates.stampMode !== undefined ||
+        updates.stampSize !== undefined ||
+        updates.stampText !== undefined ||
+        updates.stampLocation !== undefined ||
+        updates.showSignatoryStamp !== undefined ||
+        updates.forCompanyText !== undefined ||
+        updates.signatoryTitle !== undefined ||
+        updates.signatureMode !== undefined ||
+        updates.customSignatureUrl !== undefined
+      ) {
+        saveCompanyBranding({
+          ...(updates.customStampUrl !== undefined && { customStampUrl: updates.customStampUrl }),
+          ...(updates.customLogoUrl !== undefined && { logoUrl: updates.customLogoUrl }),
+          ...(updates.stampMode !== undefined && { stampMode: updates.stampMode }),
+          ...(updates.stampSize !== undefined && { stampSize: updates.stampSize }),
+          ...(updates.stampText !== undefined && { stampText: updates.stampText }),
+          ...(updates.stampLocation !== undefined && { stampLocation: updates.stampLocation }),
+          ...(updates.showSignatoryStamp !== undefined && { showSignatoryStamp: updates.showSignatoryStamp }),
+          ...(updates.forCompanyText !== undefined && { forCompanyText: updates.forCompanyText }),
+          ...(updates.signatoryTitle !== undefined && { signatoryTitle: updates.signatoryTitle }),
+          ...(updates.signatureMode !== undefined && { signatureMode: updates.signatureMode }),
+          ...(updates.customSignatureUrl !== undefined && { customSignatureUrl: updates.customSignatureUrl })
+        });
+      }
+
       return next;
     });
   };
