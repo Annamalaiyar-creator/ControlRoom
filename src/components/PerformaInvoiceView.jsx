@@ -3264,189 +3264,207 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             </div>
           </div>
 
-          {/* SECTION 4: BANK DETAILS & FINANCIAL BREAKDOWN */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', alignItems: 'start' }}>
-
-            {/* Left Column: Official Bank Details Card */}
-            <div style={{ backgroundColor: '#F0FDFA', borderRadius: '16px', border: '1px solid #99F6E4', padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Landmark size={18} color="#0E7490" />
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>VRM Official Commercial Bank Details</span>
+          {/* SECTION 4: VRM OFFICIAL COMMERCIAL BANK DETAILS */}
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                  4
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: '#0E7490', backgroundColor: '#CCFBF1', padding: '3px 8px', borderRadius: '4px', border: '1px solid #5EEAD4' }}>
-                  Verified Account
-                </span>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  VRM OFFICIAL COMMERCIAL BANK DETAILS
+                </h3>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', color: '#334155' }}>
-                <div><strong>Bank:</strong> HDFC Bank Ltd</div>
-                <div><strong>Account Name:</strong> VRM STRUCTURES INDIA PVT LTD</div>
-                <div><strong>Account No:</strong> 50200088912456</div>
-                <div><strong>IFSC Code:</strong> HDFC0001234</div>
-                <div style={{ gridColumn: 'span 2' }}><strong>Branch:</strong> Ambattur Industrial Estate, Chennai - 600058</div>
-              </div>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '6px', border: '1px solid #A5F3FC', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <Landmark size={13} color="#0E7490" /> Verified Settlement Account
+              </span>
             </div>
 
-            {/* Right Column: Real-Time Commercial Financial Summary Card */}
-            <div
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #CBD5E1',
-                borderTop: '4px solid #0E7490',
-                padding: '24px',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px'
-              }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '0.04em' }}>
-                    FINANCIAL BREAKDOWN
-                  </h3>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '3px 8px', borderRadius: '4px', border: '1px solid #A5F3FC' }}>
-                    INR (₹) Commercial
+            <div style={{ backgroundColor: '#F0FDFA', borderRadius: '12px', border: '1px solid #99F6E4', padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', fontSize: '13px', color: '#334155' }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '2px' }}>BANK NAME</span>
+                  <strong style={{ color: '#0F172A', fontSize: '13.5px' }}>HDFC Bank Ltd</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '2px' }}>BENEFICIARY ACCOUNT NAME</span>
+                  <strong style={{ color: '#0F172A', fontSize: '13.5px' }}>VRM STRUCTURES INDIA PVT LTD</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '2px' }}>CURRENT ACCOUNT NUMBER</span>
+                  <strong style={{ color: '#0E7490', fontSize: '14px', fontFamily: 'monospace' }}>50200088912456</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '2px' }}>RTGS / NEFT / IFSC CODE</span>
+                  <strong style={{ color: '#0E7490', fontSize: '14px', fontFamily: 'monospace' }}>HDFC0001234</strong>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', display: 'block', marginBottom: '2px' }}>BRANCH LOCATION</span>
+                  <strong style={{ color: '#334155', fontSize: '13px' }}>Ambattur Industrial Estate, Chennai - 600058</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 5: FINANCIAL BREAKDOWN */}
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E2E8F0', borderTop: '4px solid #0E7490', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#0E7490', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '800' }}>
+                  5
+                </div>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0E7490', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  FINANCIAL BREAKDOWN
+                </h3>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#0E7490', backgroundColor: '#ECFEFF', padding: '4px 10px', borderRadius: '6px', border: '1px solid #A5F3FC' }}>
+                INR (₹) Commercial
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
+              {/* Financial Calculation Lines */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                {totals.kitSubtotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4F46E5' }}>
+                    <span style={{ fontWeight: '600' }}>Preset Kits Subtotal:</span>
+                    <span style={{ fontWeight: '700' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                  <span>Line Items Subtotal:</span>
+                  <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{(totals.sub - totals.kitSubtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', color: '#0F172A', fontWeight: '700', borderTop: '1px dashed #CBD5E1', paddingTop: '8px' }}>
+                  <span>Total Taxable Subtotal:</span>
+                  <span>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                  <span>CGST (9%):</span>
+                  <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                  <span>SGST (9%):</span>
+                  <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '8px 12px', borderRadius: '8px' }}>
+                  <span>Total GST Amount (18%):</span>
+                  <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: '2px solid #0E7490',
+                    paddingTop: '14px',
+                    marginTop: '4px'
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', display: 'block' }}>Grand Total (INR)</span>
+                    <span style={{ fontSize: '11px', color: '#64748B' }}>Inclusive of all statutory taxes</span>
+                  </div>
+                  <span style={{ fontSize: '22px', fontWeight: '900', color: '#0E7490' }}>
+                    ₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {totals.kitSubtotal > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#4F46E5' }}>
-                      <span style={{ fontWeight: '600' }}>Preset Kits Subtotal:</span>
-                      <span style={{ fontWeight: '700' }}>₹{totals.kitSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
-                    <span>Line Items Subtotal:</span>
-                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{(totals.sub - totals.kitSubtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#0F172A', fontWeight: '700', borderTop: '1px dashed #E2E8F0', paddingTop: '8px' }}>
-                    <span>Total Taxable Subtotal:</span>
-                    <span>₹{totals.sub.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
-                    <span>CGST (9%):</span>
-                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
-                    <span>SGST (9%):</span>
-                    <span style={{ fontWeight: '600', color: '#0F172A' }}>₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#0E7490', fontWeight: '700', backgroundColor: '#ECFEFF', padding: '6px 10px', borderRadius: '6px' }}>
-                    <span>Total GST Amount (18%):</span>
-                    <span>₹{totals.gst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderTop: '2px solid #0E7490',
-                      paddingTop: '14px',
-                      marginTop: '4px'
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', display: 'block' }}>Grand Total (INR)</span>
-                      <span style={{ fontSize: '11px', color: '#64748B' }}>Inclusive of all statutory taxes</span>
-                    </div>
-                    <span style={{ fontSize: '20px', fontWeight: '900', color: '#0E7490' }}>
-                      ₹{totals.grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-                  <button
-                    type="button"
-                    onClick={previewCurrentFormAsTemplate}
-                    style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: '#ECFEFF',
-                      color: '#0E7490',
-                      border: '1px solid #A5F3FC',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <Printer size={16} /> Preview Print / PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={triggerSaveConfirm}
-                    style={{
-                      width: '100%',
-                      height: '44px',
-                      borderRadius: '8px',
-                      backgroundColor: '#10B981',
-                      color: 'white',
-                      border: 'none',
-                      fontSize: '13px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
-                    }}
-                  >
-                    Confirm & Save PI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={triggerDraftConfirm}
-                    style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: '#FFFFFF',
-                      color: '#0E7490',
-                      border: '1.5px solid #0E7490',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    Save as Draft
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPiConfirmModal('cancel')}
-                    style={{
-                      width: '100%',
-                      height: '36px',
-                      borderRadius: '8px',
-                      backgroundColor: 'transparent',
-                      color: '#64748B',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Discard Changes
-                  </button>
-                </div>
               </div>
 
+              {/* Action Buttons Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '10px 0' }}>
+                <button
+                  type="button"
+                  onClick={previewCurrentFormAsTemplate}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    backgroundColor: '#ECFEFF',
+                    color: '#0E7490',
+                    border: '1.5px solid #A5F3FC',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Printer size={16} /> Preview Official Print / PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={triggerSaveConfirm}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    borderRadius: '10px',
+                    backgroundColor: '#10B981',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '14px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.35)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Confirm & Save Proforma Invoice
+                </button>
+                <button
+                  type="button"
+                  onClick={triggerDraftConfirm}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                    color: '#0E7490',
+                    border: '1.5px solid #0E7490',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Save as Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPiConfirmModal('cancel')}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: '10px',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Discard Changes
+                </button>
+              </div>
             </div>
+          </div>
 
           </div>
         );
