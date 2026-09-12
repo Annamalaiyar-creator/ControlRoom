@@ -657,8 +657,11 @@ app.post('/api/store/:key', async (req, res) => {
     let finalDataToSave = storeData;
 
     // For all array stores (including bom_store, invoice_store, customer_store, po_store),
-    // merge smartly so concurrent users NEVER overwrite each other
-    if (Array.isArray(storeData)) {
+    // merge smartly so concurrent users NEVER overwrite each other, unless explicitly resetting with empty array []
+    if (Array.isArray(storeData) && storeData.length === 0) {
+      finalDataToSave = [];
+      supabaseMemoryStore[key] = [];
+    } else if (Array.isArray(storeData)) {
       let existingList = [];
       if (fs.existsSync(filePath)) {
         try {
@@ -2598,6 +2601,26 @@ app.post('/api/boms/reserve-code', async (req, res) => {
   try {
     const result = await getOrReserveNextBomAtomic(true);
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Dedicated endpoint to reset BOM, PI, Dispatch, Accounts Verification, and Invoice Ledger data for a fresh start
+app.post('/api/reset-bom-workflow-data', async (req, res) => {
+  try {
+    const storesToReset = ['bom_store', 'proforma_invoice_store', 'sales_pi_store', 'invoice_store'];
+    for (const key of storesToReset) {
+      const filePath = getStoreFilePath(`${key}.json`);
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2), 'utf8');
+      supabaseMemoryStore[key] = [];
+      try {
+        await pushStoreToSupabase(key, []);
+      } catch (e) {
+        console.warn(`[Reset Supabase Warning for ${key}]:`, e.message);
+      }
+    }
+    res.json({ success: true, message: 'All BOM, PI, Dispatch, Accounts Verification, and Invoice records have been reset cleanly.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

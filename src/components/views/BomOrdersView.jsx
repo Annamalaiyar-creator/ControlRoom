@@ -97,7 +97,10 @@ export default function BomOrdersView(props) {
 
         if (data && Array.isArray(data)) {
           if (data.length === 0) {
-            setBomStore(prev => (Array.isArray(prev) && prev.length > 0 ? prev : []));
+            setBomStore([]);
+            try {
+              localStorage.setItem('controlroom_bom_store', JSON.stringify([]));
+            } catch (_) {}
           } else {
             setBomStore(prev => {
               const combined = [...(Array.isArray(data) ? data : []), ...(Array.isArray(prev) ? prev : [])];

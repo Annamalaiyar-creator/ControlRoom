@@ -8,86 +8,9 @@ import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../uti
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
 import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../utils/supabaseDataSync';
 
-const defaultSalesPIs = [
-  {
-    piNo: 'SPI-2025-101',
-    vendor: 'Apex Infra Solutions',
-    gstNo: '33AAAAA9999A1Z9',
-    productName: 'Solar Mounting Structures & Fasteners',
-    unitValue: 250000,
-    quantity: 15,
-    amount: '₹37,50,000',
-    pdfName: 'sales_pi_apex_infra.pdf',
-    piDate: '24 May 2025',
-    expDate: '24 Jun 2025',
-    status: 'Issued',
-    statusType: 'issued',
-    type: 'Sales PI'
-  },
-  {
-    piNo: 'SPI-2025-102',
-    vendor: 'SunGrid Power Systems',
-    gstNo: '27BBBBB8888B2Z8',
-    productName: 'Rooftop Solar Rails 4.2m',
-    unitValue: 145000,
-    quantity: 10,
-    amount: '₹14,50,000',
-    pdfName: 'sales_pi_sungrid.pdf',
-    piDate: '22 May 2025',
-    expDate: '22 Jun 2025',
-    status: 'Issued',
-    statusType: 'issued',
-    type: 'Sales PI'
-  }
-];
+const defaultSalesPIs = [];
 
-const defaultProcurementPIs = [
-  {
-    piNo: 'PPI-2025-001',
-    vendor: 'Tata Steel Ltd.',
-    gstNo: '22AAAAA1234A1Z1',
-    productName: 'Structural Steel Beams',
-    unitValue: 187500,
-    quantity: 10,
-    amount: '₹18,75,000',
-    pdfName: 'pi_tata_steel_2025.pdf',
-    piDate: '20 May 2025',
-    expDate: '20 Jun 2025',
-    status: 'Issued',
-    statusType: 'issued',
-    type: 'Procurement PI'
-  },
-  {
-    piNo: 'PPI-2025-002',
-    vendor: 'Jindal Aluminium',
-    gstNo: '29BBBBB5678B2Z2',
-    productName: 'Aluminum Sheets',
-    unitValue: 124000,
-    quantity: 10,
-    amount: '₹12,40,000',
-    pdfName: 'pi_jindal_ref_99.pdf',
-    piDate: '19 May 2025',
-    expDate: '19 Jun 2025',
-    status: 'Issued',
-    statusType: 'issued',
-    type: 'Procurement PI'
-  },
-  {
-    piNo: 'PPI-2025-003',
-    vendor: 'Havells India Ltd.',
-    gstNo: '07CCCCC9012C3Z3',
-    productName: 'Electrical Cables',
-    unitValue: 63500,
-    quantity: 10,
-    amount: '₹6,35,000',
-    pdfName: 'pi_havells_elect.pdf',
-    piDate: '18 May 2025',
-    expDate: '18 Jun 2025',
-    status: 'Issued',
-    statusType: 'issued',
-    type: 'Procurement PI'
-  }
-];
+const defaultProcurementPIs = [];
 
 const normalizePiRecord = (item) => {
   if (!item) return item;
@@ -156,20 +79,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(normalizePiRecord);
+        if (Array.isArray(parsed)) return parsed.map(normalizePiRecord);
       }
-      // If procurement store is checked but sales has records, check if user has converted PIs
       if (!isSalesRole) {
         const salesSaved = localStorage.getItem('controlroom_sales_pi_store');
         if (salesSaved) {
           const salesParsed = JSON.parse(salesSaved);
-          if (Array.isArray(salesParsed) && salesParsed.length > 0) {
-            return [...salesParsed, ...defaultProcurementPIs].map(normalizePiRecord);
+          if (Array.isArray(salesParsed)) {
+            return salesParsed.map(normalizePiRecord);
           }
         }
       }
     } catch (e) {}
-    return (isSalesRole ? defaultSalesPIs : defaultProcurementPIs).map(normalizePiRecord);
+    return [];
   });
 
   // Handle targetPiNo navigation
@@ -343,6 +265,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         try {
           localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(result));
           localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(result));
+        } catch (_) {}
+      } else {
+        setPiList([]);
+        try {
+          localStorage.setItem('controlroom_sales_pi_store', JSON.stringify([]));
+          localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify([]));
         } catch (_) {}
       }
     }).catch(() => {});
