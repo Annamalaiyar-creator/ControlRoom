@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import TypeableProductSelect from '../TypeableProductSelect';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
@@ -1748,43 +1749,26 @@ export default function CrmQuotationsView({
                           </td>
                           <td style={{ padding: '10px 10px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {/* Line 1: Product / Item Name */}
-                              <div style={{ position: 'relative' }}>
-                                <input
-                                  type="text"
-                                  list={`product-list-${i}`}
-                                  placeholder="Type or select product / item..."
-                                  value={item.name || ''}
-                                  onChange={(e) => {
-                                     const val = e.target.value;
-                                     const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                                     const pName = matched ? matched.name : val;
-                                     const pCat = matched ? (matched.category || matched.description || mat.category) : mat.category;
-                                     const isSolar5 = is5PctSolarProduct(pName, pCat);
-                                     setQuoteItems(prev => prev.map((mat, idx) => idx === i ? {
-                                       ...mat,
-                                       name: pName,
-                                       rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                       uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                       category: pCat,
-                                       gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
-                                     } : mat));
-                                   }}
-                                   style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: 'text' }}
-                                 />
-                                 <datalist id={`product-list-${i}`}>
-                                   {(itemsList || []).map((prod, pidx) => {
-                                     const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
-                                     const isOutOfStock = st <= 0;
-                                     const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
-                                     return (
-                                       <option key={pidx} value={prod.name}>
-                                         {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                       </option>
-                                     );
-                                   })}
-                                 </datalist>
-                               </div>
+                              {/* Line 1: Product / Item Name (Typeable & Dropdown) */}
+                              <TypeableProductSelect
+                                value={item.name || ''}
+                                itemsList={itemsList}
+                                placeholder="Type or select product / item..."
+                                accentColor="#4F46E5"
+                                onChange={(val, matched) => {
+                                  const pName = matched ? matched.name : val;
+                                  const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                                  const isSolar5 = is5PctSolarProduct(pName, pCat);
+                                  setQuoteItems(prev => prev.map((mat, idx) => idx === i ? {
+                                    ...mat,
+                                    name: pName,
+                                    rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                    uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                    category: pCat,
+                                    gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
+                                  } : mat));
+                                }}
+                              />
                                {/* Line 2: Description */}
                                <input
                                  type="text"

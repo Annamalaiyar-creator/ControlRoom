@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Check, Hourglass, Edit3, Trash2, Eye, FileText, X, UploadCloud, CheckCircle, Search, AlertTriangle, ArrowLeft, ArrowRight, MoreVertical, Edit, Info, Calendar, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, Tag, MoreHorizontal, Download, Building2, Truck, Boxes, User, Landmark, ShieldCheck, Upload, FileCheck, ShoppingCart, Clock, Printer, Palette, Copy, AlertCircle } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import SearchablePresetSelector from './SearchablePresetSelector';
+import TypeableProductSelect from './TypeableProductSelect';
 import VRMProformaInvoicePrintTemplate from './VRMProformaInvoicePrintTemplate';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
@@ -2904,42 +2905,25 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                             </td>
                             <td style={{ padding: '12px 10px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ position: 'relative' }}>
-                                  <input
-                                    type="text"
-                                    list={`pi-product-list-${i}`}
-                                    placeholder="Type or select product / item..."
-                                    value={item.name || ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                                      const pName = matched ? matched.name : val;
-                                      const pCat = matched ? (matched.category || matched.description || mat.category) : mat.category;
-                                      const isSolar5 = is5PctSolarProduct(pName, pCat);
-                                      setPiItems(prev => prev.map((mat, idx) => idx === i ? {
-                                        ...mat,
-                                        name: pName,
-                                        rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                        uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                        category: pCat,
-                                        gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
-                                      } : mat));
-                                    }}
-                                    style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600' }}
-                                  />
-                                  <datalist id={`pi-product-list-${i}`}>
-                                    {(itemsList || []).map((prod, pidx) => {
-                                      const st = Number(prod.stock !== undefined ? prod.stock : 100);
-                                      const isOutOfStock = st <= 0;
-                                      const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st})`;
-                                      return (
-                                        <option key={pidx} value={prod.name}>
-                                          {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                        </option>
-                                      );
-                                    })}
-                                  </datalist>
-                                </div>
+                                <TypeableProductSelect
+                                  value={item.name || ''}
+                                  itemsList={itemsList}
+                                  placeholder="Type or select product / item..."
+                                  accentColor="#0E7490"
+                                  onChange={(val, matched) => {
+                                    const pName = matched ? matched.name : val;
+                                    const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                                    const isSolar5 = is5PctSolarProduct(pName, pCat);
+                                    setPiItems(prev => prev.map((mat, idx) => idx === i ? {
+                                      ...mat,
+                                      name: pName,
+                                      rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                      uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                      category: pCat,
+                                      gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
+                                    } : mat));
+                                  }}
+                                />
                                 <input
                                   type="text"
                                   placeholder="Description / Technical specs..."

@@ -23,6 +23,8 @@ import * as XLSX from 'xlsx';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, readCompressedImage, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import StatusBadge from '../StatusBadge';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import TypeableProductSelect from '../TypeableProductSelect';
+import { is5PctSolarProduct } from '../PerformaInvoiceView';
 import {
   notifyBomSentToDispatch,
   notifyBomPackedAndSentToAccounts,
@@ -14263,32 +14265,26 @@ export default function ProductionViewsEngine(props) {
                                 />
                               </td>
                               <td style={{ padding: '12px 10px' }}>
-                                <input
-                                  type="text"
-                                  list={`product-list-${i}`}
+                                <TypeableProductSelect
+                                  value={item.name || ''}
+                                  itemsList={itemsList}
                                   placeholder="Type or select product..."
-                                  value={item.name}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase());
+                                  accentColor="#4F46E5"
+                                  onChange={(val, matched) => {
+                                    const pName = matched ? matched.name : val;
+                                    const pCat = matched ? (matched.description || matched.category || item.category) : item.category;
+                                    const isSolar5 = is5PctSolarProduct(pName, pCat);
                                     setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
                                       ...mat,
-                                      name: val,
+                                      name: pName,
                                       rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
                                       uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
                                       mm: matched ? (matched.sections || mat.mm) : mat.mm,
-                                      category: matched ? (matched.description || mat.category) : mat.category
+                                      category: pCat,
+                                      gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
                                     } : mat));
                                   }}
-                                  style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', backgroundColor: 'white', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                                 />
-                                <datalist id={`product-list-${i}`}>
-                                  {(itemsList || []).map((prod, pidx) => (
-                                    <option key={pidx} value={prod.name}>
-                                      {prod.code ? `[${prod.code}] ` : ''}{prod.name} — {(prod.stock !== undefined && prod.stock !== null) ? `(Stock: ${prod.stock} ${prod.uom || prod.unit || 'NOS'})` : ''}
-                                    </option>
-                                  ))}
-                                </datalist>
                               </td>
                               <td style={{ padding: '12px 10px' }}>
                                 <input

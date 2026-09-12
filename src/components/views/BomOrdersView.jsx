@@ -13,6 +13,8 @@ import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
 import SearchablePresetSelector from '../SearchablePresetSelector';
+import TypeableProductSelect from '../TypeableProductSelect';
+import { is5PctSolarProduct } from '../PerformaInvoiceView';
 import VRMBomPrintTemplate, { VRMBomPrintSheet } from '../VRMBomPrintTemplate';
 import { notifyBomSentToDispatch, notifyBomCancelledByDispatch } from '../../services/notificationService';
 
@@ -2481,54 +2483,52 @@ export default function BomOrdersView(props) {
               <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ORDER ITEMS & BILL OF MATERIALS</span>
             </div>
 
-            {newBomSourcePiNo ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#FEF3C7', border: '1.5px solid #F59E0B', padding: '0 16px', borderRadius: '20px', height: '40px', color: '#92400E', fontSize: '13px', fontWeight: '700' }}>
-                <Lock style={{ width: '15px', height: '15px', color: '#D97706' }} />
-                <span>Line Items Locked from PI ({newBomSourcePiNo})</span>
+            {newBomSourcePiNo && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ECFEFF', border: '1px solid #A5F3FC', padding: '0 14px', borderRadius: '20px', height: '38px', color: '#0E7490', fontSize: '12px', fontWeight: '700' }}>
+                <FileText style={{ width: '14px', height: '14px', color: '#0E7490' }} />
+                <span>Source PI: {newBomSourcePiNo}</span>
               </div>
-            ) : (
-              <>
-                {/* Preset Pill */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
-                  <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
-                </div>
-
-                {/* Searchable Preset Selector */}
-                <SearchablePresetSelector
-                  value={selectedPreset}
-                  activePresetsMap={activePresetsMap}
-                  accentColor="#0E7490"
-                  width="380px"
-                  placeholder="Pick a Preset to add..."
-                  style={{ height: '40px' }}
-                  onChange={(val, targetPreset) => {
-                    if (val && targetPreset && targetPreset.items) {
-                      handleAddPresetToOrder(val, targetPreset, 1);
-                    } else if (!val) {
-                      setSelectedPreset('');
-                    }
-                  }}
-                />
-
-                {/* Clear Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedBomItemIndexes.length > 0) {
-                      setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
-                      setSelectedBomItemIndexes([]);
-                    } else {
-                      if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
-                    }
-                  }}
-                  title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
-                  style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
-                >
-                  <X style={{ width: '18px', height: '18px' }} />
-                </button>
-              </>
             )}
+
+            {/* Preset Pill */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+              <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+            </div>
+
+            {/* Searchable Preset Selector */}
+            <SearchablePresetSelector
+              value={selectedPreset}
+              activePresetsMap={activePresetsMap}
+              accentColor="#0E7490"
+              width="380px"
+              placeholder="Pick a Preset to add..."
+              style={{ height: '40px' }}
+              onChange={(val, targetPreset) => {
+                if (val && targetPreset && targetPreset.items) {
+                  handleAddPresetToOrder(val, targetPreset, 1);
+                } else if (!val) {
+                  setSelectedPreset('');
+                }
+              }}
+            />
+
+            {/* Clear Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedBomItemIndexes.length > 0) {
+                  setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
+                  setSelectedBomItemIndexes([]);
+                } else {
+                  if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
+                }
+              }}
+              title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
+              style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+            >
+              <X style={{ width: '18px', height: '18px' }} />
+            </button>
           </div>
 
           {/* Active Preset Badges / Pills */}
@@ -2640,7 +2640,7 @@ export default function BomOrdersView(props) {
                   (() => {
                     const hasAnyPreset = bomMaterialsList.some(it => it.isPresetItem);
                     return bomMaterialsList.map((item, i) => {
-                    const isPiLocked = Boolean(newBomSourcePiNo);
+                    const isPiLocked = false;
                     const q = parseFloat(item.qty) || 0;
                     const r = parseFloat(item.rate) || 0;
                     const taxable = q * r;
@@ -2677,40 +2677,26 @@ export default function BomOrdersView(props) {
                         </td>
                         <td style={{ padding: '10px 10px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {/* Line 1: Product / Item Name */}
-                            <div style={{ position: 'relative' }}>
-                              <input
-                                type="text"
-                                disabled={isPiLocked}
-                                list={`product-list-${i}`}
-                                placeholder="Type or select product / item..."
-                                value={item.name || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                                  setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
-                                    ...mat,
-                                    name: matched ? matched.name : val,
-                                    rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                    uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                    category: matched ? (matched.category || matched.description || mat.category) : mat.category
-                                  } : mat));
-                                }}
-                                style={{ width: '100%', height: '34px', borderRadius: '7px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '13px', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', color: isPiLocked ? '#475569' : '#0F172A', outline: 'none', boxSizing: 'border-box', fontWeight: '600', cursor: isPiLocked ? 'not-allowed' : 'text' }}
-                              />
-                              <datalist id={`product-list-${i}`}>
-                                {(itemsList || []).map((prod, pidx) => {
-                                  const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
-                                  const isOutOfStock = st <= 0;
-                                  const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || 'NOS'})`;
-                                  return (
-                                    <option key={pidx} value={prod.name}>
-                                      {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                    </option>
-                                  );
-                                })}
-                              </datalist>
-                            </div>
+                            {/* Line 1: Product / Item Name (Typeable & Dropdown) */}
+                            <TypeableProductSelect
+                              value={item.name || ''}
+                              itemsList={itemsList}
+                              placeholder="Type or select product / item..."
+                              accentColor="#0E7490"
+                              onChange={(val, matched) => {
+                                const pName = matched ? matched.name : val;
+                                const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                                const isSolar5 = is5PctSolarProduct(pName, pCat);
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
+                                  ...mat,
+                                  name: pName,
+                                  rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                  uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                  category: pCat,
+                                  gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
+                                } : mat));
+                              }}
+                            />
                             {/* Line 2: Description */}
                             <input
                               type="text"
@@ -3027,9 +3013,9 @@ export default function BomOrdersView(props) {
             </table>
           </div>
 
-          {!newBomSourcePiNo && (
             <div>
               <button
+                type="button"
                 onClick={handleAddMaterialRow}
                 style={{ border: '1px solid #A5F3FC', background: '#ECFEFF', color: '#0E7490', padding: '9px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
@@ -3037,7 +3023,6 @@ export default function BomOrdersView(props) {
                 Add Product / Item
               </button>
             </div>
-          )}
           </div>
         </div>
 
@@ -4902,53 +4887,26 @@ export default function BomOrdersView(props) {
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
                       <td style={{ padding: '12px 10px' }}>
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            type="text"
-                            disabled={isSourcePiLocked}
-                            list={`confirm-product-list-${idx}`}
-                            placeholder="Type or select product / item..."
-                            value={item.name || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const matched = (itemsList || []).find(it => (it.name || '').toLowerCase() === val.toLowerCase() || (it.code || '').toLowerCase() === val.toLowerCase());
-                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? {
-                                ...it,
-                                name: matched ? matched.name : val,
-                                rate: matched ? Number(matched.price || matched.rate || it.rate) : it.rate,
-                                uom: matched ? (matched.uom || matched.unit || it.uom) : it.uom,
-                                category: matched ? (matched.category || matched.description || it.category) : it.category
-                              } : it);
-                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                            }}
-                            style={{
-                              width: '100%',
-                              height: '34px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              padding: '0 8px',
-                              fontSize: '12px',
-                              color: isSourcePiLocked ? '#475569' : '#0F172A',
-                              backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white',
-                              outline: 'none',
-                              fontWeight: '600',
-                              boxSizing: 'border-box',
-                              cursor: isSourcePiLocked ? 'not-allowed' : 'text'
-                            }}
-                          />
-                          <datalist id={`confirm-product-list-${idx}`}>
-                            {(itemsList || []).map((prod, pidx) => {
-                              const st = Number(prod.stock !== undefined ? prod.stock : (prod.availableStock !== undefined ? prod.availableStock : 0));
-                              const isOutOfStock = st <= 0;
-                              const stockLabel = isOutOfStock ? '⚠️ (Stock: 0 / BLOCKED)' : `✓ (Available Stock: ${st.toLocaleString()} ${prod.uom || prod.unit || 'NOS'})`;
-                              return (
-                                <option key={pidx} value={prod.name}>
-                                  {prod.code ? `[${prod.code}] ${prod.name} ${stockLabel}` : `${prod.name} ${stockLabel}`}
-                                </option>
-                              );
-                            })}
-                          </datalist>
-                        </div>
+                        <TypeableProductSelect
+                          value={item.name || ''}
+                          itemsList={itemsList}
+                          placeholder="Type or select product / item..."
+                          accentColor="#0E7490"
+                          onChange={(val, matched) => {
+                            const pName = matched ? matched.name : val;
+                            const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                            const isSolar5 = is5PctSolarProduct(pName, pCat);
+                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? {
+                              ...it,
+                              name: pName,
+                              rate: matched ? Number(matched.price || matched.rate || it.rate) : it.rate,
+                              uom: matched ? (matched.uom || matched.unit || it.uom) : it.uom,
+                              category: pCat,
+                              gstRate: isSolar5 ? '5%' : (it.gstRate || '18%')
+                            } : it);
+                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                          }}
+                        />
                       </td>
                       <td style={{ padding: '12px 10px' }}>
                         <input
