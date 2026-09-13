@@ -610,7 +610,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [transportScope, setTransportScope] = useState('VRM Structures');
 
   // Commercial Fields
-  const [paymentTerms, setPaymentTerms] = useState('50% Advance + 50% Before Dispatch');
+  const [paymentTerms, setPaymentTerms] = useState('100% Advance');
   const [creditDays, setCreditDays] = useState('');
   const [remarks, setRemarks] = useState('');
 
@@ -625,6 +625,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       if (found.contact || found.contactPerson) setContactPerson(found.contact || found.contactPerson);
       if (found.phone) setPhone(found.phone);
       if (found.email) setEmail(found.email);
+      if (found.paymentTerms) setPaymentTerms(found.paymentTerms);
       const street = found.billingAddress || found.street || found.address || '';
       if (street) setBillingStreet(street);
       if (found.city) setBillingCity(found.city);
@@ -952,7 +953,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setTransporterName('');
     setVehicleNo('');
     setTransportScope('VRM Structures');
-    setPaymentTerms('50% Advance + 50% Before Dispatch');
+    setPaymentTerms('100% Advance');
     setCreditDays('');
     setRemarks('');
     setPiItems([]); // Fresh empty default with 0 prefilled items
@@ -1251,7 +1252,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setEmail(pi.email || '');
     setGstNo(pi.gstNo || '');
     setSalesPerson(pi.salesPerson || getActiveUserName());
-    setPaymentTerms(pi.paymentTerms || '50% Advance + 50% Before Dispatch');
+    setPaymentTerms(pi.paymentTerms || '100% Advance');
     setCreditDays(pi.creditDays || '');
     setRemarks(pi.remarks || '');
     setTransportMode(pi.transportMode || 'Transport');
@@ -2483,6 +2484,67 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '600', color: '#475569', backgroundColor: '#F8FAFC', outline: 'none', boxSizing: 'border-box', cursor: 'not-allowed' }}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Row 2: Payment Terms & Logistics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Payment Terms
+                  </label>
+                  <select
+                    value={paymentTerms}
+                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="100% Advance">100% Advance</option>
+                    <option value="50% Advance + 50% Before Dispatch">50% Advance + 50% Before Dispatch</option>
+                    <option value="Payment While Dispatch">Payment While Dispatch</option>
+                    <option value="Credit Payment">Credit Payment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Transport Scope
+                  </label>
+                  <select
+                    value={transportScope}
+                    onChange={(e) => setTransportScope(e.target.value)}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="VRM Structures">VRM Structures (Included)</option>
+                    <option value="Customer Scope">Customer Scope / Ex-Works</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Transport Mode
+                  </label>
+                  <select
+                    value={transportMode}
+                    onChange={(e) => setTransportMode(e.target.value)}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="Transport">Transport (Road / Lorry)</option>
+                    <option value="Direct Pickup">Direct Customer Pickup</option>
+                    <option value="Train / Cargo">Train / Cargo Freight</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Transporter Name
+                  </label>
+                  <input
+                    type="text"
+                    value={transporterName}
+                    placeholder="e.g. VRL Logistics, SafeXpress..."
+                    onChange={(e) => setTransporterName(e.target.value)}
+                    style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
               </div>
             </div>

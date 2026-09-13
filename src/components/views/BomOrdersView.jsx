@@ -3,7 +3,7 @@ import {
   Plus, Check, Trash2, Eye, FileText, Search, AlertCircle, AlertTriangle, X,
   CheckCircle, Clock, Calendar, Edit3, RotateCcw, UploadCloud, ChevronDown, ChevronUp,
   Truck, ShoppingCart, Upload, Printer, Download, Layers, CreditCard, Bell, MoreHorizontal, FileCheck, CheckSquare,
-  Camera, Video, LayoutGrid, List, Layout, Sparkles, PackageCheck, Image, FileSpreadsheet, Loader, Lock
+  Camera, Video, LayoutGrid, List, Layout, Sparkles, PackageCheck, Image, FileSpreadsheet, Loader, Lock, Save
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -884,7 +884,11 @@ export default function BomOrdersView(props) {
       }
       if (pendingPi.customerName) setNewBomProductName(pendingPi.customerName);
       setNewBomRemarks('');
-      if (pendingPi.paymentTerms) setNewBomPaymentType(pendingPi.paymentTerms);
+      if (pendingPi.paymentTerms && pendingPi.paymentTerms !== '50% Advance + 50% Before Dispatch') {
+        setNewBomPaymentType(pendingPi.paymentTerms);
+      } else {
+        setNewBomPaymentType('100% Paid');
+      }
       if (pendingPi.creditDays) setNewBomCreditDays(pendingPi.creditDays);
       if (pendingPi.transportMode) setNewBomTransportMode(pendingPi.transportMode);
       if (pendingPi.transporterName) setNewBomTransporterName(pendingPi.transporterName);
@@ -3185,6 +3189,9 @@ export default function BomOrdersView(props) {
                   style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}
                 >
                   <option value="100% Paid">100% Paid</option>
+                  <option value="100% Advance">100% Advance</option>
+                  <option value="50% Advance + 50% Dispatch">50% Advance + 50% Dispatch</option>
+                  <option value="50% Advance + 50% Before Dispatch">50% Advance + 50% Before Dispatch</option>
                   <option value="Partial Payment">Partial Payment</option>
                   <option value="Payment While Dispatch">Payment While Dispatch</option>
                   <option value="Credit Payment">Credit Payment</option>
@@ -4102,6 +4109,62 @@ export default function BomOrdersView(props) {
               </button>
             )}
 
+            {isAlreadyForwarded && confirmingBomModal.isEditMode && (
+              <button
+                onClick={() => {
+                  const bStr = formatAddr(bObj, confirmingBomModal.billingAddress);
+                  const dStr = confirmingBomModal.sameAsBilling ? bStr : formatAddr(dObj, confirmingBomModal.deliveryAddress);
+                  const finalDObj = confirmingBomModal.sameAsBilling ? { ...bObj } : { ...dObj };
+
+                  const updatedBomData = {
+                    ...confirmingBomModal,
+                    paymentType: confirmingBomModal.paymentType,
+                    billingAddress: bStr,
+                    billingAddressObj: bObj,
+                    deliveryAddress: dStr,
+                    deliveryAddressObj: finalDObj,
+                  };
+                  delete updatedBomData.isEditMode;
+
+                  const updatedList = (bomStore || []).map(b => (b.bomCode || b.code) === (confirmingBomModal.bomCode || confirmingBomModal.code) ? {
+                    ...b,
+                    ...updatedBomData
+                  } : b);
+                  setBomStore(updatedList);
+                  saveCloudStoreImmediate('bom_store', updatedList);
+                  try {
+                    localStorage.setItem('controlroom_bom_store', JSON.stringify(updatedList.map(stripDataUrlsFromRecord)));
+                  } catch (_) {}
+                  try {
+                    fetch('/api/boms', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ bom: stripDataUrlsFromRecord(updatedBomData), isUpdate: true })
+                    }).catch(err => console.error('Error updating BOM:', err));
+                  } catch (_) {}
+                  setConfirmingBomModal(null);
+                  alert(`✅ BOM (${confirmingBomModal.bomCode || confirmingBomModal.code}) details updated successfully!`);
+                }}
+                style={{
+                  border: 'none',
+                  backgroundColor: '#0E7490',
+                  color: 'white',
+                  height: '40px',
+                  padding: '0 20px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(14,116,144,0.3)'
+                }}
+              >
+                <Save style={{ width: '15px', height: '15px' }} /> Update BOM Details
+              </button>
+            )}
+
             {!isAlreadyForwarded && (
               <button
                 onClick={() => {
@@ -4313,20 +4376,25 @@ export default function BomOrdersView(props) {
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '6px' }}>
-                PAYMENT TYPE {!isAlreadyForwarded && <span style={{ color: '#2563EB', fontSize: '10px' }}>(Editable)</span>}
+                PAYMENT TYPE {(!isAlreadyForwarded || confirmingBomModal.isEditMode) && <span style={{ color: '#2563EB', fontSize: '10px' }}>(Editable)</span>}
               </label>
-              {isAlreadyForwarded ? (
+              {isAlreadyForwarded && !confirmingBomModal.isEditMode ? (
                 <div style={{ fontSize: '13px', fontWeight: '700', color: '#2563EB', height: '40px', display: 'flex', alignItems: 'center' }}>
-                  {confirmingBomModal.paymentType}
+                  {confirmingBomModal.paymentType || '100% Paid'}
                 </div>
               ) : (
                 <select
-                  value={confirmingBomModal.paymentType || '100% Advance'}
+                  value={confirmingBomModal.paymentType || '100% Paid'}
                   onChange={(e) => setConfirmingBomModal({ ...confirmingBomModal, paymentType: e.target.value })}
                   style={{ width: '100%', height: '40px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 12px', fontSize: '13px', fontWeight: '700', color: '#2563EB', backgroundColor: '#FFFFFF', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
                 >
+                  <option value="100% Paid">100% Paid</option>
                   <option value="100% Advance">100% Advance</option>
                   <option value="50% Advance + 50% Dispatch">50% Advance + 50% Dispatch</option>
+                  <option value="50% Advance + 50% Before Dispatch">50% Advance + 50% Before Dispatch</option>
+                  <option value="Partial Payment">Partial Payment</option>
+                  <option value="Payment While Dispatch">Payment While Dispatch</option>
+                  <option value="Credit Payment">Credit Payment</option>
                   <option value="Net 30 Days">Net 30 Days</option>
                 </select>
               )}
