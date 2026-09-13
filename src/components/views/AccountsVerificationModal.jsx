@@ -4,6 +4,7 @@ import {
   UploadCloud, Download, Upload, Printer, Layers, Receipt, IndianRupee, Image
 } from "lucide-react";
 import { getMediaFromCache, formatCurrency } from "../../utils/otherViewsShared";
+import StatusBadge from "../StatusBadge";
 
 export default function AccountsVerificationModal({
   accountsVerificationModal,
