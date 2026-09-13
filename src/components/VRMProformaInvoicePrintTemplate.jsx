@@ -867,68 +867,32 @@ export function VRMProformaInvoicePrintSheet({
         {`
           @page {
             size: A4 portrait;
-            margin: 12mm 14mm 12mm 14mm !important; /* 4-side clean margin on every printed page */
+            margin: 12mm 12mm !important;
           }
 
           @media print {
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              height: auto !important;
-              min-height: 100% !important;
-              overflow: visible !important;
-              background: #ffffff !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
+            body * {
+              visibility: hidden !important;
             }
 
-            /* Hide background app root and non-print tools */
-            #root,
             .no-print,
             .vrm-floating-action-toolbar,
             .TemplateCustomizerDrawer {
               display: none !important;
             }
 
-            /* Remove fixed overlay constraints so pages flow naturally */
-            .vrm-print-portal-overlay {
-              position: static !important;
-              display: block !important;
-              width: 100% !important;
-              height: auto !important;
-              min-height: auto !important;
-              overflow: visible !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              background: transparent !important;
-              backdrop-filter: none !important;
-              z-index: auto !important;
+            #${id},
+            #${id} * {
+              visibility: visible !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
 
-            .vrm-print-workspace {
-              position: static !important;
-              display: block !important;
-              width: 100% !important;
-              max-width: 100% !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-
-            .vrm-print-sheet-container {
-              position: static !important;
-              display: block !important;
-              width: 100% !important;
-              max-width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-
-            /* Printable Sheet: Flows across Page 1, Page 2, etc. */
+            /* Printable Sheet: Exact full width, zero-offset layout */
             #${id} {
-              position: static !important;
-              display: block !important;
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
               width: 100% !important;
               max-width: 100% !important;
               min-height: auto !important;
@@ -973,7 +937,8 @@ export function VRMProformaInvoicePrintSheet({
             }
 
             /* Prevent splitting critical blocks like totals, bank details, and stamp */
-            .avoid-break {
+            .avoid-break,
+            .print-avoid-break {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
@@ -981,6 +946,10 @@ export function VRMProformaInvoicePrintSheet({
             .page-break {
               page-break-before: always !important;
               break-before: always !important;
+            }
+
+            div {
+              overflow: visible !important;
             }
           }
           .editable-template-field {
@@ -3553,7 +3522,7 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
+        position -= pageHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, '', 'FAST');
         heightLeft -= pageHeight;

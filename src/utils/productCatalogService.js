@@ -109,24 +109,26 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
     const nameKey = String(p.name || '').toLowerCase().trim();
     const fpKey = wordFingerprint(nameKey);
 
-    // Determine baseline stock before allocations
+    // Determine baseline stock before allocations (default 5000)
     let baseStock = 5000;
-    if (codeKey && stockMap.has(codeKey)) {
-      baseStock = stockMap.get(codeKey);
-    } else if (nameKey && stockMap.has(nameKey)) {
-      baseStock = stockMap.get(nameKey);
-    } else if (fpKey && stockMap.has(fpKey)) {
-      baseStock = stockMap.get(fpKey);
+    if (codeKey && stockMap.has(codeKey) && Number(stockMap.get(codeKey)) > 0) {
+      baseStock = Number(stockMap.get(codeKey));
+    } else if (nameKey && stockMap.has(nameKey) && Number(stockMap.get(nameKey)) > 0) {
+      baseStock = Number(stockMap.get(nameKey));
+    } else if (fpKey && stockMap.has(fpKey) && Number(stockMap.get(fpKey)) > 0) {
+      baseStock = Number(stockMap.get(fpKey));
     } else {
       for (const [k, v] of stockMap.entries()) {
         if (k && (k === codeKey || k === nameKey || nameKey.includes(k) || k.includes(nameKey))) {
-          baseStock = v;
-          break;
+          if (Number(v) > 0) {
+            baseStock = Number(v);
+            break;
+          }
         }
       }
     }
 
-    // Active allocations for this item
+    // Active allocations for this item from active BOMs and active PIs
     const blockedQty = Math.max(
       (codeKey && bomReservedMap.get(codeKey)) || 0,
       (nameKey && bomReservedMap.get(nameKey)) || 0,
@@ -134,11 +136,11 @@ export const getFullProductsCatalogWithStock = (directItems = null) => {
     );
     let realStock = Math.max(0, baseStock - blockedQty);
 
-    // If raw materials store has explicit stock adjustment, honor the lowest available count
+    // If raw materials store has explicit stock adjustment, honor it without letting uninitialized 0s wipe baseline
     const rawStock = (codeKey && rawStoreMap.get(codeKey)) !== undefined 
       ? rawStoreMap.get(codeKey) 
       : (nameKey && rawStoreMap.get(nameKey) !== undefined ? rawStoreMap.get(nameKey) : (fpKey && rawStoreMap.get(fpKey) !== undefined ? rawStoreMap.get(fpKey) : null));
-    if (rawStock !== null && !isNaN(rawStock)) {
+    if (rawStock !== null && !isNaN(rawStock) && Number(rawStock) > 0) {
       realStock = Math.min(realStock, Number(rawStock));
     }
 

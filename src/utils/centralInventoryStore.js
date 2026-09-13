@@ -245,31 +245,37 @@ class CentralInventoryStore {
   // ----------------------------------------------------
   getInventoryItems() {
     return this.items.map(item => {
+      // Base physical opening stock (defaults to 5000 if not set)
+      const baseOpening = Math.max(0, parseFloat(item.openingStock !== undefined ? item.openingStock : (item.stock !== undefined ? item.stock : 5000)) || 5000);
+
       // Calculate Stock IN & Stock OUT from append-only ledger
       const txs = this.transactions.filter(t => t.itemCode === item.code);
       const stockIn = txs.filter(t => t.direction === 'IN').reduce((acc, t) => acc + (parseFloat(t.qty) || 0), 0);
-      const stockOut = txs.filter(t => t.direction === 'OUT').reduce((acc, t) => acc + (parseFloat(t.qty) || 0), 0);
-      const onHand = Math.max(0, stockIn - stockOut);
+      const totalIn = stockIn > 0 ? stockIn : baseOpening;
 
-      // Active Stock Reservations
+      // Actual physical stock out (excluding pure BOM reservation holds that are tracked in active reservations)
+      const stockOut = txs.filter(t => t.direction === 'OUT' && t.type !== 'PRODUCTION_ISSUE' && t.type !== 'BOM_RESERVATION').reduce((acc, t) => acc + (parseFloat(t.qty) || 0), 0);
+      const onHand = Math.max(0, totalIn - stockOut);
+
+      // Active Stock Reservations (BOMs & PIs)
       const activeRes = this.reservations
         .filter(r => r.itemCode === item.code && r.status === 'Active')
         .reduce((acc, r) => acc + (parseFloat(r.reservedQty) || 0), 0);
 
       const available = Math.max(0, onHand - activeRes);
 
-      // Determine Low / Out Stock Status
+      // Determine Low / Out Stock Status based on remaining available balance
       let status = 'In Stock';
-      if (onHand === 0) {
+      if (available === 0) {
         status = 'Out of Stock';
-      } else if (onHand <= item.minLevel) {
+      } else if (available <= item.minLevel) {
         status = 'Low Stock';
       }
 
       return {
         ...item,
         onHand,
-        stockIn,
+        stockIn: totalIn,
         stockOut,
         reserved: activeRes,
         available,
@@ -460,8 +466,10 @@ class CentralInventoryStore {
       const targetName = item ? item.name : (pItem.name || 'BOM Item');
       const targetUnit = (item && item.uom) || pItem.uom || 'Nos';
 
+      const basePhysical = Math.max(0, parseFloat(item ? (item.physicalStock || item.openingStock || item.stock || 5000) : 5000) || 5000);
       if (item) {
-        item.stock = Math.max(0, (parseFloat(item.stock) || 5000) - qty);
+        item.physicalStock = basePhysical;
+        item.stock = Math.max(0, basePhysical - qty);
       }
 
       // Add to reservations
@@ -475,10 +483,10 @@ class CentralInventoryStore {
         status: 'Active'
       });
 
-      // Add OUT transaction to ledger
+      // Add Reservation transaction to ledger
       const tx = {
-        id: `TX-BOM-OUT-${bomCode}-${targetCode}-${Date.now()}`,
-        type: TX_TYPES.PRODUCTION_ISSUE,
+        id: `TX-BOM-RES-${bomCode}-${targetCode}-${Date.now()}`,
+        type: 'BOM_RESERVATION',
         refNo: bomCode,
         dateTime: timestamp,
         itemCode: targetCode,
@@ -490,7 +498,7 @@ class CentralInventoryStore {
         user,
         department: 'Production & Logistics',
         sourceDoc: `BOM Order: ${bomCode}`,
-        remarks: `Allocated and deducted ${qty} ${targetUnit} for BOM ${bomCode}`
+        remarks: `Reserved ${qty} ${targetUnit} for BOM ${bomCode}`
       };
       this.transactions.push(tx);
     });

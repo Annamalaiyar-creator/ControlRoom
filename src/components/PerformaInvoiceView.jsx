@@ -530,8 +530,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
   }, []);
 
-  // Customer directory lookup from localStorage for instant auto-complete
-  const customerList = useMemo(() => {
+  // Customer directory lookup with live cloud & Zoho sync for instant auto-complete
+  const [customerList, setCustomerList] = useState(() => {
     try {
       const stored = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_crm_customers') || localStorage.getItem('controlroom_customer_list');
       if (stored) {
@@ -544,6 +544,93 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       { code: 'Tata Power Solar Systems Ltd', companyName: 'Tata Power Solar Systems Ltd', c2: 'Tata Power Solar Systems Ltd', gst: '27AAACT2345D1ZA', gstNo: '27AAACT2345D1ZA', contact: 'Karthik Raja', contactPerson: 'Karthik Raja', phone: '+91 98450 12345', email: 'karthik@tatapower.com', billingAddress: '12 Electronic City Phase 1', city: 'Bengaluru', state: 'Karnataka', pincode: '560001' },
       { code: 'Waaree Energies Ltd', companyName: 'Waaree Energies Ltd', c2: 'Waaree Energies Ltd', gst: '24AAACW5678B1Z2', gstNo: '24AAACW5678B1Z2', contact: 'Dharmesh Patel', contactPerson: 'Dharmesh Patel', phone: '+91 97234 56789', email: 'dharmesh@waaree.com', billingAddress: '88 Ring Road, Surat', city: 'Surat', state: 'Gujarat', pincode: '395001' }
     ];
+  });
+
+  // Sync Customers directly from Supabase, Zoho Books & CRM Customers
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncCustomers = async () => {
+      try {
+        let merged = [];
+        // 1. Check localStorage first for instant local responsiveness
+        try {
+          const raw = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_crm_customers') || localStorage.getItem('controlroom_customer_list');
+          if (raw) {
+            const p = JSON.parse(raw);
+            if (Array.isArray(p) && p.length > 0) merged = [...p];
+          }
+        } catch (_) {}
+
+        // 2. Fetch from Supabase Cloud Store
+        try {
+          const cloudCusts = await fetchCloudStore('customer_store', []);
+          if (Array.isArray(cloudCusts) && cloudCusts.length > 0) {
+            cloudCusts.forEach(cc => {
+              const nameKey = (cc.companyName || cc.name || cc.c2 || cc.code || '').toLowerCase().trim();
+              if (nameKey && !merged.some(m => (m.companyName || m.name || m.c2 || m.code || '').toLowerCase().trim() === nameKey)) {
+                merged.push(cc);
+              }
+            });
+          }
+        } catch (_) {}
+
+        // 3. Fallback to Zoho Customers endpoint if list is small
+        if (merged.length < 5) {
+          try {
+            const zohoRes = await fetch('/api/zoho/customers');
+            if (zohoRes.ok) {
+              const zList = await zohoRes.json();
+              if (Array.isArray(zList) && zList.length > 0) {
+                zList.forEach(zc => {
+                  const nameKey = (zc.companyName || zc.name || zc.c2 || zc.code || '').toLowerCase().trim();
+                  if (nameKey && !merged.some(m => (m.companyName || m.name || m.c2 || m.code || '').toLowerCase().trim() === nameKey)) {
+                    merged.push(zc);
+                  }
+                });
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (isMounted && merged.length > 0) {
+          setCustomerList(merged);
+        }
+      } catch (err) {
+        console.warn('[PI] Customer sync notice:', err);
+      }
+    };
+
+    syncCustomers();
+
+    // Subscribe to realtime cloud customer updates
+    const realtimeCustSub = subscribeToCloudStore('customer_store', (updatedCusts) => {
+      if (isMounted && Array.isArray(updatedCusts) && updatedCusts.length > 0) {
+        setCustomerList(prev => {
+          const combined = [...updatedCusts];
+          (prev || []).forEach(p => {
+            const nameKey = (p.companyName || p.name || p.c2 || p.code || '').toLowerCase().trim();
+            if (nameKey && !combined.some(c => (c.companyName || c.name || c.c2 || c.code || '').toLowerCase().trim() === nameKey)) {
+              combined.push(p);
+            }
+          });
+          return combined;
+        });
+      }
+    });
+
+    const handleLocalCustUpdate = () => syncCustomers();
+    window.addEventListener('controlroom_customer_store_updated', handleLocalCustUpdate);
+    window.addEventListener('controlroom_storage_update', handleLocalCustUpdate);
+    window.addEventListener('storage', handleLocalCustUpdate);
+
+    return () => {
+      isMounted = false;
+      if (realtimeCustSub && realtimeCustSub.unsubscribe) realtimeCustSub.unsubscribe();
+      window.removeEventListener('controlroom_customer_store_updated', handleLocalCustUpdate);
+      window.removeEventListener('controlroom_storage_update', handleLocalCustUpdate);
+      window.removeEventListener('storage', handleLocalCustUpdate);
+    };
   }, []);
 
   // Full 285+ Standardized Products Catalog with Live Central Inventory Stock
@@ -617,9 +704,17 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   // Customer auto-suggest handler
   const handleSelectCustomer = (cName) => {
     setVendorName(cName);
-    const found = customerList.find(c =>
-      (c.companyName || c.name || c.c2 || c.code || '').toLowerCase() === cName.toLowerCase()
-    );
+    const cleanSearch = (cName || '').toLowerCase().trim();
+    if (!cleanSearch) return;
+
+    const found = (customerList || []).find(c => {
+      const cComp = (c.companyName || c.name || c.c2 || c.code || '').toLowerCase().trim();
+      return cComp === cleanSearch;
+    }) || (customerList || []).find(c => {
+      const cComp = (c.companyName || c.name || c.c2 || c.code || '').toLowerCase().trim();
+      return cComp.length > 2 && (cComp.startsWith(cleanSearch) || cleanSearch.startsWith(cComp) || cComp.includes(cleanSearch));
+    });
+
     if (found) {
       if (found.gst || found.gstNumber || found.gstNo) setGstNo(found.gst || found.gstNumber || found.gstNo);
       if (found.contact || found.contactPerson) setContactPerson(found.contact || found.contactPerson);
@@ -2576,11 +2671,24 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     style={{ width: '100%', height: '42px', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '0 14px', fontSize: '13px', fontWeight: '600', color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                   />
                   <datalist id="pi-customers-datalist">
-                    {(customerList || []).map((c, idx) => (
-                      <option key={idx} value={c.companyName || c.name || c.c2 || c.code}>
-                        {c.gst || c.gstNumber ? `GST: ${c.gst || c.gstNumber}` : ''}
-                      </option>
-                    ))}
+                    {(customerList || []).reduce((acc, c) => {
+                      const name = (c.companyName || c.name || c.c2 || c.code || '').trim();
+                      if (name && !acc.some(item => (item.companyName || item.name || item.c2 || item.code || '').trim().toLowerCase() === name.toLowerCase())) {
+                        acc.push(c);
+                      }
+                      return acc;
+                    }, []).map((c, idx) => {
+                      const name = (c.companyName || c.name || c.c2 || c.code || '').trim();
+                      const gst = c.gst || c.gstNumber || c.gstNo;
+                      const contact = c.contact || c.contactPerson;
+                      const city = c.city || '';
+                      const details = [gst ? `GST: ${gst}` : null, contact ? `Contact: ${contact}` : null, city].filter(Boolean).join(' • ');
+                      return (
+                        <option key={idx} value={name}>
+                          {details}
+                        </option>
+                      );
+                    })}
                   </datalist>
                 </div>
 

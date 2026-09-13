@@ -627,26 +627,32 @@ export default function BomOrdersView(props) {
         });
 
         if (match) {
-          const currStock = Math.max(0, parseFloat(String(match.stock).replace(/,/g, '')) || 0);
-          const newStock = Math.max(0, currStock - qtyToBlock);
-          match.stock = newStock;
+          const basePhysical = Math.max(0, parseFloat(String(match.physicalStock || match.openingStock || 5000).replace(/,/g, '')) || 5000);
+          match.physicalStock = basePhysical;
           match.reserved = (parseFloat(match.reserved) || 0) + qtyToBlock;
           match.blockedForBom = (match.blockedForBom || 0) + qtyToBlock;
+          const newStock = Math.max(0, basePhysical - match.reserved);
+          match.stock = newStock;
+          match.availableStock = newStock;
           const minL = parseFloat(String(match.minLevel || '100').replace(/,/g, '')) || 100;
           match.status = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
           match.lastUpdated = `Blocked for BOM ${bomCode}`;
         } else if (pName) {
-          // If not existing in current store, register it with 0 available stock
+          // If not existing in current store, register it with 5000 physical baseline and calculated available balance
+          const initPhysical = 5000;
+          const newStock = Math.max(0, initPhysical - qtyToBlock);
           currentMats.push({
             code: pCode || `FG-${Date.now().toString().slice(-4)}`,
             name: pItem.name || 'Finished Good Item',
             cat: pItem.category || 'Finished Goods',
             unit: pItem.uom || 'Nos',
-            stock: 0,
+            physicalStock: initPhysical,
+            stock: newStock,
+            availableStock: newStock,
             reserved: qtyToBlock,
             blockedForBom: qtyToBlock,
             minLevel: 10,
-            status: 'Out of Stock',
+            status: newStock === 0 ? 'Out of Stock' : (newStock <= 10 ? 'Low Stock' : 'In Stock'),
             store: 'Main Store',
             lastUpdated: `Blocked for BOM ${bomCode}`
           });
@@ -661,12 +667,13 @@ export default function BomOrdersView(props) {
           return false;
         });
         if (itemMatch) {
-          const currStock = Math.max(0, parseFloat(String(itemMatch.stock || itemMatch.availableStock || 0).replace(/,/g, '')) || 0);
-          const newStock = Math.max(0, currStock - qtyToBlock);
-          itemMatch.stock = newStock;
-          itemMatch.availableStock = newStock;
+          const baseItemPhysical = Math.max(0, parseFloat(String(itemMatch.physicalStock || itemMatch.openingStock || 5000).replace(/,/g, '')) || 5000);
+          itemMatch.physicalStock = baseItemPhysical;
           itemMatch.reserved = (parseFloat(itemMatch.reserved) || 0) + qtyToBlock;
-          itemMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
+          const newItemStock = Math.max(0, baseItemPhysical - itemMatch.reserved);
+          itemMatch.stock = newItemStock;
+          itemMatch.availableStock = newItemStock;
+          itemMatch.status = newItemStock === 0 ? 'Out of Stock' : (newItemStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
         }
       });
 
@@ -724,11 +731,13 @@ export default function BomOrdersView(props) {
         });
 
         if (match) {
-          const currStock = parseFloat(String(match.stock).replace(/,/g, '')) || 0;
-          const newStock = currStock + qtyToRestore;
-          match.stock = newStock;
+          const basePhysical = Math.max(0, parseFloat(String(match.physicalStock || match.openingStock || 5000).replace(/,/g, '')) || 5000);
+          match.physicalStock = basePhysical;
           match.reserved = Math.max(0, (parseFloat(match.reserved) || 0) - qtyToRestore);
           match.blockedForBom = Math.max(0, (match.blockedForBom || 0) - qtyToRestore);
+          const newStock = Math.max(0, basePhysical - match.reserved);
+          match.stock = newStock;
+          match.availableStock = newStock;
           const minL = parseFloat(String(match.minLevel || '100').replace(/,/g, '')) || 100;
           match.status = newStock === 0 ? 'Out of Stock' : (newStock <= minL ? 'Low Stock' : 'In Stock');
           match.lastUpdated = `Restored from Cancelled BOM ${bomCode}`;
@@ -742,12 +751,13 @@ export default function BomOrdersView(props) {
           return false;
         });
         if (itemMatch) {
-          const currStock = parseFloat(String(itemMatch.stock || itemMatch.availableStock || 0).replace(/,/g, '')) || 0;
-          const newStock = currStock + qtyToRestore;
-          itemMatch.stock = newStock;
-          itemMatch.availableStock = newStock;
+          const baseItemPhysical = Math.max(0, parseFloat(String(itemMatch.physicalStock || itemMatch.openingStock || 5000).replace(/,/g, '')) || 5000);
+          itemMatch.physicalStock = baseItemPhysical;
           itemMatch.reserved = Math.max(0, (parseFloat(itemMatch.reserved) || 0) - qtyToRestore);
-          itemMatch.status = newStock === 0 ? 'Out of Stock' : (newStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
+          const newItemStock = Math.max(0, baseItemPhysical - itemMatch.reserved);
+          itemMatch.stock = newItemStock;
+          itemMatch.availableStock = newItemStock;
+          itemMatch.status = newItemStock === 0 ? 'Out of Stock' : (newItemStock <= (itemMatch.minLevel || 20) ? 'Low Stock' : 'In Stock');
         }
       });
 

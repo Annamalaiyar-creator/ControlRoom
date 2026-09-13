@@ -2338,9 +2338,9 @@ export default function StockStatusView(props) {
                 Number(matchedMat?.reserved || it.reserved || 0)
               );
               let availableQty = Math.max(0, physicalBase - activeBlocked);
-              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock)) {
+              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock) && Number(matchedMat.stock) > 0) {
                 availableQty = Math.min(availableQty, Number(matchedMat.stock));
-              } else if (it.stock !== undefined && !isNaN(it.stock)) {
+              } else if (it.stock !== undefined && !isNaN(it.stock) && Number(it.stock) > 0) {
                 availableQty = Math.min(availableQty, Number(it.stock));
               }
               const minLvl = Number(it.reorderLevel || it.minLevel || 50);
@@ -2602,9 +2602,9 @@ export default function StockStatusView(props) {
                 Number(matchedMat?.reserved || it.reserved || 0)
               );
               let availableQty = Math.max(0, physicalBase - activeBlocked);
-              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock)) {
+              if (matchedMat && matchedMat.stock !== undefined && !isNaN(matchedMat.stock) && Number(matchedMat.stock) > 0) {
                 availableQty = Math.min(availableQty, Number(matchedMat.stock));
-              } else if (it.stock !== undefined && !isNaN(it.stock)) {
+              } else if (it.stock !== undefined && !isNaN(it.stock) && Number(it.stock) > 0) {
                 availableQty = Math.min(availableQty, Number(it.stock));
               }
 
