@@ -3,7 +3,8 @@ import {
   Check, Trash2, CheckCircle, CheckSquare, XCircle, ChevronLeft,
   UploadCloud, Package, Upload, Receipt, Camera, Video, Play, Save
 } from "lucide-react";
-import { stripDataUrlsFromRecord } from "../../utils/otherViewsShared";
+import { stripDataUrlsFromRecord, compressAndSaveFile, saveMediaToCache } from "../../utils/otherViewsShared";
+import { saveCloudStore } from "../../utils/supabaseDataSync";
 
 export default function DispatchPackingModal({
   dispatchPackingModal,

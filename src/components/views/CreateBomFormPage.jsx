@@ -5,7 +5,7 @@ import {
   ShoppingCart, Upload, Layers, Image, Bell, Save
 } from "lucide-react";
 import {
-  cleanNum, stripDataUrlsFromRecord, compressAndSaveFile
+  cleanNum, stripDataUrlsFromRecord, compressAndSaveFile, saveMediaToCache
 } from "../../utils/otherViewsShared";
 import { saveCloudStoreImmediate } from "../../utils/supabaseDataSync";
 import SearchablePresetSelector from "../SearchablePresetSelector";

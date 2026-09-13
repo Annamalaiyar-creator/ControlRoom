@@ -4,7 +4,8 @@ import {
   FileCheck, CheckSquare, XCircle, ChevronLeft, RotateCcw,
   Truck, Download, Printer, Receipt, Camera, Video, Film
 } from "lucide-react";
-import { getMediaFromCache } from "../../utils/otherViewsShared";
+import { getMediaFromCache, saveMediaToCache, compressAndSaveFile } from "../../utils/otherViewsShared";
+import { saveCloudStore } from "../../utils/supabaseDataSync";
 
 export default function InvoiceDetailModal({
   viewingInvoiceModal,

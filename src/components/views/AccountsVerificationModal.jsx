@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Eye, FileText, X, CheckCircle, Clock, XCircle, Calendar,
   UploadCloud, Download, Upload, Printer, Layers, Receipt, IndianRupee, Image
 } from "lucide-react";
-import { getMediaFromCache, formatCurrency } from "../../utils/otherViewsShared";
+import { getMediaFromCache, formatCurrency, cleanNum, compressAndSaveFile } from "../../utils/otherViewsShared";
+import { saveCloudStore } from "../../utils/supabaseDataSync";
+import { notifyAccountsVerificationCompleted } from "../../services/notificationService";
 import StatusBadge from "../StatusBadge";
 import { VRMBomPrintSheet } from "../VRMBomPrintTemplate";
 
@@ -15,8 +17,15 @@ export default function AccountsVerificationModal({
   bomStore,
   setBomStore,
   userRole,
-  setPreviewDocModal
+  setPreviewDocModal,
+  canCancelBom = false,
+  handleCancelBomOrder = () => {},
+  invoiceList = [],
+  setInvoiceList = () => {}
 }) {
+  const [viewingProofDocModal, setViewingProofDocModal] = useState(null);
+  const [accountsBomViewMode, setAccountsBomViewMode] = useState('paper');
+
   const accVerif = (accountsVerificationModal && accountsVerificationModal.accountsVerification) || {};
   const isAlreadyCompleted = Boolean(
     isAccountsViewOnly ||
