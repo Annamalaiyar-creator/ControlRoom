@@ -120,13 +120,25 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   // Two-way helper to find all BOMs generated from this PI
   const getConvertedBomsForPi = (pi) => {
     if (!pi) return [];
+    // Only associate BOMs if this PI was explicitly converted or has an assigned BOM code
+    const isExplicitlyConverted = Boolean(
+      pi.convertedToBom || 
+      pi.status === 'Converted to BOM' || 
+      pi.convertedBomNo || 
+      pi.convertedBomCode
+    );
+    if (!isExplicitlyConverted) return [];
+
     const piNum = (pi.piNo || pi.estimate_number || pi.id || '').trim().toLowerCase();
     const explicitCode = (pi.convertedBomNo || pi.convertedBomCode || '').trim().toLowerCase();
 
     return (bomList || []).filter(b => {
       if (!b) return false;
-      const sPi = (b.sourcePiNo || b.piNo || '').trim().toLowerCase();
-      // Strict exact match for PI number
+      // Do NOT link to cancelled or restored BOMs
+      if (b.cancelled || b.status === 'Cancelled' || b.status === 'Cancelled & Stock Restored') return false;
+
+      const sPi = (b.sourcePiNo || '').trim().toLowerCase();
+      // Match sourcePiNo or explicit converted BOM code
       if (piNum && sPi && sPi === piNum) return true;
       if (explicitCode) {
         const bCode = (b.bomCode || b.code || b.id || '').trim().toLowerCase();
@@ -134,6 +146,34 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       }
       return false;
     });
+  };
+
+  const handleRevertPiToIssued = (pi) => {
+    if (!pi) return;
+    const targetNo = String(pi.piNo || pi.id || '').trim().toLowerCase();
+    const updated = piList.map(p => {
+      const pNo = String(p.piNo || p.id || '').trim().toLowerCase();
+      if (pNo === targetNo) {
+        return {
+          ...p,
+          status: 'Issued',
+          convertedToBom: false,
+          convertedBomNo: null,
+          convertedBomCode: null
+        };
+      }
+      return p;
+    });
+    updatePiList(updated);
+    if (selectedPi) {
+      setSelectedPi(prev => prev ? ({
+        ...prev,
+        status: 'Issued',
+        convertedToBom: false,
+        convertedBomNo: null,
+        convertedBomCode: null
+      }) : null);
+    }
   };
 
   const currentEmpId = (localStorage.getItem('controlroom_logged_emp_id') || '').trim();
@@ -1543,7 +1583,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             String(pi.productName || '').toLowerCase().includes(searchLower) ||
             bomCodesStr.includes(searchLower);
 
-          const isConverted = hasSavedBom;
+          const isConverted = hasSavedBom && Boolean(pi.convertedToBom || pi.status === 'Converted to BOM' || pi.convertedBomNo || pi.convertedBomCode);
           const currentStatus = isConverted
             ? 'Converted to BOM'
             : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM')
@@ -1686,11 +1726,15 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                 {[
                   { id: 'All', label: 'All Invoices (Total Sent)', count: visiblePIList.length },
                   { id: 'Issued', label: 'Issued / Active', count: visiblePIList.filter(pi => {
-                    const isConverted = getConvertedBomsForPi(pi).length > 0;
+                    const matchedBoms = getConvertedBomsForPi(pi);
+                    const isConverted = matchedBoms.length > 0 && Boolean(pi.convertedToBom || pi.status === 'Converted to BOM' || pi.convertedBomNo || pi.convertedBomCode);
                     const st = isConverted ? 'Converted to BOM' : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM') ? 'Issued' : (pi.status || 'Issued'));
                     return st === 'Issued';
                   }).length },
-                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => getConvertedBomsForPi(pi).length > 0).length },
+                  { id: 'Converted to BOM', label: 'Converted to BOM', count: visiblePIList.filter(pi => {
+                    const matchedBoms = getConvertedBomsForPi(pi);
+                    return matchedBoms.length > 0 && Boolean(pi.convertedToBom || pi.status === 'Converted to BOM' || pi.convertedBomNo || pi.convertedBomCode);
+                  }).length },
                   { id: 'Cancelled', label: 'Cancelled', count: visiblePIList.filter(pi => pi.status === 'Cancelled').length },
                   { id: 'Draft', label: 'Draft', count: visiblePIList.filter(pi => pi.status === 'Draft').length }
                 ].map(tab => (
@@ -1761,7 +1805,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
                         const matchedBoms = getConvertedBomsForPi(pi);
                         const hasSavedBom = matchedBoms.length > 0;
-                        const isConverted = hasSavedBom;
+                        const isConverted = hasSavedBom && Boolean(pi.convertedToBom || pi.status === 'Converted to BOM' || pi.convertedBomNo || pi.convertedBomCode);
                         const currentStatus = isConverted
                           ? 'Converted to BOM'
                           : ((pi.status === 'Pending Approval' || pi.status === 'Approved' || pi.status === 'Converted to BOM')
@@ -1772,7 +1816,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         let statusFg = '#2563eb';
                         let displayStatus = currentStatus;
 
-                        if (hasSavedBom) {
+                        if (isConverted) {
                           statusBg = '#ecfdf5';
                           statusFg = '#059669';
                           displayStatus = 'Converted to BOM';
@@ -1866,7 +1910,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusFg }}></span>
                                   {displayStatus}
                                 </span>
-                                {hasSavedBom && (
+                                {isConverted && (
                                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                     {matchedBoms.map((b, bIdx) => {
                                       const bCode = b.bomCode || b.code || b.id;
@@ -2116,9 +2160,9 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   if (!target || target.status === 'Cancelled') return null;
                   const matchedBoms = getConvertedBomsForPi(target);
                   const hasSavedBom = matchedBoms.length > 0;
-                  const isConverted = hasSavedBom;
+                  const isConverted = hasSavedBom && Boolean(target.convertedToBom || target.status === 'Converted to BOM' || target.convertedBomNo || target.convertedBomCode);
 
-                  if (hasSavedBom) {
+                  if (isConverted) {
                     const firstBomCode = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
                     return (
                       <button
@@ -2149,33 +2193,6 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         }}
                       >
                         <Layers size={14} style={{ color: '#FFFFFF' }} /> View {firstBomCode} ↗
-                      </button>
-                    );
-                  }
-
-                  if (isConverted) {
-                    return (
-                      <button
-                        onClick={() => handleConvertToBom(target)}
-                        style={{
-                          backgroundColor: '#D97706',
-                          border: 'none',
-                          color: '#FFFFFF',
-                          borderRadius: '10px',
-                          padding: '6px 16px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                          boxShadow: '0 2px 4px rgba(217, 119, 6, 0.3)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Layers size={14} style={{ color: '#FFFFFF' }} /> Complete BOM
                       </button>
                     );
                   }
@@ -3761,7 +3778,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         const totalGstVal = Math.max(0, grandTotalVal - subtotalVal);
         const matchedBoms = getConvertedBomsForPi(selectedPi);
         const hasSavedBom = matchedBoms.length > 0;
-        const isConverted = hasSavedBom;
+        const isConverted = hasSavedBom && Boolean(selectedPi.convertedToBom || selectedPi.status === 'Converted to BOM' || selectedPi.convertedBomNo || selectedPi.convertedBomCode);
 
         const modalGstTiersMap = {};
         (piItemsList || []).forEach(it => {
@@ -3952,7 +3969,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
                 {/* 0. PROMINENT CONVERTED BOM STATUS BANNER */}
-                {hasSavedBom && (
+                {isConverted && (
                   <div style={{
                     backgroundColor: '#ECFDF5',
                     border: '1.5px solid #6EE7B7',
@@ -3977,7 +3994,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {matchedBoms.map((b, idx) => {
                         const bCode = b.bomCode || b.code || b.id;
                         return (
@@ -4012,6 +4029,23 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                           </button>
                         );
                       })}
+                      <button
+                        type="button"
+                        onClick={() => handleRevertPiToIssued(selectedPi)}
+                        title="Disconnect BOM and revert this PI back to Issued status"
+                        style={{
+                          padding: '8px 14px',
+                          backgroundColor: '#FFF1F2',
+                          color: '#E11D48',
+                          border: '1px solid #FECDD3',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✕ Revert to Issued
+                      </button>
                     </div>
                   </div>
                 )}
@@ -4423,36 +4457,54 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     </button>
                   )}
 
-                  {hasSavedBom ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const firstBom = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
-                        setSelectedPi(null);
-                        window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
-                          detail: { tab: 'Sales BOM', targetBom: firstBom } 
-                        }));
-                        if (typeof onNavigateTab === 'function') {
-                          onNavigateTab('Sales BOM');
-                        }
-                      }}
-                      style={{
-                        padding: '10px 22px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        backgroundColor: '#059669',
-                        color: '#FFFFFF',
-                        fontSize: '13px',
-                        fontWeight: '800',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(5,150,105,0.3)'
-                      }}
-                    >
-                      <Layers size={16} /> View {matchedBoms[0]?.bomCode || 'BOM'} Order ↗
-                    </button>
+                  {isConverted ? (
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRevertPiToIssued(selectedPi)}
+                        style={{
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          border: '1.5px solid #CBD5E1',
+                          backgroundColor: '#FFFFFF',
+                          color: '#64748B',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Revert to Issued (Unlink BOM)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstBom = matchedBoms[0]?.bomCode || matchedBoms[0]?.code || matchedBoms[0]?.id;
+                          setSelectedPi(null);
+                          window.dispatchEvent(new CustomEvent('controlroom_navigate_tab', { 
+                            detail: { tab: 'Sales BOM', targetBom: firstBom } 
+                          }));
+                          if (typeof onNavigateTab === 'function') {
+                            onNavigateTab('Sales BOM');
+                          }
+                        }}
+                        style={{
+                          padding: '10px 22px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          backgroundColor: '#059669',
+                          color: '#FFFFFF',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(5,150,105,0.3)'
+                        }}
+                      >
+                        <Layers size={16} /> View {matchedBoms[0]?.bomCode || 'BOM'} Order ↗
+                      </button>
+                    </div>
                   ) : (
                     selectedPi.status !== 'Cancelled' && (
                       <button

@@ -353,6 +353,19 @@ export default function BomOrdersView(props) {
 
     return rawList.filter(b => {
       if (!b) return false;
+
+      // Always include BOM if targeted directly from PI or props
+      if (props.targetBomCode) {
+        const tCode = String(props.targetBomCode).trim().toLowerCase();
+        const bCode = String(b.bomCode || b.code || b.id || '').trim().toLowerCase();
+        if (bCode === tCode) return true;
+      }
+      if (props.targetPiNo) {
+        const tPi = String(props.targetPiNo).trim().toLowerCase();
+        const sPi = String(b.sourcePiNo || b.piNo || '').trim().toLowerCase();
+        if (sPi === tPi) return true;
+      }
+
       const spCode = (b.salesPersonCode || b.createdById || '').trim().toUpperCase();
       if (curCode && spCode && spCode === curCode) return true;
 
@@ -372,7 +385,7 @@ export default function BomOrdersView(props) {
 
       return false;
     });
-  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, defaultSalesPersonName, currentLoggedEmail]);
+  }, [bomStore, isRestrictedSalesUser, currentEmpId, currentEmpName, defaultSalesPersonName, currentLoggedEmail, props.targetBomCode, props.targetPiNo]);
 
   const [selectedPreset, setSelectedPreset] = useState('');
   const [presetSetCount, setPresetSetCount] = useState(1);
