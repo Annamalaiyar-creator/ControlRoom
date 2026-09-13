@@ -446,24 +446,20 @@ export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
           <div style={{ textAlign: 'center', minWidth: '230px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {branding.showSignatoryStamp && (
               <div style={{ minHeight: '65px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
-                {(branding.stampMode === 'custom' || !branding.stampMode) && (branding.customStampUrl || VRM_OFFICIAL_STAMP) ? (
-                  <img
-                    src={branding.customStampUrl || VRM_OFFICIAL_STAMP}
-                    alt="Company Stamp"
-                    style={{
-                      maxHeight: '85px',
-                      maxWidth: '220px',
-                      objectFit: 'contain'
-                    }}
-                  />
-                ) : (
-                  <svg width="170" height="60" viewBox="0 0 125 46">
-                    <ellipse cx="62" cy="23" rx="54" ry="19" stroke="#0E7490" strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
-                    <text x="62" y="19" textAnchor="middle" fill="#0E7490" fontSize="6.5" fontWeight="bold">{branding.stampText || 'VRM STRUCTURES INDIA'}</text>
-                    <text x="62" y="30" textAnchor="middle" fill="#0E7490" fontSize="5.5">{branding.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
-                    <path d="M 38 24 Q 60 14 90 22" stroke="#0E7490" strokeWidth="1.5" fill="none" />
-                  </svg>
-                )}
+                <img
+                  src={branding.customStampUrl || VRM_OFFICIAL_STAMP || '/vrm_stamp.png'}
+                  alt="VRM Structures Official Stamp"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== VRM_OFFICIAL_STAMP) {
+                      e.currentTarget.src = VRM_OFFICIAL_STAMP;
+                    }
+                  }}
+                  style={{
+                    maxHeight: '90px',
+                    maxWidth: '220px',
+                    objectFit: 'contain'
+                  }}
+                />
               </div>
             )}
             <div style={{ borderTop: '1.5px dashed #94A3B8', paddingTop: '6px', width: '100%' }}>

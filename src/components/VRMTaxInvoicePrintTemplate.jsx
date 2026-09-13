@@ -370,24 +370,20 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                     {branding.forCompanyText || 'VRM Structures India Pvt Ltd'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%', minHeight: '70px', alignItems: 'center' }}>
-                    {(branding.stampMode === 'custom' || !branding.stampMode) && (branding.customStampUrl || VRM_OFFICIAL_STAMP) ? (
-                      <img
-                        src={branding.customStampUrl || VRM_OFFICIAL_STAMP}
-                        alt="Company Stamp"
-                        style={{
-                          maxHeight: '85px',
-                          maxWidth: '210px',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    ) : (
-                      <svg width="180" height="65" viewBox="0 0 150 55">
-                        <circle cx="75" cy="27" r="24" stroke="#003366" strokeWidth="1.5" strokeDasharray="3 3"/>
-                        <text x="75" y="20" textAnchor="middle" fill="#003366" fontSize="7.5" fontWeight="bold">{branding.stampText || 'VRM STRUCTURES INDIA'}</text>
-                        <text x="75" y="36" textAnchor="middle" fill="#003366" fontSize="7.5">{branding.stampLocation || 'CHENNAI'}</text>
-                        <path d="M 40 30 Q 65 10 110 25" stroke="#0047AB" strokeWidth="2" fill="none" />
-                      </svg>
-                    )}
+                    <img
+                      src={branding.customStampUrl || VRM_OFFICIAL_STAMP || '/vrm_stamp.png'}
+                      alt="VRM Structures Official Stamp"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== VRM_OFFICIAL_STAMP) {
+                          e.currentTarget.src = VRM_OFFICIAL_STAMP;
+                        }
+                      }}
+                      style={{
+                        maxHeight: '90px',
+                        maxWidth: '220px',
+                        objectFit: 'contain'
+                      }}
+                    />
                   </div>
                   <div style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#000000' }}>
                     {branding.signatoryTitle || 'Authorized Signatory'}

@@ -503,13 +503,13 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
       if (isMounted && master && typeof master === 'object') {
         setCurrentSettings(prev => ({
           ...prev,
-          ...(master.logoUrl && { customLogoUrl: master.logoUrl }),
-          ...(master.customStampUrl !== undefined && { customStampUrl: master.customStampUrl }),
-          ...(master.stampMode && { stampMode: master.stampMode }),
-          ...(master.stampSize && { stampSize: master.stampSize }),
+          customLogoUrl: master.logoUrl || prev.customLogoUrl || VRM_OFFICIAL_LOGO,
+          customStampUrl: master.customStampUrl || prev.customStampUrl || VRM_OFFICIAL_STAMP,
+          stampMode: 'custom',
+          stampSize: 230,
+          showSignatoryStamp: master.showSignatoryStamp !== undefined ? master.showSignatoryStamp : true,
           ...(master.stampText && { stampText: master.stampText }),
-          ...(master.stampLocation && { stampLocation: master.stampLocation }),
-          ...(master.showSignatoryStamp !== undefined && { showSignatoryStamp: master.showSignatoryStamp })
+          ...(master.stampLocation && { stampLocation: master.stampLocation })
         }));
       }
     });
@@ -518,13 +518,13 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
       if (isMounted && b && typeof b === 'object') {
         setCurrentSettings(prev => ({
           ...prev,
-          ...(b.logoUrl && { customLogoUrl: b.logoUrl }),
-          ...(b.customStampUrl !== undefined && { customStampUrl: b.customStampUrl }),
-          ...(b.stampMode && { stampMode: b.stampMode }),
-          ...(b.stampSize && { stampSize: b.stampSize }),
+          customLogoUrl: b.logoUrl || prev.customLogoUrl || VRM_OFFICIAL_LOGO,
+          customStampUrl: b.customStampUrl || prev.customStampUrl || VRM_OFFICIAL_STAMP,
+          stampMode: 'custom',
+          stampSize: 230,
+          showSignatoryStamp: b.showSignatoryStamp !== undefined ? b.showSignatoryStamp : true,
           ...(b.stampText && { stampText: b.stampText }),
-          ...(b.stampLocation && { stampLocation: b.stampLocation }),
-          ...(b.showSignatoryStamp !== undefined && { showSignatoryStamp: b.showSignatoryStamp })
+          ...(b.stampLocation && { stampLocation: b.stampLocation })
         }));
       }
     });
@@ -1746,79 +1746,89 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
                     </span>
                   </div>
 
-                  {/* Stamp Mode (Vector vs Custom Upload) */}
+                  {/* Frozen Official Stamp Controls */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
-                      Stamp Render Mode
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                      <button
-                        type="button"
-                        onClick={() => updateSetting({ stampMode: 'vector' })}
-                        style={{
-                          padding: '8px',
-                          borderRadius: '6px',
-                          border: currentSettings.stampMode === 'vector' ? `2px solid ${activeAccent}` : '1px solid #CBD5E1',
-                          backgroundColor: currentSettings.stampMode === 'vector' ? `${activeAccent}10` : '#FFFFFF',
-                          color: '#0F172A',
-                          fontSize: '11.5px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Vector Oval Seal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateSetting({ stampMode: 'custom' })}
-                        style={{
-                          padding: '8px',
-                          borderRadius: '6px',
-                          border: currentSettings.stampMode === 'custom' ? `2px solid ${activeAccent}` : '1px solid #CBD5E1',
-                          backgroundColor: currentSettings.stampMode === 'custom' ? `${activeAccent}10` : '#FFFFFF',
-                          color: '#0F172A',
-                          fontSize: '11.5px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Custom Image Stamp
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                        Official Company Stamp
+                      </label>
+                      <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '10px' }}>
+                        Active 🔒
+                      </span>
                     </div>
 
-                    {currentSettings.stampMode === 'custom' && (
-                      <div style={{ marginTop: '8px' }}>
-                        <input
-                          ref={stampInputRef}
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const compressed = await compressImageFile(file, 400, 0.9);
-                            updateSetting({ customStampUrl: compressed });
-                          }}
-                        />
+                    <div style={{
+                      padding: '12px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '90px'
+                    }}>
+                      <img
+                        src={currentSettings.customStampUrl || VRM_OFFICIAL_STAMP || '/vrm_stamp.png'}
+                        alt="Official Stamp"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== VRM_OFFICIAL_STAMP) {
+                            e.currentTarget.src = VRM_OFFICIAL_STAMP;
+                          }
+                        }}
+                        style={{ maxHeight: '80px', maxWidth: '180px', objectFit: 'contain' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <input
+                        ref={stampInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const compressed = await compressImageFile(file, 400, 0.9);
+                          updateSetting({ customStampUrl: compressed, stampMode: 'custom' });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => stampInputRef.current?.click()}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FFFFFF',
+                          border: '1px dashed #CBD5E1',
+                          borderRadius: '6px',
+                          padding: '8px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: activeAccent,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Change Stamp
+                      </button>
+
+                      {currentSettings.customStampUrl && currentSettings.customStampUrl !== VRM_OFFICIAL_STAMP && (
                         <button
                           type="button"
-                          onClick={() => stampInputRef.current?.click()}
+                          onClick={() => updateSetting({ customStampUrl: VRM_OFFICIAL_STAMP, stampMode: 'custom' })}
                           style={{
-                            width: '100%',
-                            backgroundColor: '#FFFFFF',
-                            border: '1px dashed #CBD5E1',
+                            padding: '8px 12px',
+                            backgroundColor: '#F1F5F9',
+                            border: '1px solid #CBD5E1',
                             borderRadius: '6px',
-                            padding: '8px',
                             fontSize: '11px',
-                            fontWeight: '700',
-                            color: activeAccent,
+                            fontWeight: '600',
+                            color: '#475569',
                             cursor: 'pointer'
                           }}
                         >
-                          Upload Stamp File
+                          Reset
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

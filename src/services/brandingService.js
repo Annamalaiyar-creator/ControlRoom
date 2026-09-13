@@ -48,10 +48,11 @@ export const getCachedBranding = () => {
     if (!branding.logoUrl || branding.logoUrl === '/vrm_logo.png') {
       branding.logoUrl = constantLogo || VRM_OFFICIAL_LOGO;
     }
+    branding.showSignatoryStamp = true;
 
     return branding;
   } catch (e) {
-    return { ...DEFAULT_BRANDING };
+    return { ...DEFAULT_BRANDING, customStampUrl: VRM_OFFICIAL_STAMP, logoUrl: VRM_OFFICIAL_LOGO };
   }
 };
 
@@ -66,20 +67,30 @@ export const fetchMasterBranding = async () => {
     if (res.ok) {
       const json = await res.json();
       if (json && json.success && json.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        if (json.data.logoUrl || json.data.customStampUrl || json.data.stampText) {
-          applyAndCacheBranding(json.data);
-          return json.data;
+        if (!json.data.customStampUrl || json.data.stampMode === 'vector') {
+          json.data.customStampUrl = VRM_OFFICIAL_STAMP;
+          json.data.stampMode = 'custom';
         }
+        if (!json.data.logoUrl || json.data.logoUrl === '/vrm_logo.png') {
+          json.data.logoUrl = VRM_OFFICIAL_LOGO;
+        }
+        applyAndCacheBranding(json.data);
+        return json.data;
       }
     }
 
     // 2. Fallback to Supabase cloud store
     const cloudData = await fetchCloudStore('company_branding_store', null);
     if (cloudData && typeof cloudData === 'object' && !Array.isArray(cloudData)) {
-      if (cloudData.logoUrl || cloudData.customStampUrl || cloudData.stampText) {
-        applyAndCacheBranding(cloudData);
-        return cloudData;
+      if (!cloudData.customStampUrl || cloudData.stampMode === 'vector') {
+        cloudData.customStampUrl = VRM_OFFICIAL_STAMP;
+        cloudData.stampMode = 'custom';
       }
+      if (!cloudData.logoUrl || cloudData.logoUrl === '/vrm_logo.png') {
+        cloudData.logoUrl = VRM_OFFICIAL_LOGO;
+      }
+      applyAndCacheBranding(cloudData);
+      return cloudData;
     }
   } catch (err) {
     console.warn('[BrandingService] Error fetching master branding from server:', err);
@@ -94,14 +105,19 @@ const applyAndCacheBranding = (data) => {
   try {
     const current = getCachedBranding();
     const merged = { ...current, ...data };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
 
-    if (merged.customStampUrl) {
-      localStorage.setItem('vrm_constant_stamp', merged.customStampUrl);
+    if (!merged.customStampUrl || merged.stampMode === 'vector') {
+      merged.customStampUrl = VRM_OFFICIAL_STAMP;
+      merged.stampMode = 'custom';
     }
-    if (merged.logoUrl) {
-      localStorage.setItem('vrm_constant_logo', merged.logoUrl);
+    if (!merged.logoUrl || merged.logoUrl === '/vrm_logo.png') {
+      merged.logoUrl = VRM_OFFICIAL_LOGO;
     }
+    merged.showSignatoryStamp = true;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    localStorage.setItem('vrm_constant_stamp', merged.customStampUrl);
+    localStorage.setItem('vrm_constant_logo', merged.logoUrl);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('vrm_branding_updated', { detail: merged }));

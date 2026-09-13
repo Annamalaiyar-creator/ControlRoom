@@ -2062,53 +2062,27 @@ export function VRMProformaInvoicePrintSheet({
                     position: 'relative',
                     minHeight: '60px'
                   }}>
-                    {/* STAMP DISPLAY */}
-                    {(cfg.stampMode === 'custom' || !cfg.stampMode) && (cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp')) || VRM_OFFICIAL_STAMP) ? (
+                    {/* FROZEN OFFICIAL STAMP DISPLAY */}
+                    {cfg.showSignatoryStamp !== false && (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <img
-                          src={cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp')) || VRM_OFFICIAL_STAMP}
-                          alt="Company Stamp"
+                          src={cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp')) || VRM_OFFICIAL_STAMP || '/vrm_stamp.png'}
+                          alt="VRM Structures Official Stamp"
+                          onError={(e) => {
+                            if (e.currentTarget.src !== VRM_OFFICIAL_STAMP) {
+                              e.currentTarget.src = VRM_OFFICIAL_STAMP;
+                            }
+                          }}
                           style={{
-                            height: '110px',
+                            height: '115px',
                             width: '230px',
                             maxWidth: '240px',
-                            maxHeight: '115px',
+                            maxHeight: '120px',
                             objectFit: 'contain'
                           }}
                         />
                       </div>
-                    ) : cfg.stampMode === 'vector' ? (
-                      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <svg
-                          width={230}
-                          height={85}
-                          viewBox="0 0 125 46"
-                          style={{ width: '230px', height: '85px' }}
-                        >
-                          <ellipse cx="62" cy="23" rx="54" ry="19" stroke={accent} strokeWidth="1.2" strokeDasharray="3 2" fill="none"/>
-                          <text x="62" y="19" textAnchor="middle" fill={accent} fontSize="6.5" fontWeight="bold">{cfg.stampText || 'VRM STRUCTURES INDIA'}</text>
-                          <text x="62" y="30" textAnchor="middle" fill={accent} fontSize="5.5">{cfg.stampLocation || 'CHENNAI - AUTHORIZED'}</text>
-                          <path d="M 38 24 Q 60 14 90 22" stroke={accent} strokeWidth="1.5" fill="none" />
-                        </svg>
-                        {isEditable && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                            <div style={{ fontSize: '9px' }}>
-                              <EditableText
-                                value={cfg.stampText}
-                                fallback="VRM STRUCTURES INDIA"
-                                onSave={(v) => onUpdateSetting?.({ stampText: v })}
-                              />
-                              {' - '}
-                              <EditableText
-                                value={cfg.stampLocation}
-                                fallback="CHENNAI - AUTHORIZED"
-                                onSave={(v) => onUpdateSetting?.({ stampLocation: v })}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
+                    )}
 
                     {/* SIGNATURE DISPLAY */}
                     {cfg.signatureMode && cfg.signatureMode !== 'none' && (
@@ -3338,12 +3312,30 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
         if (branding.customSignatureUrl) initial.customSignatureUrl = branding.customSignatureUrl;
       }
 
+      // Freeze official stamp and logo as permanent defaults if not explicitly custom-uploaded
+      if (!initial.customStampUrl || initial.stampMode === 'vector') {
+        initial.customStampUrl = VRM_OFFICIAL_STAMP;
+        initial.stampMode = 'custom';
+      }
+      if (!initial.customLogoUrl || initial.customLogoUrl === '/vrm_logo.png') {
+        initial.customLogoUrl = VRM_OFFICIAL_LOGO;
+      }
+      initial.showSignatoryStamp = true;
+
       // Fixed constant dimensions
       initial.logoHeight = 56;
       initial.stampSize = 230;
       return initial;
     } catch (e) {}
-    return { ...DEFAULT_PI_TEMPLATE_SETTINGS, logoHeight: 56, stampSize: 230 };
+    return {
+      ...DEFAULT_PI_TEMPLATE_SETTINGS,
+      customStampUrl: VRM_OFFICIAL_STAMP,
+      customLogoUrl: VRM_OFFICIAL_LOGO,
+      stampMode: 'custom',
+      showSignatoryStamp: true,
+      logoHeight: 56,
+      stampSize: 230
+    };
   });
 
   // Pull latest master company branding from backend on mount and subscribe to multi-tab updates
@@ -3353,13 +3345,13 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
       if (isMounted && master && typeof master === 'object') {
         setTemplateSettings(prev => ({
           ...prev,
-          ...(master.logoUrl && { customLogoUrl: master.logoUrl }),
-          ...(master.customStampUrl !== undefined && { customStampUrl: master.customStampUrl }),
-          ...(master.stampMode && { stampMode: master.stampMode }),
-          ...(master.stampSize && { stampSize: master.stampSize }),
+          customLogoUrl: master.logoUrl || prev.customLogoUrl || VRM_OFFICIAL_LOGO,
+          customStampUrl: master.customStampUrl || prev.customStampUrl || VRM_OFFICIAL_STAMP,
+          stampMode: 'custom',
+          stampSize: 230,
+          showSignatoryStamp: master.showSignatoryStamp !== undefined ? master.showSignatoryStamp : true,
           ...(master.stampText && { stampText: master.stampText }),
           ...(master.stampLocation && { stampLocation: master.stampLocation }),
-          ...(master.showSignatoryStamp !== undefined && { showSignatoryStamp: master.showSignatoryStamp }),
           ...(master.forCompanyText && { forCompanyText: master.forCompanyText }),
           ...(master.signatoryTitle && { signatoryTitle: master.signatoryTitle }),
           ...(master.signatureMode && { signatureMode: master.signatureMode }),
@@ -3372,13 +3364,13 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
       if (isMounted && b && typeof b === 'object') {
         setTemplateSettings(prev => ({
           ...prev,
-          ...(b.logoUrl && { customLogoUrl: b.logoUrl }),
-          ...(b.customStampUrl !== undefined && { customStampUrl: b.customStampUrl }),
-          ...(b.stampMode && { stampMode: b.stampMode }),
-          ...(b.stampSize && { stampSize: b.stampSize }),
+          customLogoUrl: b.logoUrl || prev.customLogoUrl || VRM_OFFICIAL_LOGO,
+          customStampUrl: b.customStampUrl || prev.customStampUrl || VRM_OFFICIAL_STAMP,
+          stampMode: 'custom',
+          stampSize: 230,
+          showSignatoryStamp: b.showSignatoryStamp !== undefined ? b.showSignatoryStamp : true,
           ...(b.stampText && { stampText: b.stampText }),
           ...(b.stampLocation && { stampLocation: b.stampLocation }),
-          ...(b.showSignatoryStamp !== undefined && { showSignatoryStamp: b.showSignatoryStamp }),
           ...(b.forCompanyText && { forCompanyText: b.forCompanyText }),
           ...(b.signatoryTitle && { signatoryTitle: b.signatoryTitle }),
           ...(b.signatureMode && { signatureMode: b.signatureMode }),
