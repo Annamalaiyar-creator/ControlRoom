@@ -7,7 +7,8 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, RotateCcw, UploadCloud, ChevronDown, ChevronUp, ExternalLink,
   Truck, Shield, Package, Star, Download, HelpCircle, Info, ShoppingCart, Upload, Printer, Maximize2,
   ShieldCheck, Layers, Factory, Cpu, Receipt, IndianRupee, Smartphone, Camera, Image, RefreshCw,
-  CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Send
+  CreditCard, Bell, Video, Play, Pause, Film, Sparkles, MoreHorizontal, Copy, Hourglass, Boxes, Send,
+  Wrench
 } from 'lucide-react';
 import TopSpendingCategories from '../TopSpendingCategories';
 import POTrendChart from '../POTrendChart';
@@ -1271,6 +1272,7 @@ export default function StockStatusView(props) {
   const [stockStatusCategory, setStockStatusCategory] = useState('All Categories');
   const [stockStatusStatus, setStockStatusStatus] = useState('All Status');
   const [stockStatusActiveSubTab, setStockStatusActiveSubTab] = useState('All');
+  const [stockProductTypeTab, setStockProductTypeTab] = useState('All'); // 'All' | 'Finished Goods' | 'Accessories'
   const [stockStatusPage, setStockStatusPage] = useState(1);
   const [stockStatusRowsPerPage, setStockStatusRowsPerPage] = useState(10);
   const [stockStatusGoToInput, setStockStatusGoToInput] = useState('');
@@ -1283,10 +1285,11 @@ export default function StockStatusView(props) {
       alert('No stock records to export.');
       return;
     }
-    const headers = ['Material / SKU', 'Code', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Incoming Qty', 'Reorder Level', 'Stock Value', 'Status'];
+    const headers = ['Material / SKU', 'Code', 'Product Type', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Incoming Qty', 'Reorder Level', 'Stock Value', 'Status'];
     const rows = rowsToExport.map(r => [
       `"${String(r.item || '').replace(/"/g, '""')}"`,
       `"${String(r.code || '').replace(/"/g, '""')}"`,
+      `"${String(r.productType || 'Finished Goods').replace(/"/g, '""')}"`,
       `"${String(r.category || '').replace(/"/g, '""')}"`,
       `"${String(r.location || '').replace(/"/g, '""')}"`,
       `"${String(r.stock || '0').replace(/"/g, '""')}"`,
@@ -2523,8 +2526,46 @@ export default function StockStatusView(props) {
               if (mFp) rawMatMap.set(mFp, m);
             });
 
-            // 3. Build comprehensive item list
-            const combinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
+            // 3. Helper to classify inventory items and filter out pure raw materials
+            const classifyStockItem = (nameStr = '', catStr = '', matStr = '') => {
+              const n = String(nameStr || '').toLowerCase().trim();
+              const c = String(catStr || '').toLowerCase().trim();
+              const m = String(matStr || '').toLowerCase().trim();
+
+              const isPureRaw = (
+                c.includes('raw') || n.includes('raw coil') || n.includes('steel coil') ||
+                n.includes('zinc ingot') || n.includes('billet') || n.includes('sheet metal coil')
+              ) && !n.includes('clamp') && !n.includes('leg') && !n.includes('rafter') && !n.includes('purlin') && !n.includes('rail');
+
+              if (isPureRaw) return { isRaw: true, productType: 'Raw Material', category: 'Raw Material' };
+
+              const accKeywords = [
+                'clamp', 'fastener', 'nut', 'bolt', 'washer', 'clip', 'screw', 't nut',
+                'connector', 'lug', 'gland', 'earthing', 'cable', 'wire', 'fuse',
+                'mcb', 'spd', 'accessory', 'accessories', 'hardware', 'bracket'
+              ];
+              if (accKeywords.some(k => n.includes(k) || c.includes(k) || m.includes(k))) {
+                let cleanCat = 'Accessories';
+                if (n.includes('clamp')) cleanCat = 'Clamps';
+                else if (n.includes('bolt') || n.includes('nut') || n.includes('washer') || n.includes('screw') || n.includes('fastener')) cleanCat = 'Fasteners & Hardware';
+                else if (n.includes('cable') || n.includes('wire') || n.includes('earthing') || n.includes('acdb') || n.includes('dcdb')) cleanCat = 'Electrical';
+                return { isRaw: false, productType: 'Accessories', category: cleanCat };
+              }
+
+              let cleanCat = 'Structures & Rails';
+              if (n.includes('leg')) cleanCat = 'Legs & Columns';
+              else if (n.includes('rafter')) cleanCat = 'Rafters';
+              else if (n.includes('purlin')) cleanCat = 'Purlins';
+              else if (n.includes('rail')) cleanCat = 'Rails';
+              else if (n.includes('bracing')) cleanCat = 'Bracing';
+              else if (n.includes('panel') || n.includes('module')) cleanCat = 'Solar Modules';
+              else if (n.includes('inverter')) cleanCat = 'Inverters';
+
+              return { isRaw: false, productType: 'Finished Goods', category: cleanCat };
+            };
+
+            // Build comprehensive item list - strictly excluding pure raw materials
+            const rawCombinedList = (itemsList && itemsList.length > 0) ? itemsList.map(it => {
               const itRes = resolveProductCode(it).toLowerCase().trim();
               const codeKey = String(itRes || it.code || it.sku || it.itemId || '').toLowerCase().trim();
               const nameKey = String(it.name || '').toLowerCase().trim();
@@ -2553,10 +2594,14 @@ export default function StockStatusView(props) {
               if (availableQty === 0) statusText = 'Out of Stock';
               else if (availableQty <= minLvl) statusText = 'Low Stock';
 
+              const classification = classifyStockItem(it.name, it.category, it.material);
+
               return {
                 code: it.code || it.sku || it.itemId || (itRes ? itRes.toUpperCase() : 'VRM-ITEM'),
                 item: it.name,
-                category: it.category || it.material || 'Raw Material',
+                productType: classification.productType,
+                isRaw: classification.isRaw,
+                category: classification.category,
                 location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),
                 stock: availableQty.toLocaleString('en-IN'),
                 allocated: activeBlocked.toLocaleString('en-IN'),
@@ -2570,28 +2615,60 @@ export default function StockStatusView(props) {
               const rawNum = Math.max(0, parseFloat(String(it.stock).replace(/,/g, '')) || 0);
               const allocNum = parseFloat(String(it.allocated).replace(/,/g, '')) || 0;
               const avail = Math.max(0, rawNum - allocNum);
+              const classification = classifyStockItem(it.item, it.category, '');
               return {
                 ...it,
+                productType: classification.productType,
+                isRaw: classification.isRaw,
+                category: classification.category,
                 stock: avail.toLocaleString('en-IN'),
                 rawStockNum: avail
               };
             });
 
-            // 4. Calculate sub-tab badge counts from total combined stock list
-            const totalAll = combinedList.length;
-            const totalInStock = combinedList.filter(r => r.status === 'In Stock').length;
-            const totalLowStock = combinedList.filter(r => r.status === 'Low Stock').length;
-            const totalOutOfStock = combinedList.filter(r => r.status === 'Out of Stock').length;
+            // Exclude pure raw materials so only Finished Goods and Accessories are shown
+            const combinedList = rawCombinedList.filter(row => !row.isRaw);
+
+            // 4. Calculate primary Product Type counts
+            const totalAllProducts = combinedList.length;
+            const totalFinishedGoods = combinedList.filter(r => r.productType === 'Finished Goods').length;
+            const totalAccessories = combinedList.filter(r => r.productType === 'Accessories').length;
+
+            const productTypeTabs = [
+              { id: 'All', label: 'All Products', count: totalAllProducts, icon: Package },
+              { id: 'Finished Goods', label: 'Finished Goods / Structures', count: totalFinishedGoods, icon: Layers },
+              { id: 'Accessories', label: 'Accessories & Fasteners', count: totalAccessories, icon: Boxes }
+            ];
+
+            // Dynamic categories for selected product type (never showing Raw Material)
+            const dynamicCategories = Array.from(new Set(
+              combinedList
+                .filter(r => stockProductTypeTab === 'All' || r.productType === stockProductTypeTab)
+                .map(r => r.category)
+                .filter(Boolean)
+            )).sort();
+
+            // Calculate status sub-tab counts based on active product type
+            const activeTypePool = stockProductTypeTab === 'All'
+              ? combinedList
+              : combinedList.filter(r => r.productType === stockProductTypeTab);
+
+            const totalInStock = activeTypePool.filter(r => r.status === 'In Stock').length;
+            const totalLowStock = activeTypePool.filter(r => r.status === 'Low Stock').length;
+            const totalOutOfStock = activeTypePool.filter(r => r.status === 'Out of Stock').length;
 
             const stockTabs = [
-              { id: 'All', label: 'All Items', count: totalAll, bg: '#F1F5F9', fg: '#475569' },
+              { id: 'All', label: 'All Items', count: activeTypePool.length, bg: '#F1F5F9', fg: '#475569' },
               { id: 'In Stock', label: 'In Stock', count: totalInStock, bg: '#DCFCE7', fg: '#15803D' },
               { id: 'Low Stock', label: 'Low Stock', count: totalLowStock, bg: '#FEF3C7', fg: '#D97706' },
               { id: 'Out of Stock', label: 'Out of Stock', count: totalOutOfStock, bg: '#FEE2E2', fg: '#DC2626' }
             ];
 
-            // 5. Apply sub-tab & search & dropdown filters
+            // 5. Apply product type, status sub-tab, search & dropdown filters
             const filteredList = combinedList.filter(row => {
+              if (stockProductTypeTab !== 'All' && row.productType !== stockProductTypeTab) {
+                return false;
+              }
               if (stockStatusActiveSubTab !== 'All' && row.status !== stockStatusActiveSubTab) {
                 return false;
               }
@@ -2599,9 +2676,10 @@ export default function StockStatusView(props) {
                 const q = stockStatusSearchQuery.toLowerCase().trim();
                 const matchItem = String(row.item || '').toLowerCase().includes(q);
                 const matchCode = String(row.code || '').toLowerCase().includes(q);
+                const matchType = String(row.productType || '').toLowerCase().includes(q);
                 const matchCat = String(row.category || '').toLowerCase().includes(q);
                 const matchLoc = String(row.location || '').toLowerCase().includes(q);
-                if (!matchItem && !matchCode && !matchCat && !matchLoc) return false;
+                if (!matchItem && !matchCode && !matchType && !matchCat && !matchLoc) return false;
               }
               if (stockStatusWarehouse !== 'All Warehouses' && row.location !== stockStatusWarehouse) {
                 return false;
@@ -2668,6 +2746,7 @@ export default function StockStatusView(props) {
                         setStockStatusCategory('All Categories');
                         setStockStatusStatus('All Status');
                         setStockStatusActiveSubTab('All');
+                        setStockProductTypeTab('All');
                         setStockStatusPage(1);
                         setSelectedStockRows([]);
                       }}
@@ -2693,8 +2772,58 @@ export default function StockStatusView(props) {
                   </div>
                 </div>
 
+                {/* Primary Product Type Tabs: All Products | Finished Goods / Structures | Accessories & Fasteners */}
+                <div style={{ padding: '12px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginRight: '4px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Layers size={14} style={{ color: '#0E7490' }} /> Product View:
+                  </span>
+                  {productTypeTabs.map(tab => {
+                    const isActive = stockProductTypeTab === tab.id;
+                    const TabIcon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setStockProductTypeTab(tab.id);
+                          setStockStatusCategory('All Categories');
+                          setStockStatusPage(1);
+                          setSelectedStockRows([]);
+                        }}
+                        style={{
+                          padding: '7px 16px',
+                          borderRadius: '8px',
+                          border: isActive ? '1px solid #0E7490' : '1px solid #CBD5E1',
+                          backgroundColor: isActive ? '#0E7490' : '#FFFFFF',
+                          color: isActive ? '#FFFFFF' : '#334155',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isActive ? '0 2px 4px rgba(14, 116, 144, 0.2)' : 'none'
+                        }}
+                      >
+                        <TabIcon size={14} style={{ color: isActive ? '#FFFFFF' : '#64748B' }} />
+                        <span>{tab.label}</span>
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '1px 7px',
+                          borderRadius: '10px',
+                          backgroundColor: isActive ? 'rgba(255, 255, 255, 0.25)' : '#F1F5F9',
+                          color: isActive ? '#FFFFFF' : '#475569',
+                          fontWeight: '700'
+                        }}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* Integrated Search & Dropdown Filters Strip */}
-                <div style={{ padding: '14px 24px', backgroundColor: '#FAFAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ padding: '14px 24px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '220px' }}>
                     <input
                       type="text"
@@ -2703,7 +2832,7 @@ export default function StockStatusView(props) {
                         setStockStatusSearchQuery(e.target.value);
                         setStockStatusPage(1);
                       }}
-                      placeholder="Search by Material / SKU / Code..."
+                      placeholder="Search by Material / SKU / Code / Type..."
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                     />
                     <Search style={{ width: '14px', height: '14px', color: '#94A3B8', position: 'absolute', left: '12px', top: '12px' }} />
@@ -2725,7 +2854,7 @@ export default function StockStatusView(props) {
                     </select>
                   </div>
 
-                  <div style={{ minWidth: '160px' }}>
+                  <div style={{ minWidth: '170px' }}>
                     <select
                       value={stockStatusCategory}
                       onChange={(e) => {
@@ -2734,13 +2863,10 @@ export default function StockStatusView(props) {
                       }}
                       style={{ height: '38px', width: '100%', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155', fontWeight: '500' }}
                     >
-                      <option value="All Categories">All Categories</option>
-                      <option value="Rails">Rails</option>
-                      <option value="Clamps">Clamps</option>
-                      <option value="Fasteners">Fasteners</option>
-                      <option value="Accessories">Accessories</option>
-                      <option value="Raw Material">Raw Material</option>
-                      <option value="General">General</option>
+                      <option value="All Categories">All Categories ({dynamicCategories.length})</option>
+                      {dynamicCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -2788,7 +2914,7 @@ export default function StockStatusView(props) {
 
                 {/* Main Data Table with Checkboxes & Interactive Row Selection */}
                 <div style={{ overflowX: 'auto', width: '100%' }}>
-                  <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                  <table className="custom-table" style={{ width: '100%', minWidth: '1180px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
                         <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
@@ -2809,26 +2935,27 @@ export default function StockStatusView(props) {
                         </th>
                         <th style={{ padding: '12px 14px', width: '50px', minWidth: '50px' }}>#</th>
                         <th style={{ padding: '12px 14px', minWidth: '220px' }}>Material / SKU</th>
-                        <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px' }}>Category</th>
-                        <th style={{ padding: '12px 14px', width: '150px', minWidth: '150px' }}>Warehouse</th>
-                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Available Qty</th>
-                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Reserved Qty</th>
-                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Incoming Qty</th>
-                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Reorder Level</th>
+                        <th style={{ padding: '12px 14px', width: '135px', minWidth: '135px' }}>Type</th>
+                        <th style={{ padding: '12px 14px', width: '135px', minWidth: '135px' }}>Category</th>
+                        <th style={{ padding: '12px 14px', width: '140px', minWidth: '140px' }}>Warehouse</th>
+                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Available Qty</th>
+                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Reserved Qty</th>
+                        <th style={{ padding: '12px 14px', width: '100px', minWidth: '100px', textAlign: 'center' }}>Incoming Qty</th>
+                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Reorder Level</th>
                         {!isSalesUser && (
-                          <th style={{ padding: '12px 14px', width: '140px', minWidth: '140px', textAlign: 'right' }}>Stock Value (₹)</th>
+                          <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px', textAlign: 'right' }}>Stock Value (₹)</th>
                         )}
-                        <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px 14px', width: '125px', minWidth: '125px', textAlign: 'center' }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayedRows.length === 0 ? (
                         <tr>
-                          <td colSpan={isSalesUser ? 10 : 11} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
+                          <td colSpan={isSalesUser ? 11 : 12} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                               <Package style={{ width: '32px', height: '32px', color: '#94A3B8' }} />
                               <strong style={{ color: '#334155' }}>No stock items match the selected criteria</strong>
-                              <span style={{ fontSize: '12px', color: '#94A3B8' }}>Try adjusting your search query or filters above.</span>
+                              <span style={{ fontSize: '12px', color: '#94A3B8' }}>Try adjusting your search query or product type filters above.</span>
                             </div>
                           </td>
                         </tr>
@@ -2893,8 +3020,43 @@ export default function StockStatusView(props) {
                                 <div style={{ fontWeight: '700', color: '#0F172A', cursor: 'pointer' }}>{row.item}</div>
                                 <div style={{ fontSize: '11px', color: '#0E7490', fontWeight: '600' }}>{row.code}</div>
                               </td>
+                              <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                                {row.productType === 'Finished Goods' ? (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    backgroundColor: '#EFF6FF',
+                                    color: '#1D4ED8',
+                                    border: '1px solid #BFDBFE'
+                                  }}>
+                                    <Layers size={11} style={{ color: '#2563EB' }} />
+                                    Finished Good
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    backgroundColor: '#FAF5FF',
+                                    color: '#7E22CE',
+                                    border: '1px solid #E9D5FF'
+                                  }}>
+                                    <Boxes size={11} style={{ color: '#9333EA' }} />
+                                    Accessory
+                                  </span>
+                                )}
+                              </td>
                               <td style={{ padding: '12px 14px', color: '#475569' }}>
-                                <span style={{ backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', color: '#475569' }}>
+                                <span style={{ backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', color: '#475569', whiteSpace: 'nowrap' }}>
                                   {row.category}
                                 </span>
                               </td>
@@ -3218,9 +3380,22 @@ export default function StockStatusView(props) {
                               {viewingStockItem.code}
                             </span>
                           </div>
-                          <span style={{ fontSize: '12px', color: '#64748B' }}>
-                            Category: {viewingStockItem.category} &bull; Warehouse: {viewingStockItem.location}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontWeight: '700',
+                              backgroundColor: viewingStockItem.productType === 'Finished Goods' ? '#EFF6FF' : '#FAF5FF',
+                              color: viewingStockItem.productType === 'Finished Goods' ? '#1D4ED8' : '#7E22CE',
+                              border: `1px solid ${viewingStockItem.productType === 'Finished Goods' ? '#BFDBFE' : '#E9D5FF'}`
+                            }}>
+                              {viewingStockItem.productType === 'Finished Goods' ? 'Finished Good' : 'Accessory'}
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#64748B' }}>
+                              Category: <strong style={{ color: '#334155' }}>{viewingStockItem.category}</strong> &bull; Warehouse: <strong style={{ color: '#334155' }}>{viewingStockItem.location}</strong>
+                            </span>
+                          </div>
                         </div>
                         <button
                           onClick={() => setViewingStockItem(null)}
