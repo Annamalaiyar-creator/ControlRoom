@@ -1961,14 +1961,14 @@ export default function StockStatusView(props) {
   const INITIAL_REORDER_ALERTS = [
     { id: 1, name: 'Aluminium Rail 4.2m', sku: 'AL-RAIL-4.2', category: 'Rails', warehouse: 'Main Warehouse', stock: '120', percent: '12%', minLevel: '500', uom: 'Nos', leadTime: '7 Days', reorderQty: '880', val: '8,80,000', status: 'Critical', coverage: '2 Days', level: 12 },
     { id: 2, name: 'Mid Clamp', sku: 'MC-01', category: 'Clamps', warehouse: 'Main Warehouse', stock: '926', percent: '17%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,250', val: '3,12,500', status: 'Critical', coverage: '3 Days', level: 17 },
-    { id: 3, name: 'End Clamp', sku: 'EC-01', category: 'Clamps', warehouse: 'Regional Warehouse', stock: '300', percent: '20%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,200', val: '2,40,000', status: 'Critical', coverage: '3 Days', level: 20 },
+    { id: 3, name: 'End Clamp', sku: 'EC-01', category: 'Clamps', warehouse: 'Main Warehouse', stock: '300', percent: '20%', minLevel: '1,500', uom: 'Nos', leadTime: '5 Days', reorderQty: '1,200', val: '2,40,000', status: 'Critical', coverage: '3 Days', level: 20 },
     { id: 4, name: 'GI Nut Bolt M8x25', sku: 'NB-M8-25', category: 'Fasteners', warehouse: 'Main Warehouse', stock: '2,450', percent: '25%', minLevel: '10,000', uom: 'Nos', leadTime: '4 Days', reorderQty: '7,550', val: '1,51,000', status: 'Low Stock', coverage: '4 Days', level: 25 },
-    { id: 5, name: 'GI Nut Bolt M10x30', sku: 'NB-M10-30', category: 'Fasteners', warehouse: 'Regional Warehouse', stock: '1,800', percent: '30%', minLevel: '6,000', uom: 'Nos', leadTime: '4 Days', reorderQty: '4,200', val: '1,68,000', status: 'Low Stock', coverage: '4 Days', level: 30 },
+    { id: 5, name: 'GI Nut Bolt M10x30', sku: 'NB-M10-30', category: 'Fasteners', warehouse: 'Main Warehouse', stock: '1,800', percent: '30%', minLevel: '6,000', uom: 'Nos', leadTime: '4 Days', reorderQty: '4,200', val: '1,68,000', status: 'Low Stock', coverage: '4 Days', level: 30 },
     { id: 6, name: 'Spring Washer M8', sku: 'SW-M8', category: 'Fasteners', warehouse: 'Main Warehouse', stock: '950', percent: '32%', minLevel: '3,000', uom: 'Nos', leadTime: '3 Days', reorderQty: '2,050', val: '41,000', status: 'Low Stock', coverage: '5 Days', level: 32 },
     { id: 7, name: 'L-Foot', sku: 'LF-01', category: 'Accessories', warehouse: 'Main Warehouse', stock: '160', percent: '33%', minLevel: '480', uom: 'Nos', leadTime: '7 Days', reorderQty: '320', val: '64,000', status: 'Low Stock', coverage: '6 Days', level: 33 },
-    { id: 8, name: 'Cable Clip', sku: 'CC-01', category: 'Accessories', warehouse: 'Regional Warehouse', stock: '3,200', percent: '35%', minLevel: '9,000', uom: 'Nos', leadTime: '3 Days', reorderQty: '5,800', val: '58,000', status: 'Low Stock', coverage: '6 Days', level: 35 },
+    { id: 8, name: 'Cable Clip', sku: 'CC-01', category: 'Accessories', warehouse: 'Main Warehouse', stock: '3,200', percent: '35%', minLevel: '9,000', uom: 'Nos', leadTime: '3 Days', reorderQty: '5,800', val: '58,000', status: 'Low Stock', coverage: '6 Days', level: 35 },
     { id: 9, name: 'Earthing Lug', sku: 'EL-01', category: 'Electrical', warehouse: 'Main Warehouse', stock: '220', percent: '37%', minLevel: '600', uom: 'Nos', leadTime: '6 Days', reorderQty: '380', val: '45,600', status: 'Low Stock', coverage: '7 Days', level: 37 },
-    { id: 10, name: 'UV Cable Tie 300mm', sku: 'CT-300', category: 'Accessories', warehouse: 'Regional Warehouse', stock: '1,400', percent: '38%', minLevel: '3,600', uom: 'Nos', leadTime: '3 Days', reorderQty: '2,200', val: '26,400', status: 'Low Stock', coverage: '8 Days', level: 38 }
+    { id: 10, name: 'Solar Panel Adani 540wp', sku: 'MOD-AD-540', category: 'Solar Panels', warehouse: 'Stock Area', stock: '400', percent: '40%', minLevel: '1,000', uom: 'Nos', leadTime: '5 Days', reorderQty: '600', val: '32,00,000', status: 'Low Stock', coverage: '8 Days', level: 40 }
   ];
 
   const [reorderAlerts, setReorderAlerts] = useState(() => {
@@ -2030,12 +2030,13 @@ export default function StockStatusView(props) {
   const INITIAL_STOCK_REGISTRY = [
     { code: 'AL-001', item: 'Aluminium Rail 4.2m', category: 'Rails', location: 'Main Warehouse', stock: '120', allocated: '30', incoming: '500', minLevel: '500', val: '8,80,000', status: 'Low Stock' },
     { code: 'MC-001', item: 'Mid Clamp', category: 'Clamps', location: 'Main Warehouse', stock: '926', allocated: '100', incoming: '1,000', minLevel: '1,500', val: '3,12,500', status: 'Low Stock' },
-    { code: 'EC-001', item: 'End Clamp', category: 'Clamps', location: 'Regional Warehouse', stock: '2,400', allocated: '200', incoming: '-', minLevel: '1,000', val: '2,40,000', status: 'In Stock' },
+    { code: 'EC-001', item: 'End Clamp', category: 'Clamps', location: 'Main Warehouse', stock: '2,400', allocated: '200', incoming: '-', minLevel: '1,000', val: '2,40,000', status: 'In Stock' },
     { code: 'NB-025', item: 'GI Nut Bolt M8 x 25', category: 'Fasteners', location: 'Main Warehouse', stock: '0', allocated: '0', incoming: '500', minLevel: '500', val: '1,51,000', status: 'Out of Stock' },
-    { code: 'NB-030', item: 'GI Nut Bolt M10 x 30', category: 'Fasteners', location: 'Regional Warehouse', stock: '1,800', allocated: '150', incoming: '-', minLevel: '2,000', val: '1,68,000', status: 'Low Stock' },
+    { code: 'NB-030', item: 'GI Nut Bolt M10 x 30', category: 'Fasteners', location: 'Main Warehouse', stock: '1,800', allocated: '150', incoming: '-', minLevel: '2,000', val: '1,68,000', status: 'Low Stock' },
     { code: 'WS-008', item: 'Spring Washer M8', category: 'Fasteners', location: 'Main Warehouse', stock: '950', allocated: '50', incoming: '-', minLevel: '500', val: '41,000', status: 'In Stock' },
     { code: 'LF-001', item: 'L-Foot', category: 'Accessories', location: 'Main Warehouse', stock: '160', allocated: '20', incoming: '-', minLevel: '200', val: '64,000', status: 'Low Stock' },
-    { code: 'CC-001', item: 'Cable Clip', category: 'Accessories', location: 'Regional Warehouse', stock: '3,200', allocated: '100', incoming: '-', minLevel: '1,000', val: '58,000', status: 'In Stock' }
+    { code: 'CC-001', item: 'Cable Clip', category: 'Accessories', location: 'Main Warehouse', stock: '3,200', allocated: '100', incoming: '-', minLevel: '1,000', val: '58,000', status: 'In Stock' },
+    { code: 'MOD-001', item: 'MODULE - ADANI BIFACIAL DCR 540wp', category: 'Solar Panels', location: 'Stock Area', stock: '850', allocated: '50', incoming: '500', minLevel: '200', val: '76,50,000', status: 'In Stock' }
   ];
 
   const [stockRegistry, setStockRegistry] = useState(() => {
@@ -2579,7 +2580,7 @@ export default function StockStatusView(props) {
               else if (n.includes('purlin')) cleanCat = 'Purlins';
               else if (n.includes('rail')) cleanCat = 'Rails';
               else if (n.includes('bracing')) cleanCat = 'Bracing';
-              else if (n.includes('panel') || n.includes('module')) cleanCat = 'Solar Modules';
+              else if (n.includes('panel') || n.includes('module')) cleanCat = 'Solar Panels';
               else if (n.includes('inverter')) cleanCat = 'Inverters';
 
               return { isRaw: false, productType: 'Finished Goods', category: cleanCat };
@@ -2617,13 +2618,24 @@ export default function StockStatusView(props) {
 
               const classification = classifyStockItem(it.name, it.category, it.material);
 
+              // Warehouse rule: Solar panels are stored strictly in Stock Area; all other items in Main Warehouse
+              const isSolarPanelItem = (
+                classification.category === 'Solar Panels' ||
+                classification.category === 'Solar Modules' ||
+                String(it.name || '').toLowerCase().includes('panel') ||
+                String(it.name || '').toLowerCase().includes('module') ||
+                String(it.category || '').toLowerCase().includes('panel') ||
+                String(it.category || '').toLowerCase().includes('module')
+              );
+              const assignedLocation = isSolarPanelItem ? 'Stock Area' : 'Main Warehouse';
+
               return {
                 code: it.code || it.sku || it.itemId || (itRes ? itRes.toUpperCase() : 'VRM-ITEM'),
                 item: it.name,
                 productType: classification.productType,
                 isRaw: classification.isRaw,
                 category: classification.category,
-                location: it.location || (it.material === 'HDG' ? 'HDG Yard' : 'Main Warehouse'),
+                location: assignedLocation,
                 stock: availableQty.toLocaleString('en-IN'),
                 allocated: activeBlocked.toLocaleString('en-IN'),
                 incoming: it.incoming ? String(it.incoming) : '0',
@@ -2637,8 +2649,18 @@ export default function StockStatusView(props) {
               const allocNum = parseFloat(String(it.allocated).replace(/,/g, '')) || 0;
               const avail = Math.max(0, rawNum - allocNum);
               const classification = classifyStockItem(it.item, it.category, '');
+              const isSolarPanelItem = (
+                classification.category === 'Solar Panels' ||
+                classification.category === 'Solar Modules' ||
+                String(it.item || '').toLowerCase().includes('panel') ||
+                String(it.item || '').toLowerCase().includes('module') ||
+                String(it.category || '').toLowerCase().includes('panel') ||
+                String(it.category || '').toLowerCase().includes('module')
+              );
+              const assignedLocation = isSolarPanelItem ? 'Stock Area' : 'Main Warehouse';
               return {
                 ...it,
+                location: assignedLocation,
                 productType: classification.productType,
                 isRaw: classification.isRaw,
                 category: classification.category,
@@ -2870,8 +2892,7 @@ export default function StockStatusView(props) {
                     >
                       <option value="All Warehouses">All Warehouses</option>
                       <option value="Main Warehouse">Main Warehouse</option>
-                      <option value="HDG Yard">HDG Yard</option>
-                      <option value="Regional Warehouse">Regional Warehouse</option>
+                      <option value="Stock Area">Stock Area</option>
                     </select>
                   </div>
 
@@ -3644,7 +3665,7 @@ export default function StockStatusView(props) {
                       style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
                     >
                       <option>Main Warehouse</option>
-                      <option>Regional Warehouse</option>
+                      <option>Stock Area</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
