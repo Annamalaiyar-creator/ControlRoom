@@ -2819,13 +2819,12 @@ export default function StockStatusView(props) {
                           <th style={{ padding: '12px 14px', width: '140px', minWidth: '140px', textAlign: 'right' }}>Stock Value (₹)</th>
                         )}
                         <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px', textAlign: 'center' }}>Status</th>
-                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayedRows.length === 0 ? (
                         <tr>
-                          <td colSpan={isSalesUser ? 11 : 12} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
+                          <td colSpan={isSalesUser ? 10 : 11} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                               <Package style={{ width: '32px', height: '32px', color: '#94A3B8' }} />
                               <strong style={{ color: '#334155' }}>No stock items match the selected criteria</strong>
@@ -2855,6 +2854,7 @@ export default function StockStatusView(props) {
                           return (
                             <tr
                               key={rowKey || idx}
+                              onClick={() => setViewingStockItem(row)}
                               style={{
                                 borderBottom: '1px solid #F1F5F9',
                                 transition: 'all 0.15s ease',
@@ -2889,10 +2889,7 @@ export default function StockStatusView(props) {
                               <td style={{ padding: '12px 14px', color: '#94A3B8', fontSize: '12px' }}>
                                 {startIndex + idx + 1}
                               </td>
-                              <td
-                                onClick={() => setViewingStockItem(row)}
-                                style={{ padding: '12px 14px' }}
-                              >
+                              <td style={{ padding: '12px 14px' }}>
                                 <div style={{ fontWeight: '700', color: '#0F172A', cursor: 'pointer' }}>{row.item}</div>
                                 <div style={{ fontSize: '11px', color: '#0E7490', fontWeight: '600' }}>{row.code}</div>
                               </td>
@@ -2936,48 +2933,6 @@ export default function StockStatusView(props) {
                                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: badgeColors.color, display: 'inline-block' }} />
                                   {row.status}
                                 </span>
-                              </td>
-                              <td onClick={(e) => e.stopPropagation()} style={{ padding: '12px 8px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                  <button
-                                    onClick={() => setViewingStockItem(row)}
-                                    title="View Item Stock Details"
-                                    style={{
-                                      width: '30px',
-                                      height: '30px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #E2E8F0',
-                                      backgroundColor: '#FFFFFF',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      cursor: 'pointer',
-                                      color: '#0E7490'
-                                    }}
-                                  >
-                                    <Eye size={14} />
-                                  </button>
-                                  {!isSalesUser && (
-                                    <button
-                                      onClick={() => handleCreatePoFromSelectedStock([rowKey], combinedList)}
-                                      title="Create PO / Reorder Item"
-                                      style={{
-                                        width: '30px',
-                                        height: '30px',
-                                        borderRadius: '6px',
-                                        border: '1px solid #E2E8F0',
-                                        backgroundColor: '#FFFFFF',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        color: '#2563EB'
-                                      }}
-                                    >
-                                      <ShoppingCart size={14} />
-                                    </button>
-                                  )}
-                                </div>
                               </td>
                             </tr>
                           );
