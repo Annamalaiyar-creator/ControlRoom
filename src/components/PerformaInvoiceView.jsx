@@ -7,7 +7,7 @@ import VRMProformaInvoicePrintTemplate from './VRMProformaInvoicePrintTemplate';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../vrmHdgProposalPresets';
 import { saveMediaToCache, getMediaFromCache, compressAndSaveFile } from '../utils/otherViewsShared';
 import { getFullProductsCatalogWithStock } from '../utils/productCatalogService';
-import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../utils/supabaseDataSync';
+import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore, subscribeToCloudStore } from '../utils/supabaseDataSync';
 import { notifyPiCreated } from '../services/notificationService';
 
 const defaultSalesPIs = [];
@@ -97,25 +97,8 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     };
   }, []);
 
-  const [piList, setPiList] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed.map(normalizePiRecord);
-      }
-      if (!isSalesRole) {
-        const salesSaved = localStorage.getItem('controlroom_sales_pi_store');
-        if (salesSaved) {
-          const salesParsed = JSON.parse(salesSaved);
-          if (Array.isArray(salesParsed)) {
-            return salesParsed.map(normalizePiRecord);
-          }
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  // PI List directly from Supabase Database
+  const [piList, setPiList] = useState([]);
 
   // Handle targetPiNo navigation
   useEffect(() => {
@@ -202,97 +185,83 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   }, [piList, isRestrictedSalesUser, currentEmpId, currentEmpName, currentLoggedEmail]);
 
   useEffect(() => {
-    Promise.all([
-      fetchCloudStore('sales_pi_store').catch(() => []),
-      fetchCloudStore('proforma_invoice_store').catch(() => []),
-      fetch('/api/zoho/estimates').then(r => r.ok ? r.json() : []).catch(() => [])
-    ]).then(([salesCloud, proformaCloud, zohoData]) => {
-      const mergedMap = new Map();
+    const loadPiData = () => {
+      Promise.all([
+        fetchCloudStore('sales_pi_store').catch(() => []),
+        fetchCloudStore('proforma_invoice_store').catch(() => []),
+        fetch('/api/zoho/estimates').then(r => r.ok ? r.json() : []).catch(() => [])
+      ]).then(([salesCloud, proformaCloud, zohoData]) => {
+        const mergedMap = new Map();
 
-      // 1. FIRST: Seed mergedMap with existing localStorage & React state so no local PI is EVER lost on refresh!
-      const seedRecords = [];
-      try {
-        const localSales = localStorage.getItem('controlroom_sales_pi_store');
-        if (localSales) {
-          const p = JSON.parse(localSales);
-          if (Array.isArray(p)) seedRecords.push(...p);
-        }
-        const localProc = localStorage.getItem('controlroom_procurement_pi_store');
-        if (localProc) {
-          const p = JSON.parse(localProc);
-          if (Array.isArray(p)) seedRecords.push(...p);
-        }
-      } catch (_) {}
-      if (Array.isArray(piList)) seedRecords.push(...piList);
+        // 1. Authoritative source: Supabase cloud stores
+        const primaryCloud = (Array.isArray(salesCloud) && salesCloud.length > 0)
+          ? salesCloud
+          : (Array.isArray(proformaCloud) ? proformaCloud : []);
 
-      seedRecords.forEach(p => {
-        if (p && p.piNo) {
-          mergedMap.set(String(p.piNo).trim().toLowerCase(), normalizePiRecord(p));
-        }
-      });
-
-      // 2. Merge Cloud stores (enriching without clearing)
-      if (Array.isArray(salesCloud)) {
-        salesCloud.forEach(p => {
+        primaryCloud.forEach(p => {
           if (p && p.piNo) {
-            const k = String(p.piNo).trim().toLowerCase();
-            const existing = mergedMap.get(k) || {};
-            mergedMap.set(k, normalizePiRecord({ ...existing, ...p }));
+            mergedMap.set(String(p.piNo).trim().toLowerCase(), normalizePiRecord(p));
           }
         });
-      }
 
-      if (Array.isArray(proformaCloud)) {
-        proformaCloud.forEach(p => {
-          if (p && p.piNo) {
-            const k = String(p.piNo).trim().toLowerCase();
-            const existing = mergedMap.get(k) || {};
-            mergedMap.set(k, normalizePiRecord({ ...existing, ...p }));
-          }
-        });
-      }
-
-      // 3. Merge Zoho Estimates (Quotes)
-      if (Array.isArray(zohoData)) {
-        zohoData.forEach(zp => {
-          if (zp && zp.piNo) {
-            const k = String(zp.piNo).trim().toLowerCase();
-            if (!mergedMap.has(k)) {
-              mergedMap.set(k, normalizePiRecord({
-                ...zp,
-                zohoSynced: true,
-                zohoEstimateId: zp.id || zp.zohoEstimateId,
-                zohoModule: 'Quotes'
-              }));
-            } else {
-              const existing = mergedMap.get(k);
-              mergedMap.set(k, normalizePiRecord({
-                ...zp,
-                ...existing, // Local records take priority for salesPerson, status ('Converted to BOM'), items, address
-                zohoSynced: true,
-                zohoEstimateId: zp.id || zp.zohoEstimateId || existing.zohoEstimateId,
-                zohoModule: 'Quotes'
-              }));
+        if (Array.isArray(proformaCloud)) {
+          proformaCloud.forEach(p => {
+            if (p && p.piNo) {
+              const k = String(p.piNo).trim().toLowerCase();
+              if (!mergedMap.has(k)) {
+                mergedMap.set(k, normalizePiRecord(p));
+              }
             }
-          }
-        });
-      }
+          });
+        }
 
-      if (mergedMap.size > 0) {
+        // 2. Merge Zoho Estimates (Quotes)
+        if (Array.isArray(zohoData)) {
+          zohoData.forEach(zp => {
+            if (zp && zp.piNo) {
+              const k = String(zp.piNo).trim().toLowerCase();
+              if (!mergedMap.has(k)) {
+                mergedMap.set(k, normalizePiRecord({
+                  ...zp,
+                  zohoSynced: true,
+                  zohoEstimateId: zp.id || zp.zohoEstimateId,
+                  zohoModule: 'Quotes'
+                }));
+              } else {
+                const existing = mergedMap.get(k);
+                mergedMap.set(k, normalizePiRecord({
+                  ...zp,
+                  ...existing,
+                  zohoSynced: true,
+                  zohoEstimateId: zp.id || zp.zohoEstimateId || existing.zohoEstimateId,
+                  zohoModule: 'Quotes'
+                }));
+              }
+            }
+          });
+        }
+
         const result = Array.from(mergedMap.values()).map(normalizePiRecord);
         setPiList(result);
-        try {
-          localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(result));
-          localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(result));
-        } catch (_) {}
-      } else {
-        setPiList([]);
-        try {
-          localStorage.setItem('controlroom_sales_pi_store', JSON.stringify([]));
-          localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify([]));
-        } catch (_) {}
+      }).catch(() => {});
+    };
+
+    loadPiData();
+
+    // Live Realtime sync directly from Supabase Database
+    const sub = subscribeToCloudStore('sales_pi_store', (latest) => {
+      if (Array.isArray(latest)) {
+        setPiList(latest.map(normalizePiRecord));
       }
-    }).catch(() => {});
+    });
+
+    const onStoreUpdate = () => loadPiData();
+    window.addEventListener('controlroom_store_update', onStoreUpdate);
+
+    return () => {
+      if (sub && sub.unsubscribe) sub.unsubscribe();
+      window.removeEventListener('controlroom_store_update', onStoreUpdate);
+    };
   }, [storageKey, isSalesRole]);
 
   const updatePiList = (newList) => {

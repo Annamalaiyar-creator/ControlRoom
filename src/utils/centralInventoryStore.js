@@ -1,4 +1,5 @@
 import { VRM_PRODUCTS } from './vrmProductsData.js';
+import { fetchCloudStore, saveCloudStore } from './supabaseDataSync.js';
 
 // Initial Seed Item Master derived strictly from official VRM catalog (All items initialized with 5000 units stock)
 export const INITIAL_CENTRAL_ITEMS = VRM_PRODUCTS.map((p, idx) => ({
@@ -43,18 +44,14 @@ class CentralInventoryStore {
   }
 
   initStore() {
-    // 1. Load Item Master
-    const savedItems = localStorage.getItem(this.storageKeyItems);
-    if (savedItems) {
-      try {
-        this.items = JSON.parse(savedItems);
-      } catch (e) {
-        this.items = [...INITIAL_CENTRAL_ITEMS];
+    // 1. Load Item Master with Supabase Cloud Database fallback
+    this.items = [...INITIAL_CENTRAL_ITEMS];
+    fetchCloudStore('item_store', INITIAL_CENTRAL_ITEMS).then(cloudItems => {
+      if (Array.isArray(cloudItems) && cloudItems.length > 0) {
+        this.items = cloudItems;
+        this.notifyChange();
       }
-    } else {
-      this.items = [...INITIAL_CENTRAL_ITEMS];
-      this.saveItems();
-    }
+    }).catch(() => {});
 
     // 2. Load Transactions Ledger
     const savedTx = localStorage.getItem(this.storageKeyTx);
@@ -230,13 +227,13 @@ class CentralInventoryStore {
   }
 
   // Helper Persistence Methods
-  saveItems() { localStorage.setItem(this.storageKeyItems, JSON.stringify(this.items)); }
-  saveTransactions() { localStorage.setItem(this.storageKeyTx, JSON.stringify(this.transactions)); }
-  saveGrns() { localStorage.setItem(this.storageKeyGrn, JSON.stringify(this.grnList)); }
-  saveJobWorks() { localStorage.setItem(this.storageKeyJobWork, JSON.stringify(this.jobWorks)); }
-  saveProdOrders() { localStorage.setItem(this.storageKeyProdOrders, JSON.stringify(this.productionOrders)); }
-  saveReservations() { localStorage.setItem(this.storageKeyReservations, JSON.stringify(this.reservations)); }
-  saveNotifications() { localStorage.setItem(this.storageKeyNotifications, JSON.stringify(this.notifications)); }
+  saveItems() { saveCloudStore('item_store', this.items); }
+  saveTransactions() { saveCloudStore('vrm_prod_ledger', this.transactions); }
+  saveGrns() { saveCloudStore('grn_store', this.grnList); }
+  saveJobWorks() { saveCloudStore('jobworks_store', this.jobWorks); }
+  saveProdOrders() { saveCloudStore('workorder_store', this.productionOrders); }
+  saveReservations() { saveCloudStore('reservations_store', this.reservations); }
+  saveNotifications() { saveCloudStore('notifications_store', this.notifications); }
 
   notifyChange() {
     this.evaluateStockAlerts();

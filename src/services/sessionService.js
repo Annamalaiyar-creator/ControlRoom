@@ -168,10 +168,38 @@ export async function heartbeatActiveSession() {
 }
 
 /**
+ * Automatically clean up revoked or expired sessions (> 24 hours) from Supabase
+ */
+export async function pruneStaleSessions() {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: stale } = await supabase
+      .from('leaves')
+      .select('id, status, dates')
+      .eq('employee', 'SESSION_REGISTRY');
+
+    if (Array.isArray(stale) && stale.length > 0) {
+      const toDelete = stale
+        .filter(s => s.status === 'revoked' || (s.dates && s.dates < oneDayAgo))
+        .map(s => s.id);
+
+      if (toDelete.length > 0) {
+        await supabase.from('leaves').delete().in('id', toDelete);
+      }
+    }
+  } catch (err) {
+    console.warn('[SessionService] Session pruning notice:', err);
+  }
+}
+
+/**
  * Fetch all active sessions across all devices from Supabase
  */
 export async function fetchLiveActiveSessions() {
   const currentSessionId = getOrCreateSessionId();
+  // Asynchronously prune stale/revoked sessions in background
+  pruneStaleSessions().catch(() => {});
+
   try {
     const { data, error } = await supabase
       .from('leaves')

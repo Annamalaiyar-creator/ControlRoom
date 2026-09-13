@@ -345,7 +345,7 @@
     "customerType": "Customer",
     "industry": "Solar Energy / Utility Scale",
     "gstNumber": "—",
-    "panNumber": "—",
+    "panNumber": "���",
     "address": "",
     "city": "",
     "state": "",
@@ -1001,5 +1001,18 @@
     "email": "—",
     "phone": "+91 98765 43210",
     "status": "ACTIVE"
+  },
+  {
+    "id": "4080449000000388001",
+    "customerCode": "Tata Power Solar Systems Ltd",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "companyName": "Tata Power Solar Systems Ltd",
+    "customerType": "Customer",
+    "email": "—",
+    "phone": "—",
+    "gstNumber": "—",
+    "panNumber": "—",
+    "status": "ACTIVE",
+    "zohoContactId": "4080449000000388001"
   }
 ]

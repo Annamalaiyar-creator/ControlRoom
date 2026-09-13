@@ -263,113 +263,42 @@ class ProductionModuleEngine {
   }
 
   initCloudSync() {
-    fetchCloudStore('vrm_prod_workorders', this.workOrders).then(cloudWOs => {
-      if (cloudWOs && Array.isArray(cloudWOs) && cloudWOs.length > 0) {
-        const woMap = new Map();
-        // 1. Load remote cloud WOs first
-        cloudWOs.forEach(w => {
-          const id = w.id || w.workOrderNo;
-          if (id) woMap.set(id, w);
-        });
-        // 2. Overlay current local WOs so freshly created ones are preserved
-        this.workOrders.forEach(w => {
-          const id = w.id || w.workOrderNo;
-          if (id) woMap.set(id, { ...woMap.get(id), ...w });
-        });
-        this.workOrders = Array.from(woMap.values());
-        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
+    // Load all collections directly from Supabase Cloud Database
+    Promise.all([
+      fetchCloudStore('vrm_prod_workorders', this.workOrders),
+      fetchCloudStore('vrm_prod_inventory', this.inventory),
+      fetchCloudStore('vrm_prod_recipes', this.recipes),
+      fetchCloudStore('vrm_prod_ledger', this.ledger)
+    ]).then(([cloudWOs, cloudInv, cloudRecipes, cloudLedger]) => {
+      if (Array.isArray(cloudWOs) && cloudWOs.length > 0) this.workOrders = cloudWOs;
+      if (Array.isArray(cloudInv) && cloudInv.length > 0) this.inventory = cloudInv;
+      if (Array.isArray(cloudRecipes) && cloudRecipes.length > 0) this.recipes = cloudRecipes;
+      if (Array.isArray(cloudLedger) && cloudLedger.length > 0) this.ledger = cloudLedger;
+      this.notifySubscribers();
+    }).catch(err => console.warn('[ProductionEngine] Cloud boot fetch notice:', err));
+
+    // Live Realtime subscriptions from Supabase
+    subscribeToCloudStore('vrm_prod_workorders', (latestWOs) => {
+      if (Array.isArray(latestWOs)) {
+        this.workOrders = latestWOs;
         this.notifySubscribers();
       }
     });
 
-    subscribeToCloudStore('vrm_prod_workorders', (latestWOs) => {
-      if (latestWOs && Array.isArray(latestWOs)) {
-        const woMap = new Map();
-        latestWOs.forEach(w => {
-          const id = w.id || w.workOrderNo;
-          if (id) woMap.set(id, w);
-        });
-        this.workOrders.forEach(w => {
-          const id = w.id || w.workOrderNo;
-          if (id) woMap.set(id, { ...woMap.get(id), ...w });
-        });
-        this.workOrders = Array.from(woMap.values());
-        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
+    subscribeToCloudStore('vrm_prod_inventory', (latestInv) => {
+      if (Array.isArray(latestInv)) {
+        this.inventory = latestInv;
         this.notifySubscribers();
       }
     });
   }
 
   loadFromStorage() {
-    try {
-      const savedRecipes = localStorage.getItem('vrm_prod_recipes');
-      const savedInventory = localStorage.getItem('vrm_prod_inventory');
-      const savedWOs = localStorage.getItem('vrm_prod_workorders');
-      const savedLedger = localStorage.getItem('vrm_prod_ledger');
-
-      if (savedRecipes) {
-        const parsedRecipes = JSON.parse(savedRecipes);
-        // Ensure all clamp and rail recipes are standardized to rawMaterialUnit 'Length'
-        this.recipes = parsedRecipes.map(r => ({
-          ...r,
-          rawMaterialUnit: 'Length',
-          outputUnit: r.outputUnit || 'Pieces'
-        }));
-      }
-      if (savedInventory) {
-        this.inventory = JSON.parse(savedInventory);
-        // Ensure all raw material items in inventory use 'Length' as unit
-        this.inventory.forEach(item => {
-          if (item.category === 'Raw Material') {
-            item.unit = 'Length';
-          }
-        });
-        // Ensure ALU-BAR-2650MM exists in inventory
-        if (!this.inventory.some(i => i.code === 'ALU-BAR-2650MM')) {
-          this.inventory.push({
-            code: 'ALU-BAR-2650MM',
-            name: 'Aluminium Extrusion Bar (2650 mm)',
-            category: 'Raw Material',
-            unit: 'Length',
-            isWholeUnitOnly: true,
-            physicalStock: 120,
-            reservedStock: 0,
-            availableStock: 120,
-            issuedStock: 0,
-            consumedStock: 0,
-            safetyStock: 20,
-            unitRate: 620,
-            bayLocation: 'Bay #1 - Extrusion Yard'
-          });
-        }
-      }
-      if (savedWOs) this.workOrders = JSON.parse(savedWOs);
-      if (savedLedger) this.ledger = JSON.parse(savedLedger);
-    } catch (e) {
-      console.error('Failed loading VRM Production Engine storage:', e);
-    }
+    // Synchronous memory default initialization; async cloud sync loads true authoritative state from Supabase
   }
 
   saveToStorage() {
     try {
-      try {
-        localStorage.setItem('vrm_prod_recipes', JSON.stringify(this.recipes));
-        localStorage.setItem('vrm_prod_inventory', JSON.stringify(this.inventory));
-        localStorage.setItem('vrm_prod_workorders', JSON.stringify(this.workOrders));
-        localStorage.setItem('vrm_prod_ledger', JSON.stringify(this.ledger));
-      } catch (quotaErr) {
-        console.warn('localStorage quota warning in ProductionEngine. Cleaning up transient data URLs...');
-        // Safely strip data URLs from recipes if quota is exceeded
-        const cleanRecipes = this.recipes.map(r => stripDataUrlsFromRecord(r));
-        const cleanWOs = this.workOrders.map(w => stripDataUrlsFromRecord(w));
-        try {
-          localStorage.setItem('vrm_prod_recipes', JSON.stringify(cleanRecipes));
-          localStorage.setItem('vrm_prod_workorders', JSON.stringify(cleanWOs));
-        } catch (e) {
-          // Fallback silencer to prevent app crashes
-        }
-      }
-
       saveCloudStore('vrm_prod_recipes', this.recipes);
       saveCloudStore('vrm_prod_inventory', this.inventory);
       saveCloudStore('vrm_prod_workorders', this.workOrders);

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, MessageSquare, Edit3, Mail, Phone, CheckCircle2,
   FileText, MoreHorizontal, ChevronDown, ChevronRight,
   Calendar, Clock, Plus, Trash2, Send, Layers
 } from 'lucide-react';
+import { fetchCloudStore, saveCloudStore } from '../../utils/supabaseDataSync';
 
 export default function Customer360PageView({
   customer,
@@ -27,23 +28,25 @@ export default function Customer360PageView({
 
   const custKey = customer?.customerCode || customer?.id || 'default_key';
 
-  // Customer Tasks store in localStorage
-  const [customerTasks, setCustomerTasks] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('controlroom_crm_tasks') || '{}');
-    } catch (e) {
-      return {};
-    }
-  });
+  // Customer Tasks store in Supabase cloud database
+  const [customerTasks, setCustomerTasks] = useState({});
 
-  // Customer Notes store in localStorage
-  const [customerNotes, setCustomerNotes] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('controlroom_crm_notes') || '{}');
-    } catch (e) {
-      return {};
-    }
-  });
+  // Customer Notes store in Supabase cloud database
+  const [customerNotes, setCustomerNotes] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchCloudStore('crm_tasks', {}),
+      fetchCloudStore('crm_notes', {})
+    ]).then(([tasks, notes]) => {
+      if (active) {
+        if (tasks && typeof tasks === 'object' && !Array.isArray(tasks)) setCustomerTasks(tasks);
+        if (notes && typeof notes === 'object' && !Array.isArray(notes)) setCustomerNotes(notes);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   const handleAddCustomerTask = (id) => {
     if (!newTaskInput.trim()) return;
@@ -59,9 +62,7 @@ export default function Customer360PageView({
       [id]: [taskObj, ...(customerTasks[id] || [])]
     };
     setCustomerTasks(updated);
-    try {
-      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
-    } catch (e) {}
+    saveCloudStore('crm_tasks', updated);
     setNewTaskInput('');
     setNewTaskDueDate('');
   };
@@ -73,9 +74,7 @@ export default function Customer360PageView({
       [id]: list.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
     };
     setCustomerTasks(updated);
-    try {
-      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
-    } catch (e) {}
+    saveCloudStore('crm_tasks', updated);
   };
 
   const handleDeleteCustomerTask = (id, taskId) => {
@@ -85,9 +84,7 @@ export default function Customer360PageView({
       [id]: list.filter(t => t.id !== taskId)
     };
     setCustomerTasks(updated);
-    try {
-      localStorage.setItem('controlroom_crm_tasks', JSON.stringify(updated));
-    } catch (e) {}
+    saveCloudStore('crm_tasks', updated);
   };
 
   const handleAddCustomerNote = (id) => {
@@ -104,9 +101,7 @@ export default function Customer360PageView({
       [id]: [noteObj, ...(customerNotes[id] || [])]
     };
     setCustomerNotes(updated);
-    try {
-      localStorage.setItem('controlroom_crm_notes', JSON.stringify(updated));
-    } catch (e) {}
+    saveCloudStore('crm_notes', updated);
     setNewNoteInput('');
   };
 

@@ -594,7 +594,7 @@
     "email": "karthik@sunpower.com",
     "phone": "9840198401",
     "gstNumber": "—",
-    "panNumber": "—",
+    "panNumber": "���",
     "status": "ACTIVE",
     "zohoContactId": "4080449000000373008",
     "industry": "Solar Energy / Utility Scale",
@@ -1001,5 +1001,36 @@
       "email": ""
     },
     "createdAt": "2026-09-12T12:04:12+0530"
+  },
+  {
+    "id": "Tata Power Solar Systems Ltd",
+    "customerCode": "Tata Power Solar Systems Ltd",
+    "companyName": "Tata Power Solar Systems Ltd",
+    "customerName": "Tata Power Solar Systems Ltd",
+    "customerType": "Customer",
+    "industry": "Solar Energy / Utility Scale",
+    "gstNumber": "—",
+    "panNumber": "—",
+    "address": "",
+    "city": "",
+    "state": "",
+    "pincode": "",
+    "creditLimit": 2500000,
+    "creditDays": 30,
+    "paymentTerms": "Due on Receipt",
+    "assignedSalesperson": "Mohith JV",
+    "source": "Zoho Books",
+    "zohoContactId": "4080449000000388001",
+    "primaryContact": {
+      "name": "—",
+      "designation": "Procurement Head",
+      "phone": "",
+      "whatsapp": "",
+      "email": ""
+    },
+    "createdAt": "2026-09-10T23:45:52+0530",
+    "email": "—",
+    "phone": "—",
+    "status": "ACTIVE"
   }
 ]

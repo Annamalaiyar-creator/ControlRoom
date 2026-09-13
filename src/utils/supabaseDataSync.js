@@ -179,52 +179,33 @@ export async function saveCloudStoreImmediate(storeKey, storeData) {
     const employeeKey = storeKey.toUpperCase();
     const { data: records } = await supabase
       .from('leaves')
-      .select('id, reason')
+      .select('id')
       .eq('employee', employeeKey)
-      .order('id', { ascending: false })
-      .limit(1);
+      .order('id', { ascending: false });
 
-    const record = (records && records.length > 0) ? records[0] : null;
+    const payload = {
+      employee: employeeKey,
+      reason: JSON.stringify(storeData),
+      status: 'active',
+      dates: new Date().toISOString(),
+      duration: String(Array.isArray(storeData) ? storeData.length : 1),
+      type: 'Store'
+    };
 
-    let finalPayload = storeData;
-    if (Array.isArray(storeData) && storeData.length > 0 && record && record.reason) {
-      try {
-        const existingCloud = JSON.parse(record.reason);
-        if (Array.isArray(existingCloud) && existingCloud.length > 0) {
-          finalPayload = mergeDatasets(existingCloud, storeData);
-        }
-      } catch (_) {}
-    } else if (storeData && typeof storeData === 'object' && !Array.isArray(storeData) && record && record.reason) {
-      try {
-        const existingCloud = JSON.parse(record.reason);
-        if (existingCloud && typeof existingCloud === 'object' && !Array.isArray(existingCloud)) {
-          finalPayload = { ...existingCloud, ...storeData };
-        }
-      } catch (_) {}
-    }
-
-    if (record && record.id) {
-      await supabase
-        .from('leaves')
-        .update({
-          reason: JSON.stringify(finalPayload),
-          status: 'active',
-          dates: new Date().toISOString(),
-          duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1)
-        })
-        .eq('id', record.id);
+    if (records && records.length > 0) {
+      await supabase.from('leaves').update(payload).eq('id', records[0].id);
+      if (records.length > 1) {
+        const excess = records.slice(1).map(r => r.id);
+        supabase.from('leaves').delete().in('id', excess).then(() => {}).catch(() => {});
+      }
     } else {
-      await supabase
-        .from('leaves')
-        .insert({
-          employee: employeeKey,
-          reason: JSON.stringify(finalPayload),
-          status: 'active',
-          dates: new Date().toISOString(),
-          duration: String(Array.isArray(finalPayload) ? finalPayload.length : 1),
-          type: 'Store'
-        });
+      await supabase.from('leaves').insert(payload);
     }
+
+    // Broadcast update locally to all listening React components in current window
+    window.dispatchEvent(new CustomEvent('controlroom_store_update', {
+      detail: { storeKey, data: storeData }
+    }));
   } catch (err) {
     console.warn(`[Supabase Immediate Sync Warn for ${storeKey}]:`, err?.message || err);
   }
@@ -429,6 +410,17 @@ export async function getAndReserveNextBomCode(commit = true) {
  */
 export function subscribeToCloudStore(storeKey, onUpdateCallback) {
   try {
+    const employeeKey = storeKey.toUpperCase();
+    
+    // Window-level broadcast listener for cross-component sync
+    const handleLocalUpdate = (e) => {
+      if (e?.detail?.storeKey === storeKey && e?.detail?.data !== undefined) {
+        onUpdateCallback(e.detail.data);
+      }
+    };
+    window.addEventListener('controlroom_store_update', handleLocalUpdate);
+
+    // Supabase Realtime subscription for cross-device/cross-user sync
     const channel = supabase
       .channel(`sync_${storeKey}_${Math.random()}`)
       .on(
@@ -436,24 +428,29 @@ export function subscribeToCloudStore(storeKey, onUpdateCallback) {
         {
           event: '*',
           schema: 'public',
-          table: storeKey === 'employees_store' ? 'users' : 'controlroom_store',
-          filter: storeKey === 'employees_store' ? undefined : `key=eq.${storeKey}`
+          table: storeKey === 'employees_store' ? 'users' : 'leaves',
+          filter: storeKey === 'employees_store' ? undefined : `employee=eq.${employeeKey}`
         },
         async (payload) => {
           if (storeKey === 'employees_store') {
             const list = await fetchCloudStore('employees_store', []);
             onUpdateCallback(list);
-          } else if (payload && payload.new && payload.new.data) {
+          } else if (payload && payload.new && payload.new.reason) {
             try {
-              localStorage.setItem(`controlroom_${storeKey}`, JSON.stringify(payload.new.data));
-            } catch (e) {}
-            onUpdateCallback(payload.new.data);
+              const parsed = JSON.parse(payload.new.reason);
+              onUpdateCallback(parsed);
+            } catch (_) {}
           }
         }
       )
       .subscribe();
 
-    return channel;
+    return {
+      unsubscribe: () => {
+        window.removeEventListener('controlroom_store_update', handleLocalUpdate);
+        if (channel) supabase.removeChannel(channel);
+      }
+    };
   } catch (err) {
     console.warn(`[SupabaseSync] Realtime subscribe error for ${storeKey}:`, err);
     return null;

@@ -9,11 +9,9 @@
     "purchaseRate": 1111,
     "purchaseDescription": "NOT OK",
     "productType": "goods",
-    "status": "In Stock",
+    "status": "Inactive",
     "stock": 5000,
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212041",
@@ -27,12 +25,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212033",
@@ -46,12 +42,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212049",
@@ -65,12 +59,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211945",
@@ -84,12 +76,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211961",
@@ -103,12 +93,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211993",
@@ -122,12 +110,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212065",
@@ -141,12 +127,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212057",
@@ -160,12 +144,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211953",
@@ -179,12 +161,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211969",
@@ -198,12 +178,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211977",
@@ -217,12 +195,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212073",
@@ -236,12 +212,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000211985",
@@ -255,12 +229,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212089",
@@ -274,12 +246,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000212081",
@@ -293,12 +263,10 @@
     "uom": "NOS",
     "description": "—",
     "stock": 5000,
-    "status": "In Stock",
+    "status": "Active",
     "category": "Raw Material",
     "cat": "Raw Material",
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000307283",
@@ -308,7 +276,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -319,9 +287,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "reorderLevel": 100,
-    "openingStock": 5000,
-    "availableStock": 5000,
-    "reserved": 0
+    "openingStock": 5000
   },
   {
     "id": "4080449000000366922",
@@ -331,7 +297,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ACB4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -342,9 +308,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366930",
@@ -354,7 +318,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ACR4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -365,9 +329,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366962",
@@ -377,7 +339,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ACB6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -388,9 +350,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366970",
@@ -400,7 +360,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ACR6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -411,9 +371,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366410",
@@ -423,7 +381,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AR100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -434,9 +392,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366402",
@@ -446,7 +402,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AR120",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -457,9 +413,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366722",
@@ -469,7 +423,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM6*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -480,9 +434,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366730",
@@ -492,7 +444,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM6*50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -503,9 +455,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000033196",
@@ -515,7 +465,7 @@
     "rate": 200,
     "price": 200,
     "sku": "—",
-    "status": "In Stock",
+    "status": "Inactive",
     "description": "—",
     "purchaseRate": 200,
     "purchaseDescription": "",
@@ -526,9 +476,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366642",
@@ -538,7 +486,7 @@
     "rate": 0,
     "price": 0,
     "sku": "B150",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -549,9 +497,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366650",
@@ -561,7 +507,7 @@
     "rate": 0,
     "price": 0,
     "sku": "B200",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -572,9 +518,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366602",
@@ -584,7 +528,7 @@
     "rate": 0,
     "price": 0,
     "sku": "BP",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -595,9 +539,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366850",
@@ -607,7 +549,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -618,9 +560,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368122",
@@ -630,7 +570,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CT",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -641,9 +581,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368146",
@@ -653,7 +591,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CTR",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -664,9 +602,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366906",
@@ -676,7 +612,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CB10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -687,9 +623,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366250",
@@ -699,7 +633,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CB2400",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -710,9 +644,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366258",
@@ -722,7 +654,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CB3000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -733,9 +665,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366938",
@@ -745,7 +675,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DCB4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -756,9 +686,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366946",
@@ -768,7 +696,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DCR4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -779,9 +707,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366978",
@@ -791,7 +717,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DCB6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -802,9 +728,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366986",
@@ -814,7 +738,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DCR6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -825,9 +749,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367418",
@@ -837,7 +759,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -848,9 +770,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367338",
@@ -860,7 +780,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -871,9 +791,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367426",
@@ -883,7 +801,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT125",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -894,9 +812,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367346",
@@ -906,7 +822,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT12",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -917,9 +833,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367354",
@@ -929,7 +843,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT15",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -940,9 +854,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367362",
@@ -952,7 +864,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT20",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -963,9 +875,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367298",
@@ -975,7 +885,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS3.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -986,9 +896,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367370",
@@ -998,7 +906,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1009,9 +917,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367282",
@@ -1021,7 +927,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS3-24",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1032,9 +938,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367290",
@@ -1044,7 +948,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS3-48",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1055,9 +959,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367378",
@@ -1067,7 +969,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1078,9 +980,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367386",
@@ -1090,7 +990,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1101,9 +1001,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367306",
@@ -1113,7 +1011,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1124,9 +1022,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367394",
@@ -1136,7 +1032,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT60",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1147,9 +1043,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367314",
@@ -1159,7 +1053,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1170,9 +1064,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367402",
@@ -1182,7 +1074,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT70",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1193,9 +1085,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367410",
@@ -1205,7 +1095,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT80",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1216,9 +1106,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367322",
@@ -1228,7 +1116,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHS8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1239,9 +1127,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367330",
@@ -1251,7 +1137,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DHT8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1262,9 +1148,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367082",
@@ -1274,7 +1158,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SC2.2",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1285,9 +1169,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367098",
@@ -1297,7 +1179,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS3.3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1308,9 +1190,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367090",
@@ -1320,7 +1200,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1331,9 +1211,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367074",
@@ -1343,7 +1221,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS1.5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1354,9 +1232,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367250",
@@ -1366,7 +1242,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1377,9 +1253,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367154",
@@ -1389,7 +1263,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1400,9 +1274,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367258",
@@ -1412,7 +1284,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT110",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1423,9 +1295,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367266",
@@ -1435,7 +1305,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT125",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1446,9 +1316,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367162",
@@ -1458,7 +1326,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT12",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1469,9 +1337,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367274",
@@ -1481,7 +1347,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT136",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1492,9 +1358,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367170",
@@ -1504,7 +1368,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT15",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1515,9 +1379,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367178",
@@ -1527,7 +1389,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT18",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1538,9 +1400,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367186",
@@ -1550,7 +1410,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT20",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1561,9 +1421,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367194",
@@ -1573,7 +1431,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT25",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1584,9 +1442,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367106",
@@ -1596,7 +1452,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS3.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1607,9 +1463,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367202",
@@ -1619,7 +1473,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT33",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1630,9 +1484,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367210",
@@ -1642,7 +1494,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1653,9 +1505,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367114",
@@ -1665,7 +1515,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1676,9 +1526,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367218",
@@ -1688,7 +1536,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1699,9 +1547,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367122",
@@ -1711,7 +1557,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DS5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1722,9 +1568,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367130",
@@ -1734,7 +1578,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1745,9 +1589,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367226",
@@ -1757,7 +1599,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT60",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1768,9 +1610,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367138",
@@ -1780,7 +1620,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1791,9 +1631,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367234",
@@ -1803,7 +1641,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT80",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1814,9 +1652,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367146",
@@ -1826,7 +1662,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1837,9 +1673,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367242",
@@ -1849,7 +1683,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DT90",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1860,9 +1694,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367874",
@@ -1872,7 +1704,7 @@
     "rate": 0,
     "price": 0,
     "sku": "DG",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1883,9 +1715,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366450",
@@ -1895,7 +1725,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC1.2",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1906,9 +1736,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366442",
@@ -1918,7 +1746,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC2.4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1929,9 +1757,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366434",
@@ -1941,7 +1767,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC3.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1952,9 +1778,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366418",
@@ -1964,7 +1788,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC4.8N",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1975,9 +1799,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366426",
@@ -1987,7 +1809,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CC4.8O",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -1998,9 +1820,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366898",
@@ -2010,7 +1830,7 @@
     "rate": 0,
     "price": 0,
     "sku": "EPC6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2021,9 +1841,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366914",
@@ -2033,7 +1851,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ES",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2044,9 +1862,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367002",
@@ -2056,7 +1872,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ECG16",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2067,9 +1883,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366954",
@@ -2079,7 +1893,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ECG4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2090,9 +1904,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366994",
@@ -2102,7 +1914,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ECG6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2113,9 +1925,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366530",
@@ -2125,7 +1935,7 @@
     "rate": 0,
     "price": 0,
     "sku": "EC30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2134,11 +1944,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4968,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4968,
-    "reserved": 32
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366506",
@@ -2148,7 +1956,7 @@
     "rate": 0,
     "price": 0,
     "sku": "EC35",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2157,11 +1965,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4968,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4968,
-    "reserved": 32
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366570",
@@ -2171,7 +1977,7 @@
     "rate": 0,
     "price": 0,
     "sku": "E100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2182,9 +1988,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366586",
@@ -2194,7 +1998,7 @@
     "rate": 0,
     "price": 0,
     "sku": "E150",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2205,9 +2009,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366562",
@@ -2217,7 +2019,7 @@
     "rate": 0,
     "price": 0,
     "sku": "E40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2228,9 +2030,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366578",
@@ -2240,7 +2040,7 @@
     "rate": 0,
     "price": 0,
     "sku": "E80",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2251,9 +2051,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366890",
@@ -2263,7 +2061,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ELA",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2274,9 +2072,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366810",
@@ -2286,7 +2082,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ANM10*100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2295,11 +2091,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4920,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4920,
-    "reserved": 80
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366818",
@@ -2309,7 +2103,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ANM8*100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2320,9 +2114,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367826",
@@ -2332,7 +2124,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2343,9 +2135,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367746",
@@ -2355,7 +2145,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2366,9 +2156,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367834",
@@ -2378,7 +2166,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT125",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2389,9 +2177,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367754",
@@ -2401,7 +2187,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT12",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2412,9 +2198,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367762",
@@ -2424,7 +2208,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT15",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2435,9 +2219,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367770",
@@ -2447,7 +2229,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT20",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2458,9 +2240,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367842",
@@ -2470,7 +2250,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT250",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2481,9 +2261,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367778",
@@ -2493,7 +2271,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT25",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2504,9 +2282,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367674",
@@ -2516,7 +2292,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS2",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2527,9 +2303,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367690",
@@ -2539,7 +2313,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS3.3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2550,9 +2324,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367850",
@@ -2562,7 +2334,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT350",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2573,9 +2345,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367682",
@@ -2585,7 +2355,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2596,9 +2366,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367698",
@@ -2608,7 +2376,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS4.2",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2619,9 +2387,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367786",
@@ -2631,7 +2397,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2642,9 +2408,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367794",
@@ -2654,7 +2418,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2665,9 +2429,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367706",
@@ -2677,7 +2439,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2688,9 +2450,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367722",
@@ -2700,7 +2460,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2711,9 +2471,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367802",
@@ -2723,7 +2481,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT60",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2734,9 +2492,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367714",
@@ -2746,7 +2502,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GS6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2757,9 +2513,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367730",
@@ -2769,7 +2523,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2780,9 +2534,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367810",
@@ -2792,7 +2544,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT70",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2803,9 +2555,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367818",
@@ -2815,7 +2565,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT80",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2826,9 +2576,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367738",
@@ -2838,7 +2586,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GT8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2849,9 +2597,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368162",
@@ -2861,7 +2607,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HR",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2872,9 +2618,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366826",
@@ -2884,7 +2628,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HHM10*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2895,9 +2639,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366834",
@@ -2907,7 +2649,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HHM12*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2918,9 +2660,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367466",
@@ -2930,7 +2670,7 @@
     "rate": 0,
     "price": 0,
     "sku": "IL1500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2941,9 +2681,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367458",
@@ -2953,7 +2691,7 @@
     "rate": 0,
     "price": 0,
     "sku": "IL900",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2964,9 +2702,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366594",
@@ -2976,7 +2712,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LB",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -2987,9 +2723,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366554",
@@ -2999,7 +2733,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ALB",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3010,9 +2744,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366122",
@@ -3022,7 +2754,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L1000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3031,11 +2763,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4990,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4990,
-    "reserved": 10
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366130",
@@ -3045,7 +2775,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L1200",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3056,9 +2786,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366138",
@@ -3068,7 +2796,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L1300",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3079,9 +2807,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366146",
@@ -3091,7 +2817,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L1500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3102,9 +2828,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366154",
@@ -3114,7 +2838,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L1800",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3125,9 +2849,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366162",
@@ -3137,7 +2859,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L2000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3148,9 +2870,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366170",
@@ -3160,7 +2880,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L2500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3171,9 +2891,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366178",
@@ -3183,7 +2901,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L3000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3194,9 +2912,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366098",
@@ -3206,7 +2922,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3215,11 +2931,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4990,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4990,
-    "reserved": 10
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366106",
@@ -3229,7 +2943,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L650",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3240,9 +2954,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366114",
@@ -3252,7 +2964,7 @@
     "rate": 0,
     "price": 0,
     "sku": "L900",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3263,9 +2975,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366882",
@@ -3275,7 +2985,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LA1",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3286,9 +2996,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366490",
@@ -3298,7 +3006,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LC",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3309,9 +3017,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366498",
@@ -3321,7 +3027,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LC(N)",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3332,9 +3038,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367866",
@@ -3344,7 +3048,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LA810",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3355,9 +3059,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366842",
@@ -3367,7 +3069,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MC6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3378,9 +3080,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368154",
@@ -3390,7 +3090,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MC4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3401,9 +3101,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366522",
@@ -3413,7 +3111,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MC30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3424,9 +3122,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366514",
@@ -3436,7 +3132,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MC35",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3445,11 +3141,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4960,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4960,
-    "reserved": 40
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000033187",
@@ -3459,7 +3153,7 @@
     "rate": 2500,
     "price": 2500,
     "sku": "—",
-    "status": "In Stock",
+    "status": "Inactive",
     "description": "—",
     "purchaseRate": 2000,
     "purchaseDescription": "",
@@ -3470,9 +3164,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366354",
@@ -3482,7 +3174,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR100N",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3493,9 +3185,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366378",
@@ -3505,7 +3195,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR100O",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3516,9 +3206,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367058",
@@ -3528,7 +3216,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3539,9 +3227,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367066",
@@ -3551,7 +3237,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR120",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3562,9 +3248,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366394",
@@ -3574,7 +3258,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR125",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3585,9 +3269,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366362",
@@ -3597,7 +3279,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3608,9 +3290,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366370",
@@ -3620,7 +3300,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR60",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3631,9 +3311,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366386",
@@ -3643,7 +3321,7 @@
     "rate": 0,
     "price": 0,
     "sku": "MR75",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3654,9 +3332,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367882",
@@ -3666,7 +3342,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ABD540",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3677,9 +3353,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367890",
@@ -3689,7 +3363,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ABD545",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3700,9 +3374,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367898",
@@ -3712,7 +3384,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ABD550",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3723,9 +3395,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367906",
@@ -3735,7 +3405,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ABD555",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3746,9 +3416,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367914",
@@ -3758,7 +3426,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATD605",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3769,9 +3437,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367922",
@@ -3781,7 +3447,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATD615",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3792,9 +3458,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367930",
@@ -3804,7 +3468,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATD620",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3815,9 +3479,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367938",
@@ -3827,7 +3489,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATD630",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3838,9 +3500,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367946",
@@ -3850,7 +3510,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATD635",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3861,9 +3521,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367954",
@@ -3873,7 +3531,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATN615",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3884,9 +3542,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367962",
@@ -3896,7 +3552,7 @@
     "rate": 0,
     "price": 0,
     "sku": "ATN625",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3907,9 +3563,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368018",
@@ -3919,7 +3573,7 @@
     "rate": 0,
     "price": 0,
     "sku": "LBN550",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3930,9 +3584,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367970",
@@ -3942,7 +3594,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WBD540",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3953,9 +3605,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367978",
@@ -3965,7 +3615,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WTD560",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3976,9 +3626,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367986",
@@ -3988,7 +3636,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WTD580",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -3999,9 +3647,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367994",
@@ -4011,7 +3657,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WTD585",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4022,9 +3668,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368002",
@@ -4034,7 +3678,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WTD610",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4045,9 +3689,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368010",
@@ -4057,7 +3699,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WTN590",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4068,9 +3710,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368138",
@@ -4080,7 +3720,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PL",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4091,9 +3731,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367490",
@@ -4103,7 +3741,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS2",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4114,9 +3752,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367650",
@@ -4126,7 +3762,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4137,9 +3773,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367570",
@@ -4149,7 +3783,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4160,9 +3794,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367658",
@@ -4172,7 +3804,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT110",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4183,9 +3815,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367666",
@@ -4195,7 +3825,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT125",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4206,9 +3836,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367578",
@@ -4218,7 +3846,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT12",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4229,9 +3857,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367586",
@@ -4241,7 +3867,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT15",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4252,9 +3878,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367594",
@@ -4264,7 +3888,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT20",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4275,9 +3899,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367602",
@@ -4287,7 +3909,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT25",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4298,9 +3920,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367506",
@@ -4310,7 +3930,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS3.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4321,9 +3941,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367498",
@@ -4333,7 +3951,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4344,9 +3962,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367522",
@@ -4356,7 +3972,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS4.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4367,9 +3983,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367618",
@@ -4379,7 +3993,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4390,9 +4004,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367514",
@@ -4402,7 +4014,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4413,9 +4025,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367626",
@@ -4425,7 +4035,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4436,9 +4046,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367530",
@@ -4448,7 +4056,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4459,9 +4067,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367538",
@@ -4471,7 +4077,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4482,9 +4088,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367634",
@@ -4494,7 +4098,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT60",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4505,9 +4109,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367546",
@@ -4517,7 +4119,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PS6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4528,9 +4130,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367554",
@@ -4540,7 +4140,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4551,9 +4151,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367642",
@@ -4563,7 +4161,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT75",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4574,9 +4172,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367562",
@@ -4586,7 +4182,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4597,9 +4193,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367610",
@@ -4609,7 +4203,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PT30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4620,9 +4214,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366322",
@@ -4632,7 +4224,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CP2400",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4643,9 +4235,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366330",
@@ -4655,7 +4245,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CP3000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4666,9 +4256,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366338",
@@ -4678,7 +4266,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CP3200",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4689,9 +4277,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366346",
@@ -4701,7 +4287,7 @@
     "rate": 0,
     "price": 0,
     "sku": "CP3600",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4712,9 +4298,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366266",
@@ -4724,7 +4308,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP2400",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4733,11 +4317,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4992,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4992,
-    "reserved": 8
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366274",
@@ -4747,7 +4329,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP2485",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4758,9 +4340,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366282",
@@ -4770,7 +4350,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP2500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4781,9 +4361,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366290",
@@ -4793,7 +4371,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP3000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4802,11 +4380,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4992,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4992,
-    "reserved": 8
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366298",
@@ -4816,7 +4392,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP3035",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4825,11 +4401,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4992,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4992,
-    "reserved": 8
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366306",
@@ -4839,7 +4413,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP3330",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4850,9 +4424,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366314",
@@ -4862,7 +4434,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HP3600",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4873,9 +4445,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366618",
@@ -4885,7 +4455,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PC130",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4896,9 +4466,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366610",
@@ -4908,7 +4476,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PC50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4919,9 +4487,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366218",
@@ -4931,7 +4497,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GR1600",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4942,9 +4508,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366186",
@@ -4954,7 +4518,7 @@
     "rate": 0,
     "price": 0,
     "sku": "R1600",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4965,9 +4529,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366226",
@@ -4977,7 +4539,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GR2950",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -4988,9 +4550,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366194",
@@ -5000,7 +4560,7 @@
     "rate": 0,
     "price": 0,
     "sku": "R2950",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5011,9 +4571,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366234",
@@ -5023,7 +4581,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GR3350",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5034,9 +4592,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366202",
@@ -5046,7 +4602,7 @@
     "rate": 0,
     "price": 0,
     "sku": "R3350",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5057,9 +4613,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366242",
@@ -5069,7 +4623,7 @@
     "rate": 0,
     "price": 0,
     "sku": "GR3900",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5078,11 +4632,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "General",
-    "stock": 4990,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4990,
-    "reserved": 10
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366210",
@@ -5092,7 +4644,7 @@
     "rate": 0,
     "price": 0,
     "sku": "R3900",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5103,9 +4655,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366626",
@@ -5115,7 +4665,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RC40",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5126,9 +4676,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366634",
@@ -5138,7 +4686,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RC70",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5149,9 +4697,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368026",
@@ -5161,7 +4707,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RBD540",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5172,9 +4718,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368034",
@@ -5184,7 +4728,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RBD545",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5195,9 +4739,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368042",
@@ -5207,7 +4749,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RBD550",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5218,9 +4760,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368130",
@@ -5230,7 +4770,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RL",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5241,9 +4781,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368170",
@@ -5253,7 +4791,7 @@
     "rate": 0,
     "price": 0,
     "sku": "RI",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5264,9 +4802,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366874",
@@ -5276,7 +4812,7 @@
     "rate": 0,
     "price": 0,
     "sku": "STS1",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5287,9 +4823,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366858",
@@ -5299,7 +4833,7 @@
     "rate": 0,
     "price": 0,
     "sku": "STS3",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5310,9 +4844,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366866",
@@ -5322,7 +4854,7 @@
     "rate": 0,
     "price": 0,
     "sku": "STS3/4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5333,9 +4865,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367858",
@@ -5345,7 +4875,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SS2.5",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5356,9 +4886,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367434",
@@ -5368,7 +4896,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SL2000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5379,9 +4907,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367442",
@@ -5391,7 +4917,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SL2500",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5402,9 +4928,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367450",
@@ -5414,7 +4938,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SL3000",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5425,9 +4949,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367482",
@@ -5437,7 +4959,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SPC130",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5448,9 +4970,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367474",
@@ -5460,7 +4980,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SPC50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5471,9 +4991,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366738",
@@ -5483,7 +5001,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HM6*80",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5494,9 +5012,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366746",
@@ -5506,7 +5022,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HM6*90",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5517,9 +5033,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366658",
@@ -5529,7 +5043,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM8*20",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5538,11 +5052,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "Raw Material",
-    "stock": 4896,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4896,
-    "reserved": 104
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366802",
@@ -5552,7 +5064,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM8*25",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5563,9 +5075,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366674",
@@ -5575,7 +5085,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM8*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5586,9 +5096,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366682",
@@ -5598,7 +5106,7 @@
     "rate": 0,
     "price": 0,
     "sku": "AM8*50",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5607,11 +5115,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "Raw Material",
-    "stock": 4960,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4960,
-    "reserved": 40
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366706",
@@ -5621,7 +5127,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HNM8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5632,9 +5138,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366778",
@@ -5644,7 +5148,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SHM10*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5653,11 +5157,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "Raw Material",
-    "stock": 4888,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4888,
-    "reserved": 112
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366786",
@@ -5667,7 +5169,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SHM12*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5676,11 +5178,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "Raw Material",
-    "stock": 4980,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4980,
-    "reserved": 20
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366714",
@@ -5690,7 +5190,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HM8*30",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5701,9 +5201,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366770",
@@ -5713,7 +5211,7 @@
     "rate": 0,
     "price": 0,
     "sku": "HNM6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5724,9 +5222,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366754",
@@ -5736,7 +5232,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PWM6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5747,9 +5243,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366762",
@@ -5759,7 +5253,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SWM6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5770,9 +5264,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366794",
@@ -5782,7 +5274,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PWBM8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5793,9 +5285,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366690",
@@ -5805,7 +5295,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SNM8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5816,9 +5306,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366698",
@@ -5828,7 +5316,7 @@
     "rate": 0,
     "price": 0,
     "sku": "PWM8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5839,9 +5327,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366666",
@@ -5851,7 +5337,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SWM8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5862,9 +5348,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366466",
@@ -5874,7 +5358,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SR2.4",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5885,9 +5369,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366458",
@@ -5897,7 +5379,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SR3.6",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5908,9 +5390,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368050",
@@ -5920,7 +5400,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SBD545",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5931,9 +5411,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368058",
@@ -5943,7 +5421,7 @@
     "rate": 0,
     "price": 0,
     "sku": "SBD550",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5954,9 +5432,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368066",
@@ -5966,7 +5442,7 @@
     "rate": 0,
     "price": 0,
     "sku": "STD595",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -5977,9 +5453,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366538",
@@ -5989,7 +5463,7 @@
     "rate": 0,
     "price": 0,
     "sku": "T10",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6000,9 +5474,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366546",
@@ -6012,7 +5484,7 @@
     "rate": 0,
     "price": 0,
     "sku": "T8",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6023,9 +5495,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367042",
@@ -6035,7 +5505,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS100",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6046,9 +5516,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367026",
@@ -6058,7 +5526,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS223",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6069,9 +5537,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367034",
@@ -6081,7 +5547,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS260",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6092,9 +5558,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367018",
@@ -6104,7 +5568,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS442",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6115,9 +5579,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367010",
@@ -6127,7 +5589,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS444",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6138,9 +5600,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000367050",
@@ -6150,7 +5610,7 @@
     "rate": 0,
     "price": 0,
     "sku": "TMS618",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6161,9 +5621,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366482",
@@ -6173,7 +5631,7 @@
     "rate": 0,
     "price": 0,
     "sku": "UE",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6184,9 +5642,7 @@
     "category": "Raw Material",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000366474",
@@ -6196,7 +5652,7 @@
     "rate": 0,
     "price": 0,
     "sku": "UM",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6205,11 +5661,9 @@
     "uom": "NOS",
     "material": "General Component",
     "category": "Raw Material",
-    "stock": 4960,
+    "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 4960,
-    "reserved": 40
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368074",
@@ -6219,7 +5673,7 @@
     "rate": 0,
     "price": 0,
     "sku": "VBD550",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6230,9 +5684,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368082",
@@ -6242,7 +5694,7 @@
     "rate": 0,
     "price": 0,
     "sku": "VTD600",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6253,9 +5705,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368090",
@@ -6265,7 +5715,7 @@
     "rate": 0,
     "price": 0,
     "sku": "VTN590",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6276,9 +5726,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368098",
@@ -6288,7 +5736,7 @@
     "rate": 0,
     "price": 0,
     "sku": "VTN630",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6299,9 +5747,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368114",
@@ -6311,7 +5757,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WW273",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6322,9 +5768,7 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   },
   {
     "id": "4080449000000368106",
@@ -6334,7 +5778,7 @@
     "rate": 0,
     "price": 0,
     "sku": "WW310",
-    "status": "In Stock",
+    "status": "Active",
     "description": "—",
     "purchaseRate": 0,
     "purchaseDescription": "",
@@ -6345,8 +5789,6 @@
     "category": "General",
     "stock": 5000,
     "openingStock": 5000,
-    "reorderLevel": 100,
-    "availableStock": 5000,
-    "reserved": 0
+    "reorderLevel": 100
   }
 ]

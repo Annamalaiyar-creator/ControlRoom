@@ -94,5 +94,297 @@
         "selected": true
       }
     ]
+  },
+  {
+    "invNo": "INV-2026-691",
+    "code": "INV-2026-691",
+    "date": "12 Sept 2026",
+    "vendor": "Designer private limited",
+    "customerName": "Designer private limited",
+    "salesPerson": "Mohit JV",
+    "poNo": "BOM-691",
+    "bomCode": "BOM-691",
+    "grnNo": "GRN-VERIFIED",
+    "invAmt": "₹ 10,19,520.00",
+    "poVal": "₹ 10,19,520.00",
+    "grnVal": "₹ 10,19,520.00",
+    "diff": "0.00",
+    "match": "Matched",
+    "pay": "Ready for Payment",
+    "status": "Ready for Payment",
+    "items": [
+      {
+        "code": "PRD-001",
+        "name": "LEG 500 mm (HDG)",
+        "qty": 10,
+        "bomQty": 10,
+        "invQty": 10,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-002",
+        "name": "LEG 1000 mm (HDG)",
+        "qty": 10,
+        "bomQty": 10,
+        "invQty": 10,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-003",
+        "name": "RAFTER 3900 mm (GAL)",
+        "qty": 10,
+        "bomQty": 10,
+        "invQty": 10,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-004",
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "qty": 20,
+        "bomQty": 20,
+        "invQty": 20,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-005",
+        "name": "Universal Mid Clamp",
+        "qty": 20,
+        "bomQty": 20,
+        "invQty": 20,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-006",
+        "name": "Mid Clamp 35mm",
+        "qty": 20,
+        "bomQty": 20,
+        "invQty": 20,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-007",
+        "name": "End Clamp 30 mm",
+        "qty": 40,
+        "bomQty": 40,
+        "invQty": 40,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-008",
+        "name": "End Clamp 35 mm",
+        "qty": 40,
+        "bomQty": 40,
+        "invQty": 40,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-009",
+        "name": "SS304 Allen Bolt M8*50",
+        "qty": 20,
+        "bomQty": 20,
+        "invQty": 20,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0010",
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": 40,
+        "bomQty": 40,
+        "invQty": 40,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0011",
+        "name": "SS304 Allen Bolt M8*20",
+        "qty": 60,
+        "bomQty": 60,
+        "invQty": 60,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0012",
+        "name": "SS304 Hexa Bolt M12*30",
+        "qty": 20,
+        "bomQty": 20,
+        "invQty": 20,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0013",
+        "name": "SS304 Hexa Bolt M10*30",
+        "qty": 80,
+        "bomQty": 80,
+        "invQty": 80,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0014",
+        "name": "GI Anchor Bolt M10*100",
+        "qty": 80,
+        "bomQty": 80,
+        "invQty": 80,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      },
+      {
+        "code": "PRD-0015",
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "qty": 36,
+        "bomQty": 36,
+        "invQty": 36,
+        "rate": 1000,
+        "selected": true,
+        "packed": true
+      }
+    ],
+    "dispatchPacking": [
+      {
+        "name": "LEG 500 mm (HDG)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "LEG 1000 mm (HDG)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "RAFTER 3900 mm (GAL)",
+        "bomQty": 10,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Purlin 'HAT' Type - 2400 mm (GAL)",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Universal Mid Clamp",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "Mid Clamp 35mm",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "End Clamp 30 mm",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "End Clamp 35 mm",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*50",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 40,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Allen Bolt M8*20",
+        "bomQty": 60,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Hexa Bolt M12*30",
+        "bomQty": 20,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "SS304 Hexa Bolt M10*30",
+        "bomQty": 80,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "GI Anchor Bolt M10*100",
+        "bomQty": 80,
+        "packed": true,
+        "code": null
+      },
+      {
+        "name": "MODULE - ADANI BIFACIAL DCR 540wp",
+        "bomQty": 36,
+        "packed": true,
+        "code": null
+      }
+    ],
+    "billingAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "billingAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddress": "8/1 nagar, Chennai, tamil nadu - 600066, Chennai, tamil nadu, Pincode: 600066",
+    "deliveryAddressObj": {
+      "address": "8/1 nagar, Chennai, tamil nadu - 600066",
+      "city": "Chennai",
+      "state": "tamil nadu",
+      "pincode": "600066"
+    },
+    "deliveryAddressProofDoc": null,
+    "accountsVerification": {
+      "paymentStatus": null,
+      "paymentDate": "2026-09-12",
+      "totalAmount": 1019520,
+      "hardCopyReceived": false,
+      "verified": true
+    },
+    "proofDoc": "RK Transprent(Black).png",
+    "proofDocData": null,
+    "paymentProofDoc": {
+      "name": "RK Transprent(Black).png",
+      "size": "0.19 MB",
+      "type": "image/png",
+      "uploadedAt": "2026-09-12T11:07:44.174Z"
+    }
   }
 ]

@@ -13,7 +13,7 @@ import TypeableProductSelect from '../TypeableProductSelect';
 import NotificationToast from '../NotificationToast';
 import { addLiveNotification } from '../Header';
 import { getFullProductsCatalogWithStock } from '../../utils/productCatalogService';
-import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore } from '../../utils/supabaseDataSync';
+import { saveCloudStore, saveCloudStoreImmediate, fetchCloudStore, subscribeToCloudStore } from '../../utils/supabaseDataSync';
 
 const QUOTATION_TERMS_PRESETS = [
   {
@@ -240,21 +240,30 @@ export default function CrmQuotationsView({
     return () => window.removeEventListener('vrm_presets_updated', handlePresetUpdate);
   }, []);
 
-  // Customer List from localStorage (aligned with BOM / CRM customers)
-  const [customerList, setCustomerList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('controlroom_customer_store') || localStorage.getItem('controlroom_crm_customers') || localStorage.getItem('controlroom_customer_list');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  // Customer List synced directly from Supabase cloud database
+  const [customerList, setCustomerList] = useState(() => [
+    { code: 'Vikram Solar Pvt Ltd', companyName: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNumber: '33AABCU9603R1ZM', gstNo: '33AABCU9603R1ZM', contactPerson: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@vikramsolar.com', billingAddress: 'Plot 42, SIDCO Industrial Estate, Ambattur', city: 'Chennai', state: 'Tamil Nadu', pincode: '600058' },
+    { code: 'Tata Power Renewable', companyName: 'Tata Power Ltd', c2: 'Tata Power Ltd', gstNumber: '29AAACT2727Q1ZW', gstNo: '29AAACT2727Q1ZW', contactPerson: 'Anish Sharma', phone: '+91 98123 45678', email: 'anish.s@tatapower.com', billingAddress: '12 Electronic City Phase 1', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
+    { code: 'Apex Infra Systems', companyName: 'Apex Infra Ltd', c2: 'Apex Infra Ltd', gstNumber: '33AABCA1234F1Z5', gstNo: '33AABCA1234F1Z5', contactPerson: 'Priya Sundaram', phone: '+91 99400 11223', email: 'priya@apexinfra.com', billingAddress: '88 Mount Road, Guindy', city: 'Chennai', state: 'Tamil Nadu', pincode: '600032' }
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    fetchCloudStore('customer_store', []).then(list => {
+      if (active && Array.isArray(list) && list.length > 0) {
+        setCustomerList(list);
       }
-    } catch (e) {}
-    return [
-      { code: 'Vikram Solar Pvt Ltd', companyName: 'Vikram Solar Pvt Ltd', c2: 'Vikram Solar Pvt Ltd', gstNumber: '33AABCU9603R1ZM', gstNo: '33AABCU9603R1ZM', contactPerson: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@vikramsolar.com', billingAddress: 'Plot 42, SIDCO Industrial Estate, Ambattur', city: 'Chennai', state: 'Tamil Nadu', pincode: '600058' },
-      { code: 'Tata Power Renewable', companyName: 'Tata Power Ltd', c2: 'Tata Power Ltd', gstNumber: '29AAACT2727Q1ZW', gstNo: '29AAACT2727Q1ZW', contactPerson: 'Anish Sharma', phone: '+91 98123 45678', email: 'anish.s@tatapower.com', billingAddress: '12 Electronic City Phase 1', city: 'Bengaluru', state: 'Karnataka', pincode: '560100' },
-      { code: 'Apex Infra Systems', companyName: 'Apex Infra Ltd', c2: 'Apex Infra Ltd', gstNumber: '33AABCA1234F1Z5', gstNo: '33AABCA1234F1Z5', contactPerson: 'Priya Sundaram', phone: '+91 99400 11223', email: 'priya@apexinfra.com', billingAddress: '88 Mount Road, Guindy', city: 'Chennai', state: 'Tamil Nadu', pincode: '600032' }
-    ];
-  });
+    });
+    const unsub = subscribeToCloudStore('customer_store', (newList) => {
+      if (active && Array.isArray(newList) && newList.length > 0) {
+        setCustomerList(newList);
+      }
+    });
+    return () => {
+      active = false;
+      if (unsub && unsub.unsubscribe) unsub.unsubscribe();
+    };
+  }, []);
 
   // Full 285+ Standardized Products Catalog with Live Central Inventory Stock
   const [itemsList, setItemsList] = useState(() => getFullProductsCatalogWithStock());
@@ -961,11 +970,12 @@ export default function CrmQuotationsView({
     if (onSaveQuotation) {
       onSaveQuotation(record);
     } else {
-      // Local fallback persistence
-      const currentList = JSON.parse(localStorage.getItem('controlroom_crm_quotations') || '[]');
-      const filtered = currentList.filter(q => (q.quoteNumber || q.id) !== record.id);
-      const updated = [record, ...filtered];
-      localStorage.setItem('controlroom_crm_quotations', JSON.stringify(updated));
+      // Cloud store fallback persistence
+      fetchCloudStore('crm_quotations', []).then(currentList => {
+        const filtered = (Array.isArray(currentList) ? currentList : []).filter(q => (q.quoteNumber || q.id) !== record.id);
+        const updated = [record, ...filtered];
+        saveCloudStoreImmediate('crm_quotations', updated);
+      });
     }
 
     showToast(isEditing ? `Quotation ${record.quoteNumber} revised successfully! (Rev #${newRevCount})` : `Quotation ${record.quoteNumber} created successfully!`);
@@ -973,12 +983,12 @@ export default function CrmQuotationsView({
   };
 
   // Convert Quotation directly to Proforma Invoice (PI)
-  const handleConvertToPI = (quote) => {
+  const handleConvertToPI = async (quote) => {
     if (!quote) return;
 
     // 1. Generate Next Sales PI Number
-    const existingPIs = JSON.parse(localStorage.getItem('controlroom_sales_pi_store') || '[]');
-    const nextPiIndex = existingPIs.length + 101;
+    const existingPIs = await fetchCloudStore('sales_pi_store', []);
+    const nextPiIndex = (Array.isArray(existingPIs) ? existingPIs.length : 0) + 101;
     const piNumber = `SPI-2026-${nextPiIndex}`;
 
     // 2. Prepare items and amounts
@@ -987,7 +997,7 @@ export default function CrmQuotationsView({
     const totalQty = (quote.items || []).reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1;
 
     const repName = quote.salesPerson || quote.salesperson || quote.salesRep || getActiveUserName();
-    const repCode = quote.salesPersonCode || quote.createdById || localStorage.getItem('controlroom_logged_emp_id') || '';
+    const repCode = quote.salesPersonCode || quote.createdById || '';
 
     const newPI = {
       piNo: piNumber,
@@ -1033,13 +1043,11 @@ export default function CrmQuotationsView({
       notes: `Generated automatically from Quotation ${quote.code || quote.quoteNumber}. Unlimited revisions kept in quotation history.`
     };
 
-    // 3. Save to sales PI store in Supabase and local cache immediately
-    const updatedPIs = [newPI, ...existingPIs.filter(p => p.piNo !== piNumber)];
-    localStorage.setItem('controlroom_sales_pi_store', JSON.stringify(updatedPIs));
-    localStorage.setItem('controlroom_procurement_pi_store', JSON.stringify(updatedPIs));
+    // 3. Save to sales PI store in Supabase cloud database
+    const updatedPIs = [newPI, ...(Array.isArray(existingPIs) ? existingPIs.filter(p => p.piNo !== piNumber) : [])];
     try {
-      saveCloudStoreImmediate('sales_pi_store', updatedPIs);
-      saveCloudStoreImmediate('proforma_invoice_store', updatedPIs);
+      await saveCloudStoreImmediate('sales_pi_store', updatedPIs);
+      await saveCloudStoreImmediate('proforma_invoice_store', updatedPIs);
       fetch('/api/zoho/estimates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1058,9 +1066,10 @@ export default function CrmQuotationsView({
     if (onSaveQuotation) {
       onSaveQuotation(updatedQuote);
     } else {
-      const currentList = JSON.parse(localStorage.getItem('controlroom_crm_quotations') || '[]');
-      const updated = currentList.map(q => (q.quoteNumber || q.id) === (quote.quoteNumber || quote.id) ? updatedQuote : q);
-      localStorage.setItem('controlroom_crm_quotations', JSON.stringify(updated));
+      fetchCloudStore('crm_quotations', []).then(currentList => {
+        const updated = (Array.isArray(currentList) ? currentList : []).map(q => (q.quoteNumber || q.id) === (quote.quoteNumber || quote.id) ? updatedQuote : q);
+        saveCloudStoreImmediate('crm_quotations', updated);
+      });
     }
 
     // 5. Notify & offer navigation to Performa Invoice tab
@@ -1180,9 +1189,10 @@ export default function CrmQuotationsView({
       if (onSaveQuotation) {
         onSaveQuotation(updatedQuote);
       } else {
-        const currentList = JSON.parse(localStorage.getItem('controlroom_crm_quotations') || '[]');
-        const updated = currentList.map(q => (q.quoteNumber || q.id) === (quote.quoteNumber || quote.id) ? updatedQuote : q);
-        localStorage.setItem('controlroom_crm_quotations', JSON.stringify(updated));
+        fetchCloudStore('crm_quotations', []).then(currentList => {
+          const updated = (Array.isArray(currentList) ? currentList : []).map(q => (q.quoteNumber || q.id) === (quote.quoteNumber || quote.id) ? updatedQuote : q);
+          saveCloudStoreImmediate('crm_quotations', updated);
+        });
       }
     }
 
@@ -3112,11 +3122,15 @@ export default function CrmQuotationsView({
 
           {/* Delete */}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (window.confirm(`Are you sure you want to delete ${selectedRows.length} selected quotation(s)?`)) {
                 const updatedQuotes = quotations.filter(q => !selectedRows.includes(q.quoteNumber || q.id));
-                localStorage.setItem('controlroom_crm_quotations', JSON.stringify(updatedQuotes));
-                window.location.reload();
+                await saveCloudStoreImmediate('crm_quotations', updatedQuotes);
+                setSelectedRows([]);
+                window.dispatchEvent(new CustomEvent('controlroom_crm_update', { detail: { key: 'quotations', count: updatedQuotes.length } }));
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
               }
             }}
             style={{

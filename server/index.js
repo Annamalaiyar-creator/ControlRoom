@@ -22,164 +22,110 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ik
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// In-memory cache for Supabase store sync
-let supabaseMemoryStore = {
-  po_store: null,
-  vendor_store: null,
-  item_store: null,
-  grn_store: null
-};
+// In-memory active cache for Supabase Database stores
+let supabaseMemoryStore = {};
 
-// Async background sync with Supabase (Uses active leaves table as cloud store)
-const syncStoreWithSupabase = async (key, localData) => {
+// Authoritative Database Store functions directly with Supabase
+const getDatabaseStore = async (key) => {
   const employeeKey = key.toUpperCase();
   try {
     const { data: records, error } = await supabase
       .from('leaves')
-      .select('id, reason')
+      .select('id, reason, dates, duration')
       .eq('employee', employeeKey)
-      .order('id', { ascending: false })
-      .limit(1);
+      .order('id', { ascending: false });
 
-    const record = (records && records.length > 0) ? records[0] : null;
-
-    if (!error && record && record.reason) {
-      try {
-        const cloudParsed = JSON.parse(record.reason);
-        if (Array.isArray(cloudParsed)) {
-          if (cloudParsed.length === 0) {
-            supabaseMemoryStore[key] = [];
-            return [];
-          }
-          if (Array.isArray(localData) && localData.length > 0) {
-            const itemMap = new Map();
-            cloudParsed.forEach(item => {
-              const id = item?.employee_code || item?.bomCode || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
-              if (id) itemMap.set(String(id).toLowerCase(), item);
-            });
-            localData.forEach(item => {
-              const id = item?.employee_code || item?.bomCode || item?.itemId || item?.id || item?.workOrderNo || item?.code || item?.sku || item?.email || item?.name;
-              if (id) {
-                const existing = itemMap.get(String(id).toLowerCase());
-                itemMap.set(String(id).toLowerCase(), { ...existing, ...item });
-              }
-            });
-            const merged = Array.from(itemMap.values());
-            supabaseMemoryStore[key] = merged;
-            return merged;
-          }
-          supabaseMemoryStore[key] = cloudParsed;
-          return cloudParsed;
+    if (!error && records && records.length > 0) {
+      const primaryRecord = records[0];
+      // Asynchronously clean up legacy duplicate rows if more than 1 row exists
+      if (records.length > 1) {
+        const excessIds = records.slice(1).map(r => r.id);
+        supabase.from('leaves').delete().in('id', excessIds).then(() => {}).catch(() => {});
+      }
+      if (primaryRecord.reason) {
+        try {
+          const parsed = JSON.parse(primaryRecord.reason);
+          supabaseMemoryStore[key] = parsed;
+          return parsed;
+        } catch (e) {
+          console.warn(`[getDatabaseStore parse warn for ${key}]:`, e.message);
         }
-      } catch (parseErr) {}
-    }
-
-    // If record doesn't exist yet but we have localData, create it
-    if (localData && localData.length > 0) {
-      if (record && record.id) {
-        await supabase
-          .from('leaves')
-          .update({
-            reason: JSON.stringify(localData),
-            dates: new Date().toISOString(),
-            duration: String(Array.isArray(localData) ? localData.length : 1)
-          })
-          .eq('id', record.id);
-      } else {
-        await supabase
-          .from('leaves')
-          .insert({
-            employee: employeeKey,
-            reason: JSON.stringify(localData),
-            status: 'active',
-            dates: new Date().toISOString(),
-            duration: String(Array.isArray(localData) ? localData.length : 1),
-            type: 'Store'
-          });
       }
     }
   } catch (err) {
-    console.error(`[Supabase Store Sync Error for ${key}]:`, err?.message || err);
+    console.error(`[getDatabaseStore Error for ${key}]:`, err?.message || err);
   }
-  return supabaseMemoryStore[key] || localData;
+  return supabaseMemoryStore[key] || (key === 'presets_store' || key === 'company_branding_store' ? {} : []);
 };
 
-const pushStoreToSupabase = async (key, storeData) => {
+const saveDatabaseStore = async (key, storeData) => {
+  if (storeData === undefined || storeData === null) return storeData;
   supabaseMemoryStore[key] = storeData;
   const employeeKey = key.toUpperCase();
   try {
-    const { data: record } = await supabase
+    const { data: records } = await supabase
       .from('leaves')
       .select('id')
       .eq('employee', employeeKey)
-      .maybeSingle();
+      .order('id', { ascending: false });
 
-    if (record && record.id) {
-      await supabase
-        .from('leaves')
-        .update({
-          reason: JSON.stringify(storeData),
-          status: 'active',
-          dates: new Date().toISOString(),
-          duration: String(Array.isArray(storeData) ? storeData.length : 1)
-        })
-        .eq('id', record.id);
+    const payload = {
+      employee: employeeKey,
+      reason: JSON.stringify(storeData),
+      status: 'active',
+      dates: new Date().toISOString(),
+      duration: String(Array.isArray(storeData) ? storeData.length : 1),
+      type: 'Store'
+    };
+
+    if (records && records.length > 0) {
+      const masterId = records[0].id;
+      await supabase.from('leaves').update(payload).eq('id', masterId);
+      if (records.length > 1) {
+        const excessIds = records.slice(1).map(r => r.id);
+        await supabase.from('leaves').delete().in('id', excessIds);
+      }
     } else {
-      await supabase
-        .from('leaves')
-        .insert({
-          employee: employeeKey,
-          reason: JSON.stringify(storeData),
-          status: 'active',
-          dates: new Date().toISOString(),
-          duration: String(Array.isArray(storeData) ? storeData.length : 1),
-          type: 'Store'
-        });
+      await supabase.from('leaves').insert(payload);
     }
   } catch (err) {
-    console.error(`[Supabase Push Error for ${key}]:`, err?.message || err);
+    console.error(`[saveDatabaseStore Error for ${key}]:`, err?.message || err);
   }
+  return storeData;
 };
 
-// Helpers for Production Work Orders local store
+// Aliases for seamless backward compatibility
+const syncStoreWithSupabase = async (key) => getDatabaseStore(key);
+const pushStoreToSupabase = async (key, storeData) => saveDatabaseStore(key, storeData);
+
+// Helpers for Production Work Orders Database store
 const loadLocalWorkOrders = () => {
-  try {
-    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
-    if (fs.existsSync(storePath)) {
-      const content = fs.readFileSync(storePath, 'utf8');
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (err) {
-    console.error('Error reading workorder_store.json:', err.message);
-  }
   if (supabaseMemoryStore['workorder_store'] && Array.isArray(supabaseMemoryStore['workorder_store']) && supabaseMemoryStore['workorder_store'].length > 0) {
     return supabaseMemoryStore['workorder_store'];
   }
-  return [
-    { id: 'wo_1', workOrderNo: 'WO-50', productName: 'Mini Rail 100 mm', plannedQty: 500, completedQty: 360, delayDays: 2, delayReason: 'Material Delay', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'Raw Aluminum Coil 1.5mm', customer: 'Vikram Solar', targetDate: '2026-07-22' },
-    { id: 'wo_2', workOrderNo: 'WO-51', productName: 'Long Rail 3000 mm', plannedQty: 200, completedQty: 120, delayDays: 2, delayReason: 'Machine Down', status: 'Overdue', statusColor: '#DC2626', rawMaterial: 'HDG Steel Profile Stock', customer: 'Tata Power Renewable', targetDate: '2026-07-21' },
-    { id: 'wo_3', workOrderNo: 'WO-52', productName: 'Mid Clamp 35 mm', plannedQty: 1500, completedQty: 1100, delayDays: 1, delayReason: 'Operator Shortage', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Fastener Bar', customer: 'Adani Solar', targetDate: '2026-07-25' },
-    { id: 'wo_4', workOrderNo: 'WO-53', productName: 'Alu. Bracket', plannedQty: 400, completedQty: 260, delayDays: 1, delayReason: 'Tool Change', status: 'Pending', statusColor: '#D97706', rawMaterial: 'Alu Extrusion 6063-T6', customer: 'Sterling & Wilson', targetDate: '2026-07-26' }
-  ];
+  return [];
 };
 
-// Initial background sync from Supabase cloud store on server boot
+const saveLocalWorkOrders = (orders) => {
+  supabaseMemoryStore['workorder_store'] = orders;
+  saveDatabaseStore('workorder_store', orders);
+  saveDatabaseStore('vrm_prod_workorders', orders);
+};
+
+// Authoritative Boot Sync from Supabase Cloud Database
 (async () => {
   try {
-    const initialWOs = loadLocalWorkOrders();
-    await Promise.all([
-      syncStoreWithSupabase('po_store', []),
-      syncStoreWithSupabase('vendor_store', []),
-      syncStoreWithSupabase('item_store', []),
-      syncStoreWithSupabase('grn_store', []),
-      syncStoreWithSupabase('bom_store', []),
-      syncStoreWithSupabase('employees_store', []),
-      syncStoreWithSupabase('invoice_store', []),
-      syncStoreWithSupabase('company_branding_store', {}),
-      syncStoreWithSupabase('workorder_store', initialWOs)
-    ]);
-    console.log('[SUPABASE STORE SYNC] All cloud stores synchronized on server boot');
+    const keys = [
+      'po_store', 'vendor_store', 'item_store', 'grn_store',
+      'bom_store', 'employees_store', 'invoice_store', 'company_branding_store',
+      'workorder_store', 'customer_store', 'raw_materials_store',
+      'sales_pi_store', 'proforma_invoice_store', 'payment_store',
+      'crm_leads', 'crm_customers', 'crm_opportunities', 'crm_quotations',
+      'crm_whatsapp_conversations', 'quotations_store', 'presets_store',
+      'vrm_prod_workorders', 'vrm_prod_inventory', 'vrm_prod_recipes', 'vrm_prod_ledger'
+    ];
+    await Promise.all(keys.map(k => getDatabaseStore(k)));
+    console.log('[SUPABASE DATABASE ENGINE] All stores successfully loaded from cloud database on server boot');
   } catch (err) {
     console.error('[SUPABASE BOOT NOTICE]', err.message);
   }
@@ -432,181 +378,49 @@ const loadLocalPOs = () => {
   if (supabaseMemoryStore.po_store && supabaseMemoryStore.po_store.length > 0) {
     return supabaseMemoryStore.po_store;
   }
-  try {
-    const filePath = getStoreFilePath('po_store.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      pushStoreToSupabase('po_store', data);
-      return data;
-    }
-  } catch (err) {
-    console.error('Error loading local POs:', err);
-  }
-  return [];
+  return supabaseMemoryStore.po_store || [];
 };
 
 const saveLocalPOs = (pos) => {
-  pushStoreToSupabase('po_store', pos);
-  try {
-    const filePath = getStoreFilePath('po_store.json');
-    fs.writeFileSync(filePath, JSON.stringify(pos, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving local POs:', err);
-  }
+  supabaseMemoryStore.po_store = pos;
+  saveDatabaseStore('po_store', pos);
 };
 
 const loadLocalVendors = () => {
-  if (supabaseMemoryStore.vendor_store && supabaseMemoryStore.vendor_store.length > 0) {
+  if (supabaseMemoryStore.vendor_store && Array.isArray(supabaseMemoryStore.vendor_store) && supabaseMemoryStore.vendor_store.length > 0) {
     return supabaseMemoryStore.vendor_store;
-  }
-  try {
-    const filePath = getStoreFilePath('vendor_store.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      pushStoreToSupabase('vendor_store', data);
-      return data;
-    }
-  } catch (err) {
-    console.error('Error loading local vendors:', err);
   }
   return [];
 };
 
 const saveLocalVendors = (vendors) => {
-  pushStoreToSupabase('vendor_store', vendors);
-  try {
-    const filePath = getStoreFilePath('vendor_store.json');
-    fs.writeFileSync(filePath, JSON.stringify(vendors, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving local vendors:', err);
-  }
+  supabaseMemoryStore.vendor_store = vendors;
+  saveDatabaseStore('vendor_store', vendors);
 };
 
 const loadLocalCustomers = () => {
-  let combined = [];
-  const seenIds = new Set();
-
-  // 1. First check in-memory Supabase cache
   if (supabaseMemoryStore.customer_store && Array.isArray(supabaseMemoryStore.customer_store) && supabaseMemoryStore.customer_store.length > 0) {
-    supabaseMemoryStore.customer_store.forEach(c => {
-      const id = c.customerCode || c.id || c.zohoContactId || c.code;
-      if (id && !seenIds.has(String(id).toLowerCase())) {
-        seenIds.add(String(id).toLowerCase());
-        combined.push(c);
-      }
-    });
+    return supabaseMemoryStore.customer_store;
   }
-
-  // 2. Load from customer_store.json
-  try {
-    const filePath = getStoreFilePath('customer_store.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      if (Array.isArray(data)) {
-        data.forEach(c => {
-          const id = c.customerCode || c.id || c.zohoContactId || c.code;
-          if (id && !seenIds.has(String(id).toLowerCase())) {
-            seenIds.add(String(id).toLowerCase());
-            combined.push(c);
-          }
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Error loading customer_store.json:', err);
-  }
-
-  // 3. Load from crm_customers.json so CRM created/converted customers are NEVER lost
-  try {
-    const crmPath = getStoreFilePath('crm_customers.json');
-    if (fs.existsSync(crmPath)) {
-      const data = JSON.parse(fs.readFileSync(crmPath, 'utf8'));
-      if (Array.isArray(data)) {
-        data.forEach(c => {
-          const id = c.customerCode || c.id || c.zohoContactId || c.code;
-          if (id && !seenIds.has(String(id).toLowerCase())) {
-            seenIds.add(String(id).toLowerCase());
-            combined.push(c);
-          } else if (id) {
-            const idx = combined.findIndex(x => String(x.customerCode || x.id || x.zohoContactId || x.code).toLowerCase() === String(id).toLowerCase());
-            if (idx >= 0) {
-              combined[idx] = { ...c, ...combined[idx] };
-            }
-          }
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Error loading crm_customers.json:', err);
-  }
-
-  return combined;
+  return [];
 };
 
 const saveLocalCustomers = (customers) => {
-  pushStoreToSupabase('customer_store', customers);
-  try {
-    const filePath = getStoreFilePath('customer_store.json');
-    fs.writeFileSync(filePath, JSON.stringify(customers, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving local customers:', err);
-  }
-  try {
-    const crmPath = getStoreFilePath('crm_customers.json');
-    let existingCrm = [];
-    if (fs.existsSync(crmPath)) {
-      try { existingCrm = JSON.parse(fs.readFileSync(crmPath, 'utf8')); } catch (e) {}
-    }
-    const map = new Map();
-    if (Array.isArray(existingCrm)) {
-      existingCrm.forEach(c => {
-        const k = (c.customerCode || c.id || c.zohoContactId || c.code || '').toLowerCase().trim();
-        if (k) map.set(k, c);
-      });
-    }
-    if (Array.isArray(customers)) {
-      customers.forEach(c => {
-        const k = (c.customerCode || c.id || c.zohoContactId || c.code || '').toLowerCase().trim();
-        if (k) {
-          map.set(k, { ...(map.get(k) || {}), ...c });
-        }
-      });
-    }
-    const mergedCrm = Array.from(map.values());
-    fs.writeFileSync(crmPath, JSON.stringify(mergedCrm, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error syncing crm_customers.json:', err);
-  }
+  supabaseMemoryStore.customer_store = customers;
+  saveDatabaseStore('customer_store', customers);
+  saveDatabaseStore('crm_customers', customers);
 };
 
 const loadLocalItems = () => {
   if (supabaseMemoryStore.item_store && Array.isArray(supabaseMemoryStore.item_store) && supabaseMemoryStore.item_store.length > 0) {
     return supabaseMemoryStore.item_store;
   }
-  try {
-    const filePath = getStoreFilePath('item_store.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      if (Array.isArray(data) && data.length > 0) {
-        supabaseMemoryStore.item_store = data;
-        return data;
-      }
-    }
-  } catch (err) {
-    console.error('Error loading local items:', err);
-  }
   return [];
 };
 
 const saveLocalItems = (items) => {
   supabaseMemoryStore.item_store = items;
-  pushStoreToSupabase('item_store', items);
-  try {
-    const filePath = getStoreFilePath('item_store.json');
-    fs.writeFileSync(filePath, JSON.stringify(items, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving local items:', err);
-  }
+  saveDatabaseStore('item_store', items);
 };
 
 const getGRNStorePath = () => {
@@ -614,43 +428,23 @@ const getGRNStorePath = () => {
 };
 
 const loadLocalGRNs = () => {
-  try {
-    const storePath = getGRNStorePath();
-    if (fs.existsSync(storePath)) {
-      const data = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-      if (Array.isArray(data) && data.length > 0) {
-        supabaseMemoryStore.grn_store = data;
-        return data;
-      }
-    }
-  } catch (err) {
-    console.error('Error loading local GRNs:', err);
-  }
-  if (supabaseMemoryStore.grn_store && Array.isArray(supabaseMemoryStore.grn_store)) {
+  if (supabaseMemoryStore.grn_store && Array.isArray(supabaseMemoryStore.grn_store) && supabaseMemoryStore.grn_store.length > 0) {
     return supabaseMemoryStore.grn_store;
   }
   return [];
 };
 
-// Generic Data Store endpoints with Supabase + Disk backup
+const saveLocalGRNs = (grns) => {
+  supabaseMemoryStore.grn_store = grns;
+  saveDatabaseStore('grn_store', grns);
+};
+
+// Generic Data Store endpoints backed 100% by Supabase Cloud Database
 app.get('/api/store/:key', async (req, res) => {
   const { key } = req.params;
   try {
-    const filePath = getStoreFilePath(`${key}.json`);
-    let localData = [];
-    if (fs.existsSync(filePath)) {
-      try {
-        localData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      } catch (e) {}
-    }
-    let data = localData;
-    try {
-      const synced = await syncStoreWithSupabase(key, localData);
-      if (synced) data = synced;
-    } catch (e) {
-      console.warn(`[Supabase Store Sync Warning for ${key}]:`, e.message);
-    }
-    res.json({ success: true, data: data || [] });
+    const data = await getDatabaseStore(key);
+    res.json({ success: true, data: data !== undefined && data !== null ? data : [] });
   } catch (err) {
     res.json({ success: true, data: [] });
   }
@@ -660,74 +454,47 @@ app.post('/api/store/:key', async (req, res) => {
   const { key } = req.params;
   const storeData = req.body;
   try {
-    const filePath = getStoreFilePath(`${key}.json`);
     let finalDataToSave = storeData;
 
-    // For all array stores (including bom_store, invoice_store, customer_store, po_store),
-    // merge smartly so concurrent users NEVER overwrite each other, unless explicitly resetting with empty array []
+    // Smart merge for array collections
     if (Array.isArray(storeData) && storeData.length === 0) {
       finalDataToSave = [];
-      supabaseMemoryStore[key] = [];
     } else if (Array.isArray(storeData)) {
-      let existingList = [];
-      if (fs.existsSync(filePath)) {
-        try {
-          const raw = fs.readFileSync(filePath, 'utf8');
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) existingList = parsed;
-        } catch (e) {
-          existingList = [];
-        }
-      }
+      const currentData = await getDatabaseStore(key);
+      if (Array.isArray(currentData) && currentData.length > 0) {
+        const getId = (item) => {
+          if (!item || typeof item !== 'object') return null;
+          return item.piNo || item.estimate_number || item.estimateId || item.bomCode || item.code || item.id || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.email || item.name;
+        };
 
-      if (supabaseMemoryStore[key] && Array.isArray(supabaseMemoryStore[key])) {
-        existingList = [...existingList, ...supabaseMemoryStore[key]];
-      }
+        const map = new Map();
+        currentData.forEach(item => {
+          const id = getId(item);
+          if (id) map.set(id, item);
+        });
 
-      const getId = (item) => {
-        if (!item || typeof item !== 'object') return null;
-        return item.piNo || item.estimate_number || item.estimateId || item.bomCode || item.code || item.id || item.poNo || item.invNo || item.grnNo || item.vendorCode || item.email || item.name;
-      };
-
-      const map = new Map();
-      existingList.forEach(item => {
-        const id = getId(item);
-        if (id) map.set(id, item);
-      });
-
-      storeData.forEach(item => {
-        const id = getId(item);
-        if (id) {
-          if (map.has(id)) {
-            map.set(id, { ...map.get(id), ...item });
-          } else {
-            map.set(id, item);
+        storeData.forEach(item => {
+          const id = getId(item);
+          if (id) {
+            if (map.has(id)) {
+              map.set(id, { ...map.get(id), ...item });
+            } else {
+              map.set(id, item);
+            }
           }
-        }
-      });
+        });
 
-      finalDataToSave = Array.from(map.values());
-    } else if (key === 'presets_store' && storeData && typeof storeData === 'object' && !Array.isArray(storeData)) {
-      let existingPresets = {};
-      if (fs.existsSync(filePath)) {
-        try {
-          existingPresets = JSON.parse(fs.readFileSync(filePath, 'utf8')) || {};
-        } catch (_) {}
+        finalDataToSave = Array.from(map.values());
       }
-      finalDataToSave = { ...existingPresets, ...storeData };
+    } else if (key === 'presets_store' && storeData && typeof storeData === 'object' && !Array.isArray(storeData)) {
+      const current = await getDatabaseStore(key);
+      finalDataToSave = { ...(current || {}), ...storeData };
     }
 
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(finalDataToSave, null, 2), 'utf8');
-    } catch (e) {}
-    try {
-      await pushStoreToSupabase(key, finalDataToSave);
-    } catch (e) {
-      console.warn(`[Supabase Store Push Warning for ${key}]:`, e.message);
-    }
-    res.json({ success: true, count: Array.isArray(finalDataToSave) ? finalDataToSave.length : 1 });
+    await saveDatabaseStore(key, finalDataToSave);
+    res.json({ success: true, count: Array.isArray(finalDataToSave) ? finalDataToSave.length : 1, data: finalDataToSave });
   } catch (err) {
-    res.json({ success: true, count: Array.isArray(storeData) ? storeData.length : 0 });
+    res.json({ success: false, error: err.message });
   }
 });
 
@@ -1522,16 +1289,6 @@ app.delete('/api/zoho/vendors/:id', async (req, res) => {
   res.json({ success: true, message: `Vendor ${targetId} deleted from Control Room!` });
 });
 
-const saveLocalWorkOrders = (orders) => {
-  try {
-    const storePath = path.resolve(process.cwd(), 'server', 'workorder_store.json');
-    fs.writeFileSync(storePath, JSON.stringify(orders, null, 2), 'utf8');
-    supabaseMemoryStore['workorder_store'] = orders;
-    pushStoreToSupabase('workorder_store', orders);
-  } catch (err) {
-    console.error('Error writing workorder_store.json:', err.message);
-  }
-};
 
 // Endpoint to GET Production Work Orders (Local & Supabase Store)
 app.get('/api/workorders', async (req, res) => {
@@ -4434,22 +4191,13 @@ app.get('/api/zoho/purchaseorders/{*id}', async (req, res) => {
 
 
 
-const saveLocalGRNs = (grns) => {
-  pushStoreToSupabase('grn_store', grns);
-  try {
-    let storePath = getGRNStorePath();
-    fs.writeFileSync(storePath, JSON.stringify(grns, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving local GRNs:', err);
-  }
-};
 
 // Endpoint to fetch receiving history & cumulative totals for a specific PO
-app.get('/api/po-receiving-history/{*poRef}', (req, res) => {
+app.get('/api/po-receiving-history/{*poRef}', async (req, res) => {
   const rawRef = req.params.poRef;
   const poRef = decodeURIComponent(Array.isArray(rawRef) ? rawRef.join('/') : (rawRef || ''));
-  const grns = loadLocalGRNs();
-  const poGRNs = grns.filter(g => {
+  const grns = await getDatabaseStore('grn_store');
+  const poGRNs = (Array.isArray(grns) ? grns : []).filter(g => {
     const ref = (g.poRef || g.poNo || g.poId || '').toLowerCase();
     const target = poRef.toLowerCase();
     return ref === target || ref.includes(target) || target.includes(ref) || (ref.includes('0202') && target.includes('0202')) || (ref.includes('0201') && target.includes('0201')) || (ref.includes('7327116') && target.includes('7327116'));
@@ -4480,9 +4228,9 @@ app.get('/api/po-receiving-history/{*poRef}', (req, res) => {
 });
 
 // Endpoint to list all stored GRNs
-app.get('/api/grns', (req, res) => {
-  const grns = loadLocalGRNs();
-  const sorted = [...grns].sort((a, b) => {
+app.get('/api/grns', async (req, res) => {
+  const grns = await getDatabaseStore('grn_store');
+  const sorted = [...(Array.isArray(grns) ? grns : [])].sort((a, b) => {
     const parseNum = (item) => {
       const str = String(item.grnNo || item.id || item.poRef || '');
       const match = str.match(/\d+/);
@@ -4494,9 +4242,10 @@ app.get('/api/grns', (req, res) => {
 });
 
 // Endpoint to delete a GRN by ID or grnNo
-app.delete('/api/grns/:id', (req, res) => {
+app.delete('/api/grns/:id', async (req, res) => {
   const targetId = req.params.id;
-  let grns = loadLocalGRNs();
+  let grns = await getDatabaseStore('grn_store');
+  if (!Array.isArray(grns)) grns = [];
   const existing = grns.find(g => g.id === targetId || g.grnNo === targetId);
   
   if (existing && (
@@ -4511,14 +4260,15 @@ app.delete('/api/grns/:id', (req, res) => {
 
   const initialLen = grns.length;
   grns = grns.filter(g => g.id !== targetId && g.grnNo !== targetId);
-  saveLocalGRNs(grns);
+  await saveDatabaseStore('grn_store', grns);
   res.json({ success: true, deleted: initialLen > grns.length });
 });
 
 // Endpoint to create a new GRN (Saves locally + Posts Draft Bill to Zoho)
 app.post('/api/grns', async (req, res) => {
   const grnData = req.body;
-  const grns = loadLocalGRNs();
+  let grns = await getDatabaseStore('grn_store');
+  if (!Array.isArray(grns)) grns = [];
   
   const poRefTarget = (grnData.poRef || grnData.poNo || grnData.poId || '').toLowerCase();
   

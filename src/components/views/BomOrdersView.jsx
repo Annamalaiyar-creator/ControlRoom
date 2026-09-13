@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, getAndReserveNextBomCode, resolveBomCollisions } from '../../utils/supabaseDataSync';
+import { fetchCloudStore, saveCloudStore, saveCloudStoreImmediate, subscribeToCloudStore, getAndReserveNextBomCode, resolveBomCollisions } from '../../utils/supabaseDataSync';
 import { VRM_HDG_PRESETS, getAllActivePresets } from '../../vrmHdgProposalPresets';
 import { VRM_PRODUCTS } from '../../utils/vrmProductsData';
 import { saveMediaToCache, getMediaFromCache, stripDataUrlsFromRecord, compressAndSaveFile, cleanNum, formatCurrency } from '../../utils/otherViewsShared';
@@ -41,17 +41,8 @@ export default function BomOrdersView(props) {
   const [bomCancelPromptModal, setBomCancelPromptModal] = useState(null);
   const [cancellationReasonInput, setCancellationReasonInput] = useState('');
 
-  // BOM Store from localStorage & Supabase
-  const [bomStore, setBomStore] = useState(() => {
-    try {
-      const cached = localStorage.getItem('controlroom_bom_store');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (_) {}
-    return [];
-  });
+  // BOM Store directly from Supabase Database
+  const [bomStore, setBomStore] = useState([]);
 
   // Customer List from Supabase & Zoho
   const [customerList, setCustomerList] = useState([]);
@@ -101,31 +92,22 @@ export default function BomOrdersView(props) {
         if (data && Array.isArray(data)) {
           if (data.length === 0) {
             setBomStore([]);
-            try {
-              localStorage.setItem('controlroom_bom_store', JSON.stringify([]));
-            } catch (_) {}
           } else {
-            setBomStore(prev => {
-              const combined = [...(Array.isArray(data) ? data : []), ...(Array.isArray(prev) ? prev : [])];
-              const { list: resolvedList } = resolveBomCollisions(combined, 658);
-              const parseBomSeq = (code) => {
-                const m = String(code || '').match(/BOM-(\d+)/i);
-                return m ? parseInt(m[1], 10) : 0;
-              };
-              const sorted = resolvedList.sort((a, b) => {
-                const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
-                const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
-                if (seqA !== seqB) return seqB - seqA;
-                const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
-                const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
-                return dateB - dateA;
-              });
-              const cleaned = sorted.map(stripDataUrlsFromRecord);
-              try {
-                localStorage.setItem('controlroom_bom_store', JSON.stringify(cleaned));
-              } catch (_) {}
-              return cleaned;
+            const { list: resolvedList } = resolveBomCollisions(data, 658);
+            const parseBomSeq = (code) => {
+              const m = String(code || '').match(/BOM-(\d+)/i);
+              return m ? parseInt(m[1], 10) : 0;
+            };
+            const sorted = resolvedList.sort((a, b) => {
+              const seqA = parseBomSeq(a?.bomCode || a?.code || a?.id);
+              const seqB = parseBomSeq(b?.bomCode || b?.code || b?.id);
+              if (seqA !== seqB) return seqB - seqA;
+              const dateA = new Date(a?.salesConfirmedAt || a?.date || a?.createdAt || 0).getTime() || 0;
+              const dateB = new Date(b?.salesConfirmedAt || b?.date || b?.createdAt || 0).getTime() || 0;
+              return dateB - dateA;
             });
+            const cleaned = sorted.map(stripDataUrlsFromRecord);
+            setBomStore(cleaned);
           }
         }
 
@@ -151,8 +133,15 @@ export default function BomOrdersView(props) {
     // Initial fetch
     syncFromCloud();
 
-    // Auto-poll every 6 seconds so all 5 sales people and dispatch see newly created BOMs and status changes in real time
-    const pollInterval = setInterval(syncFromCloud, 6000);
+    // Real-time live subscription directly from Supabase Database
+    const realtimeSub = subscribeToCloudStore('bom_store', (updatedBoms) => {
+      if (Array.isArray(updatedBoms)) {
+        const { list: resolvedList } = resolveBomCollisions(updatedBoms, 658);
+        setBomStore(resolvedList.map(stripDataUrlsFromRecord));
+      }
+    });
+
+    const pollInterval = setInterval(syncFromCloud, 8000);
 
     const syncFromStorage = () => {
       syncFromCloud();
@@ -160,12 +149,15 @@ export default function BomOrdersView(props) {
 
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('controlroom_storage_update', syncFromStorage);
+    window.addEventListener('controlroom_store_update', syncFromStorage);
     window.addEventListener('controlroom_customer_update', syncFromStorage);
 
     return () => {
       clearInterval(pollInterval);
+      if (realtimeSub && realtimeSub.unsubscribe) realtimeSub.unsubscribe();
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('controlroom_storage_update', syncFromStorage);
+      window.removeEventListener('controlroom_store_update', syncFromStorage);
       window.removeEventListener('controlroom_customer_update', syncFromStorage);
     };
   }, []);
