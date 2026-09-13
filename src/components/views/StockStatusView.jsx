@@ -28,6 +28,8 @@ export default function StockStatusView(props) {
     onClearConvertingPiData
   } = props;
 
+  const isSalesUser = userRole === 'Sales Executive' || userRole === 'Sales Head' || String(userRole || '').toLowerCase().includes('sales');
+
   // Common states
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -2202,26 +2204,28 @@ export default function StockStatusView(props) {
                 <Download style={{ width: '16px', height: '16px', color: '#475569' }} />
                 Export
               </button>
-              <button
-                onClick={() => setShowAddStockForm(true)}
-                style={{
-                  height: '38px',
-                  padding: '0 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Plus style={{ width: '16px', height: '16px' }} />
-                New Stock
-              </button>
+              {!isSalesUser && (
+                <button
+                  onClick={() => setShowAddStockForm(true)}
+                  style={{
+                    height: '38px',
+                    padding: '0 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  New Stock
+                </button>
+              )}
             </div>
           </div>
 
@@ -3512,7 +3516,7 @@ export default function StockStatusView(props) {
       )}
 
       {/* Add Stock Form View */}
-      {activeTab === 'Stock Status' && showAddStockForm && (
+      {activeTab === 'Stock Status' && showAddStockForm && !isSalesUser && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
