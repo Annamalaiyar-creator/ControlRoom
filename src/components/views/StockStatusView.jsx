@@ -1287,20 +1287,37 @@ export default function StockStatusView(props) {
       alert('No stock records to export.');
       return;
     }
-    const headers = ['Material / SKU', 'Code', 'Product Type', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Incoming Qty', 'Reorder Level', 'Stock Value', 'Status'];
-    const rows = rowsToExport.map(r => [
-      `"${String(r.item || '').replace(/"/g, '""')}"`,
-      `"${String(r.code || '').replace(/"/g, '""')}"`,
-      `"${String(r.productType || 'Finished Goods').replace(/"/g, '""')}"`,
-      `"${String(r.category || '').replace(/"/g, '""')}"`,
-      `"${String(r.location || '').replace(/"/g, '""')}"`,
-      `"${String(r.stock || '0').replace(/"/g, '""')}"`,
-      `"${String(r.allocated || '0').replace(/"/g, '""')}"`,
-      `"${String(r.incoming || '0').replace(/"/g, '""')}"`,
-      `"${String(r.minLevel || '0').replace(/"/g, '""')}"`,
-      `"${String(r.val || '0').replace(/"/g, '""')}"`,
-      `"${String(r.status || '').replace(/"/g, '""')}"`
-    ]);
+    const headers = isSalesUser
+      ? ['Material / SKU', 'Code', 'Product Type', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Status']
+      : ['Material / SKU', 'Code', 'Product Type', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Incoming Qty', 'Reorder Level', 'Stock Value', 'Status'];
+
+    const rows = rowsToExport.map(r => {
+      if (isSalesUser) {
+        return [
+          `"${String(r.item || '').replace(/"/g, '""')}"`,
+          `"${String(r.code || '').replace(/"/g, '""')}"`,
+          `"${String(r.productType || 'Finished Goods').replace(/"/g, '""')}"`,
+          `"${String(r.category || '').replace(/"/g, '""')}"`,
+          `"${String(r.location || '').replace(/"/g, '""')}"`,
+          `"${String(r.stock || '0').replace(/"/g, '""')}"`,
+          `"${String(r.allocated || '0').replace(/"/g, '""')}"`,
+          `"${String(r.status || '').replace(/"/g, '""')}"`
+        ];
+      }
+      return [
+        `"${String(r.item || '').replace(/"/g, '""')}"`,
+        `"${String(r.code || '').replace(/"/g, '""')}"`,
+        `"${String(r.productType || 'Finished Goods').replace(/"/g, '""')}"`,
+        `"${String(r.category || '').replace(/"/g, '""')}"`,
+        `"${String(r.location || '').replace(/"/g, '""')}"`,
+        `"${String(r.stock || '0').replace(/"/g, '""')}"`,
+        `"${String(r.allocated || '0').replace(/"/g, '""')}"`,
+        `"${String(r.incoming || '0').replace(/"/g, '""')}"`,
+        `"${String(r.minLevel || '0').replace(/"/g, '""')}"`,
+        `"${String(r.val || '0').replace(/"/g, '""')}"`,
+        `"${String(r.status || '').replace(/"/g, '""')}"`
+      ];
+    });
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -2944,8 +2961,12 @@ export default function StockStatusView(props) {
                         <th style={{ padding: '12px 14px', width: '140px', minWidth: '140px' }}>Warehouse</th>
                         <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Available Qty</th>
                         <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Reserved Qty</th>
-                        <th style={{ padding: '12px 14px', width: '100px', minWidth: '100px', textAlign: 'center' }}>Incoming Qty</th>
-                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Reorder Level</th>
+                        {!isSalesUser && (
+                          <th style={{ padding: '12px 14px', width: '100px', minWidth: '100px', textAlign: 'center' }}>Incoming Qty</th>
+                        )}
+                        {!isSalesUser && (
+                          <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Reorder Level</th>
+                        )}
                         {!isSalesUser && (
                           <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px', textAlign: 'right' }}>Stock Value (₹)</th>
                         )}
@@ -2955,7 +2976,7 @@ export default function StockStatusView(props) {
                     <tbody>
                       {displayedRows.length === 0 ? (
                         <tr>
-                          <td colSpan={isSalesUser ? 11 : 12} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
+                          <td colSpan={isSalesUser ? 9 : 12} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                               <Package style={{ width: '32px', height: '32px', color: '#94A3B8' }} />
                               <strong style={{ color: '#334155' }}>No stock items match the selected criteria</strong>
@@ -3071,12 +3092,16 @@ export default function StockStatusView(props) {
                               <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>
                                 {row.allocated}
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>
-                                {row.incoming}
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>
-                                {row.minLevel}
-                              </td>
+                              {!isSalesUser && (
+                                <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>
+                                  {row.incoming}
+                                </td>
+                              )}
+                              {!isSalesUser && (
+                                <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>
+                                  {row.minLevel}
+                                </td>
+                              )}
                               {!isSalesUser && (
                                 <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
                                   {row.val}
@@ -3438,7 +3463,7 @@ export default function StockStatusView(props) {
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isSalesUser ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                           <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
                             <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Available Stock</span>
                             <div style={{ fontSize: '20px', fontWeight: '800', color: viewingStockItem.status === 'In Stock' ? '#10B981' : viewingStockItem.status === 'Low Stock' ? '#F59E0B' : '#EF4444', marginTop: '4px' }}>
@@ -3451,19 +3476,23 @@ export default function StockStatusView(props) {
                               {viewingStockItem.allocated}
                             </div>
                           </div>
-                          <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
-                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Incoming (PO)</span>
-                            <div style={{ fontSize: '20px', fontWeight: '800', color: '#2563EB', marginTop: '4px' }}>
-                              {viewingStockItem.incoming}
+                          {!isSalesUser && (
+                            <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Incoming (PO)</span>
+                              <div style={{ fontSize: '20px', fontWeight: '800', color: '#2563EB', marginTop: '4px' }}>
+                                {viewingStockItem.incoming}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
-                            <span style={{ fontSize: '13px', color: '#64748B' }}>Reorder Level (Min Buffer)</span>
-                            <strong style={{ fontSize: '13px', color: '#0F172A' }}>{viewingStockItem.minLevel} NOS</strong>
-                          </div>
+                          {!isSalesUser && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                              <span style={{ fontSize: '13px', color: '#64748B' }}>Reorder Level (Min Buffer)</span>
+                              <strong style={{ fontSize: '13px', color: '#0F172A' }}>{viewingStockItem.minLevel} NOS</strong>
+                            </div>
+                          )}
                           {!isSalesUser && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
                               <span style={{ fontSize: '13px', color: '#64748B' }}>Total Stock Valuation</span>
