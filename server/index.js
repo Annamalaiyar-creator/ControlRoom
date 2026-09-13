@@ -3300,21 +3300,34 @@ app.get(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res)
       amount: `₹${Number(est.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
       total: est.total,
       status: est.status === 'invoiced' ? 'Invoiced' : (est.status === 'declined' ? 'Cancelled' : (est.status === 'draft' ? 'Draft' : 'Issued')),
-      statusType: est.status === 'invoiced' ? 'invoiced' : (est.status === 'declined' ? 'cancelled' : (est.status === 'draft' ? 'draft' : 'issued'))
+      statusType: est.status === 'invoiced' ? 'invoiced' : (est.status === 'declined' ? 'cancelled' : (est.status === 'draft' ? 'draft' : 'issued')),
+      zohoSynced: true,
+      zohoEstimateId: String(est.estimate_id || est.id || '').trim(),
+      zohoModule: 'Quotes'
     }));
 
     const piMap = new Map();
     mappedPIs.forEach(p => piMap.set(String(p.piNo).toLowerCase(), p));
     localEstimates.forEach(lp => {
+      if (!lp || !lp.piNo) return;
       const k = String(lp.piNo).toLowerCase();
       if (!piMap.has(k)) {
-        piMap.set(k, lp);
+        const isSynced = Boolean(lp.zohoEstimateId && /^\d{15,22}$/.test(String(lp.zohoEstimateId).trim()));
+        piMap.set(k, {
+          ...lp,
+          zohoSynced: isSynced,
+          zohoEstimateId: isSynced ? String(lp.zohoEstimateId).trim() : null,
+          zohoModule: 'Quotes'
+        });
       } else {
         const zp = piMap.get(k);
+        const validId = zp.zohoEstimateId || (lp.zohoEstimateId && /^\d{15,22}$/.test(String(lp.zohoEstimateId).trim()) ? String(lp.zohoEstimateId).trim() : null) || zp.id;
         piMap.set(k, {
           ...zp,
           ...lp,
-          zohoEstimateId: zp.id || lp.zohoEstimateId,
+          zohoSynced: true,
+          zohoEstimateId: validId,
+          zohoModule: 'Quotes',
           status: lp.status || zp.status,
           statusType: lp.statusType || zp.statusType
         });
@@ -3336,15 +3349,29 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
     if (fs.existsSync(pProforma)) localEstimates = JSON.parse(fs.readFileSync(pProforma, 'utf8'));
   } catch (_) {}
 
+  const cleanPiNo = String(req.body.piNo || req.body.id || `PI-${Date.now()}`).trim();
+
+  // Check if this PI already has a verified 15-22 digit Zoho Estimate ID
+  let verifiedZohoId = (/^\d{15,22}$/.test(String(req.body.zohoEstimateId || '').trim())) ? String(req.body.zohoEstimateId).trim() : null;
+  if (!verifiedZohoId) {
+    const existingLocal = localEstimates.find(x => x && String(x.piNo || '').trim().toLowerCase() === cleanPiNo.toLowerCase());
+    if (existingLocal?.zohoEstimateId && /^\d{15,22}$/.test(String(existingLocal.zohoEstimateId).trim())) {
+      verifiedZohoId = String(existingLocal.zohoEstimateId).trim();
+    }
+  }
+
   const newPI = {
     ...req.body,
-    id: req.body.id || req.body.piNo || `PI-${Date.now()}`,
-    zohoSynced: false,
-    zohoSyncError: null
+    id: req.body.id || cleanPiNo,
+    piNo: cleanPiNo,
+    zohoSynced: Boolean(verifiedZohoId),
+    zohoEstimateId: verifiedZohoId || null,
+    zohoSyncError: null,
+    zohoModule: 'Quotes'
   };
 
   // 1. Immediately persist to BOTH local stores before any Zoho HTTPS network calls
-  const updatedProforma = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+  const updatedProforma = [newPI, ...localEstimates.filter(pi => String(pi.piNo || '').trim() !== cleanPiNo)];
   try {
     fs.writeFileSync(pProforma, JSON.stringify(updatedProforma, null, 2), 'utf8');
   } catch (_) {}
@@ -3354,7 +3381,7 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
     if (fs.existsSync(pSales)) {
       try { salesEstimates = JSON.parse(fs.readFileSync(pSales, 'utf8')); } catch (_) {}
     }
-    const updatedSales = [newPI, ...salesEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+    const updatedSales = [newPI, ...salesEstimates.filter(pi => String(pi.piNo || '').trim() !== cleanPiNo)];
     fs.writeFileSync(pSales, JSON.stringify(updatedSales, null, 2), 'utf8');
   } catch (_) {}
 
@@ -3370,6 +3397,43 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
 
   try {
     const accessToken = await getZohoAccessToken();
+
+    // If we already have a verified Zoho estimate ID, verify it exists in Zoho Books
+    if (verifiedZohoId) {
+      try {
+        const verifyRes = await new Promise((resolve) => {
+          const opt = {
+            hostname: 'www.zohoapis.in',
+            port: 443,
+            path: `/books/v3/estimates/${verifiedZohoId}?organization_id=${zohoSession.orgId}`,
+            method: 'GET',
+            headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+          };
+          const r = https.request(opt, (resp) => {
+            let d = '';
+            resp.on('data', c => d += c);
+            resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+          });
+          r.on('error', () => resolve(null));
+          r.end();
+        });
+
+        if (verifyRes && (verifyRes.code === 0 || verifyRes.estimate)) {
+          newPI.zohoSynced = true;
+          newPI.zohoEstimateId = verifiedZohoId;
+          newPI.zohoSyncError = null;
+          newPI.zohoModule = 'Quotes';
+          return res.json({
+            success: true,
+            estimate: newPI,
+            zohoSynced: true,
+            zohoEstimateId: verifiedZohoId,
+            zohoModule: 'Quotes',
+            zohoError: null
+          });
+        }
+      } catch (_) {}
+    }
 
     // Resolve customer ID from Zoho if name provided
     let customerId = req.body.customerId;
@@ -3466,14 +3530,14 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
 
     // 2. Add Separate / Custom products (non-preset components)
     (req.body.items || []).forEach(it => {
-      const isPreset = Boolean(it.isPresetItem || it.category === 'Preset Component');
+      const isPreset = Boolean(it.isPresetItem || it.category === 'Preset Component' || it.presetGroupId);
       // If a preset was added above, skip preset sub-components (screws, clamps, rails)
       if (hasPresetGroups || req.body.presetName) {
         if (isPreset) return;
       }
       const q = parseFloat(it.qty || it.quantity) || 1;
       let r = parseFloat(it.rate != null ? it.rate : it.unitValue);
-      if (isNaN(r)) r = 0;
+      if (isNaN(r) || r < 0) r = 0;
       lineItems.push({
         name: it.name || it.productName || 'Solar Structure Component',
         rate: r,
@@ -3492,11 +3556,29 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
       });
     }
 
+    const formatZohoDate = (dStr) => {
+      if (!dStr) return new Date().toISOString().split('T')[0];
+      const s = String(dStr).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const dmyMatch = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        const year = dmyMatch[3];
+        return `${year}-${month}-${day}`;
+      }
+      const parsed = new Date(s);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+      return new Date().toISOString().split('T')[0];
+    };
+
     const payload = {
       customer_id: customerId,
-      estimate_number: req.body.piNo || undefined,
-      date: req.body.piDate ? (new Date(req.body.piDate).toISOString().split('T')[0] || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-      expiry_date: req.body.validUntilDate || req.body.expDate || undefined,
+      estimate_number: cleanPiNo || undefined,
+      date: formatZohoDate(req.body.piDate),
+      expiry_date: (req.body.validUntilDate || req.body.expDate) ? formatZohoDate(req.body.validUntilDate || req.body.expDate) : undefined,
       line_items: lineItems,
       notes: (req.body.remarks || req.body.notes || 'Proforma Invoice generated via Control Room').slice(0, 100)
     };
@@ -3527,10 +3609,10 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
 
     if (zohoRes && (zohoRes.estimate || zohoRes.code === 0)) {
       const createdEst = zohoRes.estimate;
-      if (createdEst) {
+      if (createdEst && createdEst.estimate_id) {
         zohoEstimateCreated = createdEst;
-        newPI.zohoEstimateId = createdEst.estimate_id;
-        newPI.piNo = createdEst.estimate_number || newPI.piNo;
+        newPI.zohoEstimateId = String(createdEst.estimate_id).trim();
+        newPI.piNo = createdEst.estimate_number || cleanPiNo;
         newPI.zohoSynced = true;
         newPI.zohoSyncError = null;
         newPI.zohoModule = 'Quotes';
@@ -3554,11 +3636,11 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
         newPI.zohoSynced = false;
         newPI.zohoSyncError = zohoErrorMsg;
       }
-    } else if (zohoRes && (zohoRes.code === 36015 || (zohoRes.message && zohoRes.message.toLowerCase().includes('already exists')))) {
+    } else if (zohoRes && (zohoRes.code === 36015 || zohoRes.code === 1001 || (zohoRes.message && String(zohoRes.message).toLowerCase().includes('already exists')))) {
       // If estimate already exists in Zoho Books, search and link its existing Quote ID seamlessly
       try {
-        const estNum = encodeURIComponent(req.body.piNo || '');
-        const findRes = await new Promise((resolve) => {
+        const estNum = encodeURIComponent(cleanPiNo);
+        let findRes = await new Promise((resolve) => {
           const opt = {
             hostname: 'www.zohoapis.in',
             port: 443,
@@ -3575,47 +3657,71 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
           r.end();
         });
 
-        if (findRes && Array.isArray(findRes.estimates) && findRes.estimates.length > 0) {
-          const found = findRes.estimates[0];
+        // Fallback search by search_text if exact estimate_number param did not return results
+        if (!findRes || !Array.isArray(findRes.estimates) || findRes.estimates.length === 0) {
+          findRes = await new Promise((resolve) => {
+            const opt = {
+              hostname: 'www.zohoapis.in',
+              port: 443,
+              path: `/books/v3/estimates?organization_id=${zohoSession.orgId}&search_text=${estNum}`,
+              method: 'GET',
+              headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+            };
+            const r = https.request(opt, (resp) => {
+              let d = '';
+              resp.on('data', c => d += c);
+              resp.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+            });
+            r.on('error', () => resolve(null));
+            r.end();
+          });
+        }
+
+        const found = (findRes && Array.isArray(findRes.estimates))
+          ? (findRes.estimates.find(e => String(e.estimate_number || '').trim().toLowerCase() === cleanPiNo.toLowerCase()) || findRes.estimates[0])
+          : null;
+
+        if (found && found.estimate_id) {
           zohoEstimateCreated = found;
-          newPI.zohoEstimateId = found.estimate_id;
-          newPI.piNo = found.estimate_number || newPI.piNo;
+          newPI.zohoEstimateId = String(found.estimate_id).trim();
+          newPI.piNo = found.estimate_number || cleanPiNo;
           newPI.zohoSynced = true;
           newPI.zohoSyncError = null;
           newPI.zohoModule = 'Quotes';
+          zohoErrorMsg = null;
         } else {
-          zohoErrorMsg = zohoRes?.message || 'Estimate number already exists in Zoho Books';
+          zohoErrorMsg = zohoRes?.message || `Estimate ${cleanPiNo} already exists in Zoho Books but could not be retrieved`;
           newPI.zohoSynced = false;
           newPI.zohoSyncError = zohoErrorMsg;
         }
       } catch (err) {
-        zohoErrorMsg = zohoRes?.message || 'Estimate already exists in Zoho Books';
+        zohoErrorMsg = zohoRes?.message || err.message || 'Estimate already exists in Zoho Books';
         newPI.zohoSynced = false;
         newPI.zohoSyncError = zohoErrorMsg;
       }
     } else {
-      zohoErrorMsg = zohoRes?.message || (zohoRes?.error ? (typeof zohoRes.error === 'string' ? zohoRes.error : JSON.stringify(zohoRes.error)) : 'Zoho estimate creation rejected');
+      zohoErrorMsg = zohoRes?.message || (zohoRes?.error ? (typeof zohoRes.error === 'string' ? zohoRes.error : JSON.stringify(zohoRes.error)) : 'Zoho estimate creation rejected by server');
       newPI.zohoSynced = false;
       newPI.zohoSyncError = zohoErrorMsg;
       console.warn('[ZOHO ESTIMATE REJECTED]', zohoRes);
     }
   } catch (err) {
-    zohoErrorMsg = err.message;
+    zohoErrorMsg = err.message || 'Unexpected error during Zoho Books sync';
     newPI.zohoSynced = false;
-    newPI.zohoSyncError = err.message;
+    newPI.zohoSyncError = zohoErrorMsg;
     console.warn('[ZOHO ESTIMATE POST NOTICE]', err);
   }
 
   // 2. Persist enriched newPI (with verified zohoEstimateId) to BOTH stores
   try {
-    const finalProforma = [newPI, ...localEstimates.filter(pi => pi.piNo !== newPI.piNo)];
+    const finalProforma = [newPI, ...localEstimates.filter(pi => String(pi.piNo || '').trim() !== cleanPiNo)];
     fs.writeFileSync(pProforma, JSON.stringify(finalProforma, null, 2), 'utf8');
 
     let finalSales = [];
     if (fs.existsSync(pSales)) {
       try { finalSales = JSON.parse(fs.readFileSync(pSales, 'utf8')); } catch (_) {}
     }
-    finalSales = [newPI, ...finalSales.filter(pi => pi.piNo !== newPI.piNo)];
+    finalSales = [newPI, ...finalSales.filter(pi => String(pi.piNo || '').trim() !== cleanPiNo)];
     fs.writeFileSync(pSales, JSON.stringify(finalSales, null, 2), 'utf8');
 
     pushStoreToSupabase('proforma_invoice_store', finalProforma);
@@ -3628,7 +3734,7 @@ app.post(['/api/zoho/estimates', '/api/zoho/proforma-invoices'], async (req, res
     zohoSynced: Boolean(newPI.zohoEstimateId),
     zohoEstimateId: newPI.zohoEstimateId || null,
     zohoModule: 'Quotes',
-    zohoError: zohoErrorMsg
+    zohoError: newPI.zohoEstimateId ? null : (zohoErrorMsg || 'Quote synchronization could not be verified in Zoho Books')
   });
 });
 

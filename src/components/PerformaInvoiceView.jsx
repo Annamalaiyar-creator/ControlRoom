@@ -217,23 +217,30 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
         // 2. Merge Zoho Estimates (Quotes)
         if (Array.isArray(zohoData)) {
+          const getRealZohoId = (cand) => {
+            const s = String(cand || '').trim();
+            return /^\d{15,22}$/.test(s) ? s : null;
+          };
+
           zohoData.forEach(zp => {
             if (zp && zp.piNo) {
               const k = String(zp.piNo).trim().toLowerCase();
+              const zpZohoId = getRealZohoId(zp.zohoEstimateId) || getRealZohoId(zp.id);
               if (!mergedMap.has(k)) {
                 mergedMap.set(k, normalizePiRecord({
                   ...zp,
-                  zohoSynced: true,
-                  zohoEstimateId: zp.id || zp.zohoEstimateId,
+                  zohoSynced: Boolean(zpZohoId),
+                  zohoEstimateId: zpZohoId,
                   zohoModule: 'Quotes'
                 }));
               } else {
                 const existing = mergedMap.get(k);
+                const finalId = zpZohoId || getRealZohoId(existing?.zohoEstimateId);
                 mergedMap.set(k, normalizePiRecord({
                   ...zp,
                   ...existing,
-                  zohoSynced: true,
-                  zohoEstimateId: zp.id || zp.zohoEstimateId || existing.zohoEstimateId,
+                  zohoSynced: Boolean(finalId),
+                  zohoEstimateId: finalId,
                   zohoModule: 'Quotes'
                 }));
               }
@@ -278,26 +285,58 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   // Direct manual or automatic one-click sync of a PI to Zoho Books (Quotes)
   const syncPiToZoho = async (targetPi) => {
     if (!targetPi) return;
+    const cleanNo = String(targetPi.piNo || targetPi.id || '').trim();
     try {
       const res = await fetch('/api/zoho/estimates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(targetPi)
+        body: JSON.stringify({ ...targetPi, piNo: cleanNo })
       });
       const data = await res.json();
-      if (data && (data.zohoEstimateId || data.estimate?.zohoEstimateId)) {
-        const estId = data.zohoEstimateId || data.estimate?.zohoEstimateId;
-        const updated = piList.map(p => p.piNo === targetPi.piNo ? {
-          ...p,
-          zohoEstimateId: estId,
-          zohoSynced: true,
-          zohoSyncError: null,
-          zohoModule: 'Quotes'
-        } : p);
+      const rawEstId = data?.zohoEstimateId || data?.estimate?.zohoEstimateId;
+      const estId = (rawEstId && /^\d{15,22}$/.test(String(rawEstId).trim())) ? String(rawEstId).trim() : null;
+
+      if (estId) {
+        const finalEstNo = data?.estimate?.piNo || cleanNo;
+        const updated = piList.map(p => {
+          const matchNo = String(p.piNo || '').trim().toLowerCase();
+          const matchId = String(p.id || '').trim().toLowerCase();
+          const targetKey = cleanNo.toLowerCase();
+          if (matchNo === targetKey || matchId === targetKey || matchNo === finalEstNo.toLowerCase()) {
+            return {
+              ...p,
+              piNo: finalEstNo,
+              zohoEstimateId: estId,
+              zohoSynced: true,
+              zohoSyncError: null,
+              zohoModule: 'Quotes'
+            };
+          }
+          return p;
+        });
         updatePiList(updated);
-        alert(`✓ Proforma Invoice ${targetPi.piNo} successfully synced with Zoho Books (Quotes # ${targetPi.piNo})!`);
+        if (selectedPi) {
+          setSelectedPi(prev => {
+            if (!prev) return null;
+            const pNo = String(prev.piNo || '').trim().toLowerCase();
+            const pId = String(prev.id || '').trim().toLowerCase();
+            const targetKey = cleanNo.toLowerCase();
+            if (pNo === targetKey || pId === targetKey || pNo === finalEstNo.toLowerCase()) {
+              return {
+                ...prev,
+                piNo: finalEstNo,
+                zohoEstimateId: estId,
+                zohoSynced: true,
+                zohoSyncError: null,
+                zohoModule: 'Quotes'
+              };
+            }
+            return prev;
+          });
+        }
+        alert(`✓ Proforma Invoice ${finalEstNo} successfully synced with Zoho Books (Quotes # ${finalEstNo})!`);
       } else {
-        const errMsg = data?.zohoError || data?.notice || data?.error || data?.message || (!res.ok ? `HTTP ${res.status} error` : 'Sync could not be verified');
+        const errMsg = data?.zohoError || data?.notice || data?.error || data?.message || (!res.ok ? `HTTP ${res.status} error` : 'Zoho Books synchronization could not be confirmed. Please verify your connection.');
         alert(`Notice: Zoho Books response: ${errMsg}`);
       }
     } catch (err) {
@@ -1163,11 +1202,12 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newPI)
     }).then(res => res.json()).then(data => {
-      if (data && (data.zohoEstimateId || data.estimate?.zohoEstimateId)) {
-        const estId = data.zohoEstimateId || data.estimate?.zohoEstimateId;
-        const finalEstNo = data.estimate?.piNo || newPI.piNo;
+      const rawEstId = data?.zohoEstimateId || data?.estimate?.zohoEstimateId;
+      const estId = (rawEstId && /^\d{15,22}$/.test(String(rawEstId).trim())) ? String(rawEstId).trim() : null;
+      if (estId) {
+        const finalEstNo = data?.estimate?.piNo || newPI.piNo;
         console.log('[ZOHO ESTIMATE SYNC SUCCESS]', estId);
-        const enrichedList = updatedList.map(p => p.piNo === newPI.piNo ? {
+        const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
           ...p,
           piNo: finalEstNo,
           zohoEstimateId: estId,
@@ -1178,7 +1218,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
         updatePiList(enrichedList);
       } else if (data && data.zohoError) {
         console.warn('[ZOHO ESTIMATE SYNC NOTICE]', data.zohoError);
-        const enrichedList = updatedList.map(p => p.piNo === newPI.piNo ? {
+        const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
           ...p,
           zohoSynced: false,
           zohoSyncError: data.zohoError
