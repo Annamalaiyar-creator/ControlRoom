@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { VRM_OFFICIAL_LOGO, VRM_OFFICIAL_STAMP } from '../utils/vrmOfficialAssets';
 
 // Default Template Configuration Settings
 export const DEFAULT_PI_TEMPLATE_SETTINGS = {
@@ -32,7 +33,7 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
   companyName: '',
   companyTagline: '',
   showLogo: true,
-  customLogoUrl: null, // Custom uploaded logo base64
+  customLogoUrl: VRM_OFFICIAL_LOGO, // Official VRM Logo base64
   logoHeight: 56, // Fixed constant size
   showCompanyName: false,
   showCompanyTagline: false,
@@ -130,11 +131,11 @@ export const DEFAULT_PI_TEMPLATE_SETTINGS = {
 
   // Stamp / Seal Customization
   showSignatoryStamp: true,
-  stampMode: 'vector', // 'vector' | 'custom' | 'none'
+  stampMode: 'custom', // 'vector' | 'custom' | 'none'
   stampSize: 230, // Width in px (enlarged fixed size)
-  customStampUrl: null, // Custom uploaded stamp image base64
-  stampText: 'VRM STRUCTURES INDIA',
-  stampLocation: 'CHENNAI - AUTHORIZED',
+  customStampUrl: VRM_OFFICIAL_STAMP, // Official VRM Stamp image base64
+  stampText: 'VRM STRUCTURES INDIA PRIVATE LIMITED',
+  stampLocation: 'CHENNAI',
 
   // Signature Customization
   signatureMode: 'none', // 'none' | 'vector' | 'custom' | 'blank'
@@ -1059,8 +1060,8 @@ export function VRMProformaInvoicePrintSheet({
                     title="Company Logo"
                   >
                     <img
-                      src={cfg.customLogoUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_logo')) || '/vrm_logo.png'}
-                      alt={cfg.companyName}
+                      src={cfg.customLogoUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_logo')) || VRM_OFFICIAL_LOGO}
+                      alt={cfg.companyName || 'VRM Structures'}
                       style={{
                         height: '56px',
                         width: 'auto',
@@ -1068,11 +1069,7 @@ export function VRMProformaInvoicePrintSheet({
                         objectFit: 'contain'
                       }}
                       onError={(e) => {
-                        if (cfg.customLogoUrl) {
-                          e.currentTarget.src = '/vrm_logo.png';
-                        } else {
-                          e.currentTarget.style.display = 'none';
-                        }
+                        e.currentTarget.src = VRM_OFFICIAL_LOGO;
                       }}
                     />
                   </RemovableBlock>
@@ -2066,10 +2063,10 @@ export function VRMProformaInvoicePrintSheet({
                     minHeight: '60px'
                   }}>
                     {/* STAMP DISPLAY */}
-                    {cfg.stampMode === 'custom' && (cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp'))) ? (
+                    {(cfg.stampMode === 'custom' || !cfg.stampMode) && (cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp')) || VRM_OFFICIAL_STAMP) ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <img
-                          src={cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp'))}
+                          src={cfg.customStampUrl || (typeof window !== 'undefined' && localStorage.getItem('vrm_constant_stamp')) || VRM_OFFICIAL_STAMP}
                           alt="Company Stamp"
                           style={{
                             height: '110px',
@@ -3469,13 +3466,13 @@ export default function VRMProformaInvoicePrintTemplate({ piData, onClose }) {
   };
 
   const handleResetDefaults = () => {
-    const constantLogo = localStorage.getItem('vrm_constant_logo') || templateSettings.customLogoUrl;
-    const constantStamp = localStorage.getItem('vrm_constant_stamp') || templateSettings.customStampUrl;
+    const constantLogo = localStorage.getItem('vrm_constant_logo') || templateSettings.customLogoUrl || VRM_OFFICIAL_LOGO;
+    const constantStamp = localStorage.getItem('vrm_constant_stamp') || templateSettings.customStampUrl || VRM_OFFICIAL_STAMP;
     const reset = {
       ...DEFAULT_PI_TEMPLATE_SETTINGS,
-      customLogoUrl: constantLogo || null,
-      customStampUrl: constantStamp || null,
-      stampMode: constantStamp ? 'custom' : 'vector',
+      customLogoUrl: constantLogo,
+      customStampUrl: constantStamp,
+      stampMode: 'custom',
       logoHeight: 56,
       stampSize: 230
     };

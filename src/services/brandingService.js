@@ -1,15 +1,16 @@
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
+import { VRM_OFFICIAL_LOGO, VRM_OFFICIAL_STAMP } from '../utils/vrmOfficialAssets';
 
 export const DEFAULT_BRANDING = {
-  logoUrl: '/vrm_logo.png',
+  logoUrl: VRM_OFFICIAL_LOGO,
   logoHeight: 56,
   showLogo: true,
-  stampMode: 'vector', // 'vector' | 'custom' | 'none'
-  customStampUrl: null,
+  stampMode: 'custom', // 'vector' | 'custom' | 'none'
+  customStampUrl: VRM_OFFICIAL_STAMP,
   stampSize: 230,
   showSignatoryStamp: true,
-  stampText: 'VRM STRUCTURES INDIA',
-  stampLocation: 'CHENNAI - AUTHORIZED',
+  stampText: 'VRM STRUCTURES INDIA PRIVATE LIMITED',
+  stampLocation: 'CHENNAI',
   forCompanyText: 'For VRM Structures India Pvt Ltd',
   signatoryTitle: 'Authorized Signatory',
   signatoryName: '',
@@ -39,13 +40,13 @@ export const getCachedBranding = () => {
       } catch (_) {}
     }
 
-    // Inherit legacy local constant keys if not explicitly set
-    if (!branding.customStampUrl && constantStamp) {
-      branding.customStampUrl = constantStamp;
+    // Freeze official stamp and logo as permanent defaults if not explicitly custom-uploaded
+    if (!branding.customStampUrl || branding.stampMode === 'vector') {
+      branding.customStampUrl = constantStamp || VRM_OFFICIAL_STAMP;
       branding.stampMode = 'custom';
     }
-    if (constantLogo && (!branding.logoUrl || branding.logoUrl === '/vrm_logo.png')) {
-      branding.logoUrl = constantLogo;
+    if (!branding.logoUrl || branding.logoUrl === '/vrm_logo.png') {
+      branding.logoUrl = constantLogo || VRM_OFFICIAL_LOGO;
     }
 
     return branding;

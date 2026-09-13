@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, X } from 'lucide-react';
 import { getCachedBranding, fetchMasterBranding, subscribeBrandingUpdates } from '../services/brandingService';
+import { VRM_OFFICIAL_LOGO, VRM_OFFICIAL_STAMP } from '../utils/vrmOfficialAssets';
 
 export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
   const [branding, setBranding] = useState(getCachedBranding);
@@ -159,10 +160,10 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                         {/* Official VRM Structures Logo Image */}
                         <div style={{ marginBottom: '8px' }}>
                           <img
-                            src={branding.logoUrl || '/vrm_logo.png'}
+                            src={branding.logoUrl || VRM_OFFICIAL_LOGO}
                             alt="VRM Structures Logo"
                             style={{ height: '55px', maxWidth: '240px', objectFit: 'contain' }}
-                            onError={(e) => { e.currentTarget.src = '/vrm_logo.png'; }}
+                            onError={(e) => { e.currentTarget.src = VRM_OFFICIAL_LOGO; }}
                           />
                         </div>
                         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#003366', marginTop: '4px' }}>
@@ -369,9 +370,9 @@ export default function VRMTaxInvoicePrintTemplate({ invoiceData, onClose }) {
                     {branding.forCompanyText || 'VRM Structures India Pvt Ltd'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%', minHeight: '70px', alignItems: 'center' }}>
-                    {branding.stampMode === 'custom' && branding.customStampUrl ? (
+                    {(branding.stampMode === 'custom' || !branding.stampMode) && (branding.customStampUrl || VRM_OFFICIAL_STAMP) ? (
                       <img
-                        src={branding.customStampUrl}
+                        src={branding.customStampUrl || VRM_OFFICIAL_STAMP}
                         alt="Company Stamp"
                         style={{
                           maxHeight: '85px',

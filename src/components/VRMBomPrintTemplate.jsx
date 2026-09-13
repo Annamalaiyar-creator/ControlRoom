@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, X, Download } from 'lucide-react';
 import { getCachedBranding, fetchMasterBranding, subscribeBrandingUpdates } from '../services/brandingService';
+import { VRM_OFFICIAL_LOGO, VRM_OFFICIAL_STAMP } from '../utils/vrmOfficialAssets';
 
 function numberToWordsINR(num) {
   if (num === null || num === undefined || isNaN(num) || num === 0) return 'Zero Rupees Only';
@@ -154,10 +155,10 @@ export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
               <td style={{ width: '58%', verticalAlign: 'top', paddingRight: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
                   <img
-                    src={branding.logoUrl || '/vrm_logo.png'}
+                    src={branding.logoUrl || VRM_OFFICIAL_LOGO}
                     alt="VRM Structures Logo"
                     style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }}
-                    onError={(e) => { e.currentTarget.src = '/vrm_logo.png'; }}
+                    onError={(e) => { e.currentTarget.src = VRM_OFFICIAL_LOGO; }}
                   />
                   <div>
                     <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0E7490', letterSpacing: '-0.2px' }}>
@@ -445,13 +446,13 @@ export function VRMBomPrintSheet({ bomData, id = "printable-bom-document" }) {
           <div style={{ textAlign: 'center', minWidth: '230px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {branding.showSignatoryStamp && (
               <div style={{ minHeight: '65px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
-                {branding.stampMode === 'custom' && branding.customStampUrl ? (
+                {(branding.stampMode === 'custom' || !branding.stampMode) && (branding.customStampUrl || VRM_OFFICIAL_STAMP) ? (
                   <img
-                    src={branding.customStampUrl}
+                    src={branding.customStampUrl || VRM_OFFICIAL_STAMP}
                     alt="Company Stamp"
                     style={{
-                      maxHeight: '75px',
-                      maxWidth: '200px',
+                      maxHeight: '85px',
+                      maxWidth: '220px',
                       objectFit: 'contain'
                     }}
                   />

@@ -42,6 +42,7 @@ import {
 } from './VRMProformaInvoicePrintTemplate';
 import { fetchMasterBranding, getCachedBranding, saveCompanyBranding, subscribeBrandingUpdates } from '../services/brandingService';
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
+import { VRM_OFFICIAL_LOGO, VRM_OFFICIAL_STAMP } from '../utils/vrmOfficialAssets';
 
 // 12 Curated Preset Swatches
 const COLOR_PRESETS = [
@@ -449,6 +450,13 @@ export default function VRMTemplateStudioView({ onBackToPI }) {
     if (s.signatureMode === 'vector' && !s.customSignatureUrl) s.signatureMode = 'none';
     s.showCompanyName = false;
     s.showCompanyTagline = false;
+    if (!s.customStampUrl || s.stampMode === 'vector') {
+      s.customStampUrl = VRM_OFFICIAL_STAMP;
+      s.stampMode = 'custom';
+    }
+    if (!s.customLogoUrl) {
+      s.customLogoUrl = VRM_OFFICIAL_LOGO;
+    }
     return s;
   });
 
