@@ -2426,14 +2426,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4920,
+    "stock": 4912,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4920,
+    "availableStock": 4912,
     "currentStock": 5000,
-    "reserved": 80,
-    "blockedForBom": 80
+    "reserved": 88,
+    "blockedForBom": 88
   },
   {
     "id": "4080449000000366506",
@@ -2452,14 +2452,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4920,
+    "stock": 4912,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4920,
+    "availableStock": 4912,
     "currentStock": 5000,
-    "reserved": 80,
-    "blockedForBom": 80
+    "reserved": 88,
+    "blockedForBom": 88
   },
   {
     "id": "4080449000000366570",
@@ -2608,14 +2608,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4824,
+    "stock": 4808,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4824,
+    "availableStock": 4808,
     "currentStock": 5000,
-    "reserved": 176,
-    "blockedForBom": 176
+    "reserved": 192,
+    "blockedForBom": 192
   },
   {
     "id": "4080449000000366818",
@@ -3440,14 +3440,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4978,
+    "stock": 4976,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4978,
+    "availableStock": 4976,
     "currentStock": 5000,
-    "reserved": 22,
-    "blockedForBom": 22
+    "reserved": 24,
+    "blockedForBom": 24
   },
   {
     "id": "4080449000000366130",
@@ -3648,14 +3648,14 @@
     "uom": "NOS",
     "material": "HDG",
     "category": "HDG",
-    "stock": 4978,
+    "stock": 4976,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4978,
+    "availableStock": 4976,
     "currentStock": 5000,
-    "reserved": 22,
-    "blockedForBom": 22
+    "reserved": 24,
+    "blockedForBom": 24
   },
   {
     "id": "4080449000000366106",
@@ -3908,14 +3908,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4932,
+    "stock": 4928,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4932,
+    "availableStock": 4928,
     "currentStock": 5000,
-    "reserved": 68,
-    "blockedForBom": 68
+    "reserved": 72,
+    "blockedForBom": 72
   },
   {
     "id": "4080449000000033187",
@@ -4194,14 +4194,14 @@
     "uom": "NOS",
     "material": "ADANI (DCR)",
     "category": "ADANI (DCR)",
-    "stock": 5000,
+    "stock": 4760,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 5000,
+    "availableStock": 4760,
     "currentStock": 5000,
-    "reserved": 0,
-    "blockedForBom": 0
+    "reserved": 240,
+    "blockedForBom": 240
   },
   {
     "id": "4080449000000367898",
@@ -5364,14 +5364,14 @@
     "uom": "NOS",
     "material": "GAL",
     "category": "GAL",
-    "stock": 4972,
+    "stock": 4968,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4972,
+    "availableStock": 4968,
     "currentStock": 5000,
-    "reserved": 28,
-    "blockedForBom": 28
+    "reserved": 32,
+    "blockedForBom": 32
   },
   {
     "id": "4080449000000366274",
@@ -5754,14 +5754,14 @@
     "uom": "NOS",
     "material": "GAL",
     "category": "GAL",
-    "stock": 4978,
+    "stock": 4976,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4978,
+    "availableStock": 4976,
     "currentStock": 5000,
-    "reserved": 22,
-    "blockedForBom": 22
+    "reserved": 24,
+    "blockedForBom": 24
   },
   {
     "id": "4080449000000366210",
@@ -6274,14 +6274,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4772,
+    "stock": 4752,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4772,
+    "availableStock": 4752,
     "currentStock": 5000,
-    "reserved": 228,
-    "blockedForBom": 228
+    "reserved": 248,
+    "blockedForBom": 248
   },
   {
     "id": "4080449000000366802",
@@ -6352,14 +6352,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4932,
+    "stock": 4928,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4932,
+    "availableStock": 4928,
     "currentStock": 5000,
-    "reserved": 68,
-    "blockedForBom": 68
+    "reserved": 72,
+    "blockedForBom": 72
   },
   {
     "id": "4080449000000366706",
@@ -6404,14 +6404,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4792,
+    "stock": 4776,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4792,
+    "availableStock": 4776,
     "currentStock": 5000,
-    "reserved": 208,
-    "blockedForBom": 208
+    "reserved": 224,
+    "blockedForBom": 224
   },
   {
     "id": "4080449000000366786",
@@ -6430,14 +6430,14 @@
     "uom": "NOS",
     "material": "SS304",
     "category": "SS304",
-    "stock": 4956,
+    "stock": 4952,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4956,
+    "availableStock": 4952,
     "currentStock": 5000,
-    "reserved": 44,
-    "blockedForBom": 44
+    "reserved": 48,
+    "blockedForBom": 48
   },
   {
     "id": "4080449000000366714",
@@ -7028,14 +7028,14 @@
     "uom": "NOS",
     "material": "6063T6",
     "category": "6063T6",
-    "stock": 4927,
+    "stock": 4923,
     "reorderLevel": 100,
     "openingStock": 5000,
     "physicalStock": 5000,
-    "availableStock": 4927,
+    "availableStock": 4923,
     "currentStock": 5000,
-    "reserved": 73,
-    "blockedForBom": 73
+    "reserved": 77,
+    "blockedForBom": 77
   },
   {
     "id": "4080449000000368074",
@@ -7227,13 +7227,13 @@
     "name": "GI Anchor Bolt M10*100",
     "cat": "GAL",
     "unit": "NOS",
-    "stock": 4824,
-    "reserved": 176,
-    "blockedForBom": 176,
+    "stock": 4808,
+    "reserved": 192,
+    "blockedForBom": 192,
     "minLevel": 10,
     "status": "In Stock",
     "store": "Main Store",
     "lastUpdated": "Blocked for BOM BOM-656",
-    "availableStock": 4824
+    "availableStock": 4808
   }
 ]

@@ -707,6 +707,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
   const [pdfFile, setPdfFile] = useState(null);
   const [signedPiDoc, setSignedPiDoc] = useState(null);
   const [piNumber, setPiNumber] = useState('');
+  const [isSubmittingPI, setIsSubmittingPI] = useState(false);
   const [piDate, setPiDate] = useState(new Date().toISOString().split('T')[0]);
   const [validUntilDate, setValidUntilDate] = useState(() => new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
   const [salesPerson, setSalesPerson] = useState(getActiveUserName());
@@ -1044,19 +1045,31 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
   const fetchNextPiNumber = async () => {
     try {
-      setPiNumber('Fetching...');
       const res = await fetch('/api/zoho/next-pi-number');
       if (res.ok) {
         const data = await res.json();
         if (data && data.nextPiNo) {
-          setPiNumber(data.nextPiNo);
-          return data.nextPiNo;
+          const existingNums = (piList || []).map(p => {
+            const match = String(p.piNo || p.id || '').match(/PI-(\d+)/i);
+            return match ? parseInt(match[1], 10) : 0;
+          }).filter(n => Number.isFinite(n) && n > 0);
+          const localMax = existingNums.length > 0 ? Math.max(0, ...existingNums) : 0;
+          const serverNum = data.nextNum || (parseInt(data.nextPiNo.replace(/[^0-9]/g, ''), 10) || 0);
+          const trueMax = Math.max(localMax, serverNum - 1);
+          const finalNo = 'PI-' + String(trueMax + 1).padStart(5, '0');
+          setPiNumber(finalNo);
+          return finalNo;
         }
       }
     } catch (e) {
       console.warn('Error fetching next PI number:', e);
     }
-    const fallback = `PI-${String((piList.length || 0) + 1).padStart(5, '0')}`;
+    const existingNums = (piList || []).map(p => {
+      const match = String(p.piNo || p.id || '').match(/PI-(\d+)/i);
+      return match ? parseInt(match[1], 10) : 0;
+    }).filter(n => Number.isFinite(n) && n > 0);
+    const maxNum = existingNums.length > 0 ? Math.max(0, ...existingNums) : 0;
+    const fallback = `PI-${String(maxNum + 1).padStart(5, '0')}`;
     setPiNumber(fallback);
     return fallback;
   };
@@ -1066,7 +1079,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
     setSignedPiDoc(null);
     setUploadProgress(0);
     setIsUploading(false);
-    setPiNumber('Auto-Assigned');
+    setPiNumber('');
     setPiDate(new Date().toISOString().split('T')[0]);
     setValidUntilDate(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
     setVendorName('');
@@ -1242,131 +1255,149 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
 
   // Submits the new or edited PI
   const executeCreatePI = async (isDraft = false) => {
-    const totals = calculatePiTotals();
-    const joinedProducts = piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
+    if (isSubmittingPI) return;
+    setIsSubmittingPI(true);
+    try {
+      const totals = calculatePiTotals();
+      const joinedProducts = piItems.map(it => it.name).filter(Boolean).join(', ') || 'Solar Structure & Accessories';
 
-    let cleanPiNo = (piNumber && piNumber.trim() && piNumber !== 'Auto-Assigned' && !piNumber.startsWith('Fetching'))
-      ? piNumber.trim().toUpperCase()
-      : null;
-
-    if (!cleanPiNo) {
-      cleanPiNo = await fetchNextPiNumber();
-    }
-
-    const newPI = {
-      id: cleanPiNo,
-      piNo: cleanPiNo,
-      vendor: vendorName,
-      customerName: vendorName,
-      contactPerson,
-      phone,
-      email,
-      gstNo: (gstNo || '').toUpperCase(),
-      productName: joinedProducts,
-      items: piItems,
-      presetGroups,
-      billingAddress: {
-        street: billingStreet,
-        city: billingCity,
-        state: billingState,
-        pincode: billingPincode
-      },
-      deliveryAddress: {
-        street: sameAsBilling ? billingStreet : deliveryStreet,
-        city: sameAsBilling ? billingCity : deliveryCity,
-        state: sameAsBilling ? billingState : deliveryState,
-        pincode: sameAsBilling ? billingPincode : deliveryPincode
-      },
-      sameAsBilling,
-      transportMode,
-      transporterName,
-      vehicleNo,
-      transportScope,
-      paymentTerms,
-      creditDays,
-      remarks,
-      unitValue: Math.round(totals.sub),
-      quantity: piItems.reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1,
-      subtotal: totals.sub,
-      kitSubtotal: totals.kitSubtotal,
-      taxTotal: totals.gst,
-      cgst: totals.cgst,
-      sgst: totals.sgst,
-      grandTotal: totals.grand,
-      amount: '₹' + Math.round(totals.grand).toLocaleString('en-IN'),
-      pdfName: pdfFile ? pdfFile.name : (signedPiDoc ? signedPiDoc.name : 'pi_document.pdf'),
-      signedPiDoc: signedPiDoc || null,
-      piDate: piDate || new Date().toISOString().split('T')[0],
-      expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-      status: isDraft ? 'Draft' : (editIdx !== null ? (piList[editIdx].status === 'Pending Approval' || piList[editIdx].status === 'Approved' ? 'Issued' : piList[editIdx].status) : 'Issued'),
-      statusType: isDraft ? 'draft' : (editIdx !== null ? (piList[editIdx].statusType === 'pending' || piList[editIdx].statusType === 'approved' ? 'issued' : piList[editIdx].statusType) : 'issued'),
-      salesPerson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
-      salesperson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
-      salesPersonCode: editIdx !== null ? (piList[editIdx].salesPersonCode || currentEmpId || 'SE-VRM001') : (currentEmpId || 'SE-VRM001'),
-      salesPersonEmail: editIdx !== null ? (piList[editIdx].salesPersonEmail || currentLoggedEmail || 'sales@armsai.com') : (currentLoggedEmail || 'sales@armsai.com'),
-      createdBy: editIdx !== null ? (piList[editIdx].createdBy || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
-      createdById: editIdx !== null ? (piList[editIdx].createdById || currentEmpId || 'SE-VRM001') : (currentEmpId || 'SE-VRM001'),
-      zohoSynced: editIdx !== null ? (piList[editIdx].zohoSynced || false) : false,
-      zohoEstimateId: editIdx !== null ? (piList[editIdx].zohoEstimateId || null) : null,
-      zohoModule: 'Quotes'
-    };
-
-    let updatedList;
-    if (editIdx !== null) {
-      updatedList = [...piList];
-      updatedList[editIdx] = newPI;
-      setEditIdx(null);
-    } else {
-      updatedList = [newPI, ...piList];
-      try {
-        notifyPiCreated({
-          piNo: newPI.piNo,
-          customerName: newPI.vendor,
-          salesPerson: newPI.salesPerson,
-          salesPersonCode: newPI.salesPersonCode,
-          amount: newPI.amount
-        });
-      } catch (err) {
-        console.warn('PI voice notification error:', err);
+      let cleanPiNo;
+      if (editIdx !== null) {
+        cleanPiNo = (piNumber && piNumber.trim() && piNumber !== 'Auto-Assigned')
+          ? piNumber.trim().toUpperCase()
+          : (piList[editIdx]?.piNo || `PI-${String(editIdx + 1).padStart(5, '0')}`);
+      } else {
+        // Generate the sequential PI number at the last step upon final submission (same as BOM)
+        cleanPiNo = await fetchNextPiNumber();
       }
-    }
-    updatePiList(updatedList);
 
-    // Push to Zoho Books Quotes (Estimates API)
-    fetch('/api/zoho/estimates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newPI)
-    }).then(res => res.json()).then(data => {
-      const rawEstId = data?.zohoEstimateId || data?.estimate?.zohoEstimateId;
-      const estId = (rawEstId && /^\d{15,22}$/.test(String(rawEstId).trim())) ? String(rawEstId).trim() : null;
-      if (estId) {
-        const finalEstNo = data?.estimate?.piNo || newPI.piNo;
-        console.log('[ZOHO ESTIMATE SYNC SUCCESS]', estId);
-        const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
-          ...p,
-          piNo: finalEstNo,
-          zohoEstimateId: estId,
-          zohoSynced: true,
-          zohoSyncError: null,
-          zohoModule: 'Quotes'
-        } : p);
-        updatePiList(enrichedList);
-      } else if (data && data.zohoError) {
-        console.warn('[ZOHO ESTIMATE SYNC NOTICE]', data.zohoError);
-        const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
-          ...p,
-          zohoSynced: false,
-          zohoSyncError: data.zohoError
-        } : p);
-        updatePiList(enrichedList);
+      setPiNumber(cleanPiNo);
+
+      const newPI = {
+        id: cleanPiNo,
+        piNo: cleanPiNo,
+        vendor: vendorName,
+        customerName: vendorName,
+        contactPerson,
+        phone,
+        email,
+        gstNo: (gstNo || '').toUpperCase(),
+        productName: joinedProducts,
+        items: piItems,
+        presetGroups,
+        billingAddress: {
+          street: billingStreet,
+          city: billingCity,
+          state: billingState,
+          pincode: billingPincode
+        },
+        deliveryAddress: {
+          street: sameAsBilling ? billingStreet : deliveryStreet,
+          city: sameAsBilling ? billingCity : deliveryCity,
+          state: sameAsBilling ? billingState : deliveryState,
+          pincode: sameAsBilling ? billingPincode : deliveryPincode
+        },
+        sameAsBilling,
+        transportMode,
+        transporterName,
+        vehicleNo,
+        transportScope,
+        paymentTerms,
+        creditDays,
+        remarks,
+        unitValue: Math.round(totals.sub),
+        quantity: piItems.reduce((acc, it) => acc + (parseFloat(it.qty) || 0), 0) || 1,
+        subtotal: totals.sub,
+        kitSubtotal: totals.kitSubtotal,
+        taxTotal: totals.gst,
+        cgst: totals.cgst,
+        sgst: totals.sgst,
+        grandTotal: totals.grand,
+        amount: '₹' + Math.round(totals.grand).toLocaleString('en-IN'),
+        pdfName: pdfFile ? pdfFile.name : (signedPiDoc ? signedPiDoc.name : 'pi_document.pdf'),
+        signedPiDoc: signedPiDoc || null,
+        piDate: piDate || new Date().toISOString().split('T')[0],
+        expDate: validUntilDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        status: isDraft ? 'Draft' : (editIdx !== null ? (piList[editIdx].status === 'Pending Approval' || piList[editIdx].status === 'Approved' ? 'Issued' : piList[editIdx].status) : 'Issued'),
+        statusType: isDraft ? 'draft' : (editIdx !== null ? (piList[editIdx].statusType === 'pending' || piList[editIdx].statusType === 'approved' ? 'issued' : piList[editIdx].statusType) : 'issued'),
+        salesPerson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+        salesperson: editIdx !== null ? (piList[editIdx].salesPerson || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+        salesPersonCode: editIdx !== null ? (piList[editIdx].salesPersonCode || currentEmpId || 'SE-VRM001') : (currentEmpId || 'SE-VRM001'),
+        salesPersonEmail: editIdx !== null ? (piList[editIdx].salesPersonEmail || currentLoggedEmail || 'sales@armsai.com') : (currentLoggedEmail || 'sales@armsai.com'),
+        createdBy: editIdx !== null ? (piList[editIdx].createdBy || getEffectiveSalesPerson()) : getEffectiveSalesPerson(),
+        createdById: editIdx !== null ? (piList[editIdx].createdById || currentEmpId || 'SE-VRM001') : (currentEmpId || 'SE-VRM001'),
+        zohoSynced: editIdx !== null ? (piList[editIdx].zohoSynced || false) : false,
+        zohoEstimateId: editIdx !== null ? (piList[editIdx].zohoEstimateId || null) : null,
+        zohoModule: 'Quotes'
+      };
+
+      let updatedList;
+      if (editIdx !== null) {
+        updatedList = [...piList];
+        updatedList[editIdx] = newPI;
+        setEditIdx(null);
+      } else {
+        updatedList = [newPI, ...piList];
+        try {
+          notifyPiCreated({
+            piNo: newPI.piNo,
+            customerName: newPI.vendor,
+            salesPerson: newPI.salesPerson,
+            salesPersonCode: newPI.salesPersonCode,
+            amount: newPI.amount
+          });
+        } catch (err) {
+          console.warn('PI voice notification error:', err);
+        }
       }
-    }).catch(err => {
-      console.warn('[ZOHO ESTIMATE SYNC NOTICE]', err);
-    });
+      updatePiList(updatedList);
 
-    resetForm();
-    setViewMode('list');
+      // Push to Zoho Books Quotes (Estimates API)
+      fetch('/api/zoho/estimates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPI)
+      }).then(res => res.json()).then(data => {
+        const rawEstId = data?.zohoEstimateId || data?.estimate?.zohoEstimateId;
+        const estId = (rawEstId && /^\d{15,22}$/.test(String(rawEstId).trim())) ? String(rawEstId).trim() : null;
+        if (estId) {
+          const finalEstNo = data?.estimate?.piNo || newPI.piNo;
+          console.log('[ZOHO ESTIMATE SYNC SUCCESS]', estId);
+          const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
+            ...p,
+            piNo: finalEstNo,
+            zohoEstimateId: estId,
+            zohoSynced: true,
+            zohoSyncError: null,
+            zohoModule: 'Quotes'
+          } : p);
+          updatePiList(enrichedList);
+        } else if (data && data.zohoError) {
+          console.warn('[ZOHO ESTIMATE SYNC NOTICE]', data.zohoError);
+          const enrichedList = updatedList.map(p => (p.piNo === newPI.piNo || p.id === newPI.id) ? {
+            ...p,
+            zohoSynced: false,
+            zohoSyncError: data.zohoError
+          } : p);
+          updatePiList(enrichedList);
+        }
+      }).catch(err => {
+        console.warn('[ZOHO ESTIMATE SYNC NOTICE]', err);
+      });
+
+      alert(isDraft
+        ? `📝 Proforma Invoice (${cleanPiNo}) saved as Draft.`
+        : `✅ Proforma Invoice (${cleanPiNo}) successfully created!`);
+
+      resetForm();
+      setViewMode('list');
+      setPiConfirmModal(null);
+    } catch (err) {
+      console.error('Error creating Proforma Invoice:', err);
+      alert('Error creating Proforma Invoice: ' + (err?.message || 'Please check your connection and try again.'));
+    } finally {
+      setIsSubmittingPI(false);
+    }
   };
 
   // Pre-populates the fields to edit a Performa Invoice
@@ -1625,7 +1656,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                     resetForm();
                     setEditIdx(null);
                     setViewMode('create');
-                    fetchNextPiNumber();
+                    setPiNumber('');
                   }}
                   style={{
                     backgroundColor: '#0E7490',
@@ -2563,8 +2594,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                       type="text"
                       readOnly
                       disabled
-                      value={piNumber || 'Auto-Assigned'}
-                      placeholder="Auto-Assigned"
+                      value={viewMode === 'edit' ? (piNumber || 'N/A') : '⚡ Auto-Generated on Creation (Sequential)'}
                       style={{
                         width: '100%',
                         height: '42px',
@@ -2573,14 +2603,19 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                         padding: '0 14px',
                         fontSize: '13px',
                         fontWeight: '800',
-                        color: '#0E7490',
-                        backgroundColor: '#F8FAFC',
+                        color: viewMode === 'edit' ? '#0E7490' : '#059669',
+                        backgroundColor: viewMode === 'edit' ? '#F8FAFC' : '#F0FDF4',
                         outline: 'none',
                         boxSizing: 'border-box',
                         cursor: 'not-allowed'
                       }}
                     />
                   </div>
+                  {viewMode === 'create' && (
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                      Sequential PI number will be generated automatically upon saving (same as BOM).
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -4769,7 +4804,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div><strong>Customer:</strong> {vendorName || 'Not specified'}</div>
-                  <div><strong>PI Number:</strong> {piNumber || 'N/A'}</div>
+                  <div><strong>PI Number:</strong> {editIdx !== null ? (piNumber || 'N/A') : '⚡ Auto-Generated on Creation (Sequential)'}</div>
                   <div><strong>Total Value:</strong> ₹{calculatePiTotals().grand.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (incl. GST)</div>
                   <div><strong>Line Items / Scope:</strong> {piItems.length} material lines configured</div>
                 </div>
@@ -4779,6 +4814,7 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px' }}>
               <button
                 type="button"
+                disabled={isSubmittingPI}
                 onClick={() => setPiConfirmModal(null)}
                 style={{
                   padding: '8px 16px',
@@ -4788,23 +4824,23 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   border: '1px solid #CBD5E1',
                   fontSize: '12px',
                   fontWeight: '700',
-                  cursor: 'pointer'
+                  cursor: isSubmittingPI ? 'not-allowed' : 'pointer',
+                  opacity: isSubmittingPI ? 0.6 : 1
                 }}
               >
                 Cancel
               </button>
               <button
                 type="button"
+                disabled={isSubmittingPI}
                 onClick={() => {
                   if (piConfirmModal === 'cancel') {
                     setPiConfirmModal(null);
                     resetForm();
                     setViewMode('list');
                   } else if (piConfirmModal === 'draft') {
-                    setPiConfirmModal(null);
                     executeCreatePI(true);
                   } else {
-                    setPiConfirmModal(null);
                     executeCreatePI(false);
                   }
                 }}
@@ -4816,11 +4852,14 @@ export default function PerformaInvoiceView({ onConvertToBom, userRole = 'Procur
                   border: 'none',
                   fontSize: '12px',
                   fontWeight: '800',
-                  cursor: 'pointer',
+                  cursor: isSubmittingPI ? 'not-allowed' : 'pointer',
+                  opacity: isSubmittingPI ? 0.7 : 1,
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               >
-                {piConfirmModal === 'cancel' ? 'Yes, Discard' : (piConfirmModal === 'draft' ? 'Save Draft' : 'Confirm & Release PI')}
+                {isSubmittingPI
+                  ? 'Generating Number & Saving...'
+                  : (piConfirmModal === 'cancel' ? 'Yes, Discard' : (piConfirmModal === 'draft' ? 'Save Draft' : 'Confirm & Release PI'))}
               </button>
             </div>
           </div>

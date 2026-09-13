@@ -3218,23 +3218,41 @@ app.get(['/api/zoho/next-pi-number', '/api/zoho/next-estimate-number'], async (r
     }
   }
 
-  // 2. Check local proforma_invoice_store.json
-  try {
-    const p = getStoreFilePath('proforma_invoice_store.json');
-    if (fs.existsSync(p)) {
-      const localPIs = JSON.parse(fs.readFileSync(p, 'utf8'));
-      if (Array.isArray(localPIs)) {
-        localPIs.forEach(item => {
-          const numStr = String(item.piNo || item.id || '');
-          const match = numStr.match(/^PI-(\d+)/i) || numStr.match(/^QI-(\d+)/i);
-          if (match) {
-            const val = parseInt(match[1], 10);
-            if (val > maxNum && val < 1000000) maxNum = val;
-          }
-        });
+  // 2. Check local proforma_invoice_store.json, sales_pi_store.json, and in-memory stores
+  const storeFiles = ['proforma_invoice_store.json', 'sales_pi_store.json'];
+  for (const sf of storeFiles) {
+    try {
+      const p = getStoreFilePath(sf);
+      if (fs.existsSync(p)) {
+        const localPIs = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (Array.isArray(localPIs)) {
+          localPIs.forEach(item => {
+            const numStr = String(item.piNo || item.id || '');
+            const match = numStr.match(/^PI-(\d+)/i) || numStr.match(/^QI-(\d+)/i);
+            if (match) {
+              const val = parseInt(match[1], 10);
+              if (val > maxNum && val < 1000000) maxNum = val;
+            }
+          });
+        }
       }
+    } catch (_) {}
+  }
+
+  // 3. Check memory stores
+  ['proforma_invoice_store', 'sales_pi_store'].forEach(key => {
+    const list = supabaseMemoryStore[key];
+    if (Array.isArray(list)) {
+      list.forEach(item => {
+        const numStr = String(item.piNo || item.id || '');
+        const match = numStr.match(/^PI-(\d+)/i) || numStr.match(/^QI-(\d+)/i);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (val > maxNum && val < 1000000) maxNum = val;
+        }
+      });
     }
-  } catch (_) {}
+  });
 
   const nextNum = maxNum + 1;
   const nextPiNo = 'PI-' + String(nextNum).padStart(5, '0');
