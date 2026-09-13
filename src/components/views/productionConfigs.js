@@ -1,6 +1,8 @@
 import { prodModuleEngine } from '../../utils/productionModuleEngine';
+import { formatCurrency } from '../../utils/otherViewsShared';
 
-export function buildProductionConfigs({ bomStore = [], invoiceList = [], customerList = [] }) {
+export function buildProductionConfigs({ bomStore = [], visibleBomStore: passedVisibleBom = null, invoiceList = [], customerList = [] }) {
+  const visibleBomStore = passedVisibleBom || bomStore || [];
           // Dynamically compute unified invoices list ensuring ONLY Accounts-Verified BOMs show up in Invoice Management
           const verifiedBomInvoices = (bomStore || [])
             .filter(b => b && (b.bomCode || b.code) && (

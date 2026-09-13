@@ -893,7 +893,7 @@ export default function ProductionViewsEngine(props) {
             );
           }
 
-          const configs = buildProductionConfigs({ bomStore, invoiceList, customerList });
+          const configs = buildProductionConfigs({ bomStore, visibleBomStore, invoiceList, customerList });
 
           // RawMaterialInventoryView extracted to ./RawMaterialInventoryView.jsx
 
