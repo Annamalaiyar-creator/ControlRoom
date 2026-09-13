@@ -180,7 +180,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onChangeTab, u
             { label: 'Dashboard', icon: LayoutDashboard },
             { label: 'PO Verification', targetTab: 'Purchase Orders', poTabTarget: 'MD_APPROVED', icon: ShoppingCart, badge: realAccountsAwaitingPOCount > 0 ? String(realAccountsAwaitingPOCount) : undefined },
             { label: 'Accounts Verification', icon: CheckCircle },
-            { label: 'Proforma Invoice', icon: FileText },
             { label: 'Payments', icon: Wallet }
           ]
         },
