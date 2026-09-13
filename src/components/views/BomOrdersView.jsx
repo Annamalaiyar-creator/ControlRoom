@@ -2508,45 +2508,49 @@ export default function BomOrdersView(props) {
               </div>
             )}
 
-            {/* Preset Pill */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
-              <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
-            </div>
+            {!newBomSourcePiNo && (
+              <>
+                {/* Preset Pill */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', backgroundColor: '#ECFEFF', padding: '0 16px', borderRadius: '20px', height: '40px', border: '1px solid #CFFAFE' }}>
+                  <Layers style={{ width: '15px', height: '15px', color: '#0E7490' }} />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#0E7490' }}>Preset:</span>
+                </div>
 
-            {/* Searchable Preset Selector */}
-            <SearchablePresetSelector
-              value={selectedPreset}
-              activePresetsMap={activePresetsMap}
-              accentColor="#0E7490"
-              width="380px"
-              placeholder="Pick a Preset to add..."
-              style={{ height: '40px' }}
-              onChange={(val, targetPreset) => {
-                if (val && targetPreset && targetPreset.items) {
-                  handleAddPresetToOrder(val, targetPreset, 1);
-                } else if (!val) {
-                  setSelectedPreset('');
-                }
-              }}
-            />
+                {/* Searchable Preset Selector */}
+                <SearchablePresetSelector
+                  value={selectedPreset}
+                  activePresetsMap={activePresetsMap}
+                  accentColor="#0E7490"
+                  width="380px"
+                  placeholder="Pick a Preset to add..."
+                  style={{ height: '40px' }}
+                  onChange={(val, targetPreset) => {
+                    if (val && targetPreset && targetPreset.items) {
+                      handleAddPresetToOrder(val, targetPreset, 1);
+                    } else if (!val) {
+                      setSelectedPreset('');
+                    }
+                  }}
+                />
 
-            {/* Clear Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedBomItemIndexes.length > 0) {
-                  setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
-                  setSelectedBomItemIndexes([]);
-                } else {
-                  if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
-                }
-              }}
-              title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
-              style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
-            >
-              <X style={{ width: '18px', height: '18px' }} />
-            </button>
+                {/* Clear Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedBomItemIndexes.length > 0) {
+                      setBomMaterialsList(prev => prev.filter((_, idx) => !selectedBomItemIndexes.includes(idx)));
+                      setSelectedBomItemIndexes([]);
+                    } else {
+                      if (bomMaterialsList.length > 0) setShowClearConfirmModal(true);
+                    }
+                  }}
+                  title={selectedBomItemIndexes.length > 0 ? `Remove ${selectedBomItemIndexes.length} selected item(s)` : 'Clear all order items'}
+                  style={{ border: 'none', backgroundColor: selectedBomItemIndexes.length > 0 ? '#EF4444' : '#FFE4E6', color: selectedBomItemIndexes.length > 0 ? 'white' : '#E11D48', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                >
+                  <X style={{ width: '18px', height: '18px' }} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Active Preset Badges / Pills */}
@@ -2623,18 +2627,22 @@ export default function BomOrdersView(props) {
               <thead>
                 <tr style={{ color: '#475569', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
                   <th style={{ padding: '12px 14px', width: '30px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={bomMaterialsList.length > 0 && selectedBomItemIndexes.length === bomMaterialsList.length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedBomItemIndexes(bomMaterialsList.map((_, idx) => idx));
-                        } else {
-                          setSelectedBomItemIndexes([]);
-                        }
-                      }}
-                      style={{ accentColor: '#0E7490', cursor: 'pointer' }}
-                    />
+                    {newBomSourcePiNo ? (
+                      <span style={{ color: '#64748B', fontWeight: '700' }}>#</span>
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={bomMaterialsList.length > 0 && selectedBomItemIndexes.length === bomMaterialsList.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedBomItemIndexes(bomMaterialsList.map((_, idx) => idx));
+                          } else {
+                            setSelectedBomItemIndexes([]);
+                          }
+                        }}
+                        style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                      />
+                    )}
                   </th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '30%' }}>Product / Item <span style={{ color: '#EF4444' }}>*</span></th>
                   <th style={{ padding: '12px 10px', fontWeight: '700', width: '10%' }}>UOM</th>
@@ -2658,7 +2666,7 @@ export default function BomOrdersView(props) {
                   (() => {
                     const hasAnyPreset = bomMaterialsList.some(it => it.isPresetItem);
                     return bomMaterialsList.map((item, i) => {
-                    const isPiLocked = false;
+                    const isPiLocked = Boolean(newBomSourcePiNo);
                     const q = parseFloat(item.qty) || 0;
                     const r = parseFloat(item.rate) || 0;
                     const taxable = q * r;
@@ -2682,123 +2690,152 @@ export default function BomOrdersView(props) {
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', backgroundColor: isChecked ? '#ECFEFF' : (i % 2 === 1 ? '#FAFBFC' : 'white') }}>
                         <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent' }}>
-                          <input
-                            type="checkbox"
-                            disabled={isPiLocked}
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) setSelectedBomItemIndexes(prev => [...prev, i]);
-                              else setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
-                            }}
-                            style={{ accentColor: '#0E7490', cursor: isPiLocked ? 'not-allowed' : 'pointer' }}
-                          />
+                          {isPiLocked ? (
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B' }}>{i + 1}</span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedBomItemIndexes(prev => [...prev, i]);
+                                else setSelectedBomItemIndexes(prev => prev.filter(idx => idx !== i));
+                              }}
+                              style={{ accentColor: '#0E7490', cursor: 'pointer' }}
+                            />
+                          )}
                         </td>
                         <td style={{ padding: '10px 10px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {/* Line 1: Product / Item Name (Typeable & Dropdown) */}
-                            <TypeableProductSelect
-                              value={item.name || ''}
-                              itemsList={itemsList}
-                              placeholder="Type or select product / item..."
-                              accentColor="#0E7490"
-                              onChange={(val, matched) => {
-                                const pName = matched ? matched.name : val;
-                                const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
-                                const isSolar5 = is5PctSolarProduct(pName, pCat);
-                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
-                                  ...mat,
-                                  name: pName,
-                                  code: matched ? (matched.code || mat.code || '') : (mat.code || ''),
-                                  rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
-                                  uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
-                                  category: pCat,
-                                  gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
-                                } : mat));
-                              }}
-                            />
-                            {/* Line 2: Description */}
+                          {isPiLocked ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{item.name || '—'}</span>
+                              {item.category && <span style={{ fontSize: '11px', color: '#64748B' }}>{item.category}</span>}
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {/* Line 1: Product / Item Name (Typeable & Dropdown) */}
+                              <TypeableProductSelect
+                                value={item.name || ''}
+                                itemsList={itemsList}
+                                placeholder="Type or select product / item..."
+                                accentColor="#0E7490"
+                                onChange={(val, matched) => {
+                                  const pName = matched ? matched.name : val;
+                                  const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                                  const isSolar5 = is5PctSolarProduct(pName, pCat);
+                                  setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? {
+                                    ...mat,
+                                    name: pName,
+                                    code: matched ? (matched.code || mat.code || '') : (mat.code || ''),
+                                    rate: matched ? String(matched.price || matched.rate || mat.rate) : mat.rate,
+                                    uom: matched ? (matched.uom || matched.unit || mat.uom) : mat.uom,
+                                    category: pCat,
+                                    gstRate: isSolar5 ? '5%' : (mat.gstRate || '18%')
+                                  } : mat));
+                                }}
+                              />
+                              {/* Line 2: Description */}
+                              <input
+                                type="text"
+                                placeholder="Description..."
+                                value={item.category || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                }}
+                                style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC' }}
+                              />
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px' }}>
+                          {isPiLocked ? (
+                            <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                              {item.uom || 'NOS'}
+                            </div>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                list={`uom-list-${i}`}
+                                placeholder="UOM"
+                                value={item.uom || 'NOS'}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
+                                }}
+                                style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF', fontWeight: '600' }}
+                              />
+                              <datalist id={`uom-list-${i}`}>
+                                <option value="NOS" />
+                                <option value="SET" />
+                                <option value="KG" />
+                                <option value="MTR" />
+                                <option value="PCS" />
+                                <option value="BOX" />
+                                <option value="PKT" />
+                                <option value="PAIR" />
+                              </datalist>
+                            </>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 10px' }}>
+                          {isPiLocked ? (
+                            <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                              {item.qty || 0}
+                            </div>
+                          ) : (
                             <input
-                              type="text"
-                              disabled={isPiLocked}
-                              placeholder="Description..."
-                              value={item.category || ''}
+                              type="number"
+                              value={item.qty}
+                              placeholder="0"
                               onChange={(e) => {
                                 const val = e.target.value;
-                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, category: val } : mat));
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
                               }}
-                              style={{ width: '100%', height: '28px', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '11px', color: '#64748B', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F8FAFC' : '#F8FAFC', cursor: isPiLocked ? 'not-allowed' : 'text' }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                             />
-                          </div>
-                        </td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <input
-                            type="text"
-                            disabled={isPiLocked}
-                            list={`uom-list-${i}`}
-                            placeholder="UOM"
-                            value={item.uom || 'NOS'}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, uom: val } : mat));
-                            }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '12px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : '#FFFFFF', fontWeight: '600', cursor: isPiLocked ? 'not-allowed' : 'text' }}
-                          />
-                          <datalist id={`uom-list-${i}`}>
-                            <option value="NOS" />
-                            <option value="SET" />
-                            <option value="KG" />
-                            <option value="MTR" />
-                            <option value="PCS" />
-                            <option value="BOX" />
-                            <option value="PKT" />
-                            <option value="PAIR" />
-                          </datalist>
-                        </td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <input
-                            type="number"
-                            disabled={isPiLocked}
-                            value={item.qty}
-                            placeholder="0"
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, qty: val } : mat));
-                            }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 8px', fontSize: '13px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text' }}
-                          />
+                          )}
                         </td>
                         <td style={{ padding: '12px 10px' }}>
                           {isPresetItem ? (
                             <span style={{ fontSize: '11px', color: '#94A3B8', fontStyle: 'italic' }}>—</span>
+                          ) : isPiLocked ? (
+                            <div style={{ textAlign: 'right', fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                              ₹{parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
                           ) : (
                             <input
                               type="number"
-                              disabled={isPiLocked}
                               value={item.rate}
                               placeholder="0.00"
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, rate: val } : mat));
                               }}
-                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text' }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 10px', fontSize: '13px', textAlign: 'right', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
                             />
                           )}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                          <select
-                            disabled={isPiLocked}
-                            value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
-                            }}
-                            style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: isPiLocked ? '#64748B' : '#4338CA', backgroundColor: isPiLocked ? '#F1F5F9' : '#EEF2FF', outline: 'none', cursor: isPiLocked ? 'not-allowed' : 'pointer', textAlign: 'center' }}
-                          >
-                            <option value="18%">18% GST</option>
-                            <option value="12%">12% GST</option>
-                            <option value="5%">5% GST</option>
-                            <option value="0%">0% Exempt</option>
-                          </select>
+                          {isPiLocked ? (
+                            <span style={{ display: 'inline-block', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE' }}>
+                              {item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'} GST
+                            </span>
+                          ) : (
+                            <select
+                              value={item.gstRate || (currentGroup && currentGroup.gstRate) || '18%'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBomMaterialsList(prev => prev.map((mat, idx) => idx === i ? { ...mat, gstRate: val } : mat));
+                              }}
+                              style={{ width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #C7D2FE', padding: '0 6px', fontSize: '12px', fontWeight: '700', color: '#4338CA', backgroundColor: '#EEF2FF', outline: 'none', cursor: 'pointer', textAlign: 'center' }}
+                            >
+                              <option value="18%">18% GST</option>
+                              <option value="12%">12% GST</option>
+                              <option value="5%">5% GST</option>
+                              <option value="0%">0% Exempt</option>
+                            </select>
+                          )}
                         </td>
                         {hasAnyPreset && (() => {
                           if (isPresetItem) {
@@ -2832,155 +2869,168 @@ export default function BomOrdersView(props) {
                                       {currentGroup.presetName}
                                     </span>
 
-                                    <div style={{ position: 'relative', width: '100%' }}>
-                                      <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
-                                      <input
-                                        type="number"
-                                        disabled={isPiLocked}
-                                        value={currentGroup.kitPrice}
-                                        placeholder="0.00"
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          if (groupId) {
-                                            setPresetGroups(prev => ({
-                                              ...prev,
-                                              [groupId]: { ...(prev[groupId] || currentGroup), kitPrice: val }
-                                            }));
-                                          }
-                                          setPresetKitPrice(val);
-                                        }}
-                                        style={{
-                                          width: '100%', height: '42px', borderRadius: '8px',
-                                          border: '2px solid #818CF8', padding: '0 10px 0 26px',
-                                          fontSize: '15px', fontWeight: '800', color: '#312E81',
-                                          textAlign: 'right', outline: 'none', boxSizing: 'border-box',
-                                          backgroundColor: isPiLocked ? '#F1F5F9' : 'white', cursor: isPiLocked ? 'not-allowed' : 'text'
-                                        }}
-                                      />
-                                    </div>
+                                    {isPiLocked ? (
+                                      <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#312E81' }}>
+                                          ₹{parseFloat(currentGroup.kitPrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600', marginTop: '2px' }}>
+                                          {groupCount} items × {currentGroup.setCount || 1} set{(parseInt(currentGroup.setCount) || 1) !== 1 ? 's' : ''}
+                                        </div>
+                                        <div style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700', marginTop: '3px' }}>
+                                          GST: {currentGroup.gstRate || '18%'}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div style={{ position: 'relative', width: '100%' }}>
+                                          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: '700', color: '#6366F1', pointerEvents: 'none' }}>₹</span>
+                                          <input
+                                            type="number"
+                                            value={currentGroup.kitPrice}
+                                            placeholder="0.00"
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), kitPrice: val }
+                                                }));
+                                              }
+                                              setPresetKitPrice(val);
+                                            }}
+                                            style={{
+                                              width: '100%', height: '42px', borderRadius: '8px',
+                                              border: '2px solid #818CF8', padding: '0 10px 0 26px',
+                                              fontSize: '15px', fontWeight: '800', color: '#312E81',
+                                              textAlign: 'right', outline: 'none', boxSizing: 'border-box',
+                                              backgroundColor: 'white', cursor: 'text'
+                                            }}
+                                          />
+                                        </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                      <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
-                                        {groupCount} items ×
-                                      </span>
-                                      <input
-                                        type="number"
-                                        disabled={isPiLocked}
-                                        min="0"
-                                        max="999"
-                                        value={currentGroup.setCount !== undefined && currentGroup.setCount !== null ? currentGroup.setCount : ''}
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={(e) => {
-                                          const rawVal = e.target.value;
-                                          if (rawVal === '') {
-                                            if (groupId) {
-                                              setPresetGroups(prev => ({
-                                                ...prev,
-                                                [groupId]: { ...(prev[groupId] || currentGroup), setCount: '' }
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                            {groupCount} items ×
+                                          </span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max="999"
+                                            value={currentGroup.setCount !== undefined && currentGroup.setCount !== null ? currentGroup.setCount : ''}
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => {
+                                              const rawVal = e.target.value;
+                                              if (rawVal === '') {
+                                                if (groupId) {
+                                                  setPresetGroups(prev => ({
+                                                    ...prev,
+                                                    [groupId]: { ...(prev[groupId] || currentGroup), setCount: '' }
+                                                  }));
+                                                }
+                                                return;
+                                              }
+                                              const parsed = parseInt(rawVal);
+                                              const valToSave = isNaN(parsed) ? '' : Math.max(0, parsed);
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), setCount: valToSave }
+                                                }));
+                                              }
+                                              const multiplier = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                                              setBomMaterialsList(prev => prev.map(mat => {
+                                                if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                                  return { ...mat, qty: String(Math.round(mat.baseQty * multiplier)) };
+                                                }
+                                                return mat;
                                               }));
-                                            }
-                                            return;
-                                          }
-                                          const parsed = parseInt(rawVal);
-                                          const valToSave = isNaN(parsed) ? '' : Math.max(0, parsed);
-                                          if (groupId) {
-                                            setPresetGroups(prev => ({
-                                              ...prev,
-                                              [groupId]: { ...(prev[groupId] || currentGroup), setCount: valToSave }
-                                            }));
-                                          }
-                                          const multiplier = isNaN(parsed) ? 0 : Math.max(0, parsed);
-                                          setBomMaterialsList(prev => prev.map(mat => {
-                                            if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
-                                              return { ...mat, qty: String(Math.round(mat.baseQty * multiplier)) };
-                                            }
-                                            return mat;
-                                          }));
-                                        }}
-                                        onBlur={() => {
-                                          const current = currentGroup.setCount;
-                                          const finalCount = (current === '' || isNaN(parseInt(current)) || parseInt(current) < 0) ? 1 : Math.max(0, parseInt(current));
-                                          if (groupId) {
-                                            setPresetGroups(prev => ({
-                                              ...prev,
-                                              [groupId]: { ...(prev[groupId] || currentGroup), setCount: finalCount }
-                                            }));
-                                          }
-                                          setBomMaterialsList(prev => prev.map(mat => {
-                                            if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
-                                              return { ...mat, qty: String(Math.round(mat.baseQty * finalCount)) };
-                                            }
-                                            return mat;
-                                          }));
-                                        }}
-                                        style={{
-                                          width: '42px', height: '26px', borderRadius: '6px',
-                                          border: '1.5px solid #818CF8', fontSize: '13px',
-                                          fontWeight: '800', color: '#312E81', textAlign: 'center',
-                                          padding: '0 2px', outline: 'none', backgroundColor: isPiLocked ? '#F1F5F9' : 'white', boxSizing: 'border-box', cursor: isPiLocked ? 'not-allowed' : 'text'
-                                        }}
-                                        title="Sets multiplier for this preset"
-                                      />
-                                      <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
-                                        set{(parseInt(currentGroup.setCount) || 1) !== 1 ? 's' : ''}
-                                      </span>
-                                    </div>
+                                            }}
+                                            onBlur={() => {
+                                              const current = currentGroup.setCount;
+                                              const finalCount = (current === '' || isNaN(parseInt(current)) || parseInt(current) < 0) ? 1 : Math.max(0, parseInt(current));
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), setCount: finalCount }
+                                                }));
+                                              }
+                                              setBomMaterialsList(prev => prev.map(mat => {
+                                                if ((mat.presetGroupId || 'legacy_default') === groupId && mat.baseQty) {
+                                                  return { ...mat, qty: String(Math.round(mat.baseQty * finalCount)) };
+                                                }
+                                                return mat;
+                                              }));
+                                            }}
+                                            style={{
+                                              width: '42px', height: '26px', borderRadius: '6px',
+                                              border: '1.5px solid #818CF8', fontSize: '13px',
+                                              fontWeight: '800', color: '#312E81', textAlign: 'center',
+                                              padding: '0 2px', outline: 'none', backgroundColor: 'white', boxSizing: 'border-box', cursor: 'text'
+                                            }}
+                                            title="Sets multiplier for this preset"
+                                          />
+                                          <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: '600' }}>
+                                            set{(parseInt(currentGroup.setCount) || 1) !== 1 ? 's' : ''}
+                                          </span>
+                                        </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                      <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
-                                      <select
-                                        disabled={isPiLocked}
-                                        value={currentGroup.gstRate || item.gstRate || '18%'}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          if (groupId) {
-                                            setPresetGroups(prev => ({
-                                              ...prev,
-                                              [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
-                                            }));
-                                          }
-                                          setBomMaterialsList(prev => prev.map((mat, idx) =>
-                                            ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
-                                              ? { ...mat, gstRate: val }
-                                              : mat
-                                          ));
-                                        }}
-                                        style={{
-                                          height: '24px', borderRadius: '6px',
-                                          border: '1.5px solid #818CF8', padding: '0 4px',
-                                          fontSize: '11px', fontWeight: '800',
-                                          color: isPiLocked ? '#64748B' : '#312E81', backgroundColor: isPiLocked ? '#F1F5F9' : '#FFFFFF',
-                                          outline: 'none', cursor: isPiLocked ? 'not-allowed' : 'pointer'
-                                        }}
-                                        title="Change GST Rate for this preset"
-                                      >
-                                        <option value="18%">18%</option>
-                                        <option value="12%">12%</option>
-                                        <option value="5%">5%</option>
-                                        <option value="0%">0%</option>
-                                      </select>
-                                    </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                          <span style={{ fontSize: '10px', color: '#6366F1', fontWeight: '700' }}>GST:</span>
+                                          <select
+                                            value={currentGroup.gstRate || item.gstRate || '18%'}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (groupId) {
+                                                setPresetGroups(prev => ({
+                                                  ...prev,
+                                                  [groupId]: { ...(prev[groupId] || currentGroup), gstRate: val }
+                                                }));
+                                              }
+                                              setBomMaterialsList(prev => prev.map((mat, idx) =>
+                                                ((mat.presetGroupId || 'legacy_default') === groupId || idx === i)
+                                                  ? { ...mat, gstRate: val }
+                                                  : mat
+                                              ));
+                                            }}
+                                            style={{
+                                              height: '24px', borderRadius: '6px',
+                                              border: '1.5px solid #818CF8', padding: '0 4px',
+                                              fontSize: '11px', fontWeight: '800',
+                                              color: '#312E81', backgroundColor: '#FFFFFF',
+                                              outline: 'none', cursor: 'pointer'
+                                            }}
+                                            title="Change GST Rate for this preset"
+                                          >
+                                            <option value="18%">18%</option>
+                                            <option value="12%">12%</option>
+                                            <option value="5%">5%</option>
+                                            <option value="0%">0%</option>
+                                          </select>
+                                        </div>
 
-                                    {!isPiLocked && groupId && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemovePresetGroup(groupId)}
-                                        style={{
-                                          border: 'none',
-                                          backgroundColor: 'transparent',
-                                          color: '#EF4444',
-                                          fontSize: '10px',
-                                          fontWeight: '700',
-                                          cursor: 'pointer',
-                                          padding: '2px 6px',
-                                          borderRadius: '4px',
-                                          marginTop: '2px'
-                                        }}
-                                        title={`Remove entire ${currentGroup.presetName} preset`}
-                                      >
-                                        Remove Kit
-                                      </button>
+                                        {groupId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemovePresetGroup(groupId)}
+                                            style={{
+                                              border: 'none',
+                                              backgroundColor: 'transparent',
+                                              color: '#EF4444',
+                                              fontSize: '10px',
+                                              fontWeight: '700',
+                                              cursor: 'pointer',
+                                              padding: '2px 6px',
+                                              borderRadius: '4px',
+                                              marginTop: '2px'
+                                            }}
+                                            title={`Remove entire ${currentGroup.presetName} preset`}
+                                          >
+                                            Remove Kit
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 </td>
@@ -3008,8 +3058,9 @@ export default function BomOrdersView(props) {
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                           {isPiLocked ? (
-                            <span title="Locked from Source Proforma Invoice" style={{ color: '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Lock style={{ width: '15px', height: '15px' }} />
+                            <span title="Locked from Source Proforma Invoice" style={{ color: '#0E7490', backgroundColor: '#ECFEFF', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Lock style={{ width: '13px', height: '13px' }} />
+                              <span>Locked</span>
                             </span>
                           ) : (
                             <button
@@ -3032,6 +3083,7 @@ export default function BomOrdersView(props) {
             </table>
           </div>
 
+          {!newBomSourcePiNo && (
             <div>
               <button
                 type="button"
@@ -3042,6 +3094,7 @@ export default function BomOrdersView(props) {
                 Add Product / Item
               </button>
             </div>
+          )}
           </div>
         </div>
 
@@ -4908,84 +4961,116 @@ export default function BomOrdersView(props) {
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#64748B' }}>{idx + 1}</td>
                       <td style={{ padding: '12px 10px' }}>
-                        <TypeableProductSelect
-                          value={item.name || ''}
-                          itemsList={itemsList}
-                          placeholder="Type or select product / item..."
-                          accentColor="#0E7490"
-                          onChange={(val, matched) => {
-                            const pName = matched ? matched.name : val;
-                            const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
-                            const isSolar5 = is5PctSolarProduct(pName, pCat);
-                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? {
-                              ...it,
-                              name: pName,
-                              code: matched ? (matched.code || it.code || '') : (it.code || ''),
-                              rate: matched ? Number(matched.price || matched.rate || it.rate) : it.rate,
-                              uom: matched ? (matched.uom || matched.unit || it.uom) : it.uom,
-                              category: pCat,
-                              gstRate: isSolar5 ? '5%' : (it.gstRate || '18%')
-                            } : it);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                        />
+                        {isSourcePiLocked ? (
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                            {item.name || '—'}
+                          </div>
+                        ) : (
+                          <TypeableProductSelect
+                            value={item.name || ''}
+                            itemsList={itemsList}
+                            placeholder="Type or select product / item..."
+                            accentColor="#0E7490"
+                            onChange={(val, matched) => {
+                              const pName = matched ? matched.name : val;
+                              const pCat = matched ? (matched.category || matched.description || item.category) : item.category;
+                              const isSolar5 = is5PctSolarProduct(pName, pCat);
+                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? {
+                                ...it,
+                                name: pName,
+                                code: matched ? (matched.code || it.code || '') : (it.code || ''),
+                                rate: matched ? Number(matched.price || matched.rate || it.rate) : it.rate,
+                                uom: matched ? (matched.uom || matched.unit || it.uom) : it.uom,
+                                category: pCat,
+                                gstRate: isSolar5 ? '5%' : (it.gstRate || '18%')
+                              } : it);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="text"
-                          disabled={isSourcePiLocked}
-                          placeholder="Description..."
-                          value={item.category || item.specs || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, category: val, specs: val } : it);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F8FAFC' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
-                        />
+                        {isSourcePiLocked ? (
+                          <div style={{ fontSize: '12px', color: '#64748B' }}>
+                            {item.category || item.specs || '—'}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Description..."
+                            value={item.category || item.specs || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, category: val, specs: val } : it);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                            style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 10px', fontSize: '12px', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'text' }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="text"
-                          disabled={isSourcePiLocked}
-                          placeholder="UOM"
-                          value={item.uom || item.unit || 'NOS'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, uom: val, unit: val } : it);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', fontWeight: '700', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
-                        />
+                        {isSourcePiLocked ? (
+                          <div style={{ fontSize: '12px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>
+                            {item.uom || item.unit || 'NOS'}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="UOM"
+                            value={item.uom || item.unit || 'NOS'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, uom: val, unit: val } : it);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                            style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', fontWeight: '700', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'text' }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          disabled={isSourcePiLocked}
-                          value={item.qty}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, qty: val } : it);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
-                        />
+                        {isSourcePiLocked ? (
+                          <div style={{ fontSize: '13px', textAlign: 'center', fontWeight: '800', color: '#2563EB' }}>
+                            {item.qty || 0}
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.qty}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, qty: val } : it);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                            style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 6px', fontSize: '12px', textAlign: 'center', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'text' }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isSourcePiLocked}
-                          value={item.rate}
-                          placeholder={isPartBundle ? '0 (Bundled)' : '0'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
-                            setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
-                          }}
-                          style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', textAlign: 'right', color: isSourcePiLocked ? '#475569' : '#0F172A', backgroundColor: isSourcePiLocked ? '#F1F5F9' : 'white', outline: 'none', cursor: isSourcePiLocked ? 'not-allowed' : 'text' }}
-                        />
+                        {isSourcePiLocked ? (
+                          <div style={{ fontSize: '13px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>
+                            {isPartBundle ? (
+                              <span style={{ backgroundColor: '#ECFEFF', color: '#0E7490', fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                Bundled in Kit
+                              </span>
+                            ) : (
+                              `₹ ${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                            )}
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.rate}
+                            placeholder={isPartBundle ? '0 (Bundled)' : '0'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedItems = (confirmingBomModal.items || []).map((it, i) => i === idx ? { ...it, rate: val } : it);
+                              setConfirmingBomModal({ ...confirmingBomModal, items: updatedItems });
+                            }}
+                            style={{ width: '100%', height: '36px', borderRadius: '6px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '12px', textAlign: 'right', color: '#0F172A', backgroundColor: 'white', outline: 'none', cursor: 'text' }}
+                          />
+                        )}
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#0F172A' }}>
                         {itemTotal > 0 ? (
