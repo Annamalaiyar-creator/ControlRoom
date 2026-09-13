@@ -1307,6 +1307,11 @@ export default function StockStatusView(props) {
   };
 
   const handleCreatePoFromSelectedStock = (selectedRowIds = [], allRows = []) => {
+    const isSales = userRole === 'Sales Executive' || userRole === 'Sales Head' || String(userRole || '').toLowerCase().includes('sales');
+    if (isSales) {
+      alert('Sales Executives and Sales Heads do not have permissions to create Purchase Orders.');
+      return;
+    }
     const ids = selectedRowIds && selectedRowIds.length > 0 ? selectedRowIds : selectedStockRows;
     if (!ids || ids.length === 0) {
       alert('Please select at least one item to reorder.');
@@ -2952,24 +2957,26 @@ export default function StockStatusView(props) {
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  <button
-                                    onClick={() => handleCreatePoFromSelectedStock([rowKey], combinedList)}
-                                    title="Create PO / Reorder Item"
-                                    style={{
-                                      width: '30px',
-                                      height: '30px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #E2E8F0',
-                                      backgroundColor: '#FFFFFF',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      cursor: 'pointer',
-                                      color: '#2563EB'
-                                    }}
-                                  >
-                                    <ShoppingCart size={14} />
-                                  </button>
+                                  {!isSalesUser && (
+                                    <button
+                                      onClick={() => handleCreatePoFromSelectedStock([rowKey], combinedList)}
+                                      title="Create PO / Reorder Item"
+                                      style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #E2E8F0',
+                                        backgroundColor: '#FFFFFF',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: '#2563EB'
+                                      }}
+                                    >
+                                      <ShoppingCart size={14} />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -3153,27 +3160,29 @@ export default function StockStatusView(props) {
                       <Eye size={14} style={{ color: '#0E7490' }} /> View Details
                     </button>
 
-                    <button
-                      onClick={() => handleCreatePoFromSelectedStock(selectedStockRows, combinedList)}
-                      style={{
-                        backgroundColor: '#0E7490',
-                        border: 'none',
-                        color: '#FFFFFF',
-                        borderRadius: '10px',
-                        padding: '6px 14px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
-                      }}
-                    >
-                      <ShoppingCart size={14} style={{ color: '#FFFFFF' }} /> Create PO / Reorder
-                    </button>
+                    {!isSalesUser && (
+                      <button
+                        onClick={() => handleCreatePoFromSelectedStock(selectedStockRows, combinedList)}
+                        style={{
+                          backgroundColor: '#0E7490',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '6px 14px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                        }}
+                      >
+                        <ShoppingCart size={14} style={{ color: '#FFFFFF' }} /> Create PO / Reorder
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
@@ -3341,17 +3350,19 @@ export default function StockStatusView(props) {
                         >
                           Close
                         </button>
-                        <button
-                          onClick={() => {
-                            const itemKey = viewingStockItem.code || viewingStockItem.item;
-                            setViewingStockItem(null);
-                            handleCreatePoFromSelectedStock([itemKey], combinedList);
-                          }}
-                          style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <ShoppingCart size={15} />
-                          Create PO / Reorder Item
-                        </button>
+                        {!isSalesUser && (
+                          <button
+                            onClick={() => {
+                              const itemKey = viewingStockItem.code || viewingStockItem.item;
+                              setViewingStockItem(null);
+                              handleCreatePoFromSelectedStock([itemKey], combinedList);
+                            }}
+                            style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <ShoppingCart size={15} />
+                            Create PO / Reorder Item
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
