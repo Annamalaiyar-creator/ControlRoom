@@ -1364,6 +1364,7 @@ export default function ProductionViewsEngine(props) {
           activeTab={activeTab}
           canCancelBom={canCancelBom}
           handleCancelBomOrder={handleCancelBomOrder}
+          setActiveMediaPreviewModal={setActiveMediaPreviewModal}
           onViewFullDetails={(rec) => {
             if (activeTab === 'BOM' || activeTab === 'BOM Orders' || activeTab === 'BOM / Routing') {
               setConfirmingBomModal({ ...rec, isEditMode: true });

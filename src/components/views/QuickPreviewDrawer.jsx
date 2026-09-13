@@ -8,8 +8,15 @@ export default function QuickPreviewDrawer({
   activeTab,
   canCancelBom,
   handleCancelBomOrder,
-  onViewFullDetails
+  onViewFullDetails,
+  filteredRows = [],
+  totalRecords = 1,
+  setActiveMediaPreviewModal
 }) {
+  const displayCount = Array.isArray(filteredRows) && filteredRows.length > 0
+    ? filteredRows.length
+    : (typeof totalRecords === 'number' && totalRecords > 0 ? totalRecords : 1);
+
   return (
   <div
     onClick={() => onClose()}
@@ -54,7 +61,7 @@ export default function QuickPreviewDrawer({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '14px', fontSize: '11px', color: '#64748B', fontWeight: '700' }}>
             <ChevronDown size={14} style={{ cursor: 'pointer' }} />
             <ChevronUp size={14} style={{ cursor: 'pointer' }} />
-            <span>1 of {(filteredRows || []).length || 1}</span>
+            <span>1 of {displayCount}</span>
           </div>
         </div>
 
@@ -305,7 +312,13 @@ export default function QuickPreviewDrawer({
                 {packPhotos.map((ph, pIdx) => (
                   <div
                     key={pIdx}
-                    onClick={() => setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name || `Photo ${pIdx + 1}` })}
+                    onClick={() => {
+                      if (typeof setActiveMediaPreviewModal === 'function') {
+                        setActiveMediaPreviewModal({ type: 'image', url: ph.dataUrl, name: ph.name || `Photo ${pIdx + 1}` });
+                      } else if (ph.dataUrl) {
+                        window.open(ph.dataUrl, '_blank');
+                      }
+                    }}
                     style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', position: 'relative' }}
                   >
                     <img src={ph.dataUrl} alt={ph.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -318,7 +331,13 @@ export default function QuickPreviewDrawer({
                 {packVideos.map((vd, vIdx) => (
                   <div
                     key={vIdx}
-                    onClick={() => setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name || `Video ${vIdx + 1}` })}
+                    onClick={() => {
+                      if (typeof setActiveMediaPreviewModal === 'function') {
+                        setActiveMediaPreviewModal({ type: 'video', url: vd.dataUrl, name: vd.name || `Video ${vIdx + 1}` });
+                      } else if (vd.dataUrl) {
+                        window.open(vd.dataUrl, '_blank');
+                      }
+                    }}
                     style={{ height: '76px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #CBD5E1', backgroundColor: '#0F172A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', position: 'relative' }}
                   >
                     <Video size={20} style={{ color: '#38BDF8' }} />
