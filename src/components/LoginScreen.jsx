@@ -22,7 +22,9 @@ import {
   Users,
   Asterisk,
   Sparkles,
-  Receipt
+  Receipt,
+  Smartphone,
+  Mail
 } from 'lucide-react';
 import { authenticateUser, syncEmployeesFromCloud } from '../services/authService';
 import { saveCloudStore } from '../utils/supabaseDataSync';

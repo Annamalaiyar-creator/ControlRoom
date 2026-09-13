@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, FileText, ChevronLeft, Save } from "lucide-react";
+import { Check, FileText, ChevronLeft, Save, Truck, Users } from "lucide-react";
 
 export default function CustomerFormView({
   showCustomerForm,

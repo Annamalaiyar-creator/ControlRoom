@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { getMediaFromCache, formatCurrency } from "../../utils/otherViewsShared";
 import StatusBadge from "../StatusBadge";
+import { VRMBomPrintSheet } from "../VRMBomPrintTemplate";
 
 export default function AccountsVerificationModal({
   accountsVerificationModal,

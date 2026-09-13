@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Phone, Edit3, ChevronLeft, Truck } from "lucide-react";
+import { Users, Phone, Edit3, ChevronLeft, Truck, FileText } from "lucide-react";
 
 export default function CustomerProfileView({
   viewingCustomer,

@@ -6,7 +6,7 @@ import {
   Globe, Shield, Bell, Eye, EyeOff, Search, Filter, Settings,
   FileCode, Layers, FileText, Download, Upload, Zap, PhoneCall,
   ExternalLink, ChevronRight, AlertCircle, Sparkles, X, Check,
-  Radio, BarChart2, RadioTower, Power, LogOut, Code, Info
+  Radio, BarChart2, RadioTower, Power, LogOut, Code, Info, ShieldCheck
 } from 'lucide-react';
 import { fetchCloudStore, saveCloudStore } from '../utils/supabaseDataSync';
 import { fetchLiveActiveSessions, revokeSession, revokeAllOtherSessions } from '../services/sessionService';
