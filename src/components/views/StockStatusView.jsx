@@ -1270,10 +1270,85 @@ export default function StockStatusView(props) {
   const [stockStatusWarehouse, setStockStatusWarehouse] = useState('All Warehouses');
   const [stockStatusCategory, setStockStatusCategory] = useState('All Categories');
   const [stockStatusStatus, setStockStatusStatus] = useState('All Status');
+  const [stockStatusActiveSubTab, setStockStatusActiveSubTab] = useState('All');
   const [stockStatusPage, setStockStatusPage] = useState(1);
   const [stockStatusRowsPerPage, setStockStatusRowsPerPage] = useState(10);
   const [stockStatusGoToInput, setStockStatusGoToInput] = useState('');
   const [stockStatusStorageTrigger, setStockStatusStorageTrigger] = useState(0);
+  const [selectedStockRows, setSelectedStockRows] = useState([]);
+  const [viewingStockItem, setViewingStockItem] = useState(null);
+
+  const handleExportStockCSV = (rowsToExport = []) => {
+    if (!rowsToExport || rowsToExport.length === 0) {
+      alert('No stock records to export.');
+      return;
+    }
+    const headers = ['Material / SKU', 'Code', 'Category', 'Warehouse', 'Available Qty', 'Reserved Qty', 'Incoming Qty', 'Reorder Level', 'Stock Value', 'Status'];
+    const rows = rowsToExport.map(r => [
+      `"${String(r.item || '').replace(/"/g, '""')}"`,
+      `"${String(r.code || '').replace(/"/g, '""')}"`,
+      `"${String(r.category || '').replace(/"/g, '""')}"`,
+      `"${String(r.location || '').replace(/"/g, '""')}"`,
+      `"${String(r.stock || '0').replace(/"/g, '""')}"`,
+      `"${String(r.allocated || '0').replace(/"/g, '""')}"`,
+      `"${String(r.incoming || '0').replace(/"/g, '""')}"`,
+      `"${String(r.minLevel || '0').replace(/"/g, '""')}"`,
+      `"${String(r.val || '0').replace(/"/g, '""')}"`,
+      `"${String(r.status || '').replace(/"/g, '""')}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Stock_Status_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCreatePoFromSelectedStock = (selectedRowIds = [], allRows = []) => {
+    const ids = selectedRowIds && selectedRowIds.length > 0 ? selectedRowIds : selectedStockRows;
+    if (!ids || ids.length === 0) {
+      alert('Please select at least one item to reorder.');
+      return;
+    }
+    const selectedRowsData = (allRows || []).filter(r => ids.includes(r.code || r.item));
+    if (selectedRowsData.length === 0) return;
+
+    const poItemsPayload = selectedRowsData.map(item => {
+      const avail = parseFloat(String(item.stock || '0').replace(/,/g, '')) || 0;
+      const minLvl = parseFloat(String(item.minLevel || '50').replace(/,/g, '')) || 50;
+      const neededQty = Math.max(minLvl - avail, 100);
+      const cleanVal = parseFloat(String(item.val || '0').replace(/[^0-9.]/g, '')) || 0;
+      const calcRate = avail > 0 && cleanVal > 0 ? Math.round(cleanVal / avail) : 250;
+
+      return {
+        name: item.item,
+        sku: item.code,
+        code: item.code,
+        account: item.category || 'Raw Material',
+        qty: neededQty,
+        unit: 'NOS',
+        rate: calcRate,
+        tax: 18
+      };
+    });
+
+    try {
+      localStorage.setItem('controlroom_pending_reorder_po', JSON.stringify({
+        items: poItemsPayload,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.error('Failed to store pending reorder PO payload', e);
+    }
+
+    if (typeof onChangeTab === 'function') {
+      onChangeTab('Purchase Orders');
+    } else {
+      alert(`Prepared PO payload with ${poItemsPayload.length} item(s). Please navigate to Purchase Orders to finalize.`);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -2099,20 +2174,23 @@ export default function StockStatusView(props) {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{
-                height: '38px',
-                padding: '0 16px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                backgroundColor: '#FFFFFF',
-                color: '#1E293B',
-                fontSize: '13px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer'
-              }}>
+              <button
+                onClick={() => handleExportStockCSV()}
+                style={{
+                  height: '38px',
+                  padding: '0 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  backgroundColor: '#FFFFFF',
+                  color: '#1E293B',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
                 <Download style={{ width: '16px', height: '16px', color: '#475569' }} />
                 Export
               </button>
@@ -2136,121 +2214,6 @@ export default function StockStatusView(props) {
                 <Plus style={{ width: '16px', height: '16px' }} />
                 New Stock
               </button>
-            </div>
-          </div>
-
-
-          {/* Search / Filter Card */}
-          <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr auto auto', gap: '16px', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={stockStatusSearchQuery}
-                    onChange={(e) => {
-                      setStockStatusSearchQuery(e.target.value);
-                      setStockStatusPage(1);
-                    }}
-                    placeholder="Search by Material / SKU / Code..."
-                    style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
-                  />
-                  <Search style={{ width: '14px', height: '14px', color: '#64748B', position: 'absolute', left: '12px' }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select
-                  value={stockStatusWarehouse}
-                  onChange={(e) => {
-                    setStockStatusWarehouse(e.target.value);
-                    setStockStatusPage(1);
-                  }}
-                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
-                >
-                  <option value="All Warehouses">All Warehouses</option>
-                  <option value="Main Warehouse">Main Warehouse</option>
-                  <option value="HDG Yard">HDG Yard</option>
-                  <option value="Regional Warehouse">Regional Warehouse</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select
-                  value={stockStatusCategory}
-                  onChange={(e) => {
-                    setStockStatusCategory(e.target.value);
-                    setStockStatusPage(1);
-                  }}
-                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
-                >
-                  <option value="All Categories">All Categories</option>
-                  <option value="Rails">Rails</option>
-                  <option value="Clamps">Clamps</option>
-                  <option value="Fasteners">Fasteners</option>
-                  <option value="Accessories">Accessories</option>
-                  <option value="Raw Material">Raw Material</option>
-                  <option value="General">General</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <select
-                  value={stockStatusStatus}
-                  onChange={(e) => {
-                    setStockStatusStatus(e.target.value);
-                    setStockStatusPage(1);
-                  }}
-                  style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155' }}
-                >
-                  <option value="All Status">All Status</option>
-                  <option value="In Stock">In Stock</option>
-                  <option value="Low Stock">Low Stock</option>
-                  <option value="Out of Stock">Out of Stock</option>
-                </select>
-              </div>
-              <div>
-                <button
-                  onClick={() => {}}
-                  style={{
-                    height: '38px',
-                    padding: '0 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF',
-                    color: '#475569',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
-                  Filters
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    setStockStatusSearchQuery('');
-                    setStockStatusWarehouse('All Warehouses');
-                    setStockStatusCategory('All Categories');
-                    setStockStatusStatus('All Status');
-                    setStockStatusPage(1);
-                  }}
-                  style={{
-                    height: '38px',
-                    padding: '0 8px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#2563EB',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Reset
-                </button>
-              </div>
             </div>
           </div>
 
@@ -2609,14 +2572,31 @@ export default function StockStatusView(props) {
               };
             });
 
-            // 4. Apply search & dropdown filters
+            // 4. Calculate sub-tab badge counts from total combined stock list
+            const totalAll = combinedList.length;
+            const totalInStock = combinedList.filter(r => r.status === 'In Stock').length;
+            const totalLowStock = combinedList.filter(r => r.status === 'Low Stock').length;
+            const totalOutOfStock = combinedList.filter(r => r.status === 'Out of Stock').length;
+
+            const stockTabs = [
+              { id: 'All', label: 'All Items', count: totalAll, bg: '#F1F5F9', fg: '#475569' },
+              { id: 'In Stock', label: 'In Stock', count: totalInStock, bg: '#DCFCE7', fg: '#15803D' },
+              { id: 'Low Stock', label: 'Low Stock', count: totalLowStock, bg: '#FEF3C7', fg: '#D97706' },
+              { id: 'Out of Stock', label: 'Out of Stock', count: totalOutOfStock, bg: '#FEE2E2', fg: '#DC2626' }
+            ];
+
+            // 5. Apply sub-tab & search & dropdown filters
             const filteredList = combinedList.filter(row => {
+              if (stockStatusActiveSubTab !== 'All' && row.status !== stockStatusActiveSubTab) {
+                return false;
+              }
               if (stockStatusSearchQuery.trim()) {
                 const q = stockStatusSearchQuery.toLowerCase().trim();
                 const matchItem = String(row.item || '').toLowerCase().includes(q);
                 const matchCode = String(row.code || '').toLowerCase().includes(q);
                 const matchCat = String(row.category || '').toLowerCase().includes(q);
-                if (!matchItem && !matchCode && !matchCat) return false;
+                const matchLoc = String(row.location || '').toLowerCase().includes(q);
+                if (!matchItem && !matchCode && !matchCat && !matchLoc) return false;
               }
               if (stockStatusWarehouse !== 'All Warehouses' && row.location !== stockStatusWarehouse) {
                 return false;
@@ -2630,54 +2610,229 @@ export default function StockStatusView(props) {
               return true;
             });
 
-            // 5. Paginate
+            // 6. Paginate
             const totalItems = filteredList.length;
             const totalPages = Math.ceil(totalItems / stockStatusRowsPerPage) || 1;
             const safePage = Math.min(stockStatusPage, totalPages);
             const startIndex = (safePage - 1) * stockStatusRowsPerPage;
             const displayedRows = filteredList.slice(startIndex, startIndex + stockStatusRowsPerPage);
 
+            const isAllDisplayedSelected = displayedRows.length > 0 && displayedRows.every(r => selectedStockRows.includes(r.code || r.item));
+
             return (
-              <div className="section-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '15px', color: '#0F172A' }}>
-                    Stock Status List ({totalItems.toLocaleString('en-IN')} Items)
-                  </strong>
-                  {stockStatusSearchQuery || stockStatusWarehouse !== 'All Warehouses' || stockStatusCategory !== 'All Categories' || stockStatusStatus !== 'All Status' ? (
-                    <span style={{ fontSize: '12px', color: '#0E7490', fontWeight: '600' }}>
-                      Filtered: Showing {totalItems.toLocaleString('en-IN')} of {combinedList.length.toLocaleString('en-IN')} items
-                    </span>
-                  ) : null}
+              <div className="section-card" style={{ padding: '0', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                {/* Header & Quick Action Row */}
+                <div style={{ padding: '18px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <strong style={{ fontSize: '16px', color: '#0F172A', fontWeight: '700' }}>
+                      Stock Status List ({filteredList.length.toLocaleString('en-IN')} Items)
+                    </strong>
+                    {filteredList.length !== combinedList.length && (
+                      <span style={{ fontSize: '12px', color: '#0E7490', backgroundColor: '#ECFEFF', border: '1px solid #A5F3FC', borderRadius: '20px', padding: '2px 10px', fontWeight: '600' }}>
+                        Filtered from {combinedList.length.toLocaleString('en-IN')} total
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={() => handleExportStockCSV(filteredList)}
+                      style={{
+                        height: '36px',
+                        padding: '0 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
+                        color: '#334155',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Download style={{ width: '14px', height: '14px', color: '#64748B' }} />
+                      Export CSV
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setStockStatusSearchQuery('');
+                        setStockStatusWarehouse('All Warehouses');
+                        setStockStatusCategory('All Categories');
+                        setStockStatusStatus('All Status');
+                        setStockStatusActiveSubTab('All');
+                        setStockStatusPage(1);
+                        setSelectedStockRows([]);
+                      }}
+                      title="Reset All Filters"
+                      style={{
+                        height: '36px',
+                        padding: '0 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#F8FAFC',
+                        color: '#64748B',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RotateCcw style={{ width: '13px', height: '13px' }} />
+                      Reset
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                {/* Integrated Search & Dropdown Filters Strip */}
+                <div style={{ padding: '14px 24px', backgroundColor: '#FAFAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '220px' }}>
+                    <input
+                      type="text"
+                      value={stockStatusSearchQuery}
+                      onChange={(e) => {
+                        setStockStatusSearchQuery(e.target.value);
+                        setStockStatusPage(1);
+                      }}
+                      placeholder="Search by Material / SKU / Code..."
+                      style={{ height: '38px', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px 0 36px', fontSize: '13px', width: '100%', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                    />
+                    <Search style={{ width: '14px', height: '14px', color: '#94A3B8', position: 'absolute', left: '12px', top: '12px' }} />
+                  </div>
+
+                  <div style={{ minWidth: '160px' }}>
+                    <select
+                      value={stockStatusWarehouse}
+                      onChange={(e) => {
+                        setStockStatusWarehouse(e.target.value);
+                        setStockStatusPage(1);
+                      }}
+                      style={{ height: '38px', width: '100%', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155', fontWeight: '500' }}
+                    >
+                      <option value="All Warehouses">All Warehouses</option>
+                      <option value="Main Warehouse">Main Warehouse</option>
+                      <option value="HDG Yard">HDG Yard</option>
+                      <option value="Regional Warehouse">Regional Warehouse</option>
+                    </select>
+                  </div>
+
+                  <div style={{ minWidth: '160px' }}>
+                    <select
+                      value={stockStatusCategory}
+                      onChange={(e) => {
+                        setStockStatusCategory(e.target.value);
+                        setStockStatusPage(1);
+                      }}
+                      style={{ height: '38px', width: '100%', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '0 12px', fontSize: '13px', backgroundColor: '#FFFFFF', color: '#334155', fontWeight: '500' }}
+                    >
+                      <option value="All Categories">All Categories</option>
+                      <option value="Rails">Rails</option>
+                      <option value="Clamps">Clamps</option>
+                      <option value="Fasteners">Fasteners</option>
+                      <option value="Accessories">Accessories</option>
+                      <option value="Raw Material">Raw Material</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status Sub-Tabs Row */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', padding: '0 24px', gap: '20px', alignItems: 'center', flexWrap: 'wrap', backgroundColor: '#FFFFFF' }}>
+                  {stockTabs.map(tab => {
+                    const isActive = stockStatusActiveSubTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setStockStatusActiveSubTab(tab.id);
+                          setStockStatusPage(1);
+                        }}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          padding: '12px 4px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: isActive ? '#0E7490' : '#64748B',
+                          borderBottom: isActive ? '2px solid #0E7490' : '2px solid transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        {tab.label}
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          backgroundColor: tab.bg,
+                          color: tab.fg,
+                          fontWeight: 'bold'
+                        }}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Main Data Table with Checkboxes & Interactive Row Selection */}
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table className="custom-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ textAlign: 'left', borderBottom: '1px solid #F1F5F9' }}>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>#</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Material / SKU</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Category</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600' }}>Warehouse</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Available Qty</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reserved Qty</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Incoming Qty</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Reorder Level</th>
+                      <tr style={{ color: '#475569', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', fontSize: '12px', fontWeight: 'bold', height: '48px' }}>
+                        <th style={{ width: '48px', minWidth: '48px', maxWidth: '48px', padding: '12px 0', textAlign: 'center', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                          <input
+                            type="checkbox"
+                            style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
+                            checked={isAllDisplayedSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                const idsToAdd = displayedRows.map(r => r.code || r.item);
+                                setSelectedStockRows(prev => Array.from(new Set([...prev, ...idsToAdd])));
+                              } else {
+                                const idsToRemove = displayedRows.map(r => r.code || r.item);
+                                setSelectedStockRows(prev => prev.filter(id => !idsToRemove.includes(id)));
+                              }
+                            }}
+                          />
+                        </th>
+                        <th style={{ padding: '12px 14px', width: '50px', minWidth: '50px' }}>#</th>
+                        <th style={{ padding: '12px 14px', minWidth: '220px' }}>Material / SKU</th>
+                        <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px' }}>Category</th>
+                        <th style={{ padding: '12px 14px', width: '150px', minWidth: '150px' }}>Warehouse</th>
+                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Available Qty</th>
+                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Reserved Qty</th>
+                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Incoming Qty</th>
+                        <th style={{ padding: '12px 14px', width: '120px', minWidth: '120px', textAlign: 'center' }}>Reorder Level</th>
                         {!isSalesUser && (
-                          <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'right' }}>Stock Value (₹)</th>
+                          <th style={{ padding: '12px 14px', width: '140px', minWidth: '140px', textAlign: 'right' }}>Stock Value (₹)</th>
                         )}
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Status</th>
-                        <th style={{ padding: '13px 16px', color: '#64748B', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                        <th style={{ padding: '12px 14px', width: '130px', minWidth: '130px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px 14px', width: '110px', minWidth: '110px', textAlign: 'center' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayedRows.length === 0 ? (
                         <tr>
-                          <td colSpan={isSalesUser ? 10 : 11} style={{ padding: '32px 16px', textAlign: 'center', color: '#64748B' }}>
-                            No stock items match the selected filters.
+                          <td colSpan={isSalesUser ? 11 : 12} style={{ padding: '40px 16px', textAlign: 'center', color: '#64748B' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                              <Package style={{ width: '32px', height: '32px', color: '#94A3B8' }} />
+                              <strong style={{ color: '#334155' }}>No stock items match the selected criteria</strong>
+                              <span style={{ fontSize: '12px', color: '#94A3B8' }}>Try adjusting your search query or filters above.</span>
+                            </div>
                           </td>
                         </tr>
                       ) : (
                         displayedRows.map((row, idx) => {
+                          const rowKey = row.code || row.item;
+                          const isChecked = selectedStockRows.includes(rowKey);
+
                           let qtyColor = '#10B981'; // Green
                           if (row.rawStockNum === 0 || row.status === 'Out of Stock') {
                             qtyColor = '#EF4444'; // Red
@@ -2685,54 +2840,137 @@ export default function StockStatusView(props) {
                             qtyColor = '#F59E0B'; // Orange
                           }
 
+                          let badgeColors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
+                          if (row.status === 'Low Stock') {
+                            badgeColors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
+                          } else if (row.status === 'Out of Stock') {
+                            badgeColors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
+                          }
+
                           return (
-                            <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
-                              <td style={{ padding: '13px 16px', color: '#94A3B8' }}>{startIndex + idx + 1}</td>
-                              <td style={{ padding: '13px 16px' }}>
-                                <div style={{ fontWeight: '700', color: '#0F172A' }}>{row.item}</div>
-                                <div style={{ fontSize: '10px', color: '#64748B' }}>{row.code}</div>
+                            <tr
+                              key={rowKey || idx}
+                              style={{
+                                borderBottom: '1px solid #F1F5F9',
+                                transition: 'all 0.15s ease',
+                                backgroundColor: isChecked ? '#ECFEFF' : 'transparent',
+                                cursor: 'pointer'
+                              }}
+                              className={`table-row-hover ${isChecked ? 'selected-row' : ''}`}
+                            >
+                              <td
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  width: '48px',
+                                  minWidth: '48px',
+                                  padding: '12px 0',
+                                  textAlign: 'center',
+                                  verticalAlign: 'middle',
+                                  borderLeft: isChecked ? '4px solid #0E7490' : '4px solid transparent',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  style={{ accentColor: '#0E7490', cursor: 'pointer', verticalAlign: 'middle', margin: 0 }}
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    setSelectedStockRows(prev =>
+                                      prev.includes(rowKey) ? prev.filter(k => k !== rowKey) : [...prev, rowKey]
+                                    );
+                                  }}
+                                />
                               </td>
-                              <td style={{ padding: '13px 16px', color: '#475569' }}>{row.category}</td>
-                              <td style={{ padding: '13px 16px', color: '#475569' }}>{row.location}</td>
-                              <td style={{ padding: '13px 16px', textAlign: 'center', fontWeight: '700', color: qtyColor }}>{row.stock}</td>
-                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.allocated}</td>
-                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569' }}>{row.incoming}</td>
-                              <td style={{ padding: '13px 16px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>{row.minLevel}</td>
+                              <td style={{ padding: '12px 14px', color: '#94A3B8', fontSize: '12px' }}>
+                                {startIndex + idx + 1}
+                              </td>
+                              <td
+                                onClick={() => setViewingStockItem(row)}
+                                style={{ padding: '12px 14px' }}
+                              >
+                                <div style={{ fontWeight: '700', color: '#0F172A', cursor: 'pointer' }}>{row.item}</div>
+                                <div style={{ fontSize: '11px', color: '#0E7490', fontWeight: '600' }}>{row.code}</div>
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#475569' }}>
+                                <span style={{ backgroundColor: '#F1F5F9', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', color: '#475569' }}>
+                                  {row.category}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#475569' }}>{row.location}</td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '700', color: qtyColor, fontSize: '13px' }}>
+                                {row.stock}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>
+                                {row.allocated}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748B' }}>
+                                {row.incoming}
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: '600' }}>
+                                {row.minLevel}
+                              </td>
                               {!isSalesUser && (
-                                <td style={{ padding: '13px 16px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>{row.val}</td>
+                                <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>
+                                  {row.val}
+                                </td>
                               )}
-                              <td style={{ padding: '13px 16px', textAlign: 'center' }}>
-                                {(() => {
-                                  let colors = { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-                                  if (row.status === 'In Stock') {
-                                    colors = { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
-                                  } else if (row.status === 'Low Stock') {
-                                    colors = { bg: '#fffbeb', color: '#d97706', border: '#fef3c7' };
-                                  } else if (row.status === 'Out of Stock') {
-                                    colors = { bg: '#fff5f5', color: '#e53e3e', border: '#fed7d7' };
-                                  }
-                                  return (
-                                    <span style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      padding: '4px 10px',
-                                      borderRadius: '6px',
-                                      fontSize: '11px',
-                                      fontWeight: 'bold',
-                                      backgroundColor: colors.bg,
-                                      color: colors.color,
-                                      border: `1px solid ${colors.border}`,
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: colors.color, display: 'inline-block' }} />
-                                      {row.status}
-                                    </span>
-                                  );
-                                })()}
+                              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: badgeColors.bg,
+                                  color: badgeColors.color,
+                                  border: `1px solid ${badgeColors.border}`,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: badgeColors.color, display: 'inline-block' }} />
+                                  {row.status}
+                                </span>
                               </td>
-                              <td style={{ padding: '12px 4px', textAlign: 'center', color: '#64748B', cursor: 'pointer' }}>
-                                <MoreVertical style={{ width: '14px', height: '14px', margin: '0 auto' }} />
+                              <td onClick={(e) => e.stopPropagation()} style={{ padding: '12px 8px', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                  <button
+                                    onClick={() => setViewingStockItem(row)}
+                                    title="View Item Stock Details"
+                                    style={{
+                                      width: '30px',
+                                      height: '30px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #E2E8F0',
+                                      backgroundColor: '#FFFFFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      color: '#0E7490'
+                                    }}
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleCreatePoFromSelectedStock([rowKey], combinedList)}
+                                    title="Create PO / Reorder Item"
+                                    style={{
+                                      width: '30px',
+                                      height: '30px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #E2E8F0',
+                                      backgroundColor: '#FFFFFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      color: '#2563EB'
+                                    }}
+                                  >
+                                    <ShoppingCart size={14} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2743,10 +2981,10 @@ export default function StockStatusView(props) {
                 </div>
 
                 {/* Standard Pagination Footer Layout */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '12px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid #F1F5F9', backgroundColor: '#FFFFFF' }}>
                   {/* Left Side: Rows per page selector restricted strictly to 5, 10 + Showing X to Y of Z entries */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#64748B' }}>Showing per page</span>
                       <select
                         value={stockStatusRowsPerPage}
@@ -2860,6 +3098,264 @@ export default function StockStatusView(props) {
                     </div>
                   </div>
                 </div>
+
+                {/* Floating Selection Toolbar for Stock Status List Table */}
+                {selectedStockRows.length > 0 && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '50px',
+                    boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    flexWrap: 'nowrap',
+                    alignItems: 'center',
+                    whiteSpace: 'nowrap',
+                    gap: '8px',
+                    zIndex: 10000,
+                    width: 'max-content',
+                    maxWidth: 'calc(100vw - 32px)',
+                    overflowX: 'auto',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                  }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '4px', paddingRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <strong style={{ color: '#0F172A', fontSize: '14px' }}>{selectedStockRows.length}</strong> Selected
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        const firstKey = selectedStockRows[0];
+                        const targetRow = combinedList.find(r => (r.code || r.item) === firstKey);
+                        if (targetRow) setViewingStockItem(targetRow);
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      <Eye size={14} style={{ color: '#0E7490' }} /> View Details
+                    </button>
+
+                    <button
+                      onClick={() => handleCreatePoFromSelectedStock(selectedStockRows, combinedList)}
+                      style={{
+                        backgroundColor: '#0E7490',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 4px rgba(14, 116, 144, 0.25)'
+                      }}
+                    >
+                      <ShoppingCart size={14} style={{ color: '#FFFFFF' }} /> Create PO / Reorder
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const selectedData = combinedList.filter(r => selectedStockRows.includes(r.code || r.item));
+                        handleExportStockCSV(selectedData);
+                      }}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      <Download size={14} style={{ color: '#059669' }} /> Export Selected
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedStockRows([])}
+                      title="Deselect all"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: '#94A3B8',
+                        cursor: 'pointer',
+                        padding: '4px 6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '6px',
+                        flexShrink: 0
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Stock Item Details Modal */}
+                {viewingStockItem && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10001,
+                    padding: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      width: '100%',
+                      maxWidth: '640px',
+                      maxHeight: '90vh',
+                      overflowY: 'auto',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                      fontFamily: "'Plus Jakarta Sans', sans-serif"
+                    }}>
+                      <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0F172A' }}>{viewingStockItem.item}</h3>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', backgroundColor: '#ECFEFF', color: '#0E7490', fontWeight: '700' }}>
+                              {viewingStockItem.code}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>
+                            Category: {viewingStockItem.category} &bull; Warehouse: {viewingStockItem.location}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setViewingStockItem(null)}
+                          style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{
+                          padding: '12px 16px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          backgroundColor: viewingStockItem.status === 'In Stock' ? '#F0FDF4' : viewingStockItem.status === 'Low Stock' ? '#FFFBEB' : '#FEF2F2',
+                          border: `1px solid ${viewingStockItem.status === 'In Stock' ? '#BBF7D0' : viewingStockItem.status === 'Low Stock' ? '#FEF3C7' : '#FECACA'}`
+                        }}>
+                          {viewingStockItem.status === 'In Stock' ? (
+                            <CheckCircle size={18} style={{ color: '#15803D' }} />
+                          ) : (
+                            <AlertTriangle size={18} style={{ color: viewingStockItem.status === 'Low Stock' ? '#D97706' : '#DC2626' }} />
+                          )}
+                          <div>
+                            <strong style={{ fontSize: '13px', color: viewingStockItem.status === 'In Stock' ? '#15803D' : viewingStockItem.status === 'Low Stock' ? '#D97706' : '#DC2626' }}>
+                              Status: {viewingStockItem.status}
+                            </strong>
+                            <div style={{ fontSize: '12px', color: '#475569' }}>
+                              {viewingStockItem.status === 'In Stock'
+                                ? 'Stock is currently healthy and above minimum safety buffer.'
+                                : viewingStockItem.status === 'Low Stock'
+                                ? 'Inventory is below the minimum reorder threshold. Replenishment recommended.'
+                                : 'Inventory is completely exhausted. Immediate procurement order required.'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                          <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Available Stock</span>
+                            <div style={{ fontSize: '20px', fontWeight: '800', color: viewingStockItem.status === 'In Stock' ? '#10B981' : viewingStockItem.status === 'Low Stock' ? '#F59E0B' : '#EF4444', marginTop: '4px' }}>
+                              {viewingStockItem.stock}
+                            </div>
+                          </div>
+                          <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Reserved (BOM/PI)</span>
+                            <div style={{ fontSize: '20px', fontWeight: '800', color: '#475569', marginTop: '4px' }}>
+                              {viewingStockItem.allocated}
+                            </div>
+                          </div>
+                          <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>Incoming (PO)</span>
+                            <div style={{ fontSize: '20px', fontWeight: '800', color: '#2563EB', marginTop: '4px' }}>
+                              {viewingStockItem.incoming}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                            <span style={{ fontSize: '13px', color: '#64748B' }}>Reorder Level (Min Buffer)</span>
+                            <strong style={{ fontSize: '13px', color: '#0F172A' }}>{viewingStockItem.minLevel} NOS</strong>
+                          </div>
+                          {!isSalesUser && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                              <span style={{ fontSize: '13px', color: '#64748B' }}>Total Stock Valuation</span>
+                              <strong style={{ fontSize: '13px', color: '#0F172A' }}>{viewingStockItem.val}</strong>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px' }}>
+                            <span style={{ fontSize: '13px', color: '#64748B' }}>Warehouse Storage Location</span>
+                            <strong style={{ fontSize: '13px', color: '#0F172A' }}>{viewingStockItem.location}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          onClick={() => setViewingStockItem(null)}
+                          style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                          Close
+                        </button>
+                        <button
+                          onClick={() => {
+                            const itemKey = viewingStockItem.code || viewingStockItem.item;
+                            setViewingStockItem(null);
+                            handleCreatePoFromSelectedStock([itemKey], combinedList);
+                          }}
+                          style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#0E7490', color: '#FFFFFF', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <ShoppingCart size={15} />
+                          Create PO / Reorder Item
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
